@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Board prototype — measuring instrument</title>
+<style>
+  /* No design decisions here. Every value present is one the measurement needs: the 44px touch
+     target, the label column width, the keypad height. Nothing is styled for looks. */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font: 13px/1.1 -apple-system, "Segoe UI", system-ui, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+    background: #fff; color: #111;
+  }
+
+  #chrome { padding: 2px 4px; font-size: 11px; background: #eee; flex: 0 0 auto; }
+  #chrome select { font-size: 11px; }
+
+  /* Two panes, not one. A single table with a batting section and a pitching section cannot pin the
+     right totals row: both stick to the same bottom edge and the later one wins, so the player looking
+     at batting rows sees the pitching totals. Found by looking at it. Pitching is at most three rows,
+     so it never scrolls and stays whole; only batting scrolls. */
+  #scroller { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; min-height: 0; }
+  #pitchingPane { flex: 0 0 auto; border-top: 2px solid #999; }
+
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  th, td { text-align: right; padding: 0; border: 1px solid #ccc; font-variant-numeric: tabular-nums; }
+  th.label, td.label { text-align: left; width: 62px; padding-left: 3px; font-size: 11px; }
+
+  /* Six data columns. The touch target is the constraint, not the type size. */
+  td.cell, th.col { width: calc((100% - 62px) / 6); }
+  td.cell { height: 44px; min-height: 44px; font-size: 15px; padding-right: 4px; }
+  td.cell.blank { background: #f4f4f4; }
+  td.cell.selected { outline: 2px solid #06c; outline-offset: -2px; }
+
+  thead th { position: sticky; top: 0; z-index: 2; background: #ddd; height: 22px; font-size: 11px; }
+  tr.totals td { position: sticky; bottom: 0; z-index: 2; background: #ddd; font-weight: 700; height: 34px; }
+
+  #linescore { font-size: 10px; width: 100%; }
+  #linescore td, #linescore th { height: 16px; border: 1px solid #ddd; padding: 0 1px; text-align: right; }
+  #footnotes { font-size: 11px; padding: 3px; border-bottom: 1px solid #ccc; }
+  #revealbar { font-size: 12px; padding: 4px 3px; background: #ffd; border-bottom: 1px solid #ccc; min-height: 22px; }
+  caption { font-size: 10px; text-align: left; padding: 2px 3px; background: #f0f0f0; }
+
+  /* The keypad. Section 9 forbids the system keyboard, and this is what that costs. */
+  #keypad { flex: 0 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; padding: 4px; background: #e8e8e8; }
+  #keypad button { height: 48px; font-size: 18px; border: 1px solid #bbb; background: #fff; }
+</style>
+</head>
+<body>
+<div id="chrome">
+  <select id="pick"></select>
+  <label><input type="checkbox" id="nameInline"> name under row</label>
+  <span id="readout"></span>
+</div>
+
+<div id="scroller">
+  <div id="revealbar">&nbsp;</div>
+  <table id="linescore"></table>
+  <div id="footnotes"></div>
+  <table id="grid"></table>
+</div>
+
+<div id="pitchingPane"><table id="pitching"></table></div>
+<div id="keypad"></div>
+
+<script>
+const BOARDS = /*BOARDS*/;
+const BAT = ["PA","AB","R","H","BB","K"], PIT = ["IP","H","R","ER","BB","K"];
+let board, selected = null;
+
+function lineScore(b) {
+  const n = Math.max(b.lineScore.offense.length, b.lineScore.defense.length);
+  const head = ["", ...Array.from({length: n}, (_, i) => i + 1), "R", "H", "E"];
+  const row = (label, innings, rhe) =>
+    "<tr><td style='text-align:left'>" + label + "</td>" +
+    Array.from({length: n}, (_, i) => "<td>" + (innings[i] ?? "x") + "</td>").join("") +
+    rhe.map(v => "<td><b>" + v + "</b></td>").join("") + "</tr>";
+  return "<tr>" + head.map(h => "<th>" + h + "</th>").join("") + "</tr>" +
+    row("OFF", b.lineScore.offense, b.lineScore.offenseRHE) +
+    row("DEF", b.lineScore.defense, b.lineScore.defenseRHE);
+}
+
+function grid(b) {
+  const inline = document.getElementById("nameInline").checked;
+  const head = h => "<tr><th class='label'></th>" + h.map(x => "<th class='col'>" + x + "</th>").join("") + "</tr>";
+  const cells = (vals, blanks) => vals.map((v, i) =>
+    "<td class='cell" + (blanks.includes(i) ? " blank" : "") + "' tabindex='0'>" +
+    (blanks.includes(i) ? "" : v) + "</td>").join("");
+
+  let html = "<thead>" + head(BAT) + "</thead><tbody>";
+  b.batting.forEach((row, r) => {
+    // A scattering of blanks so the editable state is measured, not imagined.
+    const blanks = [(r * 2) % 6, (r * 3 + 1) % 6];
+    html += "<tr><th class='label'>" + b.labels[r] + "</th>" + cells(row, blanks) + "</tr>";
+    if (inline && b.revealed[r]) {
+      html += "<tr class='namerow'><td class='label' colspan='7' style='text-align:left;font-size:11px;color:#060;height:16px'>"
+            + b.revealed[r] + "</td></tr>";
+    }
+  });
+  html += "<tr class='totals'><td class='label'>TOT</td>" + b.battingTotals.map(v => "<td class='cell'>" + v + "</td>").join("") + "</tr>";
+  return html + "</tbody>";
+}
+
+function pitchingGrid(b) {
+  const head = h => "<tr><th class='label'></th>" + h.map(x => "<th class='col'>" + x + "</th>").join("") + "</tr>";
+  let html = "<thead>" + head(PIT) + "</thead><tbody>";
+  b.pitching.forEach((row, r) => {
+    html += "<tr><th class='label'>P" + (r + 1) + "</th>" +
+      row.map((v, i) => "<td class='cell" + (i === (r + 2) % 6 ? " blank" : "") + "' tabindex='0'>" +
+        (i === (r + 2) % 6 ? "" : v) + "</td>").join("") + "</tr>";
+  });
+  return html + "<tr class='totals'><td class='label'>TOT</td>" +
+    b.pitchingTotals.map(v => "<td class='cell'>" + v + "</td>").join("") + "</tr></tbody>";
+}
+
+function render() {
+  document.getElementById("linescore").innerHTML = lineScore(board);
+  document.getElementById("footnotes").textContent = board.footnotes.join("   ");
+  document.getElementById("grid").innerHTML = grid(board);
+  document.getElementById("pitching").innerHTML = pitchingGrid(board);
+  document.getElementById("revealbar").textContent =
+    document.getElementById("nameInline").checked ? " " : "◆ " + (board.revealed["0"] || "");
+  document.querySelectorAll("td.cell.blank").forEach(td =>
+    td.addEventListener("click", () => {
+      document.querySelectorAll("td.cell.selected").forEach(x => x.classList.remove("selected"));
+      td.classList.add("selected"); selected = td;
+    }));
+  measure();
+}
+
+/* The measurement. Reports what each element costs and how many 44px rows are left. */
+function measure() {
+  const px = el => Math.round(el.getBoundingClientRect().height);
+  const scroller = document.getElementById("scroller");
+  const parts = {
+    viewport: window.innerHeight,
+    chrome: px(document.getElementById("chrome")),
+    keypad: px(document.getElementById("keypad")),
+    revealbar: px(document.getElementById("revealbar")),
+    linescore: px(document.getElementById("linescore")),
+    footnotes: px(document.getElementById("footnotes")),
+    header: px(document.querySelector("#grid thead th")),
+    totals: px(document.querySelector("#grid tr.totals td")),
+    pitchingPane: px(document.getElementById("pitchingPane")),
+    scrollerVisible: px(scroller),
+    cellHeight: px(document.querySelector("#grid td.cell")),
+    gridWidth: Math.round(document.getElementById("grid").getBoundingClientRect().width),
+    labelWidth: Math.round(document.querySelector("#grid th.label").getBoundingClientRect().width),
+    dataColWidth: Math.round(document.querySelector("#grid td.cell").getBoundingClientRect().width),
+    horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    widestCellText: Math.max(...[...document.querySelectorAll("#grid td.cell")].map(c => c.scrollWidth)),
+  };
+  // Rows visible between the pinned header and the pinned totals row, without scrolling.
+  const fixed = parts.revealbar + parts.linescore + parts.footnotes + parts.header + parts.totals;
+  parts.rowsVisibleAtOnce = Math.floor((parts.scrollerVisible - fixed) / parts.cellHeight);
+  // What the board would cost with nothing above it — the ceiling if the anchor moved elsewhere.
+  parts.rowsIfNoAnchorAbove = Math.floor(
+    (parts.scrollerVisible - parts.header - parts.totals) / parts.cellHeight);
+  window.MEASUREMENT = parts;
+  document.getElementById("readout").textContent =
+    ` ${parts.rowsVisibleAtOnce} rows | col ${parts.dataColWidth}px | overflow ${parts.horizontalOverflow}`;
+}
+
+const pick = document.getElementById("pick");
+BOARDS.forEach((b, i) => pick.add(new Option(`${b.id} — ${b.note}`, i)));
+pick.addEventListener("change", () => { board = BOARDS[pick.value]; render(); });
+document.getElementById("nameInline").addEventListener("change", render);
+"0123456789".split("").forEach(d => {
+  const b = document.createElement("button"); b.textContent = d;
+  b.onclick = () => { if (selected) selected.textContent = d; };
+  document.getElementById("keypad").appendChild(b);
+});
+board = BOARDS[0];
+render();
+window.addEventListener("resize", measure);
+</script>
+</body>
+</html>
