@@ -13,29 +13,33 @@ the width budget excluded. An identity over a quantity the player cannot see is 
 they can make.
 """
 
+import dataclasses
 from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
-from boxscore_forge.boxscore import BattingLine, Direction, PitchingLine
+from boxscore_forge.boxscore import BattingLine, Direction, Footnotes, LineScore, PitchingLine
 
-BATTING_COLUMNS: Final[tuple[str, ...]] = ("at_bats", "runs", "hits", "runs_batted_in", "walks", "strikeouts")
-PITCHING_COLUMNS: Final[tuple[str, ...]] = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
 
-# The offense's hits, runs, walks and strikeouts are the same events the opposing pitchers are
-# charged with. At-bats and runs batted in have no pitching counterpart on the board.
+def _integer_fields(model: type) -> tuple[str, ...]:
+    """Read the columns off the model rather than restating them.
+
+    A hand-written list is a second source of truth that drifts the first time a column is added,
+    and it drifts silently: the new column simply goes unchecked.
+    """
+    return tuple(field.name for field in dataclasses.fields(model) if field.type in (int, "int"))
+
+
+BATTING_COLUMNS: Final[tuple[str, ...]] = _integer_fields(BattingLine)
+PITCHING_COLUMNS: Final[tuple[str, ...]] = _integer_fields(PitchingLine)
+FOOTNOTE_FIELDS: Final[tuple[str, ...]] = _integer_fields(Footnotes)
+LINE_SCORE_FIELDS: Final[tuple[str, ...]] = _integer_fields(LineScore)
+
+# The one list that stays written out, because it is a choice rather than a reflection of the model:
+# the offense's hits, runs, walks and strikeouts are the same events the opposing pitchers are
+# charged with, while at-bats and runs batted in have no pitching counterpart on the board.
 CROSS_TEAM_COLUMNS: Final[tuple[str, ...]] = ("hits", "runs", "walks", "strikeouts")
-
-FOOTNOTE_FIELDS: Final[tuple[str, ...]] = ("left_on_base", "hit_by_pitch", "sacrifice_flies", "sacrifice_hits")
-LINE_SCORE_FIELDS: Final[tuple[str, ...]] = (
-    "offense_runs",
-    "offense_hits",
-    "offense_errors",
-    "defense_runs",
-    "defense_hits",
-    "defense_errors",
-)
 
 
 class Identity(StrEnum):
