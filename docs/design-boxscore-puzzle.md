@@ -251,11 +251,13 @@ still looks right — which is why it went unnoticed. Measured across every batt
 | `AB + BB + HBP + SF + SH + XI` | **0** of 5,325,173 |
 | `AB + BB + HBP + SF + SH` | 1,956 |
 
-It affects 1,933 team-games, roughly one in every 200. **Decision needed:** either the footnote line
-carries a fifth value that is zero in 99.5% of games, or the pool excludes those games. Excluding
-costs almost nothing and keeps the footnote line shorter on a 375px board, which argues for it —
-but the identity itself must know about interference either way, so that a rejection happens for
-the stated reason rather than by accident.
+It affects 1,933 team-games, roughly one in every 200.
+
+**Resolved: those games leave the pool, and the footnote line keeps four values.** A fifth footnote
+would cost board space in every puzzle to serve one in two hundred. **The identity still knows about
+interference**, because a boxscore containing it is arithmetically correct — it is unusable, not
+wrong, and the two rejections must not be confused. Validation says the boxscore is broken;
+board-fit says the board cannot show it.
 
 **2. The backward count stops holding in 2020.** `PA = Outs + R + LOB` assumes every runner arrived
 by way of a plate appearance. Extra innings now begin with a runner already on second who never
