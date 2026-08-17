@@ -1,0 +1,84 @@
+[project]
+name = "boxscore-forge"
+version = "0.1.0"
+description = "Puzzle generation, validation and calendar construction. Never leaves the laptop."
+requires-python = "==3.13.*"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "hypothesis>=6",
+    "mypy>=1.13",
+    "ruff>=0.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/boxscore_forge"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E", "F", "W",    # pycodestyle, pyflakes
+    "I",              # isort
+    "N",              # pep8-naming
+    "UP",             # pyupgrade — catches legacy typing imports
+    "ANN",            # type annotations on public interfaces
+    "B",              # bugbear
+    "SIM",            # simplify
+    "RUF",            # ruff-specific
+    "S",              # bandit — security
+    "T20",            # no print()
+    "G",              # no f-strings in logging calls
+    "LOG",            # logging misuse
+    "TRY",            # exception antipatterns
+    "EM",             # exception messages not inline literals
+    "RET",            # return simplification
+    "ERA",            # commented-out code
+    "DTZ",            # naive datetime
+    "PTH",            # pathlib over os.path
+    "FBT",            # boolean trap
+    "C4",             # comprehensions
+    "ARG",            # unused arguments
+    "PL",             # pylint subset
+    "ISC",            # implicit string concat
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004"]   # asserts and magic numbers are fine in tests
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --strict-markers --strict-config --tb=short"
+filterwarnings = ["error"]
+# asyncio_mode is deliberately absent: the forge is CPU-bound batch work with no concurrent I/O,
+# so pytest-asyncio would be a dependency carrying no weight. Add both together if that changes.
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+    "@overload",
+]
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
