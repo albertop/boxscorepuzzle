@@ -23,8 +23,12 @@
   /* The line score is the anchor and must be complete — twelve columns, both teams. It needs no
      touch target, so it renders small enough to fit. */
   #linescore { flex: 0 0 auto; width: 100%; border-collapse: collapse; font-size: 9px; }
-  #linescore td, #linescore th { border: 1px solid #ddd; padding: 0 1px; text-align: right; height: 15px; }
-  #linescore th.side, #linescore td.side { text-align: left; width: 38px; font-weight: 700; }
+  #linescore td, #linescore th { border: 1px solid #ddd; padding: 0 1px; height: 16px;
+                                 text-align: center; vertical-align: middle; }
+  #linescore th.side, #linescore td.side { width: 38px; font-weight: 700; }
+  /* The nine innings are one thing and R/H/E are another. Without a rule the line score reads as
+     twelve equivalent columns. */
+  #linescore .summary { border-left: 2px solid #999; }
   #linescore tr.ours { background: #eef4ff; }
 
   #footnotes { flex: 0 0 auto; font-size: 11px; padding: 3px 6px; border-bottom: 1px solid #ccc; }
@@ -38,9 +42,12 @@
      digit shoved against the right edge unbalances the grid. */
   table.grid th, table.grid td { text-align: center; vertical-align: middle; padding: 0;
                                  border: 1px solid #ccc; font-variant-numeric: tabular-nums; }
-  th.label, td.label { text-align: left; width: 62px; padding-left: 3px; font-size: 11px;
+  /* Seven characters, fixed. Whole surnames go from 55% at six to 76% at seven for one pixel of
+     cell width, and a fixed width is a stable interface element where conditional truncation is an
+     erratic one — the player cannot learn what the column will show if it varies. */
+  th.label, td.label { text-align: left; width: 66px; padding-left: 3px; font-size: 11px;
                        overflow: hidden; white-space: nowrap; }
-  td.cell, th.col { width: calc((100% - 62px) / 6); }
+  td.cell, th.col { width: calc((100% - 66px) / 6); }
   td.cell { height: 44px; font-size: 15px; }
   td.cell.blank { background: #f4f4f4; }
   td.cell.selected { outline: 2px solid #06c; outline-offset: -2px; }
@@ -76,13 +83,13 @@ function lineScore(b) {
   const n = Math.max(b.lineScore.offense.length, b.lineScore.defense.length);
   const head = "<tr><th class='side'></th>" +
     Array.from({length: n}, (_, i) => "<th>" + (i + 1) + "</th>").join("") +
-    "<th>R</th><th>H</th><th>E</th></tr>";
+    "<th class='summary'>R</th><th>H</th><th>E</th></tr>";
   // AWAY and HOME, because both teams batted and both fielded — offence and defence do not name
   // the rows of a line score. The batting section's team is tinted so the player can connect them.
   const row = (side, innings, rhe, ours) =>
     "<tr class='" + (ours ? "ours" : "") + "'><td class='side'>" + side + "</td>" +
     Array.from({length: n}, (_, i) => "<td>" + (innings[i] ?? "x") + "</td>").join("") +
-    rhe.map(v => "<td><b>" + v + "</b></td>").join("") + "</tr>";
+    rhe.map((v, i) => "<td class='" + (i === 0 ? "summary" : "") + "'><b>" + v + "</b></td>").join("") + "</tr>";
   const weAreHome = b.offenseIsHome;
   return head +
     row("AWAY", weAreHome ? b.lineScore.defense : b.lineScore.offense,
@@ -91,10 +98,29 @@ function lineScore(b) {
         weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE, weAreHome);
 }
 
+const ABBREVIATION = 7;
+
+/* Every surname abbreviated to the same width, never truncated only where it overflows — a fixed
+   width is something the player can learn, a conditional one is not.
+
+   Disambiguation by first initial is mandatory and independent of the width: 6.64% of boards carry
+   two batters with the genuinely identical full surname, so the collision is not a truncation
+   artefact and appears even with no abbreviation at all. */
+function abbreviate(names) {
+  const stems = names.map(n => (n.last || "").slice(0, ABBREVIATION));
+  const seen = {};
+  stems.forEach(s => (seen[s] = (seen[s] || 0) + 1));
+  return names.map((n, i) => {
+    const dotted = stems[i] + ((n.last || "").length > ABBREVIATION ? "." : "");
+    return seen[stems[i]] > 1 && n.first ? n.first[0] + ". " + dotted : dotted;
+  });
+}
+
 function label(b, r) {
   // The revealed name replaces the position in the row label. It costs no pixels and it sits where
-  // the player expects the row's identity, so nine names accumulate as a free progress bar.
-  return r < solvedRows && b.revealed[r] ? b.revealed[r] : b.labels[r];
+  // the player expects the row's identity, so names accumulate as a free progress bar.
+  if (r >= solvedRows || !b.revealed[r]) return b.labels[r];
+  return b.abbreviated[r];
 }
 
 function grid(b) {
@@ -179,6 +205,7 @@ function measure() {
 
 const pick = document.getElementById("pick");
 BOARDS.forEach((b, i) => pick.add(new Option(`${b.id} — ${b.note}`, i)));
+BOARDS.forEach(b => { b.abbreviated = abbreviate(b.names); });
 pick.addEventListener("change", () => { board = BOARDS[pick.value]; render(); });
 "0123456789".split("").forEach(d => {
   const btn = document.createElement("button"); btn.textContent = d;

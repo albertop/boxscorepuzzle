@@ -76,7 +76,8 @@ def to_json(loaded: Loaded, note: str) -> dict[str, object]:
             if getattr(direction.footnote_totals, field)
         ]
         + [f"LOB: {direction.team_footnotes.left_on_base}"],
-        "revealed": {str(index): name for index, name in enumerate(SAMPLE_NAMES)},
+        "names": [{"first": first, "last": last} for first, last in loaded.names],
+        "revealed": {str(index): f"{first} {last}" for index, (first, last) in enumerate(loaded.names)},
     }
 
 

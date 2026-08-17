@@ -573,22 +573,58 @@ identity, and §31 rests on measurements taken against this board rather than th
 
 **What is NOT decided:**
 
-| Parameter | Provisional value | Status |
+### ✅ The roster caps, decided (browser prototype, August 2026)
+
+**≤13 batters in the offensive team, ≤2 pitchers in the defensive team.** Nothing in §6 is
+provisional any more.
+
+**Rows on screen turned out not to be the binding constraint.** With the active section's totals
+pinned they never scroll away, so the question is not how many rows are visible but whether a step's
+working set can be held together. Measured: 70% of steps at a chain target of ten touch rows within
+a five-row window, and the ones that span the whole lineup are column sums combining a **median of
+two non-zero numbers** — scanning ten rows to find two is a scan, not something carried in the head.
+
+**The pitcher cap is the one that costs screen, and the batter cap is the one that costs pool** —
+the opposite of the provisional pair, which had them the other way round.
+
+| Caps | Directions | Against the old pair |
+|---|---:|---:|
+| ≤10 batters, ≤3 pitchers *(the old provisional pair)* | 65,522 | — |
+| ≤12, ≤2 | 103,304 | +58% |
+| **≤13, ≤2 — decided** | **128,766** | **+97%** |
+| ≤14, ≤2 | 148,815 | +127% |
+
+So the old caps were **dominated**: loosening batters and tightening pitchers buys more pool *and*
+more visible rows at once. At 320px, three pitchers left two batting rows visible where two pitchers
+left four.
+
+**Era distribution at the decided caps**, against the pair it replaces:
+
+| Decade | ≤10/≤3 | ≤13/≤2 |
+|---|---:|---:|
+| 1910 | 13,995 | 21,040 |
+| 1940 | 10,257 | 15,484 |
+| 1970 | 5,059 | **14,684** |
+| 1980 | 2,874 | **11,934** |
+| 2000 | 900 | 4,632 |
+| 2020 | 66 | 754 |
+
+The 1970s and 1980s roughly triple, which is where the recognisability deficit for the progressive
+reveal sat. The 1910–1949 skew softens from 68% to around 57%. **⚠️ Accepted rather than solved:**
+the modern game is still thin — 754 directions in the 2020s against 21,040 in the 1910s — because a
+game with seven relievers cannot fit a board of any size this project will build.
+
+### Other measured values, no longer estimates
+
+| Element | Value | Where it came from |
 |---|---|---|
-| Max batters in the offensive team | ≤10 | **Estimate.** Comes from "roughly 16 rows fit" — never measured against a real board |
-| Max pitchers in the defensive team | ≤3 | **Estimate.** Same origin |
-| % of cells erased | 25–35% | **Superseded.** The erasure algorithm targets a chain length; cell count is whatever reaching it costs (§31, §36) |
-
-**⚠️ When the row ceiling is measured, the question changes.** The caps were set to fit a screen, on
-the assumption that pool was scarce. It is not: the calendar consumes about 674 directions a year
-against 55,024 surviving, which is over eighty years (§5). **The right question stops being "how many
-rows fit" and becomes "how many rows do we want."**
-
-The roster filter is far more restrictive than it needs to be, and the 1910–1949 era skew is being
-paid for with pool the project has no use for. `discovery/board-topology` already shows a 17-row
-budget yields 271,264 directions with a near-flat decade distribution and the 1970s as the largest
-decade. **The era-variety argument may well outweigh the pool argument** — but the decision still
-waits on the browser prototype, because none of this says how many rows actually fit on a phone.
+| Label column | **66px, seven characters fixed** | 76% of surnames render whole against 55% at six; one pixel of cell width |
+| Data column | 52px at 375px, 42px at 320px | Six columns after the label |
+| Custom keypad | **107px** | Measured. §6 had assumed 250–300, which was a *system* keyboard |
+| Line score | 46px, complete, 9pt | Twelve columns and both teams fit without a touch target |
+| Pinned totals | 34px | |
+| Rows visible at once | **9 at 375px, 7 at 320px** | |
+| % of cells erased | *superseded* | The erasure algorithm targets a chain length; cell count is whatever reaching it costs (§21, §31) |
 
 ### How these get resolved
 
@@ -671,6 +707,27 @@ directions (§5).
 **⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero,
 so a player will learn to stop looking — and the row where one finally appears is precisely the row
 whose arithmetic fails if they miss it.
+
+### The revealed name goes in the row label, abbreviated to a fixed width
+
+**Seven characters, always** — never full names truncated only where they overflow. A fixed width is
+something the player can learn; a conditional one is not, and they cannot tell what the column will
+show. It costs no pixels, puts the identity where the row's identity belongs, and lets the names
+accumulate as the free progress bar §7 was counting on.
+
+**Disambiguation by first initial is mandatory, and independent of the width.** Measured across
+291,481 boards: **6.64% carry two batters with the genuinely identical full surname** — Waner leads
+the list, then Smith, Jones, Davis, Robinson, Collins. Abbreviating to seven characters adds only
+0.08 points on top of that, so **this is not a truncation artefact and would occur with no
+abbreviation at all.** A first initial resolves all but 0.35%.
+
+**Those 0.35% stay in the pool.** Two players sharing a surname and an initial are still told apart
+by position, which the row showed before it was revealed — and the label identifies a *row*, not a
+player. Paying pool for a cosmetic ambiguity buys nothing.
+
+**The end-of-game reveal shows complete names**, unabbreviated and undisambiguated. Abbreviation is
+a constraint of the label column and belongs nowhere else; the closing card has room, and that is
+the moment the name is the point.
 
 ### Consequences
 
@@ -1707,6 +1764,20 @@ Everything heavy and everything that can take hours.
 ### The complete rule
 
 **The forge knows nothing about users. The service knows nothing about generating.**
+
+### The puzzle identifier is opaque, and the mapping back to the game stays in the forge
+
+C2 asks for an immutable id derived from the game. **Derived, not transcribed:** a Retrosheet id like
+`SLN191310050` spells out the team and the date, which §7 withholds until the player has earned
+them, so shipping it hands the reveal to anyone who opens the developer tools once.
+
+That is a different thing from the answer being findable. §9 already accepts that the solution lives
+in the client and is visible to anyone who looks, because the streak is against yourself. What this
+avoids is the answer being **legible at a glance** — it costs nothing and does not pretend to stop
+anyone determined.
+
+So the served artefact carries a hash. **The table mapping puzzle id back to game and direction is
+forge-side and never leaves the laptop**, alongside the generator itself.
 
 Neither machine needs to know the other's world. **The backend laptop knows nothing about rankings, accounts, or streaks.**
 

@@ -191,10 +191,8 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
 - The board is identical on all screens. Desktop gets more whitespace, not more content.
-- **⚠️ Row counts, roster caps (≤10 batters / ≤3 pitchers), and erasure percentage are PROVISIONAL
-  estimates, not decisions.** They are blocked on measurement: the real height budget from a browser
-  prototype, and compressibility + technique distribution across the pool. Do not treat them as fixed
-  and do not build them into code as constants without flagging it.
+- **Roster caps: ≤13 batters, ≤2 pitchers. Measured, not estimated** (§6). Rows on screen turned out not to bind — with the active section's totals pinned they never scroll away, and 70% of steps touch rows within a five-row window. Erasure percentage is superseded: the generator targets a chain length.
+- **The label column is 66px, seven characters, fixed.** Never full names truncated only where they overflow. **Disambiguation by first initial is mandatory** — 6.64% of boards carry two genuinely identical surnames, so it is not a truncation artefact (§7).
 
 ### 7. Puzzle quality outranks everything (§31, §22)
 
@@ -255,8 +253,8 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 **⚠️ Rewritten after measurement — the original criterion was wrong at the root (§5).**
 
-1. **Roster compactness** — hard filter, asymmetric: the *offensive* team needs ≤10 batters, the
-   *defensive* team ≤3 pitchers. **Caps still provisional**, blocked only on the browser prototype.
+1. **Roster compactness** — hard filter, asymmetric and **decided**: the *offensive* team needs
+   **≤13 batters**, the *defensive* team **≤2 pitchers** (§6).
 2. **Zero-density gate: below 30%, decided.** It removes every shutout and the three-run games while
    keeping seven-run ones. Direct and cheap — it attacks the cause instead of scoring it.
 3. **Compressibility is a viability constraint, not a ranking.** It measures how much can be removed,
@@ -267,7 +265,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 *Line score variety and digit range are dropped. They were proxies for compressibility, and
 correlating with the wrong target is not a reason to keep a filter.*
-- **Roster compactness, asymmetric:** the *offensive* team needs ≤10 batters, the *defensive* team ≤3 pitchers. Only those appear on the board.
+- **Roster compactness, asymmetric — decided:** the *offensive* team needs **≤13 batters**, the *defensive* team **≤2 pitchers**. Only those appear on the board. The pitcher cap is what costs screen space and the batter cap is what costs pool, which is the opposite of the earlier provisional pair (§6).
 - Line score variety
 - Digit range — numbers > 3 in several columns
 

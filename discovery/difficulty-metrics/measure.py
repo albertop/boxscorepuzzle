@@ -67,6 +67,7 @@ class Loaded:
     direction: Direction
     labels: tuple[str, ...]
     offense_is_home: bool
+    names: tuple[tuple[str, str], ...]
 
 
 def _parse_line_score(text: str) -> tuple[int, ...]:
@@ -111,13 +112,16 @@ def load(limit: int) -> list[Loaded]:
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     rows_query = """
-    SELECT PLAYER_ID, B_PA, B_AB, B_R, B_H, B_BB, B_SO, B_HP, B_SF, B_SH, B_XI,
-      CASE WHEN F_P_G=1 THEN 'P' WHEN F_C_G=1 THEN 'C' WHEN F_1B_G=1 THEN '1B'
-           WHEN F_2B_G=1 THEN '2B' WHEN F_3B_G=1 THEN '3B' WHEN F_SS_G=1 THEN 'SS'
-           WHEN F_LF_G=1 THEN 'LF' WHEN F_CF_G=1 THEN 'CF' WHEN F_RF_G=1 THEN 'RF'
-           WHEN B_G_DH=1 THEN 'DH' WHEN B_G_PH=1 THEN 'PH' WHEN B_G_PR=1 THEN 'PR'
-           ELSE '?' END AS label
-    FROM dbo.retroDailyReg WHERE GAME_ID = ? AND TEAM_ID = ? AND B_G = 1 ORDER BY SLOT_CT, SEQ_CT
+    SELECT d.PLAYER_ID, d.B_PA, d.B_AB, d.B_R, d.B_H, d.B_BB, d.B_SO, d.B_HP, d.B_SF, d.B_SH, d.B_XI,
+      CASE WHEN d.F_P_G=1 THEN 'P' WHEN d.F_C_G=1 THEN 'C' WHEN d.F_1B_G=1 THEN '1B'
+           WHEN d.F_2B_G=1 THEN '2B' WHEN d.F_3B_G=1 THEN '3B' WHEN d.F_SS_G=1 THEN 'SS'
+           WHEN d.F_LF_G=1 THEN 'LF' WHEN d.F_CF_G=1 THEN 'CF' WHEN d.F_RF_G=1 THEN 'RF'
+           WHEN d.B_G_DH=1 THEN 'DH' WHEN d.B_G_PH=1 THEN 'PH' WHEN d.B_G_PR=1 THEN 'PR'
+           ELSE '?' END AS label,
+      p.name_first, p.name_last
+    FROM dbo.retroDailyReg d
+    LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
+    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.B_G = 1 ORDER BY d.SLOT_CT, d.SEQ_CT
     """
     pitch_query = """
     SELECT P_OUT, P_H, P_R, P_ER, P_BB, P_SO FROM dbo.retroDailyReg
@@ -187,7 +191,14 @@ def load(limit: int) -> list[Loaded]:
                 ),
             )
             loaded.append(
-                Loaded(game_id, season, direction, tuple(r[11] for r in batting_rows), bool(is_home))
+                Loaded(
+                    game_id,
+                    season,
+                    direction,
+                    tuple(r[11] for r in batting_rows),
+                    bool(is_home),
+                    tuple((r[12] or "", r[13] or "") for r in batting_rows),
+                )
             )
     return loaded
 
