@@ -58,27 +58,73 @@ Consequences:
 
 ### Constraint families
 
-**Equalities**
+The board's constraints fall into **four families**, and which of them a solution actually had to use
+is one of the two axes that describe a puzzle (§4).
 
-- Σ individuals = team totals (AB, H, R, RBI, BB, K)
-- PA = AB + BB + HBP + SF + SH
-- **PA = Outs + R + LOB** — every batter either makes an out, scores, or is left on base
-- Outs = 3 × IP by opposing pitchers (adjusted if the home team doesn't bat in the 9th)
+**1. Column sums**
+
+- Σ individuals = team totals, for every column (PA, AB, R, H, BB, K, and the footnote columns)
 - Σ runs per inning = total R in the line score
-- **Cross-team constraint:** team A's H = Σ hits allowed by team B's pitchers (same for BB, K, R)
+- The line score's R and H for the offense = the batting totals for the same
+
+**2. Row identity — per batter, and again for the totals row**
+
+```
+PA = AB + BB + HBP + SF + SH + XI
+```
+
+**This is the constraint the board hangs on.** Without it no individual cell takes part in a second
+equation, the constraint graph is a forest, and the only puzzles that survive validation are rows of
+unconnected subtractions (§4). With it, at-bats and walks live in two equations each, cycles appear,
+and a deduction can chain.
+
+**XI — reaching base on defensive interference — is not optional.** Verified against every batter
+row Retrosheet has: with it the identity holds in all 5,325,173; without it 1,956 fail. It is rare
+enough to look like decoration and load-bearing exactly where it appears.
+
+**3. Cross-team**
+
+- Team A's H = Σ hits allowed by team B's pitchers, and the same for R, BB and K
+- Outs made by the offense = Σ outs recorded by the opposing pitchers
+
+**Without this the puzzle degenerates into row arithmetic.** It is the link between the two halves of
+the board and the reason this is a puzzle rather than unrelated columns.
+
+**4. Global identity**
+
+```
+PA = Outs + R + LOB
+```
+
+Every batter who came to the plate made an out, scored, or was left on base. It assumes every runner
+arrived by way of a plate appearance, which was true of every team-game before 2020 bar eleven —
+those eleven are source errors. Extra innings now begin with a runner already on second who never
+batted, so modern extra-inning games break it and are correctly rejected.
 
 **Inequalities**
 
-- H ≥ 2B + 3B + HR
 - AB ≥ H
+- **PA ≥ AB + BB** — available wherever the footnote terms are not, and it narrows from the opposite
+  side to the row identity: the identity says what plate appearances add up to, this says what they
+  cannot fall below
 - ER ≤ R
-- RBI ≥ HR (per player)
-- Team RBI ≤ team R
 - Non-negativity in all cells
 
-### The cross-constraint is the essential part
+*Dropped with the RBI column (§6): team RBI ≤ team R, and RBI ≥ HR per player. Also gone are
+H ≥ 2B + 3B + HR and anything else over a column the width budget excluded — an identity over a
+quantity the player cannot see is not a deduction they can make.*
 
-Without the constraint linking one team's offense to the opposing pitching line, the puzzle degenerates into row arithmetic. That cross-link is what makes it a real puzzle.
+### A footnote whose row is ambiguous is a constraint, not a defect
+
+A position label does not always name one row: with ten batters a substitute shares the starter's
+label, so `HBP: SS` can mean either of two rows (§7). That is stated by leaving both candidate cells
+unknown — the footnote's own column sum already says the pair adds to one — and settled by bounding
+rather than by trying each in turn, which would be backtracking.
+
+**Measured, it is rarely more than bookkeeping:** across 31 ambiguous groups tried under 20 erasure
+patterns each, the assignment was irrelevant in 56.6% of patterns and load-bearing in 13.5%, and
+when it did matter it exercised only column sums and the row identity. It is not a source of
+difficulty and is not counted as one.
 
 ---
 
@@ -88,17 +134,30 @@ Without the constraint linking one team's offense to the opposing pitching line,
 
 A uniqueness proof guarantees one answer exists, but does **not** guarantee a human can reach it by reasoning. You can generate unique-solution puzzles whose uniqueness depends on a system of four simultaneous unknowns. Mathematically perfect, and the player experiences them as trial and error.
 
-### The technique ladder
+### Two axes, not a ladder
 
-| Level | Technique |
-|-------|-----------|
-| T1 | Equation with a single unknown → direct solve |
-| T2 | T1 propagated to fixed point |
-| T3 | Two equations sharing unknowns → 2×2 system |
-| T4 | Bounding by inequality (AB ≥ H, ER ≤ R, non-negativity) |
-| T5 | Global team identity: PA = Outs + R + LOB |
+The original T1–T5 ladder did not survive contact with the board. T3 cannot fire at all (below), and
+with it gone T1 and T2 are the same operation — propagation to a fixed point — while T5 is not a
+technique but one more equation inside that propagation. Only bounding is genuinely different,
+because it reasons over ranges rather than values.
 
-**Publication rule:** a puzzle ships only if a solver implementing exclusively T1–T5 solves it **without backtracking**. If it needs to guess a single cell, it's discarded or given one cell back as a hint.
+**Axis 1 — technique required**
+
+| | |
+|---|---|
+| Propagation | An equation with one unknown left in it, run to a fixed point |
+| Propagation plus bounding | Narrowing a cell's range until one value is left standing |
+
+**Axis 2 — equation families required** (§3): column sums · row identity · cross-team · global
+identity. Not which were available — which the solution path actually needed.
+
+**Publication rule, unchanged in substance:** a puzzle ships only if a solver restricted to these
+techniques finishes **without backtracking**. If it needs to guess a single cell, it is discarded or
+given one cell back as a hint.
+
+Neither axis alone says how hard a puzzle feels. What describes that is the *shape* of the solution
+path — how long the chain of dependent steps ran and how narrow the choice of next move became —
+measured in §31.
 
 ### ⚠️ T3 is unreachable on this board (measured, August 2026)
 
@@ -211,6 +270,36 @@ whether a boxscore is a puzzle. Expect a significant further cut.
 **Caveat:** the discrepancy filter only covers 1898–1986. From 1987 on, "no reduction" means "not
 measured," not "clean" — though modern rosters barely pass the roster filter anyway, so those years
 contribute little.
+
+### What each difficulty level costs the pool (measured, August 2026)
+
+A harder puzzle is also a more expensive one: the solver rejects more candidate erasures, so more
+directions are consumed to produce one publishable board.
+
+| Cells erased | Candidate attempts per valid puzzle |
+|---:|---:|
+| 2 | 1.03 |
+| 4 | 1.16 |
+| 6 | 1.42 |
+| 8 | 1.85 |
+| 10 | 2.56 |
+| 12 | 3.91 |
+
+**The calendar is not close to constrained.** Illustratively — the mapping from weekday to erasure
+count is not decided — a week using each level once with two easy days consumes about 13 directions,
+so roughly 674 a year. Against 55,024 surviving directions that is **over eighty years of calendar**.
+Reusing a direction at a different difficulty years apart is available and not needed.
+
+### The footnote ambiguity is a constraint on erasure, not on the pool
+
+Whether an ambiguous footnote assignment resolves depends on **which cells are blank, not on the
+direction**. Measured across 31 ambiguous groups under 20 erasure patterns each: **no direction was
+stuck under every pattern, and none was clean under all of them** — on average 29.8% of patterns
+left the board unresolvable and the rest were fine.
+
+**So nothing leaves the pool.** The generator must not emit an erasure pattern that leaves the
+ambiguity unresolved, which discards patterns and costs a little of the yield above. The exclusion
+rule that looked necessary does not exist.
 
 **Era skew, measured:** the pool sits **62% in 1910–1949** and only 30% in 1950–1985 — older than
 originally assumed. The 2020s contribute 66 directions against 13,782 from the 1910s. The batter cap
@@ -337,14 +426,18 @@ them is what layer 1 is for. **Rejecting the modern extra-inning games is correc
 negative:** the board genuinely cannot express that identity for them, so they are not solvable
 puzzles regardless.
 
-### ⚠️ Open decision: the column set
+### ✅ Decided: the column set is `PA, AB, R, H, BB, K`
+
+Footnotes are attributed **per batter**, labelled by position (§7).
 
 The board's difficulty ceiling is set by how interconnected its constraint graph is, not by its size
-(§4). The current set leaves the graph a forest, which caps every puzzle at the trivial regime.
-Restoring the middle regime means putting **plate appearances** on the board, and the six-column
-ceiling means something has to leave.
+(§4). The previous set left the graph a forest, which capped every puzzle at the trivial regime.
+Putting **plate appearances** on the board gives each row its own identity; the six-column ceiling is
+a real calculation and does not move, so RBI leaves.
 
-**Recommended: `PA, AB, R, H, BB, K`, with footnotes attributed per player.**
+**Confirmed by the forge:** independent cycles go from 0 to 16, and drop back to 0 if the row
+identity is removed. That test is the tripwire — it guards interconnection, not any particular
+number, and fails if a future change flattens the graph again.
 
 **Why RBI is the column to drop.** It is the only batting column with neither a cross-team
 counterpart nor a place in the row identity — all ten of its cells have degree one, participating in
@@ -363,9 +456,9 @@ batter rows** Retrosheet has. Between 87.5% (the 1910s, the pool's heaviest deca
 close on `PA = AB + BB` alone, needing no footnote term at all; per-team attribution would leave
 roughly one row per game without a usable identity, and per-player leaves none.
 
-**Consequences to work through if this is adopted:** §3 gains the row identity as a board-level
-constraint, §8's tutorial loses RBI from its vocabulary, and the compressibility measurement must run
-against the new board rather than the current one.
+**Consequences, now carried through:** §3 states the row identity as a board-level constraint, §7
+attributes footnotes by position label, §8's tutorial loses RBI from its vocabulary and gains the row
+identity, and §31 rests on measurements taken against this board rather than the previous one.
 
 **What is NOT decided:**
 
@@ -435,6 +528,24 @@ three constraint families, including the cross-team constraint that §3 identifi
 
 **Note on cheating:** the risk of players looking up the game is overrated. The solution already lives in the client JSON and that's accepted. A daily puzzle is only cheated against oneself. Wordle had the answer one click away and nothing happened.
 
+### Footnotes are attributed by position, never by name
+
+`HBP: SS`, `SF: 2B`. A printed boxscore writes `HBP: Aparicio`, and that would hand the player a name
+before they had earned the row — the one thing progressive reveal exists to prevent. The position
+label is authentic baseball grammar, gives the player everything the row identity needs, and leaks
+nothing. Once a row is completed and its name appears, the footnote may be rewritten with the name.
+
+**A position label does not always name one row, and that is fine.** With ten batters a substitute
+shares the starter's label. Measured: labels are unique in **99.89%** of nine-batter team-games but
+only 24.28% of ten-batter ones — though the ambiguity only bites when a footnote actually lands on a
+shared label, which leaves **99.98%** and **86.95%** respectively fully attributable. The remainder
+is handled as a constraint rather than a defect (§3), and costs erasure patterns rather than
+directions (§5).
+
+**⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero,
+so a player will learn to stop looking — and the row where one finally appears is precisely the row
+whose arithmetic fails if they miss it.
+
 ### Consequences
 
 - **Forces row-level validation.** Constrains the open error-handling question.
@@ -449,18 +560,26 @@ three constraint families, including the cross-team constraint that §3 identifi
 
 ## 8. Tutorial
 
-**Not a modal.** The first games *are* the tutorial. Each introduces a single identity:
+**Not a modal.** The first games *are* the tutorial. There are **four equation families** on this
+board (§3), not five techniques, so there are four steps plus one on the bounding technique:
 
-1. **P1** — Column sum. One missing cell with the total given. Impossible to fail.
-2. **P2** — The batter line: PA = AB + BB + HBP + SF + SH
-3. **P3** — The batting↔pitching cross. **The game's "aha" moment.** Stage it deliberately.
-4. **P4** — Inequalities and non-negativity to eliminate candidates.
-5. **P5** — The global identity PA = Outs + R + LOB. The most powerful and least intuitive.
+1. **P1 — Column sums.** One missing cell with the total given. Impossible to fail.
+2. **P2 — The row identity:** `PA = AB + BB + HBP + SF + SH + XI`. Also where the footnote line is
+   introduced, because it is the term a player will not think to look for.
+3. **P3 — The batting↔pitching cross.** **The game's "aha" moment.** Stage it deliberately.
+4. **P4 — Bounding.** Inequalities and non-negativity to eliminate candidates rather than compute
+   them. Not an equation family but the second technique, and the only one that reasons over ranges.
+5. **P5 — The global identity** `PA = Outs + R + LOB`. The most powerful and least intuitive, and
+   measured as the rarest: it appears in a few percent of solution paths even at the hardest level
+   (§31), so a player who has not been taught it will meet it cold and rarely.
+
+**P2 and P3 are different techniques and both need a step.** The row identity works down a single
+row; the cross works across the board between the two halves. Neither substitutes for the other.
 
 ### Scope: the mechanics, not baseball
 
-- **Does explain:** that totals rule, that the batter line balances, that opposing pitching crosses with the offense, that PA = Outs + R + LOB
-- **Does not explain:** what AB means, what an RBI is, why there are nine innings
+- **Does explain:** that totals rule, that a batter's row balances, that opposing pitching crosses with the offense, that PA = Outs + R + LOB
+- **Does not explain:** what AB means, what a sacrifice fly is, why there are nine innings
 
 **The tutorial teaches identities, not statistics.** A hardcore fan knows what LOB is and has never once thought that PA = Outs + R + LOB.
 
@@ -1163,7 +1282,66 @@ What they provide is **variation within a constant form**: difficulty changes, t
 
 ### Decision: difficulty tied to the day of the week
 
-**Easy Monday, hard Saturday**, crossword-style. The T1–T5 ladder (§4) already classifies each puzzle, so the calendar can be built to give the week a shape. **It's free and worth more than any feature that could be added.**
+**Easy Monday, hard Saturday**, crossword-style. **It's free and worth more than any feature that could be added.**
+
+### Measured, August 2026: three dimensions, not one scale
+
+Over 420 real directions, 35 per decade, solved under random erasure. This replaces the invented
+scale that used to sit here.
+
+| Dimension | Lever | What it controls |
+|---|---|---|
+| **Effort** | Erasure count | How long and how chained the solve is |
+| **Character** | Equation families required | Which technique opens the board |
+| **Attention** | Live footnote present | Whether the player must notice a non-zero footnote |
+
+**Effort is one variable with three names.** Chain length and narrowest frontier width are near
+mirror images of each other (r = −0.81), and erasure count predicts both only moderately (+0.66 and
+−0.48). **Pick one and set thresholds on it** — but note that erasure count is the weakest of the
+three, so selecting on chain length gives a cleaner grade than selecting on how many cells are blank.
+
+| Cells erased | Solve rate | Chain p50/p90 | Mean frontier | Boards that pinch to one move |
+|---:|---:|---|---:|---:|
+| 2 | 97.3% | 1 / 1 | 1.99 | — |
+| 4 | 86.3% | 1 / 2 | 2.83 | 0% |
+| 6 | 70.3% | 2 / 4 | 3.51 | 3% |
+| 8 | 54.0% | 2 / 4 | 4.04 | 10% |
+| 10 | 39.1% | 4 / 6 | 4.46 | 20% |
+| 12 | 25.6% | 4 / 7 | 4.79 | 35% |
+
+Mean frontier *rises* with erasure count: more blanks give more simultaneous openings, not fewer.
+What narrows is the minimum. Bottleneck frequency tracks erasure count rather than varying
+independently of it, so it grades effort rather than adding a fourth dimension.
+
+**Character is the independent lever, and it is what §31 was asking for.** At a fixed effort level
+the families vary widely:
+
+| Families required | at 6 cells | at 12 cells |
+|---|---:|---:|
+| Column sums only | 35% | 2% |
+| Column sums + row identity | 49% | 50% |
+| Column sums + cross-team | 10% | 2% |
+| Column sums + cross-team + row identity | 4% | 41% |
+| Anything requiring the global identity | <1% | 3% |
+
+Every Tuesday can demand a different opening without changing how long it takes. **The global
+identity is rare** — it appears in a few percent of paths even at the hardest level — so a puzzle
+that requires it is a genuinely distinct event and worth placing deliberately.
+
+**Attention is a selection axis, not a difficulty one.** Whether a board needs a live footnote to
+close is a property of the direction rather than of the erasure, so Saturday boards can be chosen
+from directions carrying one without changing the cell count. It rises with erasure count only
+because more blanks means more rows in play: 0.3% at two cells, 5.7% at six, 21.3% at twelve.
+
+**Frontier width ignores the last three steps of a solution, and that is not arbitrary.** A solve
+narrows by exhaustion as it runs out of cells. Trimming one step leaves 43% of boards reporting a
+bottleneck of one; trimming two leaves 36%; trimming three leaves 10% and the distribution comes out
+smooth. Less than three and the metric mostly reports its own artefact. Recorded here so it is not
+relitigated.
+
+**⚠️ The band boundaries are not set.** These are distributions, not thresholds. Where the lines
+fall gets fixed against real solving times from the January beta — which is what C7 records — and
+not against anyone's estimate of what feels hard.
 
 ### Rejected: random daily difficulty
 
@@ -1177,6 +1355,10 @@ What they provide is **variation within a constant form**: difficulty changes, t
 Every Tuesday at medium difficulty, but **each Tuesday demanding different techniques** — one opens via the pitching cross, another via the global identity. Predictable in effort, unpredictable in path.
 
 It's what crosswords do: Saturday is always hard, but never the same kind of hard.
+
+**This is now a pool query rather than an aspiration.** The family distributions above show the
+variety is really there at every effort level, so the calendar builder selects on two axes and
+sprinkles the third.
 
 ### Format's own advantage
 
@@ -1557,8 +1739,10 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 - [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions before quality filters
 - [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
-- [ ] **⚠️ Blocking: the column set.** The current board's constraint graph is a forest, which caps every puzzle at the trivial regime. Recommendation and measurements in §6; **the compressibility measurement should not run until this is settled**, because it would measure a board that is about to change
-- [ ] **⚠️ Then: compressibility and technique distribution.** For a sample of surviving directions — how many cells can be erased preserving uniqueness *and* derivability, and which techniques the result demands. **This decides whether the board size produces hard puzzles.** Everything about board dimensions is blocked on it (§6)
+- [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
+- [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the three-dimensional calendar model is in §31
+- [ ] **Compressibility as a pool quality metric.** §31 measured the solution path under *random* erasure, which is the right comparison between boards. What is still open is the per-direction question §5 asks: the maximum share of cells a given boxscore can lose while staying derivable, which is what ranks one candidate against another
+- [ ] **Erasure ordering.** Random erasure was enough to measure; the real algorithm is not decided, and it now has data to be informed by
 - [ ] Re-measure era distribution after quality filters, before deciding whether the calendar needs era weighting (§5)
 - [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
