@@ -74,6 +74,54 @@ class TestPropagation:
         assert solution.times_used[Technique.PROPAGATION] == 1
 
 
+class TestBounding:
+    def test_solves_a_pair_that_no_single_equation_can_reach(self, cubs_at_braves_1968: Direction) -> None:
+        # Two blanks in the runs column, so no equation has one unknown in it and propagation
+        # stops. They add to nothing and neither can be negative, so both are nothing.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
+        )
+
+        assert solution.is_complete
+        assert solution.values["batting[1].runs"] == 0
+        assert solution.values["batting[3].runs"] == 0
+        assert solution.highest_technique == Technique.BOUNDING
+
+    def test_claims_no_identity_for_a_bounded_deduction(self, cubs_at_braves_1968: Direction) -> None:
+        # Only the bounded one. Once bounding pins the first zero the second blank is alone in its
+        # column, so it comes back through a plain column sum and names it.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
+        )
+
+        by_technique = {deduction.technique: deduction.from_identity for deduction in solution.deductions}
+        assert by_technique[Technique.BOUNDING] is None
+        assert by_technique[Technique.PROPAGATION] == "batting_column_sum"
+
+    def test_drops_back_to_the_cheap_rule_once_bounding_opens_a_way_in(self, cubs_at_braves_1968: Direction) -> None:
+        # Bounding pins the two zeros; the third blank is then alone in its column and belongs to
+        # propagation. Crediting bounding for it would overstate how hard the puzzle was.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs", "batting[0].hits"),
+        )
+
+        by_cell = {deduction.cell: deduction.technique for deduction in solution.deductions}
+        assert by_cell["batting[0].hits"] == Technique.SINGLE_UNKNOWN
+
+    def test_refuses_to_pick_one_of_two_possibilities(self, cubs_at_braves_1968: Direction) -> None:
+        # These two runs add to two, so each could be nothing, one or two. A solver that answered
+        # anyway would be guessing, and the whole guarantee rests on it never doing that.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[0].runs", "batting[2].runs"),
+        )
+
+        assert solution.unsolved == frozenset({"batting[0].runs", "batting[2].runs"})
+
+
 class TestTheGlobalIdentityIsWithheld:
     def test_leaves_a_cell_only_the_team_identity_could_reach(self, cubs_at_braves_1968: Direction) -> None:
         # Runners left on base appear in no equation but the global team identity. Until the ladder

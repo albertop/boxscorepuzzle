@@ -10,37 +10,51 @@ below it has stopped making progress, which is how a person solves and the only 
 "highest technique required" means anything. Admitting the global team identity alongside the column
 sums would have the easiest rule crack the hardest step, and every puzzle would look trivial.
 
-So far the ladder has its first two rungs: a single unknown in an equation, and the same rule
-propagated to a fixed point.
+There is no rung for solving a 2x2 system. It is not an omission: no two equations on this board
+share more than one cell, so no pair of them ever has the same two unknowns. A test in
+`test_constraints` holds that line, and will fail if a board change makes the rung reachable.
+
+So far the ladder has three rungs: a single unknown in an equation, the same rule propagated to a
+fixed point, and narrowing a cell's range until one value is left standing.
 """
 
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
+from boxscore_forge.bounds import narrow
 from boxscore_forge.constraints import BoardShape, Equation, constrained_cells, equations
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import Identity
 
 
 class Technique(StrEnum):
-    """The ladder. Order is meaningful: a solver reaches for the lowest rung that still moves."""
+    """The ladder. Order is meaningful: a solver reaches for the lowest rung that still moves.
+
+    The values are the design's labels, and T3 is absent because this board cannot use it.
+    """
 
     SINGLE_UNKNOWN = "T1"
     PROPAGATION = "T2"
+    BOUNDING = "T4"
 
 
-_LADDER: tuple[Technique, ...] = (Technique.SINGLE_UNKNOWN, Technique.PROPAGATION)
+_LADDER: tuple[Technique, ...] = (Technique.SINGLE_UNKNOWN, Technique.PROPAGATION, Technique.BOUNDING)
 
 
 @dataclass(frozen=True, slots=True)
 class Deduction:
-    """One cell worked out, and what it took to get there."""
+    """One cell worked out, and what it took to get there.
+
+    `from_identity` is None for a bounding deduction. Nothing was computed from one rule there: the
+    cell was cornered by everything on the board at once, and naming a single identity would be
+    inventing a provenance the reasoning never had.
+    """
 
     cell: str
     value: int
     technique: Technique
-    from_identity: Identity
+    from_identity: Identity | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,8 +92,14 @@ def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
     system = tuple(equation for equation in equations(shape) if not equation.is_global)
     deductions: list[Deduction] = []
 
+    # Givens that already disagree are caught here rather than later by bounding, so the complaint
+    # names the identity that broke instead of whichever cell happened to run out of room first.
+    _reject_contradictions(system, values)
+
     while True:
-        deduction = _next_deduction(system, values, given)
+        # The ladder is walked from the bottom every time, so a cell that bounding opens up is
+        # picked up again by the cheapest rule rather than by the one that happened to be running.
+        deduction = _next_deduction(system, values, given) or _next_bounded_deduction(shape, values)
         if deduction is None:
             break
         values[deduction.cell] = deduction.value
@@ -108,6 +128,23 @@ def _next_deduction(
             technique=_technique_for(equation, cell, given),
             from_identity=equation.origin,
         )
+    return None
+
+
+def _next_bounded_deduction(shape: BoardShape, values: Mapping[str, int]) -> Deduction | None:
+    """The first cell whose range has closed to a single value.
+
+    Only one at a time, and then back to the bottom of the ladder. Taking every cornered cell in one
+    sweep would be faster and would misreport the puzzle, crediting bounding for cells that a plain
+    column sum could have produced once the first of them was known.
+    """
+    domains = narrow(shape, values)
+    for cell in sorted(domains):
+        if cell in values:
+            continue
+        value = domains[cell].fixed_value
+        if value is not None:
+            return Deduction(cell=cell, value=value, technique=Technique.BOUNDING, from_identity=None)
     return None
 
 

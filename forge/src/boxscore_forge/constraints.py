@@ -12,6 +12,7 @@ Equations depend on the board's *shape* and never on its values. A cell being er
 a constraint along with it.
 """
 
+import functools
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
 
@@ -129,6 +130,76 @@ def cell_values(direction: Direction) -> dict[str, int]:
     return values
 
 
+def all_cells(shape: BoardShape) -> frozenset[str]:
+    """Every cell a board of this shape has, named without needing any of its values."""
+    return frozenset(
+        [
+            *(batting_cell(index, column) for index in range(shape.batter_count) for column in BATTING_COLUMNS),
+            *(batting_total_cell(column) for column in BATTING_COLUMNS),
+            *(pitching_cell(index, column) for index in range(shape.pitcher_count) for column in PITCHING_COLUMNS),
+            *(pitching_total_cell(column) for column in PITCHING_COLUMNS),
+            *(footnote_cell(field) for field in FOOTNOTE_FIELDS),
+            *(line_score_cell(field) for field in LINE_SCORE_FIELDS),
+            *(inning_cell("offense", index) for index in range(shape.offense_innings)),
+            *(inning_cell("defense", index) for index in range(shape.defense_innings)),
+        ]
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class Inequality:
+    """`sum(coefficient * cell) >= 0`, tagged with where it came from."""
+
+    terms: tuple[Term, ...]
+    origin: Identity
+
+
+@functools.cache
+def inequalities(shape: BoardShape) -> tuple[Inequality, ...]:
+    """The bounds a player can reason with. Nothing here computes a value; they only rule some out.
+
+    With the 2x2 rung unreachable on this board, these are the only thing standing between forced
+    single-unknown deductions and the global identity, which makes them the source of whatever
+    difficulty the board is capable of.
+    """
+    return (*_non_negativity(shape), *_batting_bounds(shape), *_pitching_bounds(shape))
+
+
+def _non_negativity(shape: BoardShape) -> Iterator[Inequality]:
+    for cell in sorted(all_cells(shape)):
+        yield Inequality((Term(cell, 1),), Identity.NON_NEGATIVE)
+
+
+def _batting_bounds(shape: BoardShape) -> Iterator[Inequality]:
+    """A batter cannot have more hits than at-bats, and a team cannot drive in more than it scored."""
+    for index in range(shape.batter_count):
+        yield Inequality(
+            (Term(batting_cell(index, "at_bats"), 1), Term(batting_cell(index, "hits"), -1)),
+            Identity.HITS_WITHIN_AT_BATS,
+        )
+    yield Inequality(
+        (Term(batting_total_cell("at_bats"), 1), Term(batting_total_cell("hits"), -1)),
+        Identity.HITS_WITHIN_AT_BATS,
+    )
+    yield Inequality(
+        (Term(batting_total_cell("runs"), 1), Term(batting_total_cell("runs_batted_in"), -1)),
+        Identity.RUNS_BATTED_IN_WITHIN_RUNS,
+    )
+
+
+def _pitching_bounds(shape: BoardShape) -> Iterator[Inequality]:
+    """No more of a pitcher's runs can be earned than he gave up."""
+    for index in range(shape.pitcher_count):
+        yield Inequality(
+            (Term(pitching_cell(index, "runs"), 1), Term(pitching_cell(index, "earned_runs"), -1)),
+            Identity.EARNED_RUNS_WITHIN_RUNS,
+        )
+    yield Inequality(
+        (Term(pitching_total_cell("runs"), 1), Term(pitching_total_cell("earned_runs"), -1)),
+        Identity.EARNED_RUNS_WITHIN_RUNS,
+    )
+
+
 def constrained_cells(shape: BoardShape, *, including_global: bool = True) -> frozenset[str]:
     """Cells that appear in at least one equation, and so can be deduced when they are missing.
 
@@ -146,8 +217,14 @@ def constrained_cells(shape: BoardShape, *, including_global: bool = True) -> fr
     )
 
 
+@functools.cache
 def equations(shape: BoardShape) -> tuple[Equation, ...]:
-    """The full equality system for a board of this shape."""
+    """The full equality system for a board of this shape.
+
+    Cached because the solver rebuilds the system on every pass and there are only a handful of
+    distinct board shapes in a whole run. Safe to cache: the result is a function of the shape
+    alone, which is the same reason erasing a cell cannot erase a constraint.
+    """
     return (
         *_column_sum_equations(shape),
         *_cross_team_equations(),
