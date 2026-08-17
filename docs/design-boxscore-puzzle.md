@@ -244,6 +244,11 @@ This makes the **quality metric** a central design piece:
 
 - **Compressibility** — max % of cells removable while preserving uniqueness. The primary metric, expensive to compute; only run on candidates that pass the prefilter.
 - **Zero density** — a 3-hit game leaves almost everything at 0 and cells force themselves. Penalize.
+
+> **⚠️ Measured August 2026, and the prefilter assumption is wrong — see "What compressibility
+> actually correlates with" below.** The cheap screens do predict compressibility, strongly, but with
+> the opposite sign to the one this list assumes.
+
 - **Roster compactness** — hard filter. **⚠️ Thresholds provisional** (≤10 batters in the offensive
   team, ≤3 pitchers in the defensive team). These are unvalidated estimates pending the measurements
   in §6. Note the filter is **asymmetric**: only the offensive team's batters and the defensive
@@ -270,6 +275,51 @@ whether a boxscore is a puzzle. Expect a significant further cut.
 **Caveat:** the discrepancy filter only covers 1898–1986. From 1987 on, "no reduction" means "not
 measured," not "clean" — though modern rosters barely pass the roster filter anyway, so those years
 contribute little.
+
+### What compressibility actually correlates with (measured, August 2026)
+
+Per-direction compressibility — the ceiling for *this* boxscore, not the average board's response to
+random erasure — searched over 120 directions, 10 per decade. This is the question that orders
+candidates against each other, and it is deliberately not the §31 measurement.
+
+**Boards compress much further than assumed.** Median **58.6%** of the grid removable, p10 50%, p90
+68%, range 42–80%. Mean 48 of 82 cells. The 25–35% that used to sit in §6 was invented and is low by
+half. **Flat across decades**, 55% to 63% — compressibility is no argument for any era.
+
+**Chains at the ceiling are long:** 16 to 51 steps, concentrated between 30 and 42, and
+compressibility and chain length move together (r = +0.74). The worry that a board might compress far
+only into short independent chains does not materialise.
+
+**The cheap screens predict compressibility strongly — with the wrong sign:**
+
+| Screen | Correlation with compressibility | What §5 assumed |
+|---|---:|---|
+| Zero density | **+0.79** | Penalize it |
+| Digit range (cells > 3) | **−0.70** | Reward it |
+| Scoring innings | −0.65 | Reward variety |
+| Line score variety | −0.54 | Reward variety |
+
+**So the prefilter idea works and the polarity is inverted.** Screening *for* compressibility means
+selecting zero-heavy, low-scoring games — exactly the boards §5 wanted to exclude on the grounds that
+"forced-by-zero cells are not puzzles". Both statements are right at once: a board full of zeros
+compresses beautifully because a column summing to nothing forces every blank in it, and that is a
+long solution made of trivial steps.
+
+**⚠️ Consequences that need deciding, not assuming:**
+
+1. **Compressibility on its own is not a quality metric.** Maximising it selects for boredom. It
+   measures how much can be taken away, not whether taking it away leaves anything to think about.
+2. **Chain length may be gameable the same way.** It counts dependent steps without weighting how
+   hard each one is, so a cascade of zero-forcings scores as a long chain. That bears directly on
+   §31's decision to make chain length the generator's control variable — it may need a companion
+   constraint on zero density rather than standing alone.
+3. **The screens keep their value as screens, with their sign flipped back to §5's intent.** They are
+   cheap and they are strongly informative; they simply predict the wrong target.
+
+**Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 55,024 that is **70 hours** —
+a long batch rather than an impossibility, so the expensive measurement can run pool-wide if it is
+worth doing. The search is randomised greedy with five restarts, which finds a *maximal* erasure
+rather than a *maximum* one, so every figure above is a lower bound.
 
 ### What each difficulty level costs the pool (measured, August 2026)
 
@@ -466,7 +516,18 @@ identity, and §31 rests on measurements taken against this board rather than th
 |---|---|---|
 | Max batters in the offensive team | ≤10 | **Estimate.** Comes from "roughly 16 rows fit" — never measured against a real board |
 | Max pitchers in the defensive team | ≤3 | **Estimate.** Same origin |
-| % of cells erased | 25–35% | **Invented.** No basis yet |
+| % of cells erased | 25–35% | **Superseded.** The erasure algorithm targets a chain length; cell count is whatever reaching it costs (§31, §36) |
+
+**⚠️ When the row ceiling is measured, the question changes.** The caps were set to fit a screen, on
+the assumption that pool was scarce. It is not: the calendar consumes about 674 directions a year
+against 55,024 surviving, which is over eighty years (§5). **The right question stops being "how many
+rows fit" and becomes "how many rows do we want."**
+
+The roster filter is far more restrictive than it needs to be, and the 1910–1949 era skew is being
+paid for with pool the project has no use for. `discovery/board-topology` already shows a 17-row
+budget yields 271,264 directions with a near-flat decade distribution and the 1970s as the largest
+decade. **The era-variety argument may well outweigh the pool argument** — but the decision still
+waits on the browser prototype, because none of this says how many rows actually fit on a phone.
 
 ### How these get resolved
 
@@ -1310,8 +1371,16 @@ three, so selecting on chain length gives a cleaner grade than selecting on how 
 | 12 | 25.6% | 4 / 7 | 4.79 | 35% |
 
 Mean frontier *rises* with erasure count: more blanks give more simultaneous openings, not fewer.
-What narrows is the minimum. Bottleneck frequency tracks erasure count rather than varying
-independently of it, so it grades effort rather than adding a fourth dimension.
+What narrows is the minimum.
+
+**Bottleneck frequency was proposed as a fourth dimension and measured out.** No board in the sample
+pinched to a single move more than twice, and the frequency rises with erasure count rather than
+varying within a level — 0% of boards pinch at four cells erased, 3% at six, 10% at eight, 20% at
+ten, 35% at twelve. It grades effort, badly, and adds no dimension. Closed.
+
+**Chain length is the control variable, not cell count.** Of the three effort metrics it is the one
+that grades cleanly, so the erasure algorithm takes a target chain length and lets the cell count
+fall out of reaching it (§36), and the bands are set on chain length.
 
 **Character is the independent lever, and it is what §31 was asking for.** At a fixed effort level
 the families vary widely:
@@ -1742,7 +1811,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
 - [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the three-dimensional calendar model is in §31
 - [ ] **Compressibility as a pool quality metric.** §31 measured the solution path under *random* erasure, which is the right comparison between boards. What is still open is the per-direction question §5 asks: the maximum share of cells a given boxscore can lose while staying derivable, which is what ranks one candidate against another
-- [ ] **Erasure ordering.** Random erasure was enough to measure; the real algorithm is not decided, and it now has data to be informed by
+- [ ] **Erasure ordering.** Random erasure was enough to measure; the real algorithm is not decided. **Its input is a target chain length, not a number of cells to erase** — chain length grades more cleanly than cell count (r = −0.81 against frontier width, against +0.66 for cell count), so erasure is the means and chain length is the objective. Cell count is whatever falls out of reaching it. **The difficulty bands, when they are set, are set on chain length.**
+- [x] ~~Bottleneck frequency as a difficulty dimension~~ — **measured and rejected (August 2026).** No board pinches to a single move more than twice, and the frequency rises monotonically with erasure count rather than varying within a level, so there is nothing in it to grade. Closed; do not propose it again (§31)
 - [ ] Re-measure era distribution after quality filters, before deciding whether the calendar needs era weighting (§5)
 - [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
