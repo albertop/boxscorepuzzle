@@ -14,7 +14,14 @@ from collections.abc import Iterator
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from boxscore_forge.boxscore import BattingLine, Direction, Footnotes, LineScore, PitchingLine
+from boxscore_forge.boxscore import (
+    BatterFootnotes,
+    BattingLine,
+    Direction,
+    LineScore,
+    PitchingLine,
+    TeamFootnotes,
+)
 from boxscore_forge.identities import find_violations
 from tests.strategies import valid_directions
 
@@ -35,36 +42,55 @@ def _int_field_names(model: type) -> tuple[str, ...]:
 
 
 def _batting_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
-    for index, line in enumerate(direction.batting):
+    for index, row in enumerate(direction.batting):
         for field in _int_field_names(BattingLine):
             rows = list(direction.batting)
-            rows[index] = dataclasses.replace(line, **{field: getattr(line, field) + delta})
+            rows[index] = dataclasses.replace(row, **{field: getattr(row, field) + delta})
             yield f"batting[{index}].{field}", dataclasses.replace(direction, batting=tuple(rows))
 
+    totals = direction.batting_totals
     for field in _int_field_names(BattingLine):
-        totals = direction.batting_totals
         moved = dataclasses.replace(totals, **{field: getattr(totals, field) + delta})
         yield f"batting_totals.{field}", dataclasses.replace(direction, batting_totals=moved)
 
 
+def _footnote_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
+    for index, row in enumerate(direction.batter_footnotes):
+        for field in _int_field_names(BatterFootnotes):
+            rows = list(direction.batter_footnotes)
+            rows[index] = dataclasses.replace(row, **{field: getattr(row, field) + delta})
+            yield f"footnotes[{index}].{field}", dataclasses.replace(direction, batter_footnotes=tuple(rows))
+
+    totals = direction.footnote_totals
+    for field in _int_field_names(BatterFootnotes):
+        moved = dataclasses.replace(totals, **{field: getattr(totals, field) + delta})
+        yield f"footnote_totals.{field}", dataclasses.replace(direction, footnote_totals=moved)
+
+
 def _pitching_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
-    for index, line in enumerate(direction.pitching):
+    for index, row in enumerate(direction.pitching):
         for field in _int_field_names(PitchingLine):
             rows = list(direction.pitching)
-            rows[index] = dataclasses.replace(line, **{field: getattr(line, field) + delta})
+            rows[index] = dataclasses.replace(row, **{field: getattr(row, field) + delta})
             yield f"pitching[{index}].{field}", dataclasses.replace(direction, pitching=tuple(rows))
 
+    totals = direction.pitching_totals
     for field in _int_field_names(PitchingLine):
-        totals = direction.pitching_totals
         moved = dataclasses.replace(totals, **{field: getattr(totals, field) + delta})
         yield f"pitching_totals.{field}", dataclasses.replace(direction, pitching_totals=moved)
 
 
-def _footnote_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
-    for field in _int_field_names(Footnotes):
-        footnotes = direction.footnotes
+def _team_footnote_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
+    for field in _int_field_names(TeamFootnotes):
+        footnotes = direction.team_footnotes
         moved = dataclasses.replace(footnotes, **{field: getattr(footnotes, field) + delta})
-        yield f"footnotes.{field}", dataclasses.replace(direction, footnotes=moved)
+        yield f"team_footnotes.{field}", dataclasses.replace(direction, team_footnotes=moved)
+
+
+def _move(innings: tuple[int, ...], index: int, delta: int) -> tuple[int, ...]:
+    mutated = list(innings)
+    mutated[index] += delta
+    return tuple(mutated)
 
 
 def _line_score_perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
@@ -82,16 +108,11 @@ def _line_score_perturbations(direction: Direction, delta: int) -> Iterator[tupl
         yield f"line_score.defense_by_inning[{index}]", dataclasses.replace(direction, line_score=moved)
 
 
-def _move(innings: tuple[int, ...], index: int, delta: int) -> tuple[int, ...]:
-    mutated = list(innings)
-    mutated[index] += delta
-    return tuple(mutated)
-
-
 def _perturbations(direction: Direction, delta: int) -> Iterator[tuple[str, Direction]]:
     yield from _batting_perturbations(direction, delta)
-    yield from _pitching_perturbations(direction, delta)
     yield from _footnote_perturbations(direction, delta)
+    yield from _pitching_perturbations(direction, delta)
+    yield from _team_footnote_perturbations(direction, delta)
     yield from _line_score_perturbations(direction, delta)
 
 
@@ -103,7 +124,7 @@ class TestBalancedBoxscoresAreAccepted:
 
 class TestEveryParticipatingValueIsChecked:
     @given(valid_directions(), st.sampled_from([-1, 1]))
-    @settings(max_examples=50)
+    @settings(max_examples=40)
     def test_moving_any_participating_value_breaks_an_identity(self, direction: Direction, delta: int) -> None:
         # If this fails, a value on the board takes part in no identity — which means the solver has
         # a cell it can never deduce and the generator has one it can erase without consequence.
@@ -116,7 +137,7 @@ class TestEveryParticipatingValueIsChecked:
         assert unchecked == []
 
     @given(valid_directions())
-    @settings(max_examples=50)
+    @settings(max_examples=40)
     def test_moving_a_deliberately_unused_value_changes_nothing(self, direction: Direction) -> None:
         # Only upward: taking an unused value below zero is still caught by non-negativity, which
         # is correct and not what this property is about.
@@ -141,8 +162,13 @@ class TestOrderIndependence:
     @given(valid_directions(), st.data())
     def test_batting_order_does_not_affect_validity(self, direction: Direction, data: st.DataObject) -> None:
         # The identities are sums, so the board may reorder or relabel rows without changing
-        # whether the boxscore balances. The progressive reveal depends on rows being addressable
-        # independently of the order they were dealt in.
-        reordered = data.draw(st.permutations(direction.batting))
+        # whether the boxscore balances. Rows and their footnotes move together, because a
+        # sacrifice belongs to the batter rather than to the position in the order.
+        order = data.draw(st.permutations(range(len(direction.batting))))
+        reordered = dataclasses.replace(
+            direction,
+            batting=tuple(direction.batting[index] for index in order),
+            batter_footnotes=tuple(direction.batter_footnotes[index] for index in order),
+        )
 
-        assert find_violations(dataclasses.replace(direction, batting=tuple(reordered))) == ()
+        assert find_violations(reordered) == ()

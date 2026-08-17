@@ -44,13 +44,14 @@ class Bounds:
 def narrow(shape: BoardShape, given: Mapping[str, int]) -> dict[str, Bounds]:
     """Squeeze every cell as far as the equations and inequalities allow.
 
-    The global team identity is left out, exactly as the solver leaves it out: bounding sits below
-    it on the ladder, so it must not borrow its reach.
+    The global identity is in here with everything else. It is not a technique held in reserve, just
+    one more equation; which puzzles actually needed it is recorded on the family axis instead of
+    being enforced by withholding it.
     """
     domains = {
         cell: Bounds(given[cell], given[cell]) if cell in given else Bounds(0, None) for cell in all_cells(shape)
     }
-    system = tuple(equation for equation in equations(shape) if not equation.is_global)
+    system = equations(shape)
     bounds_rules = inequalities(shape)
 
     while _tighten_once(domains, system, bounds_rules):

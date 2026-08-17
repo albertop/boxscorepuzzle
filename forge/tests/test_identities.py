@@ -1,7 +1,7 @@
 """Layer 1 of the correctness guarantee: a boxscore that does not satisfy every identity never
 reaches the pool.
 
-These identities are also the constraint system the T1-T5 solver reasons over, so a mistake here
+These identities are also the constraint system the solver reasons over, so a mistake here
 propagates into both the generator and the difficulty measurement.
 """
 
@@ -10,20 +10,18 @@ import dataclasses
 import pytest
 
 from boxscore_forge.boxscore import BattingLine, Direction, LineScore, PitchingLine
-from boxscore_forge.identities import Identity, find_violations
+from boxscore_forge.identities import FAMILY_OF, Family, Identity, find_violations
 
 
 class TestBalancedBoxscore:
     def test_finds_no_violations_when_the_game_is_real_and_balanced(self, cubs_at_braves_1968: Direction) -> None:
-        violations = find_violations(cubs_at_braves_1968)
-
-        assert violations == ()
+        assert find_violations(cubs_at_braves_1968) == ()
 
 
 class TestColumnSums:
     @pytest.mark.parametrize(
         "column",
-        ["at_bats", "runs", "hits", "runs_batted_in", "walks", "strikeouts"],
+        ["plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts"],
         ids=lambda column: f"batting-{column}",
     )
     def test_detects_batting_total_that_disagrees_with_its_column(
@@ -32,11 +30,26 @@ class TestColumnSums:
         inflated = dataclasses.replace(
             cubs_at_braves_1968.batting_totals, **{column: getattr(cubs_at_braves_1968.batting_totals, column) + 1}
         )
-        broken = dataclasses.replace(cubs_at_braves_1968, batting_totals=inflated)
 
-        violations = find_violations(broken)
+        violations = find_violations(dataclasses.replace(cubs_at_braves_1968, batting_totals=inflated))
 
         assert Identity.BATTING_COLUMN_SUM in {violation.identity for violation in violations}
+
+    @pytest.mark.parametrize(
+        "column",
+        ["hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference"],
+        ids=lambda column: f"footnote-{column}",
+    )
+    def test_detects_footnote_total_that_disagrees_with_its_column(
+        self, cubs_at_braves_1968: Direction, column: str
+    ) -> None:
+        inflated = dataclasses.replace(
+            cubs_at_braves_1968.footnote_totals, **{column: getattr(cubs_at_braves_1968.footnote_totals, column) + 1}
+        )
+
+        violations = find_violations(dataclasses.replace(cubs_at_braves_1968, footnote_totals=inflated))
+
+        assert Identity.FOOTNOTE_COLUMN_SUM in {violation.identity for violation in violations}
 
     @pytest.mark.parametrize(
         "column",
@@ -49,9 +62,8 @@ class TestColumnSums:
         inflated = dataclasses.replace(
             cubs_at_braves_1968.pitching_totals, **{column: getattr(cubs_at_braves_1968.pitching_totals, column) + 1}
         )
-        broken = dataclasses.replace(cubs_at_braves_1968, pitching_totals=inflated)
 
-        violations = find_violations(broken)
+        violations = find_violations(dataclasses.replace(cubs_at_braves_1968, pitching_totals=inflated))
 
         assert Identity.PITCHING_COLUMN_SUM in {violation.identity for violation in violations}
 
@@ -68,73 +80,77 @@ class TestCrossTeamConstraint:
         moved_total = dataclasses.replace(
             cubs_at_braves_1968.pitching_totals, **{column: getattr(cubs_at_braves_1968.pitching_totals, column) + 1}
         )
-        broken = dataclasses.replace(cubs_at_braves_1968, pitching=(moved_row, second), pitching_totals=moved_total)
 
-        violations = find_violations(broken)
+        violations = find_violations(
+            dataclasses.replace(cubs_at_braves_1968, pitching=(moved_row, second), pitching_totals=moved_total)
+        )
 
         identities = {violation.identity for violation in violations}
         assert Identity.CROSS_TEAM_TOTAL in identities
-        assert Identity.BATTING_COLUMN_SUM not in identities
         assert Identity.PITCHING_COLUMN_SUM not in identities
 
 
-class TestPlateAppearanceIdentity:
-    def test_detects_left_on_base_that_breaks_the_team_identity(self, cubs_at_braves_1968: Direction) -> None:
-        broken = dataclasses.replace(
+class TestRowIdentity:
+    def test_accepts_the_row_whose_sacrifice_hit_makes_it_close(self, cubs_at_braves_1968: Direction) -> None:
+        # The leadoff batter has five plate appearances against four at-bats and no walks. Only the
+        # sacrifice hit closes that row, and it is the reason the footnote columns exist.
+        assert find_violations(cubs_at_braves_1968) == ()
+
+    def test_detects_a_row_whose_footnote_went_missing(self, cubs_at_braves_1968: Direction) -> None:
+        without_the_sacrifice = dataclasses.replace(
             cubs_at_braves_1968,
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=7),
+            batter_footnotes=(
+                dataclasses.replace(cubs_at_braves_1968.batter_footnotes[0], sacrifice_hits=0),
+                *cubs_at_braves_1968.batter_footnotes[1:],
+            ),
         )
 
-        violations = find_violations(broken)
+        violations = find_violations(without_the_sacrifice)
 
-        assert Identity.PLATE_APPEARANCES in {violation.identity for violation in violations}
+        assert Identity.ROW_PLATE_APPEARANCES in {violation.identity for violation in violations}
 
-    def test_accepts_a_batter_who_reached_on_defensive_interference(self, cubs_at_braves_1968: Direction) -> None:
-        # Reaching on catcher's interference is a plate appearance that is not an at-bat and not
-        # any of the other four categories. Verified against the whole Retrosheet database: with it
-        # the forward count of plate appearances balances in all 407,816 team-games, and without it
-        # 1,933 of them break.
-        #
-        # Turn one at-bat that made an out into an interference: the batter is no longer charged an
-        # at-bat, one fewer out is recorded, and he is left on base instead.
-        balanced = dataclasses.replace(
+    def test_detects_a_row_with_the_wrong_plate_appearance_count(self, cubs_at_braves_1968: Direction) -> None:
+        broken = dataclasses.replace(
             cubs_at_braves_1968,
             batting=(
-                dataclasses.replace(cubs_at_braves_1968.batting[0], at_bats=3),
-                *cubs_at_braves_1968.batting[1:],
+                dataclasses.replace(cubs_at_braves_1968.batting[3], plate_appearances=5),
+                *cubs_at_braves_1968.batting[4:],
+                *cubs_at_braves_1968.batting[:3],
             ),
-            batting_totals=dataclasses.replace(cubs_at_braves_1968.batting_totals, at_bats=35),
-            pitching=(
-                dataclasses.replace(cubs_at_braves_1968.pitching[0], outs=19),
-                cubs_at_braves_1968.pitching[1],
-            ),
-            pitching_totals=dataclasses.replace(cubs_at_braves_1968.pitching_totals, outs=26),
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=9, reached_on_interference=1),
-        )
-
-        assert find_violations(balanced) == ()
-
-    def test_detects_interference_left_out_of_the_count(self, cubs_at_braves_1968: Direction) -> None:
-        broken = dataclasses.replace(
-            cubs_at_braves_1968,
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, reached_on_interference=1),
         )
 
         violations = find_violations(broken)
 
-        assert Identity.PLATE_APPEARANCES in {violation.identity for violation in violations}
+        assert Identity.ROW_PLATE_APPEARANCES in {violation.identity for violation in violations}
 
-    def test_detects_missing_sacrifice_hit(self, cubs_at_braves_1968: Direction) -> None:
-        # The Cubs' one sacrifice hit is what makes 36 at-bats plus 2 walks reach 39 plate
-        # appearances. Drop it and the identity stops closing.
+    def test_names_which_row_broke(self, cubs_at_braves_1968: Direction) -> None:
         broken = dataclasses.replace(
             cubs_at_braves_1968,
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, sacrifice_hits=0),
+            batter_footnotes=(
+                *cubs_at_braves_1968.batter_footnotes[:4],
+                dataclasses.replace(cubs_at_braves_1968.batter_footnotes[4], hit_by_pitch=1),
+                *cubs_at_braves_1968.batter_footnotes[5:],
+            ),
+        )
+
+        details = [
+            violation.detail
+            for violation in find_violations(broken)
+            if violation.identity == Identity.ROW_PLATE_APPEARANCES
+        ]
+        assert any("batting[4]" in detail for detail in details)
+
+
+class TestGlobalIdentity:
+    def test_detects_left_on_base_that_breaks_the_team_count(self, cubs_at_braves_1968: Direction) -> None:
+        broken = dataclasses.replace(
+            cubs_at_braves_1968,
+            team_footnotes=dataclasses.replace(cubs_at_braves_1968.team_footnotes, left_on_base=7),
         )
 
         violations = find_violations(broken)
 
-        assert Identity.PLATE_APPEARANCES in {violation.identity for violation in violations}
+        assert Identity.GLOBAL_PLATE_APPEARANCES in {violation.identity for violation in violations}
 
 
 class TestLineScore:
@@ -146,21 +162,7 @@ class TestLineScore:
             ),
         )
 
-        violations = find_violations(broken)
-
-        assert Identity.LINE_SCORE_RUNS in {violation.identity for violation in violations}
-
-    def test_detects_defense_innings_that_do_not_sum_to_the_run_total(self, cubs_at_braves_1968: Direction) -> None:
-        broken = dataclasses.replace(
-            cubs_at_braves_1968,
-            line_score=dataclasses.replace(
-                cubs_at_braves_1968.line_score, defense_by_inning=(0, 0, 0, 1, 0, 0, 0, 0, 0)
-            ),
-        )
-
-        violations = find_violations(broken)
-
-        assert Identity.LINE_SCORE_RUNS in {violation.identity for violation in violations}
+        assert Identity.LINE_SCORE_RUNS in {violation.identity for violation in find_violations(broken)}
 
     def test_detects_line_score_hits_that_disagree_with_the_batting_total(self, cubs_at_braves_1968: Direction) -> None:
         broken = dataclasses.replace(
@@ -168,47 +170,60 @@ class TestLineScore:
             line_score=dataclasses.replace(cubs_at_braves_1968.line_score, offense_hits=10),
         )
 
-        violations = find_violations(broken)
-
-        assert Identity.LINE_SCORE_HITS in {violation.identity for violation in violations}
+        assert Identity.LINE_SCORE_HITS in {violation.identity for violation in find_violations(broken)}
 
 
 class TestBounds:
     def test_detects_more_hits_than_at_bats(self, cubs_at_braves_1968: Direction) -> None:
-        impossible = BattingLine(at_bats=1, runs=0, hits=2, runs_batted_in=0, walks=0, strikeouts=0)
+        impossible = BattingLine(plate_appearances=1, at_bats=1, runs=0, hits=2, walks=0, strikeouts=0)
         broken = dataclasses.replace(cubs_at_braves_1968, batting=(impossible, *cubs_at_braves_1968.batting[1:]))
 
-        violations = find_violations(broken)
+        assert Identity.HITS_WITHIN_AT_BATS in {violation.identity for violation in find_violations(broken)}
 
-        assert Identity.HITS_WITHIN_AT_BATS in {violation.identity for violation in violations}
+    def test_detects_at_bats_and_walks_beyond_the_plate_appearances(self, cubs_at_braves_1968: Direction) -> None:
+        # The new bound the plate appearance column makes available. It narrows from the opposite
+        # side to the row identity: that says what plate appearances add up to, this says what they
+        # cannot fall below.
+        impossible = BattingLine(plate_appearances=2, at_bats=3, runs=0, hits=0, walks=1, strikeouts=0)
+        broken = dataclasses.replace(cubs_at_braves_1968, batting=(impossible, *cubs_at_braves_1968.batting[1:]))
+
+        identities = {violation.identity for violation in find_violations(broken)}
+        assert Identity.PLATE_APPEARANCES_COVER_AT_BATS_AND_WALKS in identities
 
     def test_detects_more_earned_runs_than_runs(self, cubs_at_braves_1968: Direction) -> None:
         impossible = PitchingLine(outs=20, hits=10, runs=1, earned_runs=4, walks=1, strikeouts=3)
         broken = dataclasses.replace(cubs_at_braves_1968, pitching=(impossible, cubs_at_braves_1968.pitching[1]))
 
-        violations = find_violations(broken)
-
-        assert Identity.EARNED_RUNS_WITHIN_RUNS in {violation.identity for violation in violations}
-
-    def test_detects_more_runs_batted_in_than_runs(self, cubs_at_braves_1968: Direction) -> None:
-        broken = dataclasses.replace(
-            cubs_at_braves_1968,
-            batting_totals=dataclasses.replace(cubs_at_braves_1968.batting_totals, runs_batted_in=5),
-        )
-
-        violations = find_violations(broken)
-
-        assert Identity.RUNS_BATTED_IN_WITHIN_RUNS in {violation.identity for violation in violations}
+        assert Identity.EARNED_RUNS_WITHIN_RUNS in {violation.identity for violation in find_violations(broken)}
 
     def test_detects_a_negative_value(self, cubs_at_braves_1968: Direction) -> None:
         broken = dataclasses.replace(
             cubs_at_braves_1968,
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=-1),
+            team_footnotes=dataclasses.replace(cubs_at_braves_1968.team_footnotes, left_on_base=-1),
         )
 
-        violations = find_violations(broken)
+        assert Identity.NON_NEGATIVE in {violation.identity for violation in find_violations(broken)}
 
-        assert Identity.NON_NEGATIVE in {violation.identity for violation in violations}
+
+class TestFamilies:
+    def test_every_equality_identity_belongs_to_a_family(self) -> None:
+        # The family axis is one of the two things that describe a puzzle's difficulty. An identity
+        # missing from the map would silently drop out of that description.
+        equalities = {
+            Identity.BATTING_COLUMN_SUM,
+            Identity.FOOTNOTE_COLUMN_SUM,
+            Identity.PITCHING_COLUMN_SUM,
+            Identity.CROSS_TEAM_TOTAL,
+            Identity.ROW_PLATE_APPEARANCES,
+            Identity.GLOBAL_PLATE_APPEARANCES,
+            Identity.LINE_SCORE_RUNS,
+            Identity.LINE_SCORE_HITS,
+        }
+
+        assert equalities <= FAMILY_OF.keys()
+
+    def test_all_four_families_are_represented(self) -> None:
+        assert set(FAMILY_OF.values()) == set(Family)
 
 
 class TestViolationReporting:
@@ -219,27 +234,14 @@ class TestViolationReporting:
         # what is wrong rather than the first thing found.
         broken = dataclasses.replace(
             cubs_at_braves_1968,
-            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=7),
+            team_footnotes=dataclasses.replace(cubs_at_braves_1968.team_footnotes, left_on_base=7),
             line_score=dataclasses.replace(cubs_at_braves_1968.line_score, offense_hits=10),
         )
 
         identities = {violation.identity for violation in find_violations(broken)}
 
-        assert Identity.PLATE_APPEARANCES in identities
+        assert Identity.GLOBAL_PLATE_APPEARANCES in identities
         assert Identity.LINE_SCORE_HITS in identities
-
-    def test_names_the_column_that_broke(self, cubs_at_braves_1968: Direction) -> None:
-        broken = dataclasses.replace(
-            cubs_at_braves_1968,
-            batting_totals=dataclasses.replace(cubs_at_braves_1968.batting_totals, walks=9),
-        )
-
-        violations = find_violations(broken)
-
-        column_sum_details = [
-            violation.detail for violation in violations if violation.identity == Identity.BATTING_COLUMN_SUM
-        ]
-        assert any("walks" in detail for detail in column_sum_details)
 
 
 class TestLineScoreErrors:

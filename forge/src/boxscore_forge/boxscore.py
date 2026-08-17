@@ -9,6 +9,11 @@ puzzles that fail validation for no visible reason.
 
 Containers are frozen because they travel through a validation pipeline, where a mutable value is
 action at a distance waiting to happen.
+
+Plate appearances are a column, and that decision is what the whole board hangs on. Without it no
+individual cell takes part in a second equation, the constraint graph is a forest, and the only
+puzzles that survive validation are rows of independent subtractions. With it, every batter row
+carries its own identity and deduction can chain.
 """
 
 from dataclasses import dataclass
@@ -18,12 +23,41 @@ from dataclasses import dataclass
 class BattingLine:
     """One batter's row, or the batting totals row. Six columns, which is the board's width limit."""
 
+    plate_appearances: int
     at_bats: int
     runs: int
     hits: int
-    runs_batted_in: int
     walks: int
     strikeouts: int
+
+
+@dataclass(frozen=True, slots=True)
+class BatterFootnotes:
+    """What a printed boxscore prints below the grid, attributed to one batter.
+
+    These are given and never erased, like the line score. They are what makes the row identity
+    close: `PA = AB + BB + HBP + SF + SH + XI`.
+
+    They are zero on roughly nine rows in ten, which is a presentation hazard rather than a reason
+    to drop them — a player who has seen nothing but zeros will stop looking, and the row where one
+    finally appears is exactly the row whose arithmetic fails without it.
+    """
+
+    hit_by_pitch: int
+    sacrifice_flies: int
+    sacrifice_hits: int
+    reached_on_interference: int
+
+
+@dataclass(frozen=True, slots=True)
+class TeamFootnotes:
+    """Footnotes that belong to the team rather than to any batter.
+
+    Runners left on base are counted for the side, not charged to whoever was stranded, and the
+    global identity cannot be stated without them.
+    """
+
+    left_on_base: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,30 +74,6 @@ class PitchingLine:
     earned_runs: int
     walks: int
     strikeouts: int
-
-
-@dataclass(frozen=True, slots=True)
-class Footnotes:
-    """Given values the board prints below the grid rather than as columns, for the offensive team.
-
-    The width budget allows six data columns and no seventh, but a printed boxscore publishes these
-    same quantities as footnotes, which cost no column width and need no touch target because they
-    are never erased.
-
-    Without `left_on_base` the plate appearance identity cannot be expressed at all, and without the
-    remaining counts it does not close.
-
-    `reached_on_interference` is the category that is easy to forget, because it almost never
-    happens and a boxscore missing it still looks right. Checked against every team-game Retrosheet
-    has: counting it, the plate appearance total balances in all 407,816; leaving it out, 1,933 of
-    them silently fail to.
-    """
-
-    left_on_base: int
-    hit_by_pitch: int
-    sacrifice_flies: int
-    sacrifice_hits: int
-    reached_on_interference: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +103,9 @@ class Direction:
 
     batting: tuple[BattingLine, ...]
     batting_totals: BattingLine
+    batter_footnotes: tuple[BatterFootnotes, ...]
+    footnote_totals: BatterFootnotes
+    team_footnotes: TeamFootnotes
     pitching: tuple[PitchingLine, ...]
     pitching_totals: PitchingLine
-    footnotes: Footnotes
     line_score: LineScore

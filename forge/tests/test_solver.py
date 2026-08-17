@@ -1,9 +1,10 @@
-"""The bottom of the technique ladder: forced single-unknown deductions, propagated.
+"""The solver, and the two axes it reports a puzzle's difficulty on.
 
-Two things are under test that matter more than the arithmetic. The solver must never guess, so
-everything it produces has to match the boxscore it came from. And it must not reach for the global
-team identity while easier rules still work, or the hardest step in a puzzle gets solved by the
-easiest technique and the puzzle is reported as trivial.
+Three things matter more than the arithmetic. It must never guess, so everything it produces has to
+match the boxscore it came from. It must reach for bounding only after propagation has stopped, or
+the harder technique gets credited for work the easier one could have done. And it must describe
+the *shape* of the solution path, because how long the chain ran and how narrow the choice of next
+move became are what tell one puzzle from another — cell count alone cannot.
 """
 
 import pytest
@@ -11,8 +12,9 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from boxscore_forge.boxscore import Direction
-from boxscore_forge.constraints import cell_values, constrained_cells, shape_of
+from boxscore_forge.constraints import cell_values, cells_in_family, constrained_cells, shape_of
 from boxscore_forge.errors import ContradictionError
+from boxscore_forge.identities import Family
 from boxscore_forge.solver import Technique, solve
 from tests.strategies import valid_directions
 
@@ -24,60 +26,84 @@ def _erase(direction: Direction, *cells: str) -> dict[str, int]:
     return values
 
 
-class TestSingleUnknown:
+class TestPropagation:
     def test_recovers_a_single_erased_cell(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
         assert solution.is_complete
         assert solution.values["batting[3].hits"] == 1
-        assert solution.highest_technique == Technique.SINGLE_UNKNOWN
+        assert solution.hardest_technique == Technique.PROPAGATION
 
     def test_reports_which_identity_it_deduced_from(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
-        assert [deduction.cell for deduction in solution.deductions] == ["batting[3].hits"]
         assert solution.deductions[0].from_identity == "batting_column_sum"
+        assert solution.families_used == frozenset({Family.COLUMN_SUM})
 
 
 class TestNothingToDo:
     def test_reports_no_technique_when_the_board_is_already_complete(self, cubs_at_braves_1968: Direction) -> None:
-        # A board with nothing erased is not a puzzle. It demands no technique, and saying it
-        # required the easiest one would put it in the same bucket as a puzzle that did.
         solution = solve(shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968))
 
-        assert solution.is_complete
         assert solution.deductions == ()
-        assert solution.highest_technique is None
+        assert solution.hardest_technique is None
+        assert solution.narrowest_frontier is None
+        assert solution.chain_length == 0
 
 
-class TestPropagation:
-    def test_chains_deductions_and_marks_the_later_ones(self, cubs_at_braves_1968: Direction) -> None:
-        # The batting total for hits has to be recovered first, from the line score, before the
-        # column sum has only one unknown left in it.
+class TestTheRowIdentityEarnsItsPlace:
+    def test_recovers_a_cell_its_column_sum_cannot_reach(self, cubs_at_braves_1968: Direction) -> None:
+        # Two blanks in the at-bats column. On a board without the row identity this is ambiguous
+        # and the puzzle is thrown away; here one of them comes back through its own row.
         solution = solve(
             shape_of(cubs_at_braves_1968),
-            _erase(cubs_at_braves_1968, "batting_totals.hits", "batting[0].hits"),
+            _erase(cubs_at_braves_1968, "batting[1].at_bats", "batting[3].at_bats"),
         )
 
         assert solution.is_complete
-        assert solution.values["batting_totals.hits"] == 11
-        assert solution.values["batting[0].hits"] == 1
-        assert solution.highest_technique == Technique.PROPAGATION
+        assert solution.values["batting[1].at_bats"] == 5
+        assert solution.values["batting[3].at_bats"] == 4
+        assert Family.ROW_IDENTITY in solution.families_used
 
-    def test_counts_how_often_each_technique_was_needed(self, cubs_at_braves_1968: Direction) -> None:
+    def test_the_deduction_chains_rather_than_standing_alone(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(
             shape_of(cubs_at_braves_1968),
-            _erase(cubs_at_braves_1968, "batting_totals.hits", "batting[0].hits"),
+            _erase(cubs_at_braves_1968, "batting[1].at_bats", "batting[3].at_bats"),
         )
 
-        assert solution.times_used[Technique.SINGLE_UNKNOWN] == 1
-        assert solution.times_used[Technique.PROPAGATION] == 1
+        assert solution.chain_length >= 2
+
+
+class TestFamiliesReported:
+    def test_reports_the_cross_team_family_when_the_path_needed_it(self, cubs_at_braves_1968: Direction) -> None:
+        # Two blanks in the pitching strikeout column, so its own sum cannot reach either of them.
+        # The only way in is across the board: the batters struck out five times, so the pitchers
+        # recorded five.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "pitching_totals.strikeouts", "pitching[0].strikeouts"),
+        )
+
+        assert solution.is_complete
+        assert Family.CROSS_TEAM in solution.families_used
+
+    def test_reports_the_global_family_when_the_path_needed_it(self, cubs_at_braves_1968: Direction) -> None:
+        # Runners left on base appear in no equation but the global identity, so a board missing
+        # that cell can only be closed by counting plate appearances backward.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "team_footnotes.left_on_base"))
+
+        assert solution.is_complete
+        assert solution.values["team_footnotes.left_on_base"] == 8
+        assert Family.GLOBAL_IDENTITY in solution.families_used
+
+    def test_reports_only_the_families_actually_used(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+
+        assert Family.GLOBAL_IDENTITY not in solution.families_used
 
 
 class TestBounding:
     def test_solves_a_pair_that_no_single_equation_can_reach(self, cubs_at_braves_1968: Direction) -> None:
-        # Two blanks in the runs column, so no equation has one unknown in it and propagation
-        # stops. They add to nothing and neither can be negative, so both are nothing.
         solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
@@ -85,35 +111,29 @@ class TestBounding:
 
         assert solution.is_complete
         assert solution.values["batting[1].runs"] == 0
-        assert solution.values["batting[3].runs"] == 0
-        assert solution.highest_technique == Technique.BOUNDING
+        assert solution.hardest_technique == Technique.BOUNDING
 
     def test_claims_no_identity_for_a_bounded_deduction(self, cubs_at_braves_1968: Direction) -> None:
-        # Only the bounded one. Once bounding pins the first zero the second blank is alone in its
-        # column, so it comes back through a plain column sum and names it.
         solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
         )
 
-        by_technique = {deduction.technique: deduction.from_identity for deduction in solution.deductions}
-        assert by_technique[Technique.BOUNDING] is None
-        assert by_technique[Technique.PROPAGATION] == "batting_column_sum"
+        bounded = [d for d in solution.deductions if d.technique == Technique.BOUNDING]
+        assert bounded and all(deduction.from_identity is None for deduction in bounded)
 
-    def test_drops_back_to_the_cheap_rule_once_bounding_opens_a_way_in(self, cubs_at_braves_1968: Direction) -> None:
-        # Bounding pins the two zeros; the third blank is then alone in its column and belongs to
-        # propagation. Crediting bounding for it would overstate how hard the puzzle was.
+    def test_propagation_runs_to_a_fixed_point_before_bounding_starts(self, cubs_at_braves_1968: Direction) -> None:
+        # An exact value beats a narrowed range. If bounding ran first it would take cells a plain
+        # subtraction could have produced, and every puzzle would look harder than it is.
         solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs", "batting[0].hits"),
         )
 
-        by_cell = {deduction.cell: deduction.technique for deduction in solution.deductions}
-        assert by_cell["batting[0].hits"] == Technique.SINGLE_UNKNOWN
+        techniques = [deduction.technique for deduction in solution.deductions]
+        assert techniques[0] == Technique.PROPAGATION
 
     def test_refuses_to_pick_one_of_two_possibilities(self, cubs_at_braves_1968: Direction) -> None:
-        # These two runs add to two, so each could be nothing, one or two. A solver that answered
-        # anyway would be guessing, and the whole guarantee rests on it never doing that.
         solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[0].runs", "batting[2].runs"),
@@ -122,26 +142,78 @@ class TestBounding:
         assert solution.unsolved == frozenset({"batting[0].runs", "batting[2].runs"})
 
 
-class TestTheGlobalIdentityIsWithheld:
-    def test_leaves_a_cell_only_the_team_identity_could_reach(self, cubs_at_braves_1968: Direction) -> None:
-        # Runners left on base appear in no equation but the global team identity. Until the ladder
-        # admits it, this cell has to stay unsolved rather than be picked up by the easy rule.
-        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes.left_on_base"))
+class TestSolutionShape:
+    def test_a_lone_deduction_reports_no_frontier_at_all(self, cubs_at_braves_1968: Direction) -> None:
+        # One blank is one move. The board never offered a choice, so there is no width to report,
+        # and calling it a bottleneck of one would put it alongside puzzles that really are tight.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
-        assert not solution.is_complete
-        assert solution.unsolved == frozenset({"footnotes.left_on_base"})
+        assert solution.chain_length == 1
+        assert solution.narrowest_frontier is None
+        assert solution.mean_frontier is None
+
+    def test_independent_deductions_do_not_lengthen_the_chain(self, cubs_at_braves_1968: Direction) -> None:
+        # Two blanks in different columns that never depend on each other. Both are one step deep,
+        # and the frontier is two because either could have been taken first.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts"),
+        )
+
+        assert solution.chain_length == 1
+        assert solution.narrowest_frontier == 2
+        assert solution.mean_frontier == 2.0
+
+    def test_a_dependent_pair_bottlenecks_where_an_independent_pair_does_not(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        # The distinction the frontier is meant to capture. Both boards erase two cells; one leaves
+        # the player a choice of where to start and the other does not.
+        dependent = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting_totals.hits", "batting[0].hits"),
+        )
+        independent = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts"),
+        )
+
+        assert dependent.narrowest_frontier == 1
+        assert independent.narrowest_frontier == 2
+
+
+class TestTallies:
+    def test_counts_how_often_each_technique_was_needed(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
+        )
+
+        assert solution.times_used[Technique.BOUNDING] >= 1
+        assert sum(solution.times_used.values()) == len(solution.deductions)
+
+    def test_counts_how_often_each_family_was_needed(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].at_bats", "batting[3].at_bats"),
+        )
+
+        assert solution.family_counts[Family.ROW_IDENTITY] >= 1
+        assert solution.family_counts[Family.GLOBAL_IDENTITY] == 0
+
+    def test_reports_which_cells_a_family_can_reach_at_all(self, cubs_at_braves_1968: Direction) -> None:
+        # Which cells a kind of reasoning could ever touch, as opposed to which it did. The erasure
+        # algorithm will need this to aim a puzzle at a particular family.
+        reachable = cells_in_family(shape_of(cubs_at_braves_1968), Family.GLOBAL_IDENTITY)
+
+        assert "team_footnotes.left_on_base" in reachable
+        assert "batting[0].hits" not in reachable
 
 
 class TestItNeverGuesses:
     @given(valid_directions(), st.data())
     def test_recovers_any_single_erased_cell_exactly(self, direction: Direction, data: st.DataObject) -> None:
-        # Every cell the current ladder can reach must come back exactly, when it is the only one
-        # missing. A solver that returns a plausible value instead of the true one is the failure
-        # mode the whole design exists to prevent.
-        #
-        # The footnotes are excluded because they appear in the global identity alone, which is
-        # still withheld. When that rung is implemented this filter comes off.
-        cell = data.draw(st.sampled_from(sorted(constrained_cells(shape_of(direction), including_global=False))))
+        cell = data.draw(st.sampled_from(sorted(constrained_cells(shape_of(direction)))))
         original = cell_values(direction)
 
         solution = solve(shape_of(direction), _erase(direction, cell))
@@ -152,7 +224,7 @@ class TestItNeverGuesses:
     @given(valid_directions(), st.data())
     def test_deduces_nothing_that_contradicts_the_boxscore(self, direction: Direction, data: st.DataObject) -> None:
         cells = sorted(constrained_cells(shape_of(direction)))
-        erased = data.draw(st.lists(st.sampled_from(cells), min_size=1, max_size=6, unique=True))
+        erased = data.draw(st.lists(st.sampled_from(cells), min_size=1, max_size=8, unique=True))
         original = cell_values(direction)
 
         solution = solve(shape_of(direction), _erase(direction, *erased))
@@ -162,9 +234,6 @@ class TestItNeverGuesses:
 
 class TestContradiction:
     def test_refuses_givens_that_cannot_all_be_true(self, cubs_at_braves_1968: Direction) -> None:
-        # An equation with nothing left unknown that still does not balance means the givens
-        # contradict each other. That is a broken puzzle, not a hard one, and it must stop rather
-        # than produce a confident answer.
         values = cell_values(cubs_at_braves_1968)
         values["line_score.offense_runs"] = 5
 

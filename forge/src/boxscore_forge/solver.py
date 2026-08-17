@@ -1,21 +1,27 @@
-"""A solver restricted to the techniques a person can actually carry out.
+"""A solver restricted to the reasoning a person can actually carry out.
 
 This is not a constraint solver that happens to be limited. The limitation is the point: a puzzle
 ships only if this solver finishes without ever guessing, because uniqueness alone does not make a
 puzzle derivable, and a unique puzzle nobody can reason through is the worst failure the design
 admits — it looks correct.
 
-The ladder is walked from the bottom on every pass. A technique is only reached for when everything
-below it has stopped making progress, which is how a person solves and the only way the record of
-"highest technique required" means anything. Admitting the global team identity alongside the column
-sums would have the easiest rule crack the hardest step, and every puzzle would look trivial.
+There is no linear T1-to-T5 ladder any more, because it does not describe this system. The 2x2 rung
+cannot fire at all: every identity is a sum over a row or a column, so two of them meet at most at
+one cell. With that gone, single-unknown solving and propagating it to a fixed point are one
+operation rather than two, and the global identity is not a technique but one more equation inside
+that propagation. Only bounding is genuinely different, because it reasons over ranges instead of
+values.
 
-There is no rung for solving a 2x2 system. It is not an omission: no two equations on this board
-share more than one cell, so no pair of them ever has the same two unknowns. A test in
-`test_constraints` holds that line, and will fail if a board change makes the rung reachable.
+What replaces the ladder is two axes:
 
-So far the ladder has three rungs: a single unknown in an equation, the same rule propagated to a
-fixed point, and narrowing a cell's range until one value is left standing.
+  Technique  — propagation alone, or propagation plus bounding
+  Family     — which of column sums, row identity, cross-team and the global identity a solution
+               path actually had to use
+
+The publication rule is unchanged in substance: a puzzle ships only if this finishes without
+backtracking. Neither axis on its own says how hard a puzzle feels, which is why the solver also
+records the shape of the solution path — how long the chain of dependent steps ran, and how narrow
+the choice of next move became.
 """
 
 from collections.abc import Mapping
@@ -25,36 +31,42 @@ from enum import StrEnum
 from boxscore_forge.bounds import narrow
 from boxscore_forge.constraints import BoardShape, Equation, constrained_cells, equations
 from boxscore_forge.errors import ContradictionError
-from boxscore_forge.identities import Identity
+from boxscore_forge.identities import FAMILY_OF, Family, Identity
 
 
 class Technique(StrEnum):
-    """The ladder. Order is meaningful: a solver reaches for the lowest rung that still moves.
+    """The first axis. Ordered: bounding is only reached for when propagation has stopped."""
 
-    The values are the design's labels, and T3 is absent because this board cannot use it.
-    """
-
-    SINGLE_UNKNOWN = "T1"
-    PROPAGATION = "T2"
-    BOUNDING = "T4"
+    PROPAGATION = "propagation"
+    BOUNDING = "bounding"
 
 
-_LADDER: tuple[Technique, ...] = (Technique.SINGLE_UNKNOWN, Technique.PROPAGATION, Technique.BOUNDING)
+_TECHNIQUE_ORDER: tuple[Technique, ...] = (Technique.PROPAGATION, Technique.BOUNDING)
+
+# The final step of any complete solve has exactly one move available, because one cell is left.
+# Frontier width therefore only says something about a board that had at least two steps.
+_ENOUGH_STEPS_TO_HAVE_HAD_A_CHOICE = 2
 
 
 @dataclass(frozen=True, slots=True)
 class Deduction:
-    """One cell worked out, and what it took to get there.
+    """One cell worked out, and everything about how it was reached.
 
-    `from_identity` is None for a bounding deduction. Nothing was computed from one rule there: the
-    cell was cornered by everything on the board at once, and naming a single identity would be
-    inventing a provenance the reasoning never had.
+    `from_identity` is None for a bounding deduction: nothing was computed from one rule there, the
+    cell was cornered by the whole board at once, and naming an identity would invent a provenance
+    the reasoning never had.
+
+    `depth` is how many dependent steps had to happen first. `frontier` is how many other moves were
+    available at the moment this one was taken — a frontier of one means the player had to scan the
+    whole board to find the only move there was.
     """
 
     cell: str
     value: int
     technique: Technique
     from_identity: Identity | None
+    depth: int
+    frontier: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,41 +80,96 @@ class Solution:
         return not self.unsolved
 
     @property
-    def highest_technique(self) -> Technique | None:
-        """The rung that decides the puzzle's difficulty. None when nothing had to be deduced."""
+    def techniques_used(self) -> frozenset[Technique]:
+        return frozenset(deduction.technique for deduction in self.deductions)
+
+    @property
+    def hardest_technique(self) -> Technique | None:
+        """The first axis. None when nothing had to be deduced at all."""
         if not self.deductions:
             return None
-        return max((deduction.technique for deduction in self.deductions), key=_LADDER.index)
+        return max(self.techniques_used, key=_TECHNIQUE_ORDER.index)
+
+    @property
+    def families_used(self) -> frozenset[Family]:
+        """The second axis: which kinds of reasoning the path needed, not which were available."""
+        return frozenset(
+            FAMILY_OF[deduction.from_identity]
+            for deduction in self.deductions
+            if deduction.from_identity is not None and deduction.from_identity in FAMILY_OF
+        )
 
     @property
     def times_used(self) -> dict[Technique, int]:
-        counts = dict.fromkeys(_LADDER, 0)
+        counts = dict.fromkeys(_TECHNIQUE_ORDER, 0)
         for deduction in self.deductions:
             counts[deduction.technique] += 1
         return counts
 
+    @property
+    def family_counts(self) -> dict[Family, int]:
+        counts = dict.fromkeys(Family, 0)
+        for deduction in self.deductions:
+            if deduction.from_identity is not None and deduction.from_identity in FAMILY_OF:
+                counts[FAMILY_OF[deduction.from_identity]] += 1
+        return counts
+
+    @property
+    def chain_length(self) -> int:
+        """The longest run of steps that each had to wait for the one before it.
+
+        Ten cells recovered in ten independent steps is a different puzzle from ten recovered in a
+        chain of ten, and cell count alone cannot tell them apart.
+        """
+        return max((deduction.depth for deduction in self.deductions), default=0)
+
+    @property
+    def narrowest_frontier(self) -> int | None:
+        """The tightest the choice of next move ever got, ignoring the final step.
+
+        The hypothesis is that this predicts perceived difficulty better than anything else here: a
+        board that bottlenecks to a single available move, even once, makes the player scan
+        everything to find it.
+
+        The last step is excluded because it is always forced — when one cell remains there is by
+        definition one move — so including it would report a bottleneck on every board ever solved
+        and separate nothing from anything. None when the board was never in a position to offer a
+        choice at all.
+        """
+        if len(self.deductions) < _ENOUGH_STEPS_TO_HAVE_HAD_A_CHOICE:
+            return None
+        return min(deduction.frontier for deduction in self.deductions[:-1])
+
+    @property
+    def mean_frontier(self) -> float | None:
+        """How much choice the player had on average, over the steps where there was any to have."""
+        if len(self.deductions) < _ENOUGH_STEPS_TO_HAVE_HAD_A_CHOICE:
+            return None
+        return sum(deduction.frontier for deduction in self.deductions[:-1]) / (len(self.deductions) - 1)
+
 
 def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
-    """Deduce as far as the implemented techniques reach, and stop.
+    """Deduce as far as the implemented reasoning reaches, and stop.
 
     Whatever remains in `unsolved` is not a failure of arithmetic — it is the honest statement that
-    a person restricted to these techniques could not get there either.
+    a person restricted to this reasoning could not get there either.
     """
     values = dict(given)
     system = tuple(equation for equation in equations(shape) if not equation.is_global)
+    global_equations = tuple(equation for equation in equations(shape) if equation.is_global)
     deductions: list[Deduction] = []
+    depths: dict[str, int] = {}
 
     # Givens that already disagree are caught here rather than later by bounding, so the complaint
     # names the identity that broke instead of whichever cell happened to run out of room first.
     _reject_contradictions(system, values)
 
     while True:
-        # The ladder is walked from the bottom every time, so a cell that bounding opens up is
-        # picked up again by the cheapest rule rather than by the one that happened to be running.
-        deduction = _next_deduction(system, values, given) or _next_bounded_deduction(shape, values)
+        deduction = _next_step(shape, system, global_equations, values, depths)
         if deduction is None:
             break
         values[deduction.cell] = deduction.value
+        depths[deduction.cell] = deduction.depth
         deductions.append(deduction)
 
     _reject_contradictions(system, values)
@@ -113,39 +180,65 @@ def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
     )
 
 
-def _next_deduction(
-    system: tuple[Equation, ...], values: Mapping[str, int], given: Mapping[str, int]
+def _next_step(
+    shape: BoardShape,
+    system: tuple[Equation, ...],
+    global_equations: tuple[Equation, ...],
+    values: Mapping[str, int],
+    depths: Mapping[str, int],
 ) -> Deduction | None:
-    """The first cell any equation forces. Equation order is fixed, so the walk is reproducible."""
-    for equation in system:
-        unknowns = equation.unknowns(values)
-        if len(unknowns) != 1:
-            continue
-        cell = unknowns[0]
+    """Propagation first, always, and only then bounding.
+
+    An exact value beats a narrowed range: taking the bounded move while a plain subtraction is
+    still available would credit the harder technique for work the easier one could have done.
+    """
+    available = _propagation_moves(system + global_equations, values)
+    if available:
+        cell, equation = available[0]
         return Deduction(
             cell=cell,
             value=_forced_value(equation, cell, values),
-            technique=_technique_for(equation, cell, given),
+            technique=Technique.PROPAGATION,
             from_identity=equation.origin,
+            depth=1 + max((depths.get(term.cell, 0) for term in equation.terms if term.cell != cell), default=0),
+            frontier=len(available),
+        )
+
+    bounded = _bounding_moves(shape, values)
+    if bounded:
+        cell, value = bounded[0]
+        return Deduction(
+            cell=cell,
+            value=value,
+            technique=Technique.BOUNDING,
+            from_identity=None,
+            # Narrowing draws on the whole board, so the honest depth is one past the deepest thing
+            # already known rather than one past a particular equation's terms.
+            depth=1 + max(depths.values(), default=0),
+            frontier=len(bounded),
         )
     return None
 
 
-def _next_bounded_deduction(shape: BoardShape, values: Mapping[str, int]) -> Deduction | None:
-    """The first cell whose range has closed to a single value.
+def _propagation_moves(system: tuple[Equation, ...], values: Mapping[str, int]) -> list[tuple[str, Equation]]:
+    """Every cell some equation forces right now. Its length is the frontier width."""
+    moves: dict[str, Equation] = {}
+    for equation in system:
+        unknowns = equation.unknowns(values)
+        if len(unknowns) == 1 and unknowns[0] not in moves:
+            moves[unknowns[0]] = equation
+    return sorted(moves.items())
 
-    Only one at a time, and then back to the bottom of the ladder. Taking every cornered cell in one
-    sweep would be faster and would misreport the puzzle, crediting bounding for cells that a plain
-    column sum could have produced once the first of them was known.
-    """
+
+def _bounding_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[str, int]]:
+    """Every cell whose range has closed to one value. The global identity stays out of the
+    narrowing for the same reason it stays out of propagation's first pass."""
     domains = narrow(shape, values)
-    for cell in sorted(domains):
-        if cell in values:
-            continue
-        value = domains[cell].fixed_value
-        if value is not None:
-            return Deduction(cell=cell, value=value, technique=Technique.BOUNDING, from_identity=None)
-    return None
+    return sorted(
+        (cell, bounds.fixed_value)
+        for cell, bounds in domains.items()
+        if cell not in values and bounds.fixed_value is not None
+    )
 
 
 def _forced_value(equation: Equation, cell: str, values: Mapping[str, int]) -> int:
@@ -157,17 +250,6 @@ def _forced_value(equation: Equation, cell: str, values: Mapping[str, int]) -> i
     coefficient = next(term.coefficient for term in equation.terms if term.cell == cell)
     known = sum(term.coefficient * values[term.cell] for term in equation.terms if term.cell != cell)
     return (equation.constant - known) // coefficient
-
-
-def _technique_for(equation: Equation, cell: str, given: Mapping[str, int]) -> Technique:
-    """Whether this followed straight from the board as printed, or from earlier work.
-
-    A deduction whose equation held nothing but givens is one a player makes on first reading. One
-    that leaned on a cell somebody already worked out is a link in a chain, and chaining is what
-    separates the second rung from the first.
-    """
-    leaned_on_earlier_work = any(term.cell != cell and term.cell not in given for term in equation.terms)
-    return Technique.PROPAGATION if leaned_on_earlier_work else Technique.SINGLE_UNKNOWN
 
 
 def _reject_contradictions(system: tuple[Equation, ...], values: Mapping[str, int]) -> None:

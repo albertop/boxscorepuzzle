@@ -1,7 +1,9 @@
-"""Narrowing what a cell could be, which is what the fourth rung reasons with.
+"""Narrowing what a cell could be, which is the second of the two techniques.
 
-With the 2x2 rung unreachable on this board, bounding is the only technique between propagation and
-the global identity. It is what has to make a puzzle hard, so it has to be right.
+Bounding is also how the board handles a footnote whose row is ambiguous — one of two shortstops
+was hit by a pitch, the term has a domain of nought or one in each row, and the rest of the board
+settles which. That is reasoning over ranges, not trying both and keeping whichever balances, which
+would be backtracking and is exactly what the publication rule forbids.
 """
 
 import pytest
@@ -19,6 +21,10 @@ def _erase(direction: Direction, *cells: str) -> dict[str, int]:
     for cell in cells:
         del values[cell]
     return values
+
+
+def _upper(bounds: Bounds) -> float:
+    return float("inf") if bounds.high is None else bounds.high
 
 
 class TestBoundsType:
@@ -41,16 +47,13 @@ class TestKnownCells:
     def test_every_cell_on_the_board_gets_a_domain(self, cubs_at_braves_1968: Direction) -> None:
         shape = shape_of(cubs_at_braves_1968)
 
-        domains = narrow(shape, cell_values(cubs_at_braves_1968))
-
-        assert domains.keys() == all_cells(shape)
+        assert narrow(shape, cell_values(cubs_at_braves_1968)).keys() == all_cells(shape)
 
 
 class TestNonNegativity:
     def test_two_cells_that_sum_to_zero_are_both_zero(self, cubs_at_braves_1968: Direction) -> None:
         # Neither can be worked out on its own, because the column sum has two unknowns in it. But
-        # they add to nothing and neither can be negative, so both are nothing. This is the whole
-        # of the fourth rung in one step.
+        # they add to nothing and neither can be negative, so both are nothing.
         domains = narrow(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
@@ -71,18 +74,45 @@ class TestNonNegativity:
         assert domains["batting[2].runs"] == Bounds(0, 2)
 
 
-class TestInequalities:
-    def test_hits_are_capped_by_at_bats(self, cubs_at_braves_1968: Direction) -> None:
-        # Two hits missing from one column, but the batter with three at-bats cannot have more than
-        # three of them, and that is enough to pin the pair.
+class TestAmbiguousFootnoteAssignment:
+    """A footnote whose row is ambiguous, modelled by leaving both candidate cells unknown.
+
+    The board says one sacrifice hit happened among two rows sharing a position label, without
+    saying which. Nothing extra is needed to state that: the footnote's own column sum already says
+    the pair adds to one.
+    """
+
+    def test_the_row_identity_settles_it_on_its_own(self, cubs_at_braves_1968: Direction) -> None:
+        # And usually it settles immediately. Row four's plate appearances are already accounted for
+        # by its at-bats and walks, so it has no room for a sacrifice; row nought's are one short,
+        # so it must have had it. Nobody tried both — each row's own identity forced the answer.
         domains = narrow(
             shape_of(cubs_at_braves_1968),
-            _erase(cubs_at_braves_1968, "batting[5].hits", "batting[5].at_bats"),
+            _erase(cubs_at_braves_1968, "footnotes[0].sacrifice_hits", "footnotes[4].sacrifice_hits"),
         )
 
-        assert domains["batting[5].hits"].low <= 2 <= _upper(domains["batting[5].hits"])
-        assert domains["batting[5].at_bats"].low >= domains["batting[5].hits"].low
+        assert domains["footnotes[4].sacrifice_hits"] == Bounds(0, 0)
+        assert domains["footnotes[0].sacrifice_hits"] == Bounds(1, 1)
 
+    def test_it_stays_open_when_the_rows_themselves_are_incomplete(self, cubs_at_braves_1968: Direction) -> None:
+        # Take the at-bats away from both candidate rows and neither identity can settle its own
+        # footnote any more. Narrowing keeps both honest at nought-or-one rather than choosing.
+        domains = narrow(
+            shape_of(cubs_at_braves_1968),
+            _erase(
+                cubs_at_braves_1968,
+                "footnotes[0].sacrifice_hits",
+                "footnotes[4].sacrifice_hits",
+                "batting[0].at_bats",
+                "batting[4].at_bats",
+            ),
+        )
+
+        assert domains["footnotes[0].sacrifice_hits"] == Bounds(0, 1)
+        assert domains["footnotes[4].sacrifice_hits"] == Bounds(0, 1)
+
+
+class TestInequalities:
     def test_earned_runs_cannot_exceed_runs(self, cubs_at_braves_1968: Direction) -> None:
         domains = narrow(
             shape_of(cubs_at_braves_1968),
@@ -91,12 +121,21 @@ class TestInequalities:
 
         assert _upper(domains["pitching[1].earned_runs"]) == 0
 
+    def test_plate_appearances_bound_at_bats_from_above(self, cubs_at_braves_1968: Direction) -> None:
+        # The bound the plate appearance column makes available, narrowing from the opposite side to
+        # the row identity.
+        domains = narrow(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].at_bats", "batting_totals.at_bats"),
+        )
+
+        assert _upper(domains["batting[1].at_bats"]) <= 5
+
 
 class TestContradiction:
     def test_refuses_a_cell_with_no_value_left_open_to_it(self, cubs_at_braves_1968: Direction) -> None:
         values = _erase(cubs_at_braves_1968, "batting[4].hits")
         values["batting[4].at_bats"] = 0
-        values["batting_totals.at_bats"] = 32
         values["batting_totals.hits"] = 12
         values["line_score.offense_hits"] = 12
         values["pitching_totals.hits"] = 12
@@ -114,11 +153,6 @@ class TestItNeverExcludesTheTruth:
         original = cell_values(direction)
         shape = shape_of(direction)
         for cell in sorted(original):
-            domains = narrow(shape, {name: value for name, value in original.items() if name != cell})
-            bounds = domains[cell]
+            bounds = narrow(shape, {name: value for name, value in original.items() if name != cell})[cell]
 
             assert bounds.low <= original[cell] <= _upper(bounds)
-
-
-def _upper(bounds: Bounds) -> float:
-    return float("inf") if bounds.high is None else bounds.high

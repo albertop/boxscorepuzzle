@@ -9,7 +9,14 @@ already cover.
 from hypothesis import strategies as st
 from hypothesis.strategies import DrawFn
 
-from boxscore_forge.boxscore import BattingLine, Direction, Footnotes, LineScore, PitchingLine
+from boxscore_forge.boxscore import (
+    BatterFootnotes,
+    BattingLine,
+    Direction,
+    LineScore,
+    PitchingLine,
+    TeamFootnotes,
+)
 
 
 def _split(draw: DrawFn, total: int, parts: int) -> list[int]:
@@ -31,61 +38,65 @@ def _split(draw: DrawFn, total: int, parts: int) -> list[int]:
 @st.composite
 def valid_directions(draw: DrawFn) -> Direction:
     """A boxscore that balances: every identity holds, by construction rather than by luck."""
-    batting = _draw_batting(draw)
+    batting, footnotes = _draw_batting(draw)
     batting_totals = _sum_batting(batting)
-
-    footnotes_without_left_on_base = (
-        draw(st.integers(min_value=0, max_value=2)),
-        draw(st.integers(min_value=0, max_value=2)),
-        draw(st.integers(min_value=0, max_value=2)),
-        draw(st.integers(min_value=0, max_value=1)),
-    )
-    hit_by_pitch, sacrifice_flies, sacrifice_hits, reached_on_interference = footnotes_without_left_on_base
-    plate_appearances = batting_totals.at_bats + batting_totals.walks + sum(footnotes_without_left_on_base)
+    footnote_totals = _sum_footnotes(footnotes)
 
     # Outs plus runs plus runners left on base must account for every plate appearance, so once the
     # runners left on base are chosen the number of outs is forced.
-    left_on_base = draw(st.integers(min_value=0, max_value=max(plate_appearances - batting_totals.runs, 0)))
-    outs = plate_appearances - batting_totals.runs - left_on_base
-
+    left_on_base = draw(
+        st.integers(min_value=0, max_value=max(batting_totals.plate_appearances - batting_totals.runs, 0))
+    )
+    outs = batting_totals.plate_appearances - batting_totals.runs - left_on_base
     pitching = _draw_pitching(draw, batting_totals, outs)
 
     return Direction(
         batting=batting,
         batting_totals=batting_totals,
+        batter_footnotes=footnotes,
+        footnote_totals=footnote_totals,
+        team_footnotes=TeamFootnotes(left_on_base=left_on_base),
         pitching=pitching,
         pitching_totals=_sum_pitching(pitching),
-        footnotes=Footnotes(
-            left_on_base=left_on_base,
-            hit_by_pitch=hit_by_pitch,
-            sacrifice_flies=sacrifice_flies,
-            sacrifice_hits=sacrifice_hits,
-            reached_on_interference=reached_on_interference,
-        ),
         line_score=_draw_line_score(draw, batting_totals),
     )
 
 
-def _draw_batting(draw: DrawFn) -> tuple[BattingLine, ...]:
+def _draw_batting(draw: DrawFn) -> tuple[tuple[BattingLine, ...], tuple[BatterFootnotes, ...]]:
     batter_count = draw(st.integers(min_value=9, max_value=12))
-    partial = []
+    lines = []
+    footnotes = []
     for _ in range(batter_count):
         at_bats = draw(st.integers(min_value=0, max_value=6))
         hits = draw(st.integers(min_value=0, max_value=at_bats))
         strikeouts = draw(st.integers(min_value=0, max_value=at_bats - hits))
         walks = draw(st.integers(min_value=0, max_value=3))
         runs = draw(st.integers(min_value=0, max_value=hits + walks))
-        partial.append((at_bats, runs, hits, walks, strikeouts))
-
-    # Runs batted in are drawn against the team total rather than per batter, because the only
-    # bound the board can express is the team one.
-    total_runs = sum(row[1] for row in partial)
-    runs_batted_in = _split(draw, draw(st.integers(min_value=0, max_value=total_runs)), batter_count)
-
-    return tuple(
-        BattingLine(at_bats=at_bats, runs=runs, hits=hits, runs_batted_in=driven_in, walks=walks, strikeouts=strikeouts)
-        for (at_bats, runs, hits, walks, strikeouts), driven_in in zip(partial, runs_batted_in, strict=True)
-    )
+        # Footnote terms are rare in a real boxscore, and drawn rare here so the common shape stays
+        # common while the exceptional row still gets generated.
+        row_footnotes = BatterFootnotes(
+            hit_by_pitch=draw(st.integers(min_value=0, max_value=1)),
+            sacrifice_flies=draw(st.integers(min_value=0, max_value=1)),
+            sacrifice_hits=draw(st.integers(min_value=0, max_value=1)),
+            reached_on_interference=draw(st.integers(min_value=0, max_value=1)),
+        )
+        lines.append(
+            BattingLine(
+                plate_appearances=at_bats
+                + walks
+                + row_footnotes.hit_by_pitch
+                + row_footnotes.sacrifice_flies
+                + row_footnotes.sacrifice_hits
+                + row_footnotes.reached_on_interference,
+                at_bats=at_bats,
+                runs=runs,
+                hits=hits,
+                walks=walks,
+                strikeouts=strikeouts,
+            )
+        )
+        footnotes.append(row_footnotes)
+    return tuple(lines), tuple(footnotes)
 
 
 def _draw_pitching(draw: DrawFn, batting_totals: BattingLine, outs: int) -> tuple[PitchingLine, ...]:
@@ -133,10 +144,10 @@ def _draw_line_score(draw: DrawFn, batting_totals: BattingLine) -> LineScore:
 
 def _sum_batting(batting: tuple[BattingLine, ...]) -> BattingLine:
     return BattingLine(
+        plate_appearances=sum(line.plate_appearances for line in batting),
         at_bats=sum(line.at_bats for line in batting),
         runs=sum(line.runs for line in batting),
         hits=sum(line.hits for line in batting),
-        runs_batted_in=sum(line.runs_batted_in for line in batting),
         walks=sum(line.walks for line in batting),
         strikeouts=sum(line.strikeouts for line in batting),
     )
@@ -150,4 +161,13 @@ def _sum_pitching(pitching: tuple[PitchingLine, ...]) -> PitchingLine:
         earned_runs=sum(line.earned_runs for line in pitching),
         walks=sum(line.walks for line in pitching),
         strikeouts=sum(line.strikeouts for line in pitching),
+    )
+
+
+def _sum_footnotes(footnotes: tuple[BatterFootnotes, ...]) -> BatterFootnotes:
+    return BatterFootnotes(
+        hit_by_pitch=sum(row.hit_by_pitch for row in footnotes),
+        sacrifice_flies=sum(row.sacrifice_flies for row in footnotes),
+        sacrifice_hits=sum(row.sacrifice_hits for row in footnotes),
+        reached_on_interference=sum(row.reached_on_interference for row in footnotes),
     )
