@@ -8,9 +8,17 @@ Invented test data cannot catch an identity that is stated wrongly, because the 
 to satisfy the wrong statement. A real game can.
 """
 
+from datetime import timedelta
+
 import pytest
+from hypothesis import settings
 
 from boxscore_forge.boxscore import BattingLine, Direction, Footnotes, LineScore, PitchingLine
+
+# Composite generation of a whole balanced boxscore is not fast, and a per-example deadline tuned
+# for trivial strategies turns into a flaky failure that says nothing about the code.
+settings.register_profile("forge", deadline=timedelta(seconds=2))
+settings.load_profile("forge")
 
 
 @pytest.fixture
