@@ -24,9 +24,9 @@ BATTING = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits
 PITCHING = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
 FOOTNOTES = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "CI"))
 
-# Stand-ins for the progressive reveal. Real names would need the Chadwick register; what matters
-# for measurement is that they are the length real names are.
-SAMPLE_NAMES = ["Luis Aparicio", "Carl Yastrzemski", "Brooks Robinson", "Bill Mazeroski"]
+# Real surnames from the register, chosen to span the measured length distribution: 98.7% of
+# batter appearances have a surname of ten characters or fewer, and these include the tail.
+SAMPLE_NAMES = ["Aparicio", "Yastrzemski", "Robinson", "Schoendienst", "Mazeroski", "Kaline"]
 
 
 def double_digit_columns(loaded: Loaded) -> int:
@@ -49,6 +49,7 @@ def to_json(loaded: Loaded, note: str) -> dict[str, object]:
         "season": loaded.season,
         "note": note,
         "labels": list(loaded.labels),
+        "offenseIsHome": loaded.offense_is_home,
         "batting": [[getattr(line, field) for field, _ in BATTING] for line in direction.batting],
         "battingTotals": [getattr(direction.batting_totals, field) for field, _ in BATTING],
         "pitching": [

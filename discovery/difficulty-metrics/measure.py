@@ -66,6 +66,7 @@ class Loaded:
     season: int
     direction: Direction
     labels: tuple[str, ...]
+    offense_is_home: bool
 
 
 def _parse_line_score(text: str) -> tuple[int, ...]:
@@ -185,7 +186,9 @@ def load(limit: int) -> list[Loaded]:
                     defense_errors=defense_errors,
                 ),
             )
-            loaded.append(Loaded(game_id, season, direction, tuple(r[11] for r in batting_rows)))
+            loaded.append(
+                Loaded(game_id, season, direction, tuple(r[11] for r in batting_rows), bool(is_home))
+            )
     return loaded
 
 
