@@ -228,7 +228,7 @@ def _cross_team_equations() -> Iterator[Equation]:
 
 
 def _row_identity_equations(shape: BoardShape) -> Iterator[Equation]:
-    """`PA = AB + BB + HBP + SF + SH + XI`, once per batter and once for the totals row.
+    """`PA = AB + BB + HBP + SF + SH + CI`, once per batter and once for the totals row.
 
     This is what gives an individual cell a second equation to live in. Without it at-bats and walks
     appear only in their column sums, no cycle exists anywhere in the board, and the only puzzles

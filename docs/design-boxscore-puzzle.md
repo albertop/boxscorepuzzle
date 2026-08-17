@@ -70,7 +70,7 @@ is one of the two axes that describe a puzzle (§4).
 **2. Row identity — per batter, and again for the totals row**
 
 ```
-PA = AB + BB + HBP + SF + SH + XI
+PA = AB + BB + HBP + SF + SH + CI
 ```
 
 **This is the constraint the board hangs on.** Without it no individual cell takes part in a second
@@ -78,7 +78,7 @@ equation, the constraint graph is a forest, and the only puzzles that survive va
 unconnected subtractions (§4). With it, at-bats and walks live in two equations each, cycles appear,
 and a deduction can chain.
 
-**XI — reaching base on defensive interference — is not optional.** Verified against every batter
+**CI — reaching base on catcher's interference — is not optional.** Verified against every batter
 row Retrosheet has: with it the identity holds in all 5,325,173; without it 1,956 fail. It is rare
 enough to look like decoration and load-bearing exactly where it appears.
 
@@ -206,7 +206,7 @@ could survive validation as anything other than trivial:
 Making **plate appearances a column** gives every batter row its own identity:
 
 ```
-PA = AB + BB + HBP + SF + SH + XI
+PA = AB + BB + HBP + SF + SH + CI
 ```
 
 At-bats and walks then live in two equations each — their column sum and their row identity — and
@@ -445,13 +445,13 @@ avoid a line of footnotes that real boxscores print anyway is the wrong trade.
 
 ### Two corrections found by reading cwbox and checking against the database
 
-**1. A fifth footnote quantity was missing: reaching base on defensive interference.** It is a plate
+**1. A fifth footnote quantity was missing: reaching base on catcher's interference (CI).** It is a plate
 appearance that is not an at-bat and not any of the other four categories, and a boxscore missing it
 still looks right — which is why it went unnoticed. Measured across every batter row Retrosheet has:
 
 | Forward count of plate appearances | Rows that fail |
 |---|---:|
-| `AB + BB + HBP + SF + SH + XI` | **0** of 5,325,173 |
+| `AB + BB + HBP + SF + SH + CI` | **0** of 5,325,173 |
 | `AB + BB + HBP + SF + SH` | 1,956 |
 
 It affects 1,933 team-games, roughly one in every 200.
@@ -625,7 +625,7 @@ whose arithmetic fails if they miss it.
 board (§3), not five techniques, so there are four steps plus one on the bounding technique:
 
 1. **P1 — Column sums.** One missing cell with the total given. Impossible to fail.
-2. **P2 — The row identity:** `PA = AB + BB + HBP + SF + SH + XI`. Also where the footnote line is
+2. **P2 — The row identity:** `PA = AB + BB + HBP + SF + SH + CI`. Also where the footnote line is
    introduced, because it is the term a player will not think to look for.
 3. **P3 — The batting↔pitching cross.** **The game's "aha" moment.** Stage it deliberately.
 4. **P4 — Bounding.** Inequalities and non-negativity to eliminate candidates rather than compute

@@ -26,9 +26,14 @@ from boxscore_forge.solver import Solution, Technique, solve
 
 BATTING_HEADERS = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "K"))
 PITCHING_HEADERS = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
-FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "XI"))
+FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "CI"))
 BLANK = "  ·"
 SEED = 20260819
+
+# Boards with more nought than this leave the pool. Provisional: the measured distribution has its
+# median at 34.5%, and this keeps a little over half the pool, which is forty-six years of calendar
+# against the 674 directions a year the week consumes.
+GATE = 0.35
 
 
 def _innings(outs: int) -> str:
@@ -97,20 +102,23 @@ def render_path(solution: Solution) -> str:
     """Every deduction in order, with how much choice there was and what it cost to find."""
     lines = [
         "  SOLUTION PATH",
-        f"  {'#':>3} {'cell':<34}{'=':>4}  {'from':<22}{'ready':>6}{'live':>6}{'cost':>7}  note",
+        f"  {'#':>3} {'cell':<34}{'=':>4}  {'from':<22}{'ready':>6}{'live':>6}{'find':>7}{'add':>5}  note",
     ]
     for number, step in enumerate(solution.deductions, start=1):
         origin = str(step.from_identity) if step.from_identity else "bounding"
         note = "trivial" if step.is_trivial else ""
         if step.technique == Technique.BOUNDING:
             note = (note + " bounded").strip()
+        search = f"{step.search_cost:>7.2f}" if step.search_cost is not None else f"{'-':>7}"
+        resolution = f"{step.resolution_cost:>5}" if step.resolution_cost is not None else f"{'-':>5}"
         lines.append(
             f"  {number:>3} {step.cell:<34}{step.value:>4}  {origin:<22}"
-            f"{step.equations_solvable:>6}{step.equations_live:>6}{step.scan_cost:>7.1f}  {note}"
+            f"{step.equations_solvable:>6}{step.equations_live:>6}{search}{resolution}  {note}"
         )
     lines.append("")
     lines.append(
-        f"  chain {solution.chain_length}   weighted {solution.weighted_chain_length:.1f}   "
+        f"  chain {solution.chain_length}   hardest to find {solution.hardest_search or 0:.2f}   "
+        f"most additions (p90) {solution.ninetieth_percentile_resolution or 0}   "
         f"trivial {solution.trivial_share or 0:.0%}   "
         f"families {', '.join(sorted(f.value for f in solution.families_used))}"
     )
@@ -153,18 +161,20 @@ def zero_density(loaded: Loaded) -> float:
 
 def main() -> None:
     rng = random.Random(SEED)
-    pool = [item for item in load(4) if not find_violations(item.direction)]
-    pool.sort(key=lambda item: item.game_id)
+    everything = [item for item in load(6) if not find_violations(item.direction)]
 
-    modern = [item for item in pool if item.season >= 1950]
-    zero_heavy = max(pool, key=zero_density)
+    # The gate, applied. The threshold is provisional — the distribution puts the median at 34.5%,
+    # so this keeps a little over half the pool and about forty-six years of calendar.
+    pool = sorted((item for item in everything if zero_density(item) < GATE), key=lambda item: item.game_id)
+    print(f"{len(everything)} directions, {len(pool)} below {GATE:.0%} zero density")
+
     picks = [
-        ("EASY — a handful of blanks, every one a single subtraction", modern[0], 3),
-        ("EASY — slightly longer, still nothing to hunt for", modern[1], 5),
-        ("MID — the row identity starts carrying weight", modern[2], 12),
-        ("MID — longer, and the pitching cross opens it", modern[3], 16),
-        ("CEILING — erased as far as it will go and stay solvable", pool[0], 999),
-        (f"ZERO-HEAVY — {zero_density(zero_heavy):.0%} of the grid is nought, and it compresses far", zero_heavy, 999),
+        ("EASY — a handful of blanks, every one a single subtraction", pool[0], 3),
+        ("EASY — slightly longer, still nothing to hunt for", pool[1], 5),
+        ("MID — the row identity starts carrying weight", pool[2], 10),
+        ("MID — longer, and the pitching cross opens it", pool[3], 12),
+        ("HARD — twenty steps deep, where the global identity turns up", pool[4], 20),
+        ("HARD — the same depth on a different game", pool[5], 20),
     ]
 
     out = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
@@ -192,14 +202,14 @@ def main() -> None:
     (out / "sample-boards.txt").write_text("\n".join(solved_text), encoding="utf-8")
 
     # One to solve by hand, with nothing after it to spoil the answer.
-    puzzle_only, _ = erase_to_chain(modern[2], 12, random.Random(SEED + 7))
+    puzzle_only, _ = erase_to_chain(pool[6], 12, random.Random(SEED + 7))
     (out / "solve-this-one.txt").write_text(
         "\n".join(
             [
-                render(modern[2], puzzle_only, title="FOR THE OPERATOR — no answer in this file"),
+                render(pool[6], puzzle_only, title="FOR THE OPERATOR — no answer in this file"),
                 "",
                 "  Every blank is deducible without guessing. Column totals rule, each batter's",
-                "  row satisfies PA = AB + BB + HBP + SF + SH + XI, the offense's H/R/BB/K equal",
+                "  row satisfies PA = AB + BB + HBP + SF + SH + CI, the offense's H/R/BB/K equal",
                 "  what the pitchers are charged with, and PA = Outs + R + LOB for the team.",
                 "",
             ]

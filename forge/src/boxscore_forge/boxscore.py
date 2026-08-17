@@ -36,7 +36,7 @@ class BatterFootnotes:
     """What a printed boxscore prints below the grid, attributed to one batter.
 
     These are given and never erased, like the line score. They are what makes the row identity
-    close: `PA = AB + BB + HBP + SF + SH + XI`.
+    close: `PA = AB + BB + HBP + SF + SH + CI`.
 
     They are zero on roughly nine rows in ten, which is a presentation hazard rather than a reason
     to drop them — a player who has seen nothing but zeros will stop looking, and the row where one

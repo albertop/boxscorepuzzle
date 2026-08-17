@@ -133,7 +133,7 @@ backtracking.
 **⚠️ The board's difficulty ceiling is topological.** A constraint graph that is a forest has no
 middle difficulty — one blank per equation is a subtraction, two in one equation are usually
 *ambiguous* rather than hard, and §22 discards them. The row identity `PA = AB + BB + HBP + SF + SH +
-XI` is what breaks the forest, taking independent cycles from 0 to 16. **Do not try to buy difficulty
+CI` is what breaks the forest, taking independent cycles from 0 to 16. **Do not try to buy difficulty
 in the erasure algorithm; it is not there to buy.** A forge test guards the cycle count.
 
 Uniqueness alone is **not** sufficient. A puzzle can have exactly one solution and still be humanly underivable — that is the worst failure mode because it looks correct.
@@ -180,7 +180,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Six data columns maximum.** 375px minus margins, 44px minimum touch target, ~70px label column. A seventh column does not fit and cannot be added.
 - Batting: **PA, AB, R, H, BB, K.** Pitching: IP, H, R, ER, BB, K. RBI was dropped for PA: it was the only batting column with neither a cross-team counterpart nor a place in the row identity, and PA is what breaks the forest (§6).
 - **The line score is always shown complete and never erased.** It is the puzzle's anchor, read-only, so it needs no touch target.
-- **A footnote line gives LOB, HBP, SF, SH and XI** — read-only and never erased, like the line score. Without LOB the board cannot express the global identity at all, and without the rest the row identity does not close. Footnotes cost no column width and need no touch target, and printed boxscores publish exactly these values this way. **Attributed per batter, labelled by position** (`HBP: SS`) — never by name, which would hand the player a name before they earned the row (§7).
+- **A footnote line gives LOB, HBP, SF, SH and CI** — read-only and never erased, like the line score. Without LOB the board cannot express the global identity at all, and without the rest the row identity does not close. Footnotes cost no column width and need no touch target, and printed boxscores publish exactly these values this way. **Attributed per batter, labelled by position** (`HBP: SS`) — never by name, which would hand the player a name before they earned the row (§7).
 - **⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero, so players learn to stop looking — and the row where one appears is exactly the row whose arithmetic fails if they miss it.
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.

@@ -8,6 +8,18 @@ Nothing here writes. All database work is `SELECT` plus session-scoped temp tabl
 
 ---
 
+## A term that was wrong for a while
+
+Reaching base on catcher's interference is abbreviated **`CI`**. Early in the design conversation it
+was written `XI` and adopted without checking; that is not baseball notation and it propagated through
+the code and the documents before anyone verified it. Renamed everywhere, with no alias left behind.
+
+**Retrosheet's own column is `B_XI`** and stays as it is — that is their name for it, not ours, and
+the loader must match the database. Anywhere `XI` appears in a query against `dbo.retroDailyReg` it is
+correct; anywhere it appears as our label for the quantity, it was not.
+
+---
+
 ## 1. The DGL database
 
 **Connection:** ODBC `DSN=LocalServer`, database `DGL`, on the operator's laptop. The DSN and

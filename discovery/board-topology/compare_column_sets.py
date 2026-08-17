@@ -57,27 +57,27 @@ class Board:
         self.equations.append(frozenset(["ls.offense_runs", "bat_tot.runs"]))
         self.equations.append(frozenset(["ls.offense_hits", "bat_tot.hits"]))
 
-        for name, value in (("fn.lob", 8), ("fn.hbp", 0), ("fn.sf", 0), ("fn.sh", 1), ("fn.xi", 0)):
+        for name, value in (("fn.lob", 8), ("fn.hbp", 0), ("fn.sf", 0), ("fn.sh", 1), ("fn.ci", 0)):
             self.values[name] = value
 
         if "pa" in self.columns:
             # Forward and backward counts are now two equations, both over the team's PA total.
-            self.equations.append(frozenset(["bat_tot.pa", "bat_tot.at_bats", "bat_tot.walks", "fn.hbp", "fn.sf", "fn.sh", "fn.xi"]))
+            self.equations.append(frozenset(["bat_tot.pa", "bat_tot.at_bats", "bat_tot.walks", "fn.hbp", "fn.sf", "fn.sh", "fn.ci"]))
             self.equations.append(frozenset(["bat_tot.pa", "pit_tot.outs", "bat_tot.runs", "fn.lob"]))
         else:
             self.equations.append(
-                frozenset(["bat_tot.at_bats", "bat_tot.walks", "fn.hbp", "fn.sf", "fn.sh", "fn.xi",
+                frozenset(["bat_tot.at_bats", "bat_tot.walks", "fn.hbp", "fn.sf", "fn.sh", "fn.ci",
                            "pit_tot.outs", "bat_tot.runs", "fn.lob"])
             )
 
         if self.row_identities:
             for i in range(9):
                 if self.per_player_footnotes:
-                    for suffix in ("hbp", "sf", "sh", "xi"):
+                    for suffix in ("hbp", "sf", "sh", "ci"):
                         self.values[f"bat[{i}].{suffix}"] = FOOTNOTE_PER_ROW[i] if suffix == "sh" else 0
                     self.equations.append(
                         frozenset([f"bat[{i}].pa", f"bat[{i}].at_bats", f"bat[{i}].walks",
-                                   f"bat[{i}].hbp", f"bat[{i}].sf", f"bat[{i}].sh", f"bat[{i}].xi"])
+                                   f"bat[{i}].hbp", f"bat[{i}].sf", f"bat[{i}].sh", f"bat[{i}].ci"])
                     )
                 elif FOOTNOTE_PER_ROW[i] == 0:
                     self.equations.append(frozenset([f"bat[{i}].pa", f"bat[{i}].at_bats", f"bat[{i}].walks"]))
