@@ -121,11 +121,42 @@ This makes the **quality metric** a central design piece:
 
 - **Compressibility** — max % of cells removable while preserving uniqueness. The primary metric, expensive to compute; only run on candidates that pass the prefilter.
 - **Zero density** — a 3-hit game leaves almost everything at 0 and cells force themselves. Penalize.
-- **Roster compactness** — hard filter (≈ ≤10 batters, ≤3 pitchers per team).
+- **Roster compactness** — hard filter. **⚠️ Thresholds provisional** (≤10 batters in the offensive
+  team, ≤3 pitchers in the defensive team). These are unvalidated estimates pending the measurements
+  in §6. Note the filter is **asymmetric**: only the offensive team's batters and the defensive
+  team's pitchers appear on the board.
 - **Line score variety** — discard 0-0-0-0-0-0-1-0-0.
 - **Digit range** — numbers > 3 should appear in several columns.
 
-**Accepted side effect:** the compactness filter biases the pool toward 1950–1985, because a modern game with seven relievers fits neither the screen nor a clean puzzle. Considered favorable: it gives the reveal character.
+**Measured funnel (August 2026), counted by direction:**
+
+| Step | Directions | Survives |
+|---|---|---|
+| Games with event files (203,908) | 407,816 | — |
+| Minus deduced (3,465 games) | 400,886 | 98.3% |
+| Roster fits the board (provisional caps) | 65,522 | 16.3% |
+| Minus discrepancies against official data in board columns | 55,024 | 84.0% |
+
+**The pool holds.** Even if the remaining quality filters cut 80%, that leaves ~11,000 puzzles —
+thirty years of daily play, plus a substantial archive at launch (§10).
+
+**55,024 is an upper bound, not the pool.** Compressibility, zero density, line score variety, and
+digit range are still to be applied, and compressibility is the expensive one that actually decides
+whether a boxscore is a puzzle. Expect a significant further cut.
+
+**Caveat:** the discrepancy filter only covers 1898–1986. From 1987 on, "no reduction" means "not
+measured," not "clean" — though modern rosters barely pass the roster filter anyway, so those years
+contribute little.
+
+**Era skew, measured:** the pool sits **62% in 1910–1949** and only 30% in 1950–1985 — older than
+originally assumed. The 2020s contribute 66 directions against 13,782 from the 1910s. The batter cap
+is the cause, not a historical preference.
+
+This is acceptable: the target market is the United States (§20), and 1910–1949 is the most
+mythologized era of American baseball. **Do not weight the calendar by era yet** — the measurement
+is pre-quality-filter, and both zero density and digit range select *against* low-scoring games,
+which are concentrated in the dead-ball era. The distribution may shift forward on its own. Re-measure
+after compressibility.
 
 ---
 
@@ -171,14 +202,63 @@ iPhone SE: ~667px, minus browser chrome, minus the custom numeric keypad (250–
 - **Row and column highlighting on cell selection goes from decoration to necessity** — it's the only thing showing the player which equations that cell touches.
 - "Luis Aparicio" doesn't fit in 70px. **The progressive name reveal must appear outside the label column** (below the row, or as a transient notice).
 
-### v1 board composition
+### v1 board composition — ⚠️ PROVISIONAL, pending measurement
 
-- Line score for both teams + R/H/E — **complete, read-only, never erased**
-- Offense for **one team only**: 9 rows × AB, R, H, RBI, BB, K + totals
-- Pitching for the **opposing team**: 1–3 rows × IP, H, R, ER, BB, K + totals
-- ≈80 cells, of which 25–35% are erased
+**These numbers are unvalidated estimates and must not be treated as decided.**
 
-Rationale: a full MLB boxscore is ~26 rows, unplayable on a phone, and with that many equations uniqueness becomes trivial. This is the minimum shape preserving all three constraint families.
+- Line score for both teams + R/H/E — **complete, read-only, never erased** *(this part is decided)*
+- Offense for **one team only**: rows × AB, R, H, RBI, BB, K + totals
+- Pitching for the **opposing team**: rows × IP, H, R, ER, BB, K + totals
+
+**What is actually decided:** six data columns maximum (derived from the width budget above), the
+column sets, one team's offense against the other team's pitching, and the line score as anchor.
+
+**What is NOT decided:**
+
+| Parameter | Provisional value | Status |
+|---|---|---|
+| Max batters in the offensive team | ≤10 | **Estimate.** Comes from "roughly 16 rows fit" — never measured against a real board |
+| Max pitchers in the defensive team | ≤3 | **Estimate.** Same origin |
+| % of cells erased | 25–35% | **Invented.** No basis yet |
+
+### How these get resolved
+
+**Two independent measurements, both required before fixing these numbers:**
+
+1. **Height budget, measured not estimated.** Prototype the board in a browser with real data at
+   375px and count how many rows actually fit above the keypad. That gives the true row ceiling,
+   which sets the roster caps.
+
+2. **Compressibility and technique distribution across the pool.** For a sample of surviving
+   directions: how many cells can be erased while preserving uniqueness *and* T1–T5 derivability,
+   and which techniques the result demands. **This is the measurement that decides whether a board
+   this size produces hard puzzles at all.**
+
+If most of the sample resolves with T1 and T2 only, the board is too small and the caps must be
+loosened — accepting fewer rows on screen is not an option, so that would mean revisiting the
+column set or the board's shape.
+
+**If pool size ever needs loosening, the lever is the batter cap, not the pitcher cap.** Measured:
+only 18.5% of directions pass ≤10 batters, while 66.9% pass ≤3 pitchers. The batter cap is what
+constrains the pool, and it is also what produces the 1910–1949 era skew.
+
+### On the relationship between board size and difficulty
+
+Fewer rows does **not** mean an easier puzzle. Difficulty in a deduction puzzle comes from how many
+equations intersect and which techniques must be chained, not from row count. A 26-row board solvable
+entirely by column sums is trivial and long; a 12-row board requiring T5 and the pitching cross is
+hard and short.
+
+The effect actually runs the other way: **more rows means more equations, and more equations makes
+uniqueness easier to reach** — more redundant paths to deduce each cell. That is what produces easy
+puzzles.
+
+This is an argument for measuring rather than assuming, in either direction.
+
+### Why the board is a subset at all
+
+A full MLB boxscore is ~26 rows, unplayable on a phone. This is the minimum shape preserving all
+three constraint families, including the cross-team constraint that §3 identifies as essential.
 
 ### Design process
 
@@ -406,7 +486,7 @@ These must exist in v1 even if no paid feature is used.
 | C8 | `canAccess(puzzle, user)` — in v1 always returns true | Any gating |
 | C9 | Reserved, empty layout slots | Ads without wrecking mobile |
 | C10 | Two-phase boot that can wait for consent | Privacy |
-| C11 | Zero strings in code, including generated text and metadata | Bilingual |
+| C11 | Zero strings in code, including generated text and metadata | Optional Spanish (§13) |
 
 **C7 is the irreversible one.** If v1 only stores "streak: 7", that history is never recoverable.
 
@@ -416,9 +496,19 @@ These must exist in v1 even if no paid feature is used.
 
 ## 13. Language
 
-**Bilingual English and Spanish**, with a user selector.
+**Interface: English. Spanish is a nice-to-have, not a must-have.**
 
-**Project convention:** all documents, code, and source comments in **English**. Discussion happens in Spanish; artifacts are in English.
+The target market is the United States. Spanish adds convenience for Latin American baseball fans —
+who can play because they read a boxscore the same way — but it is not required for launch and can
+slip without affecting the product.
+
+**What stays mandatory regardless: seam C11 — zero user-facing strings in code.** All copy goes
+through the string catalog from day one, including generated reveal text and metadata. That costs
+almost nothing to do now and is expensive to retrofit, so the option stays open even if Spanish never
+ships.
+
+**Project convention:** all documents, code, and source comments in **English**. Discussion happens
+in Spanish; artifacts are in English.
 
 ---
 
@@ -560,7 +650,7 @@ Advantage: 4–6 weeks of shakedown **before** Opening Day, which is the real at
 
 Operator's rationale: fear that someone takes the idea and implements it faster, and not wanting to burn the single first impression available in a small niche.
 
-**What is done starting now:** build audience **without showing the game.** The Dominican baseball history content the operator already writes leaks nothing about the product and attracts exactly the audience that will be the first user base. Mailing list and consistent presence through February.
+**What is done starting now:** build audience **without showing the game.** The baseball history content the operator already writes leaks nothing about the product and attracts baseball fans. Mailing list and consistent presence through February.
 
 **Launch channels (by weight):**
 
@@ -569,7 +659,11 @@ Operator's rationale: fear that someone takes the idea and implements it faster,
 3. **Communities:** r/baseball, r/Sabermetrics, SABR, Discord. SABR fits the operator's profile particularly well
 4. **The archive is SEO** — every archived puzzle is an indexable page about a real game. Thousands of long-tail pages no other puzzle game has
 5. **The baseball calendar** — Opening Day, playoffs, World Series
-6. **The Spanish angle** — nobody makes daily games for the DR, Venezuela, Puerto Rico, and Mexico. That's where bilingual-from-day-one pays off
+
+**Market note:** the target market is the United States. Latin American baseball fans can use the
+product because they read a boxscore the same way — hence optional Spanish — but Latin America
+is **not a target market**. Treating it as one would require detailed design review, not an
+extension.
 
 **Warnings:**
 
@@ -697,7 +791,7 @@ And it's possible because it's already designed that way: the puzzle is static, 
 
 **Primary domain: `boxscorepuzzle.com`**
 
-**Name language: English, no concessions.** The audience will come overwhelmingly from the US, and baseball vocabulary is already English throughout the Caribbean. Bilingual applies to the **interface**, not the name.
+**Name language: English, no concessions.** The audience will come overwhelmingly from the US, and baseball vocabulary is already English throughout the Caribbean. Any Spanish applies to the **interface**, not the name.
 
 ### Advantages and limitation of the chosen name
 
@@ -975,6 +1069,14 @@ Retrosheet publishes the material in three forms, and **they must be distinguish
 | **Deduced event files** | **Reconstructions** from partial information and context, not complete accounts. |
 
 **Games from deduced event files must be excluded from the pool.** They are reconstructions, and that's where boxscores that don't balance will show up.
+
+**⚠️ Loader defect found (August 2026):** the download script concatenates `<season>*.E??`, and that
+wildcard swallows `.EDA/.EDN/.EDF` — the deduced files. 105 files, 3,465 games, 1910–1968, already
+loaded with nothing distinguishing them. The zips are the only place the distinction survives.
+
+**Fix: record provenance as a column** on the game table (source file extension), rather than
+maintaining a separate exclusion list. A regenerated exclusion list is a second source of truth that
+can drift; a provenance column is permanent, queryable data — and §22's layer 1 needs it anyway.
 
 ### Good news about the chosen columns
 
@@ -1260,7 +1362,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Blocking**
 
 - [x] ~~Player names~~ — **resolved:** progressive reveal (§7)
-- [x] ~~v1 board~~ — **resolved:** mobile decides the UX; composition and screen budget in §6
+- [~] **v1 board — partially resolved.** Column sets, six-column ceiling, and line-score-as-anchor are decided (§6). **Row counts, roster caps, and erasure percentage are provisional** and blocked on two measurements: the real height budget from a browser prototype, and compressibility + technique distribution across the pool. **Puzzle quality outranks board size — if the measurements say the board is too small to produce hard puzzles, the board changes.**
 
 **Game core**
 
@@ -1299,8 +1401,10 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 **Data**
 
-- [ ] **⚠️ Retrosheet coverage: which years have complete (non-deduced) event files with RBI, BB, and K per batter. First technical verification to run** — it determines which years enter the pool (§32)
-- [ ] Real pool size after applying all quality filters. **Note:** the roster filter is asymmetric — the board needs the *offensive* team to have ≤10 batters and the *defensive* team ≤3 pitchers, so each game can yield up to two distinct puzzles, one per direction
+- [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions before quality filters
+- [ ] **⚠️ Next measurement, and the one that matters most: compressibility and technique distribution.** For a sample of surviving directions — how many cells can be erased preserving uniqueness *and* T1–T5 derivability, and which techniques the result demands. **This decides whether the board size produces hard puzzles.** Everything about board dimensions is blocked on it (§6)
+- [ ] Re-measure era distribution after quality filters, before deciding whether the calendar needs era weighting (§5)
+- [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
 - [x] ~~No-repetition policy~~ — **resolved:** at batch generation (§21)
 

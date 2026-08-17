@@ -20,8 +20,10 @@ No mixed-language identifiers (`get_juego`, `calendario_builder`). No Spanish co
 code. Where a domain term needs care, use the English baseball term — the vocabulary is already
 English.
 
-The UI itself is bilingual English/Spanish (§13). **No user-facing strings in code** — everything
-through the string catalog, including generated reveal text and metadata (C11).
+The UI ships in English. **Spanish is a nice-to-have, not a must-have** (§13) — it can slip without
+affecting launch. But **seam C11 is mandatory regardless: zero user-facing strings in code.** All copy
+goes through the string catalog from day one, including generated reveal text and metadata. Cheap now,
+expensive to retrofit.
 
 ---
 
@@ -162,12 +164,26 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
 - The board is identical on all screens. Desktop gets more whitespace, not more content.
+- **⚠️ Row counts, roster caps (≤10 batters / ≤3 pitchers), and erasure percentage are PROVISIONAL
+  estimates, not decisions.** They are blocked on measurement: the real height budget from a browser
+  prototype, and compressibility + technique distribution across the pool. Do not treat them as fixed
+  and do not build them into code as constants without flagging it.
 
-### 7. You can never lose (§27)
+### 7. Puzzle quality outranks everything (§31, §22)
+
+If a measurement shows the board is too small to produce puzzles that require T3–T5, **the board
+changes.** Screen budget constrains the board; it does not get to make the puzzle trivial.
+
+**Do not invent numeric parameters that shape the product.** Cell counts, thresholds, percentages,
+caps — if a value affects puzzle difficulty, pool size, or player experience and it is not derived
+from a measurement, present it as a proposal and let the operator decide. Label estimates as
+estimates.
+
+### 8. You can never lose (§27)
 
 There is no fail state. No error limit, no clock that kills the game. The puzzle stays open all day, saves itself, and at midnight closes for streak purposes only — it remains playable from the archive.
 
-### 8. Playability survives backend failure (§23)
+### 9. Playability survives backend failure (§23)
 
 The day's puzzle is a static file, validation is client-side, and events are stored locally first (C7). If the backend is down, login and sync fail but **the game still works.** Never introduce a backend dependency into the play path.
 
