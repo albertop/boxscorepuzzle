@@ -194,6 +194,101 @@ class TestSolutionShape:
         assert solution.mean_frontier is not None
 
 
+class TestWeightedChain:
+    def test_charges_nothing_for_a_step_that_combines_nothing(self, cubs_at_braves_1968: Direction) -> None:
+        # Nobody hit a sacrifice fly in this game, so that column is nothing but zeros and its total
+        # is zero. Filling a blank in it asks the player to add nothing up — it is the shape a board
+        # full of zeros takes, and the reason raw chain length overstates such boards.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
+
+        assert solution.deductions[0].is_trivial
+        assert solution.hardest_step is None
+        assert solution.chain_length == 1
+
+    def test_charges_for_a_step_that_does_combine_numbers(self, cubs_at_braves_1968: Direction) -> None:
+        # The hits column has seven non-zero entries to add up before the blank falls out.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+
+        assert not solution.deductions[0].is_trivial
+        assert solution.hardest_step is not None
+
+    def test_separates_two_boards_that_raw_chain_length_calls_equal(self, cubs_at_braves_1968: Direction) -> None:
+        # This is the whole point. Both boards are one step long; one is arithmetic and the other is
+        # a zero falling out of an empty column, and raw chain length cannot tell them apart.
+        boring = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
+        real = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+
+        assert boring.chain_length == real.chain_length
+        assert boring.hardest_step is None
+        assert real.hardest_step is not None
+
+    def test_a_long_cheap_solve_does_not_outscore_a_short_expensive_one(self, cubs_at_braves_1968: Direction) -> None:
+        # The failure a summed metric has by construction: many cheap steps beating a few costly
+        # ones. Taking the maximum removes it without any correction for volume.
+        # One blank in each of three columns that are nothing but zeros. Three steps, none of which
+        # asks the player to add anything up.
+        many_cheap = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(
+                cubs_at_braves_1968,
+                "footnotes[0].sacrifice_flies",
+                "footnotes[1].hit_by_pitch",
+                "footnotes[2].reached_on_interference",
+            ),
+        )
+        one_real = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+
+        assert len(many_cheap.deductions) > len(one_real.deductions)
+        assert many_cheap.hardest_step is None
+        assert one_real.hardest_step is not None
+
+    def test_bounding_is_counted_rather_than_costed(self, cubs_at_braves_1968: Direction) -> None:
+        # Bounding draws on the whole board, so any scan cost given to it would be invented — and
+        # under a maximum, one invented number would decide the score.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[1].runs", "batting[3].runs"),
+        )
+
+        assert solution.bounding_steps >= 1
+        assert not any(
+            deduction.has_a_comparable_cost
+            for deduction in solution.deductions
+            if deduction.technique == Technique.BOUNDING
+        )
+
+    def test_the_ninetieth_percentile_never_exceeds_the_maximum(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts", "batting[2].walks"),
+        )
+
+        assert solution.ninetieth_percentile_step is not None
+        assert solution.hardest_step is not None
+        assert solution.ninetieth_percentile_step <= solution.hardest_step
+
+    def test_a_step_costs_more_when_fewer_equations_are_ready(self, cubs_at_braves_1968: Direction) -> None:
+        # Scan cost is the share of live equations that are ready to give. One opening among many
+        # live equations is a harder thing to spot than one among few.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+
+        assert solution.deductions[0].scan_cost >= 1.0
+        assert solution.deductions[0].equations_solvable >= 1
+
+    def test_reports_how_much_of_the_solve_was_trivial(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
+
+        assert solution.trivial_share == 1.0
+
+    def test_an_untouched_board_costs_nothing(self, cubs_at_braves_1968: Direction) -> None:
+        solution = solve(shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968))
+
+        assert solution.hardest_step is None
+        assert solution.ninetieth_percentile_step is None
+        assert solution.trivial_share is None
+        assert solution.bounding_steps == 0
+
+
 class TestTallies:
     def test_counts_how_often_each_technique_was_needed(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(

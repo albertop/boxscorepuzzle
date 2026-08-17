@@ -97,7 +97,10 @@ def load(limit: int) -> list[Loaded]:
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END AS offense_is_home,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_LOB_CT ELSE g.AWAY_LOB_CT END AS lob,
-           l.VisLineScore, l.HomeLineScore
+           l.VisLineScore, l.HomeLineScore,
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_ERR_CT ELSE g.AWAY_ERR_CT END AS offense_errors,
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.AWAY_ERR_CT ELSE g.HOME_ERR_CT END AS defense_errors,
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.AWAY_HITS_CT ELSE g.HOME_HITS_CT END AS defense_hits
     FROM dbo.retroGamesReg g
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
@@ -128,7 +131,19 @@ def load(limit: int) -> list[Loaded]:
         candidates = []
         for decade in range(1910, 2030, 10):
             candidates += cursor.execute(query, limit, decade, decade + 9).fetchall()
-        for game_id, season, offense, defense, is_home, lob, vis, home in candidates:
+        for (
+            game_id,
+            season,
+            offense,
+            defense,
+            is_home,
+            lob,
+            vis,
+            home,
+            offense_errors,
+            defense_errors,
+            defense_hits,
+        ) in candidates:
             batting_rows = connection.cursor().execute(rows_query, game_id, offense).fetchall()
             pitching_rows = connection.cursor().execute(pitch_query, game_id, defense).fetchall()
             if not batting_rows or not pitching_rows:
@@ -164,10 +179,10 @@ def load(limit: int) -> list[Loaded]:
                     defense_by_inning=defense_innings,
                     offense_runs=sum(offense_innings),
                     offense_hits=sum(line.hits for line in batting),
-                    offense_errors=0,
+                    offense_errors=offense_errors,
                     defense_runs=sum(defense_innings),
-                    defense_hits=0,
-                    defense_errors=0,
+                    defense_hits=defense_hits,
+                    defense_errors=defense_errors,
                 ),
             )
             loaded.append(Loaded(game_id, season, direction, tuple(r[11] for r in batting_rows)))

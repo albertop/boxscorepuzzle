@@ -1,0 +1,596 @@
+==============================================================================
+  EASY — a handful of blanks, every one a single subtraction   [13 blanks]
+  ATL197408130   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  3  0  0  0  0  x  |   4   4   0
+  DEFENSE     0  0  0  1  0  0  0  1  1  |   3   8   0
+
+  BATTING     PA  AB   R   H  BB   K
+  RF           4   4   0   0   0   ·
+  2B           4   ·   1   ·   ·   1
+  3B           4   3   1   0   1   0
+  LF           3   3   1   1   0   0
+  CF           ·   3   1   2   0   0
+  1B           3   3   ·   0   0   1
+  SS           3   2   0   0   1   0
+  C            3   3   0   0   0   1
+  P            ·   3   0   0   0   1
+  P            0   ·   0   0   0   0
+  ----------------------------------
+  TOTALS      30  28   4   ·   2   4
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         3.0   4   4   4   1   1
+  P2         4.0   0   0   ·   ·   3
+  P3         1.0   0   0   0   0   0
+  ----------------------------------
+  TOTALS     8.0   4   4   4   ·   ·
+
+  LOB: 2
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  ATL197408130   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  3  0  0  0  0  x  |   4   4   0
+  DEFENSE     0  0  0  1  0  0  0  1  1  |   3   8   0
+
+  BATTING     PA  AB   R   H  BB   K
+  RF           4   4   0   0   0   0
+  2B           4   4   1   1   0   1
+  3B           4   3   1   0   1   0
+  LF           3   3   1   1   0   0
+  CF           3   3   1   2   0   0
+  1B           3   3   0   0   0   1
+  SS           3   2   0   0   1   0
+  C            3   3   0   0   0   1
+  P            3   3   0   0   0   1
+  P            0   0   0   0   0   0
+  ----------------------------------
+  TOTALS      30  28   4   4   2   4
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         3.0   4   4   4   1   1
+  P2         4.0   0   0   0   1   3
+  P3         1.0   0   0   0   0   0
+  ----------------------------------
+  TOTALS     8.0   4   4   4   2   4
+
+  LOB: 2
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[0].strikeouts                0  batting_column_sum        12    17    1.4  
+    2 batting[1].walks                     0  batting_column_sum        11    16    1.5  
+    3 batting[1].at_bats                   4  row_plate_appearances     11    15    1.4  trivial
+    4 batting[4].plate_appearances         3  row_plate_appearances     11    14    1.3  trivial
+    5 batting[5].runs                      0  batting_column_sum        11    13    1.2  
+    6 batting[8].plate_appearances         3  batting_column_sum        10    12    1.2  
+    7 batting[9].at_bats                   0  batting_column_sum         8    10    1.2  
+    8 batting_totals.hits                  4  cross_team_total           6     8    1.3  trivial
+    9 batting[1].hits                      1  batting_column_sum         5     6    1.2  
+   10 pitching[1].earned_runs              0  pitching_column_sum        4     5    1.2  
+   11 pitching_totals.strikeouts           4  pitching_column_sum        3     4    1.3  
+   12 pitching_totals.walks                2  cross_team_total           1     2    2.0  trivial
+   13 pitching[1].walks                    1  pitching_column_sum        1     1    1.0  
+
+  chain 3   weighted 2.7   trivial 31%   families column_sum, cross_team, row_identity
+
+==============================================================================
+  EASY — slightly longer, still nothing to hunt for   [15 blanks]
+  ATL197408180   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  1  1  0  3  0  1  |   7  12   1
+  DEFENSE     0  0  3  0  0  0  0  1  0  |   4   6   0
+
+  BATTING     PA  AB   R   H  BB   K
+  2B           5   4   1   2   ·   0
+  SS           5   5   1   ·   0   0
+  3B           ·   4   2   2   1   0
+  1B           ·   4   1   1   0   2
+  CF           5   ·   0   0   2   0
+  RF           5   4   1   1   1   1
+  RF           0   0   0   0   0   0
+  LF           5   4   ·   1   1   0
+  C            4   ·   0   2   ·   0
+  P            4   4   0   1   0   0
+  ----------------------------------
+  TOTALS      43  36   7   ·   6   3
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         6.2   ·   ·   6   4   3
+  P2         0.1   0   0   ·   1   ·
+  P3         2.0   2   ·   1   1   ·
+  ----------------------------------
+  TOTALS     9.0  12   7   7   6   3
+
+  SF: 1B     LOB: 9
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  ATL197408180   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  1  1  0  3  0  1  |   7  12   1
+  DEFENSE     0  0  3  0  0  0  0  1  0  |   4   6   0
+
+  BATTING     PA  AB   R   H  BB   K
+  2B           5   4   1   2   1   0
+  SS           5   5   1   2   0   0
+  3B           5   4   2   2   1   0
+  1B           5   4   1   1   0   2
+  CF           5   3   0   0   2   0
+  RF           5   4   1   1   1   1
+  RF           0   0   0   0   0   0
+  LF           5   4   1   1   1   0
+  C            4   4   0   2   0   0
+  P            4   4   0   1   0   0
+  ----------------------------------
+  TOTALS      43  36   7  12   6   3
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         6.2  10   6   6   4   3
+  P2         0.1   0   0   0   1   0
+  P3         2.0   2   1   1   1   0
+  ----------------------------------
+  TOTALS     9.0  12   7   7   6   3
+
+  SF: 1B     LOB: 9
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[0].walks                     1  row_plate_appearances      9    16    1.8  
+    2 batting[2].plate_appearances         5  row_plate_appearances      9    15    1.7  
+    3 batting[3].plate_appearances         5  batting_column_sum         9    14    1.6  
+    4 batting[4].at_bats                   3  row_plate_appearances      7    12    1.7  
+    5 batting[7].runs                      1  batting_column_sum         7    11    1.6  
+    6 batting[8].at_bats                   4  batting_column_sum         6    10    1.7  
+    7 batting[8].walks                     0  batting_column_sum         6     9    1.5  
+    8 batting_totals.hits                 12  cross_team_total           4     7    1.8  trivial
+    9 batting[1].hits                      2  batting_column_sum         3     5    1.7  
+   10 pitching[0].hits                    10  pitching_column_sum        2     4    2.0  
+   11 pitching[1].earned_runs              0  pitching_column_sum        1     3    3.0  
+   12 pitching[0].runs                     6  bounding                   4     2    0.5  bounded
+   13 pitching[2].runs                     1  pitching_column_sum        1     2    2.0  
+   14 pitching[1].strikeouts               0  bounding                   2     1    0.5  trivial bounded
+   15 pitching[2].strikeouts               0  pitching_column_sum        1     1    1.0  
+
+  chain 6   weighted 6.9   trivial 13%   families column_sum, cross_team, row_identity
+
+==============================================================================
+  MID — the row identity starts carrying weight   [25 blanks]
+  ATL197408250   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  0  1  0  0  0  0  |   1   6   0
+  DEFENSE     0  0  0  0  0  0  0  0  0  |   0   5   1
+
+  BATTING     PA  AB   R   H  BB   K
+  SS           4   4   ·   1   ·   1
+  2B           4   4   0   0   0   ·
+  LF           4   4   0   1   0   1
+  RF           4   ·   0   0   ·   0
+  1B           4   ·   ·   ·   0   ·
+  3B           ·   2   0   0   1   ·
+  CF           3   3   1   2   0   0
+  C            3   3   0   0   ·   ·
+  P            3   3   ·   1   ·   ·
+  ----------------------------------
+  TOTALS      32   ·   ·   6   1   2
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         8.0   5   1   ·   ·   2
+  P2           ·   ·   0   0   0   ·
+  ----------------------------------
+  TOTALS     9.0   6   ·   1   1   ·
+
+  LOB: 4
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  ATL197408250   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  0  1  0  0  0  0  |   1   6   0
+  DEFENSE     0  0  0  0  0  0  0  0  0  |   0   5   1
+
+  BATTING     PA  AB   R   H  BB   K
+  SS           4   4   0   1   0   1
+  2B           4   4   0   0   0   0
+  LF           4   4   0   1   0   1
+  RF           4   4   0   0   0   0
+  1B           4   4   0   1   0   0
+  3B           3   2   0   0   1   0
+  CF           3   3   1   2   0   0
+  C            3   3   0   0   0   0
+  P            3   3   0   1   0   0
+  ----------------------------------
+  TOTALS      32  31   1   6   1   2
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         8.0   5   1   1   1   2
+  P2         1.0   1   0   0   0   0
+  ----------------------------------
+  TOTALS     9.0   6   1   1   1   2
+
+  LOB: 4
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[0].walks                     0  row_plate_appearances     16    23    1.4  
+    2 batting[4].at_bats                   4  row_plate_appearances     15    22    1.5  trivial
+    3 batting[4].hits                      1  batting_column_sum        14    21    1.5  
+    4 batting[5].plate_appearances         3  batting_column_sum        13    20    1.5  
+    5 batting[7].walks                     0  row_plate_appearances     11    18    1.6  
+    6 batting[8].walks                     0  row_plate_appearances     10    17    1.7  
+    7 batting[3].walks                     0  batting_column_sum        10    16    1.6  
+    8 batting[3].at_bats                   4  row_plate_appearances     10    15    1.5  trivial
+    9 batting_totals.at_bats              31  batting_column_sum        10    14    1.4  
+   10 batting_totals.runs                  1  line_score_runs            8    12    1.5  trivial
+   11 pitching[0].earned_runs              1  pitching_column_sum        7    10    1.4  trivial
+   12 pitching[0].walks                    1  pitching_column_sum        6     9    1.5  trivial
+   13 pitching[1].hits                     1  pitching_column_sum        5     8    1.6  
+   14 pitching[1].outs                     3  pitching_column_sum        4     7    1.8  
+   15 pitching_totals.runs                 1  pitching_column_sum        3     6    2.0  trivial
+   16 pitching_totals.strikeouts           2  cross_team_total           1     4    4.0  trivial
+   17 pitching[1].strikeouts               0  pitching_column_sum        1     3    3.0  
+   18 batting[0].runs                      0  bounding                   8     2    0.2  bounded
+   19 batting[1].strikeouts                0  bounding                   7     2    0.3  bounded
+   20 batting[4].runs                      0  bounding                   6     2    0.3  bounded
+   21 batting[8].runs                      0  batting_column_sum         1     2    2.0  
+   22 batting[4].strikeouts                0  bounding                   4     1    0.2  trivial bounded
+   23 batting[5].strikeouts                0  bounding                   3     1    0.3  trivial bounded
+   24 batting[7].strikeouts                0  bounding                   2     1    0.5  trivial bounded
+   25 batting[8].strikeouts                0  batting_column_sum         1     1    1.0  
+
+  chain 12   weighted 8.6   trivial 40%   families column_sum, cross_team, row_identity
+
+==============================================================================
+  MID — longer, and the pitching cross opens it   [32 blanks]
+  ATL197409080   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  3  1  0  1  0  x  |   5   8   0
+  DEFENSE     0  0  0  3  0  0  0  0  0  |   3   6   4
+
+  BATTING     PA  AB   R   H  BB   K
+  3B           5   ·   1   1   1   1
+  2B           5   ·   ·   1   1   0
+  CF           ·   4   0   0   0   0
+  LF           4   3   1   1   ·   0
+  1B           4   ·   1   ·   ·   0
+  CF           ·   0   1   ·   0   0
+  1B           ·   ·   0   1   0   ·
+  C            4   4   0   2   ·   0
+  SS           4   ·   0   1   0   0
+  P            ·   3   0   0   0   1
+  ----------------------------------
+  TOTALS      38   ·   ·   ·   ·   ·
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         4.0   4   4   ·   2   3
+  P2         2.0   2   ·   ·   ·   0
+  P3           ·   ·   ·   1   1   ·
+  ----------------------------------
+  TOTALS       ·   ·   ·   4   5   4
+
+  SH: P     LOB: 9
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  ATL197409080   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  3  1  0  1  0  x  |   5   8   0
+  DEFENSE     0  0  0  3  0  0  0  0  0  |   3   6   4
+
+  BATTING     PA  AB   R   H  BB   K
+  3B           5   4   1   1   1   1
+  2B           5   4   1   1   1   0
+  CF           4   4   0   0   0   0
+  LF           4   3   1   1   1   0
+  1B           4   2   1   1   2   0
+  CF           0   0   1   0   0   0
+  1B           4   4   0   1   0   2
+  C            4   4   0   2   0   0
+  SS           4   4   0   1   0   0
+  P            4   3   0   0   0   1
+  ----------------------------------
+  TOTALS      38  32   5   8   5   4
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         4.0   4   4   3   2   3
+  P2         2.0   2   0   0   2   0
+  P3         2.0   2   1   1   1   1
+  ----------------------------------
+  TOTALS     8.0   8   5   4   5   4
+
+  SH: P     LOB: 9
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[0].at_bats                   4  row_plate_appearances     14    30    2.1  
+    2 batting[1].at_bats                   4  row_plate_appearances     13    29    2.2  
+    3 batting[2].plate_appearances         4  row_plate_appearances     12    28    2.3  trivial
+    4 batting[3].walks                     1  row_plate_appearances     11    27    2.5  
+    5 batting[5].plate_appearances         0  row_plate_appearances     10    26    2.6  trivial
+    6 batting[7].walks                     0  row_plate_appearances      9    25    2.8  
+    7 batting[8].at_bats                   4  row_plate_appearances      8    24    3.0  trivial
+    8 batting[9].plate_appearances         4  row_plate_appearances      7    23    3.3  
+    9 batting[6].plate_appearances         4  batting_column_sum         7    22    3.1  
+   10 batting[6].at_bats                   4  row_plate_appearances      7    21    3.0  trivial
+   11 batting_totals.hits                  8  line_score_hits            6    20    3.3  trivial
+   12 batting_totals.runs                  5  line_score_runs            6    19    3.2  trivial
+   13 batting[1].runs                      1  batting_column_sum         8    18    2.2  
+   14 batting_totals.strikeouts            4  cross_team_total           7    17    2.4  trivial
+   15 batting[6].strikeouts                2  batting_column_sum         7    16    2.3  
+   16 batting_totals.walks                 5  cross_team_total           6    15    2.5  trivial
+   17 batting[4].walks                     2  batting_column_sum         7    14    2.0  
+   18 batting[4].at_bats                   2  row_plate_appearances      7    13    1.9  
+   19 batting_totals.at_bats              32  batting_column_sum         7    12    1.7  
+   20 pitching[1].walks                    2  pitching_column_sum        5    10    2.0  
+   21 pitching[2].strikeouts               1  pitching_column_sum        4     9    2.2  
+   22 pitching_totals.hits                 8  cross_team_total           3     8    2.7  trivial
+   23 pitching[2].hits                     2  pitching_column_sum        3     7    2.3  
+   24 pitching_totals.outs                24  global_plate_appearances     2     6    3.0  
+   25 pitching[2].outs                     6  pitching_column_sum        2     5    2.5  
+   26 pitching_totals.runs                 5  cross_team_total           1     4    4.0  trivial
+   27 batting[4].hits                      1  bounding                   6     3    0.5  bounded
+   28 batting[5].hits                      0  batting_column_sum         1     3    3.0  
+   29 pitching[0].earned_runs              3  bounding                   4     2    0.5  bounded
+   30 pitching[1].earned_runs              0  pitching_column_sum        1     2    2.0  
+   31 pitching[1].runs                     0  bounding                   2     1    0.5  trivial bounded
+   32 pitching[2].runs                     1  pitching_column_sum        1     1    1.0  
+
+  chain 10   weighted 15.3   trivial 34%   families column_sum, cross_team, global_identity, row_identity
+
+==============================================================================
+  CEILING — erased as far as it will go and stay solvable   [45 blanks]
+  ATL197408130   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  3  0  0  0  0  x  |   4   4   0
+  DEFENSE     0  0  0  1  0  0  0  1  1  |   3   8   0
+
+  BATTING     PA  AB   R   H  BB   K
+  RF           4   ·   0   ·   ·   0
+  2B           ·   4   1   1   ·   1
+  3B           ·   ·   1   ·   1   0
+  LF           3   ·   ·   1   ·   0
+  CF           3   ·   1   2   ·   0
+  1B           ·   3   0   ·   ·   ·
+  SS           3   ·   0   ·   1   0
+  C            ·   3   0   ·   ·   1
+  P            ·   3   0   ·   ·   1
+  P            0   ·   0   ·   ·   0
+  ----------------------------------
+  TOTALS       ·   ·   ·   ·   2   4
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         3.0   ·   4   ·   1   1
+  P2         4.0   0   ·   ·   ·   ·
+  P3           ·   0   ·   ·   0   0
+  ----------------------------------
+  TOTALS     8.0   ·   ·   4   ·   ·
+
+  LOB: 2
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  ATL197408130   1974
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  1  0  3  0  0  0  0  x  |   4   4   0
+  DEFENSE     0  0  0  1  0  0  0  1  1  |   3   8   0
+
+  BATTING     PA  AB   R   H  BB   K
+  RF           4   4   0   0   0   0
+  2B           4   4   1   1   0   1
+  3B           4   3   1   0   1   0
+  LF           3   3   1   1   0   0
+  CF           3   3   1   2   0   0
+  1B           3   3   0   0   0   1
+  SS           3   2   0   0   1   0
+  C            3   3   0   0   0   1
+  P            3   3   0   0   0   1
+  P            0   0   0   0   0   0
+  ----------------------------------
+  TOTALS      30  28   4   4   2   4
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         3.0   4   4   4   1   1
+  P2         4.0   0   0   0   1   3
+  P3         1.0   0   0   0   0   0
+  ----------------------------------
+  TOTALS     8.0   4   4   4   2   4
+
+  LOB: 2
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[5].strikeouts                1  batting_column_sum         7    30    4.3  
+    2 batting[6].at_bats                   2  row_plate_appearances      6    29    4.8  
+    3 batting_totals.hits                  4  line_score_hits            5    28    5.6  trivial
+    4 batting_totals.runs                  4  line_score_runs            5    27    5.4  trivial
+    5 batting[3].runs                      1  batting_column_sum         7    26    3.7  
+    6 batting_totals.plate_appearances    30  global_plate_appearances     6    25    4.2  
+    7 batting_totals.at_bats              28  row_plate_appearances      6    24    4.0  
+    8 pitching[2].outs                     3  pitching_column_sum        5    23    4.6  
+    9 pitching_totals.hits                 4  cross_team_total           4    22    5.5  trivial
+   10 pitching[0].hits                     4  pitching_column_sum        4    21    5.2  trivial
+   11 pitching_totals.runs                 4  cross_team_total           3    20    6.7  trivial
+   12 pitching_totals.strikeouts           4  cross_team_total           2    19    9.5  trivial
+   13 pitching[1].strikeouts               3  pitching_column_sum        2    18    9.0  
+   14 pitching_totals.walks                2  cross_team_total           1    17   17.0  trivial
+   15 pitching[1].walks                    1  pitching_column_sum        1    16   16.0  
+   16 batting[0].at_bats                   4  bounding                  30    15    0.5  bounded
+   17 batting[0].walks                     0  row_plate_appearances      1    15   15.0  
+   18 batting[0].hits                      0  bounding                  28    14    0.5  bounded
+   19 batting[1].plate_appearances         4  bounding                  27    14    0.5  bounded
+   20 batting[1].walks                     0  row_plate_appearances      1    14   14.0  
+   21 batting[2].at_bats                   3  bounding                  25    13    0.5  bounded
+   22 batting[2].plate_appearances         4  row_plate_appearances      1    13   13.0  
+   23 batting[2].hits                      0  bounding                  23    12    0.5  bounded
+   24 batting[3].at_bats                   3  bounding                  22    12    0.5  bounded
+   25 batting[3].walks                     0  row_plate_appearances      1    12   12.0  
+   26 batting[4].at_bats                   3  bounding                  20    11    0.6  bounded
+   27 batting[4].walks                     0  row_plate_appearances      2    11    5.5  
+   28 batting[9].at_bats                   0  batting_column_sum         1    10   10.0  
+   29 batting[9].walks                     0  row_plate_appearances      1     9    9.0  trivial
+   30 batting[5].hits                      0  bounding                  16     8    0.5  bounded
+   31 batting[5].plate_appearances         3  bounding                  15     8    0.5  bounded
+   32 batting[5].walks                     0  row_plate_appearances      1     8    8.0  
+   33 batting[6].hits                      0  bounding                  13     7    0.5  bounded
+   34 batting[7].hits                      0  bounding                  12     7    0.6  bounded
+   35 batting[7].plate_appearances         3  bounding                  11     7    0.6  bounded
+   36 batting[7].walks                     0  row_plate_appearances      2     7    3.5  
+   37 batting[8].plate_appearances         3  batting_column_sum         2     6    3.0  
+   38 batting[8].walks                     0  batting_column_sum         2     5    2.5  
+   39 batting[8].hits                      0  bounding                   7     3    0.4  bounded
+   40 batting[9].hits                      0  batting_column_sum         1     3    3.0  
+   41 pitching[0].earned_runs              4  bounding                   5     2    0.4  bounded
+   42 pitching[1].earned_runs              0  bounding                   4     2    0.5  bounded
+   43 pitching[2].earned_runs              0  pitching_column_sum        1     2    2.0  
+   44 pitching[1].runs                     0  bounding                   2     1    0.5  trivial bounded
+   45 pitching[2].runs                     0  pitching_column_sum        1     1    1.0  
+
+  chain 31   weighted 107.8   trivial 20%   families column_sum, cross_team, global_identity, row_identity
+
+==============================================================================
+  ZERO-HEAVY — 45% of the grid is nought, and it compresses far   [53 blanks]
+  SEA201308110   2013
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  0  0  0  0  0  0  |   0   5   0
+  DEFENSE     0  0  1  0  1  0  0  0  x  |   2   4   0
+
+  BATTING     PA  AB   R   H  BB   K
+  P            ·   0   ·   ·   ·   0
+  RF           ·   ·   ·   ·   ·   0
+  SS           ·   4   ·   1   ·   2
+  DH           ·   4   ·   1   ·   0
+  CF           4   ·   ·   ·   ·   2
+  LF           3   2   ·   ·   ·   1
+  1B           3   ·   ·   1   ·   1
+  3B           3   ·   ·   ·   ·   ·
+  2B           3   ·   ·   1   ·   0
+  C            3   ·   ·   1   ·   2
+  ----------------------------------
+  TOTALS       ·   ·   ·   ·   1   ·
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         8.0   ·   ·   ·   ·   9
+  P2           ·   1   ·   ·   0   1
+  ----------------------------------
+  TOTALS     9.0   ·   ·   ·   ·   ·
+
+  LOB: 4
+
+  --------------------------------------------------------------------------
+
+  THE ANSWER
+  SEA201308110   2013
+
+              1  2  3  4  5  6  7  8  9  |   R   H   E
+  OFFENSE     0  0  0  0  0  0  0  0  0  |   0   5   0
+  DEFENSE     0  0  1  0  1  0  0  0  x  |   2   4   0
+
+  BATTING     PA  AB   R   H  BB   K
+  P            0   0   0   0   0   0
+  RF           4   4   0   0   0   0
+  SS           4   4   0   1   0   2
+  DH           4   4   0   1   0   0
+  CF           4   4   0   0   0   2
+  LF           3   2   0   0   1   1
+  1B           3   3   0   1   0   1
+  3B           3   3   0   0   0   2
+  2B           3   3   0   1   0   0
+  C            3   3   0   1   0   2
+  ----------------------------------
+  TOTALS      31  30   0   5   1  10
+
+  PITCHING    IP   H   R  ER  BB   K
+  P1         8.0   4   0   0   1   9
+  P2         1.0   1   0   0   0   1
+  ----------------------------------
+  TOTALS     9.0   5   0   0   1  10
+
+  LOB: 4
+
+  --------------------------------------------------------------------------
+
+  SOLUTION PATH
+    # cell                                 =  from                   ready  live   cost  note
+    1 batting[5].walks                     1  row_plate_appearances      6    30    5.0  
+    2 batting_totals.hits                  5  line_score_hits            5    29    5.8  trivial
+    3 batting_totals.runs                  0  line_score_runs            5    28    5.6  trivial
+    4 batting_totals.plate_appearances    31  global_plate_appearances     6    27    4.5  
+    5 batting_totals.at_bats              30  row_plate_appearances      6    26    4.3  
+    6 pitching[1].outs                     3  pitching_column_sum        5    25    5.0  
+    7 pitching_totals.hits                 5  cross_team_total           4    24    6.0  trivial
+    8 pitching[0].hits                     4  pitching_column_sum        4    23    5.8  
+    9 pitching_totals.runs                 0  cross_team_total           3    22    7.3  trivial
+   10 pitching_totals.strikeouts          10  pitching_column_sum        2    21   10.5  
+   11 batting_totals.strikeouts           10  cross_team_total           2    20   10.0  trivial
+   12 batting[7].strikeouts                2  batting_column_sum         2    19    9.5  
+   13 pitching_totals.walks                1  cross_team_total           1    18   18.0  trivial
+   14 pitching[0].walks                    1  pitching_column_sum        1    17   17.0  trivial
+   15 batting[0].hits                      0  bounding                  39    16    0.4  bounded
+   16 batting[0].plate_appearances         0  bounding                  38    16    0.4  bounded
+   17 batting[0].walks                     0  row_plate_appearances      1    16   16.0  trivial
+   18 batting[0].runs                      0  bounding                  36    15    0.4  bounded
+   19 batting[1].at_bats                   4  bounding                  35    15    0.4  bounded
+   20 batting[1].hits                      0  bounding                  34    15    0.4  bounded
+   21 batting[1].plate_appearances         4  bounding                  33    15    0.5  bounded
+   22 batting[1].walks                     0  row_plate_appearances      1    15   15.0  
+   23 batting[1].runs                      0  bounding                  31    14    0.5  bounded
+   24 batting[2].plate_appearances         4  bounding                  30    14    0.5  bounded
+   25 batting[2].walks                     0  row_plate_appearances      2    14    7.0  
+   26 batting[3].plate_appearances         4  batting_column_sum         1    13   13.0  
+   27 batting[3].walks                     0  row_plate_appearances      1    12   12.0  
+   28 batting[2].runs                      0  bounding                  26    11    0.4  bounded
+   29 batting[3].runs                      0  bounding                  25    11    0.4  bounded
+   30 batting[4].at_bats                   4  bounding                  24    11    0.5  bounded
+   31 batting[4].walks                     0  row_plate_appearances      1    11   11.0  
+   32 batting[4].hits                      0  bounding                  22    10    0.5  bounded
+   33 batting[4].runs                      0  bounding                  21    10    0.5  bounded
+   34 batting[5].hits                      0  bounding                  20    10    0.5  bounded
+   35 batting[7].hits                      0  batting_column_sum         1    10   10.0  
+   36 batting[5].runs                      0  bounding                  18     9    0.5  bounded
+   37 batting[6].at_bats                   3  bounding                  17     9    0.5  bounded
+   38 batting[6].walks                     0  row_plate_appearances      1     9    9.0  
+   39 batting[6].runs                      0  bounding                  15     8    0.5  bounded
+   40 batting[7].at_bats                   3  bounding                  14     8    0.6  bounded
+   41 batting[7].walks                     0  row_plate_appearances      1     8    8.0  
+   42 batting[7].runs                      0  bounding                  12     7    0.6  bounded
+   43 batting[8].at_bats                   3  bounding                  11     7    0.6  bounded
+   44 batting[8].walks                     0  row_plate_appearances      2     7    3.5  
+   45 batting[9].at_bats                   3  batting_column_sum         2     6    3.0  
+   46 batting[9].walks                     0  batting_column_sum         2     5    2.5  
+   47 batting[8].runs                      0  bounding                   7     3    0.4  bounded
+   48 batting[9].runs                      0  batting_column_sum         1     3    3.0  trivial
+   49 pitching[0].earned_runs              0  bounding                   5     2    0.4  bounded
+   50 pitching[0].runs                     0  bounding                   4     2    0.5  bounded
+   51 pitching[1].runs                     0  pitching_column_sum        1     2    2.0  trivial
+   52 pitching[1].earned_runs              0  bounding                   2     1    0.5  trivial bounded
+   53 pitching_totals.earned_runs          0  pitching_column_sum        1     1    1.0  trivial
+
+  chain 40   weighted 114.9   trivial 23%   families column_sum, cross_team, global_identity, row_identity

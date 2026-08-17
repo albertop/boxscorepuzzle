@@ -41,19 +41,19 @@ RESTARTS = 5
 SEED = 20260818
 
 
-def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, int, float]:
-    """Best maximal erasure found, the chain length it produced, and seconds spent."""
+def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, int, float, float, float]:
+    """Best maximal erasure found: cells, raw chain, weighted chain, trivial share, seconds."""
     started = time.perf_counter()
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
     candidates = erasable_cells(loaded.direction)
-    best_cells, best_chain = 0, 0
+    best_cells, best_chain, best_weighted, best_trivial = 0, 0, 0.0, 0.0
 
     for _ in range(RESTARTS):
         order = candidates[:]
         rng.shuffle(order)
         erased: set[str] = set()
-        chain = 0
+        chain, weighted, trivial = 0, 0.0, 0.0
         for cell in order:
             trial = erased | {cell}
             puzzle = {k: v for k, v in values.items() if k not in trial}
@@ -64,10 +64,40 @@ def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, int, float]:
             if solution.is_complete:
                 erased = trial
                 chain = solution.chain_length
+                weighted = solution.weighted_chain_length
+                trivial = solution.trivial_share or 0.0
         if len(erased) > best_cells:
-            best_cells, best_chain = len(erased), chain
+            best_cells, best_chain, best_weighted, best_trivial = len(erased), chain, weighted, trivial
 
-    return best_cells, best_chain, time.perf_counter() - started
+    return best_cells, best_chain, best_weighted, best_trivial, time.perf_counter() - started
+
+
+def at_fixed_erasure(loaded: Loaded, counts: tuple[int, ...], rng: random.Random) -> dict[int, float | None]:
+    """Weighted chain at the *same* cell count on every board.
+
+    Comparing boards at their own ceilings confounds difficulty with volume: a board that compresses
+    further has more steps and so a longer weighted chain whatever each step costs. Holding the cell
+    count fixed removes that, at the price of only working where random erasure still solves.
+
+    Returns None where no random erasure of that size solved, which is a fact about the board and
+    must not be reported as a zero.
+    """
+    shape = shape_of(loaded.direction)
+    values = cell_values(loaded.direction)
+    candidates = erasable_cells(loaded.direction)
+    result: dict[int, float | None] = {}
+    for count in counts:
+        scores = []
+        for _ in range(12):
+            erased = rng.sample(candidates, min(count, len(candidates)))
+            try:
+                solution = solve(shape, {k: v for k, v in values.items() if k not in erased})
+            except ContradictionError:
+                continue
+            if solution.is_complete:
+                scores.append(solution.weighted_chain_length)
+        result[count] = statistics.median(scores) if scores else None
+    return result
 
 
 def proxies(loaded: Loaded) -> dict[str, float]:
@@ -99,11 +129,13 @@ def main() -> None:
 
     rows = []
     for index, loaded in enumerate(sample, start=1):
-        cells, chain, seconds = ceiling(loaded, rng)
-        rows.append((loaded, cells, chain, seconds, proxies(loaded)))
+        cells, chain, weighted, trivial, seconds = ceiling(loaded, rng)
+        below = at_fixed_erasure(loaded, (6, 10), rng)
+        rows.append((loaded, cells, chain, seconds, proxies(loaded), weighted, trivial, below))
         print(
             f"  [{index:>3}/{len(sample)}] {loaded.game_id} {loaded.season}: "
-            f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {chain}, {seconds:.1f}s",
+            f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {chain}, "
+            f"weighted {weighted:.1f}, trivial {trivial:.0%}, {seconds:.1f}s",
             flush=True,
         )
 
@@ -142,9 +174,63 @@ def main() -> None:
         column = [row[4][name] for row in rows]
         print(f"  {name:<19} r = {_pearson(shares, column):+.3f}")
 
+    weighted = [row[5] for row in rows]
+    trivial = [row[6] for row in rows]
+
+    print("\n=== WEIGHTED CHAIN LENGTH AT THE CEILING ===")
+    ordered_weighted = sorted(weighted)
+    for label, value in (
+        ("min", ordered_weighted[0]),
+        ("p10", ordered_weighted[len(ordered_weighted) // 10]),
+        ("p50", statistics.median(ordered_weighted)),
+        ("p90", ordered_weighted[9 * len(ordered_weighted) // 10]),
+        ("max", ordered_weighted[-1]),
+    ):
+        print(f"  {label:>4}: {value:7.1f}")
+    print(f"  share of steps that were trivial: median {statistics.median(trivial):.0%}")
+
+    # Volume-controlled: cost per cell removed, and the same cell count on every board.
+    intensity = [row[5] / max(row[1], 1) for row in rows]
+    print(f"  cost per cell removed: median {statistics.median(intensity):.2f}")
+    for count in (6, 10):
+        column = [row[7][count] for row in rows if row[7][count] is not None]
+        print(f"  at {count:>2} cells on every board: median {statistics.median(column):6.1f} (n={len(column)})")
+
+    print("\n=== DOES THE WEIGHTING ADD ANYTHING ===")
+    print(f"  weighted vs raw chain length     r = {_pearson(weighted, [float(c) for c in chains]):+.3f}")
+    print(f"  weighted vs compressibility      r = {_pearson(weighted, shares):+.3f}")
+    print("  (a very high correlation with raw chain means the weighting changed nothing)")
+
+    print("\n=== THE TEST THAT MATTERS: DOES IT STILL REWARD BOREDOM ===")
+    print("  three readings of weighted chain: at each board's ceiling, per cell removed, and at a")
+    print("  fixed ten cells on every board. Only the last two hold volume constant.")
+    at_ten = [(row[4], row[7][10]) for row in rows if row[7][10] is not None]
+    for name in ("zero_density", "digit_range", "line_score_variety", "scoring_innings"):
+        column = [row[4][name] for row in rows]
+        print(
+            f"  {name:<19} compressibility {_pearson(shares, column):+.3f}   "
+            f"ceiling {_pearson(weighted, column):+.3f}   "
+            f"per-cell {_pearson(intensity, column):+.3f}   "
+            f"at-10 {_pearson([p[name] for p, _ in at_ten], [w for _, w in at_ten]):+.3f}"
+        )
+
+    print("\n=== DOES IT SEPARATE BOARDS RAW CHAIN CALLS EQUAL ===")
+    grouped: dict[int, list[float]] = {}
+    for row in rows:
+        grouped.setdefault(row[2], []).append(row[5])
+    for chain_length, values in sorted(grouped.items()):
+        if len(values) < 3:
+            continue
+        spread = max(values) - min(values)
+        print(
+            f"  raw chain {chain_length:>2} ({len(values):>2} boards): weighted "
+            f"{min(values):6.1f} to {max(values):6.1f}, spread {spread:5.1f}, median {statistics.median(values):6.1f}"
+        )
+
     print("\n=== SEARCH COST ===")
     print(f"  per direction: mean {statistics.fmean(seconds):.2f}s, max {max(seconds):.2f}s")
     print(f"  extrapolated over 55,024 directions: {statistics.fmean(seconds) * 55024 / 3600:.1f} hours")
+    print("  weighted chain is computed from the same walk, so it adds no search cost of its own")
 
 
 if __name__ == "__main__":

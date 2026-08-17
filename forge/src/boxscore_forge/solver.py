@@ -73,6 +73,42 @@ class Deduction:
     depth: int
     frontier: int
     depends_on: frozenset[str]
+    equations_live: int
+    equations_solvable: int
+    known_terms_combined: int | None
+
+    @property
+    def scan_cost(self) -> float:
+        """How much of the board had to be looked at to find this move.
+
+        One solvable equation among twenty live ones is a harder thing to spot than one among three,
+        and counting steps alone cannot tell those apart.
+        """
+        return self.equations_live / max(self.equations_solvable, 1)
+
+    @property
+    def is_trivial(self) -> bool:
+        """Whether the step required any arithmetic at all.
+
+        A column that sums to nothing forces every blank in it, and an equation with a single
+        non-zero known is a value copied rather than computed. Neither asks the player to combine
+        anything, so neither is difficulty however long the cascade of them runs. This is structural
+        rather than a heuristic: it counts the non-zero numbers the deduction had to add up.
+
+        Undefined for a bounding step, which combines no particular set of terms. Those are left out
+        of the cost metric and counted on their own rather than given a flattering number.
+        """
+        return self.known_terms_combined is not None and self.known_terms_combined <= 1
+
+    @property
+    def has_a_comparable_cost(self) -> bool:
+        """Whether this step's cost belongs in the same scale as the others.
+
+        Bounding does not: it draws on the whole board rather than on one equation, so any scan cost
+        assigned to it would be an invention, and under a metric that takes the maximum a single
+        invented number would decide the board's score.
+        """
+        return self.known_terms_combined is not None
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +164,48 @@ class Solution:
         chain of ten, and cell count alone cannot tell them apart.
         """
         return max((deduction.depth for deduction in self.deductions), default=0)
+
+    @property
+    def _real_step_costs(self) -> list[float]:
+        """Scan cost of every step that asked for actual work and has a comparable cost."""
+        return sorted(
+            deduction.scan_cost
+            for deduction in self.deductions
+            if deduction.has_a_comparable_cost and not deduction.is_trivial
+        )
+
+    @property
+    def hardest_step(self) -> float | None:
+        """The most expensive single step, which is what makes a board hard.
+
+        Not a sum. A total over all steps grows with how many there are, so a board of forty cheap
+        steps outscores one with three genuinely difficult ones — which is backwards, and is how a
+        zero-heavy board that compresses far ends up looking like the hardest thing in the pool.
+        A maximum is immune to that by construction and needs no statistical correction.
+
+        None when nothing on the board required work: every step was a value copied or a zero
+        falling out of an empty column.
+        """
+        costs = self._real_step_costs
+        return costs[-1] if costs else None
+
+    @property
+    def ninetieth_percentile_step(self) -> float | None:
+        """The same idea, less hostage to one freak step."""
+        costs = self._real_step_costs
+        return costs[min(int(0.9 * len(costs)), len(costs) - 1)] if costs else None
+
+    @property
+    def bounding_steps(self) -> int:
+        """Counted rather than costed, because their difficulty is not on the same scale."""
+        return sum(1 for deduction in self.deductions if not deduction.has_a_comparable_cost)
+
+    @property
+    def trivial_share(self) -> float | None:
+        """What fraction of the solve asked the player to combine nothing."""
+        if not self.deductions:
+            return None
+        return sum(1 for deduction in self.deductions if deduction.is_trivial) / len(self.deductions)
 
     @property
     def narrowest_frontier(self) -> int | None:
@@ -199,7 +277,10 @@ def _next_step(
     An exact value beats a narrowed range: taking the bounded move while a plain subtraction is
     still available would credit the harder technique for work the easier one could have done.
     """
-    available = _propagation_moves(system + global_equations, values)
+    whole_system = system + global_equations
+    live, solvable = _scan_size(whole_system, values)
+
+    available = _propagation_moves(whole_system, values)
     if available:
         cell, equation = available[0]
         leaned_on = frozenset(term.cell for term in equation.terms if term.cell != cell and term.cell in depths)
@@ -211,6 +292,9 @@ def _next_step(
             depth=1 + max((depths[earlier] for earlier in leaned_on), default=0),
             frontier=len(available),
             depends_on=leaned_on,
+            equations_live=live,
+            equations_solvable=solvable,
+            known_terms_combined=sum(1 for term in equation.terms if term.cell != cell and values[term.cell] != 0),
         )
 
     bounded = _bounding_moves(shape, values)
@@ -226,8 +310,26 @@ def _next_step(
             depth=1 + max(depths.values(), default=0),
             frontier=len(bounded),
             depends_on=frozenset(depths),
+            equations_live=live,
+            equations_solvable=len(bounded),
+            # Not applicable rather than expensive. Bounding reaches for the whole board instead of
+            # one equation, so any number here would be invented, and under a metric that takes the
+            # maximum an invented number would decide the score.
+            known_terms_combined=None,
         )
     return None
+
+
+def _scan_size(system: tuple[Equation, ...], values: Mapping[str, int]) -> tuple[int, int]:
+    """How many equations still have anything unknown in them, and how many are ready to give."""
+    live = solvable = 0
+    for equation in system:
+        unknowns = len(equation.unknowns(values))
+        if unknowns:
+            live += 1
+        if unknowns == 1:
+            solvable += 1
+    return live, solvable
 
 
 def _propagation_moves(system: tuple[Equation, ...], values: Mapping[str, int]) -> list[tuple[str, Equation]]:
