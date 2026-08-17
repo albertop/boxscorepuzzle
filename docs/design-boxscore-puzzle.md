@@ -1354,7 +1354,7 @@ scale that used to sit here.
 |---|---|---|
 | **Effort** | Erasure count | How long and how chained the solve is |
 | **Character** | Equation families required | Which technique opens the board |
-| **Attention** | Live footnote present | Whether the player must notice a non-zero footnote |
+| **Attention** | A live footnote on the direction | Whether the player *can* be made to notice a non-zero footnote |
 
 **Effort is one variable with three names.** Chain length and narrowest frontier width are near
 mirror images of each other (r = −0.81), and erasure count predicts both only moderately (+0.66 and
@@ -1397,10 +1397,18 @@ Every Tuesday can demand a different opening without changing how long it takes.
 identity is rare** — it appears in a few percent of paths even at the hardest level — so a puzzle
 that requires it is a genuinely distinct event and worth placing deliberately.
 
-**Attention is a selection axis, not a difficulty one.** Whether a board needs a live footnote to
-close is a property of the direction rather than of the erasure, so Saturday boards can be chosen
-from directions carrying one without changing the cell count. It rises with erasure count only
-because more blanks means more rows in play: 0.3% at two cells, 5.7% at six, 21.3% at twelve.
+**Attention is a selection axis, and it is two different things that must not be run together.**
+
+- **Whether the direction carries a live footnote at all** is a property of the boxscore. It is
+  fixed before any cell is erased, and it is what the calendar selects on.
+- **Whether a given solution path had to use one** depends on which cells came out, so it rises with
+  erasure count — 0.3% at two cells, 5.7% at six, 21.3% at twelve — and the generator does not
+  control it directly.
+
+**Select on the first; the second is a consequence you get more of by erasing more.** Choosing a
+Saturday direction that carries a live footnote raises the odds the solver leans on it without
+changing the cell count, which is what makes this a third dimension rather than a restatement of
+effort. It does not guarantee it, and nothing here can.
 
 **Frontier width ignores the last three steps of a solution, and that is not arbitrary.** A solve
 narrows by exhaustion as it runs out of cells. Trimming one step leaves 43% of boards reporting a
@@ -1767,11 +1775,11 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Blocking**
 
 - [x] ~~Player names~~ — **resolved:** progressive reveal (§7)
-- [~] **v1 board — partially resolved.** Column sets, six-column ceiling, and line-score-as-anchor are decided (§6). **Row counts, roster caps, and erasure percentage are provisional** and blocked on two measurements: the real height budget from a browser prototype, and compressibility + technique distribution across the pool. **Puzzle quality outranks board size — if the measurements say the board is too small to produce hard puzzles, the board changes.**
+- [~] **v1 board — partially resolved.** Column set, six-column ceiling, line-score-as-anchor and per-batter footnotes are decided (§6). Technique distribution and compressibility are measured (§31, §5). **What remains provisional is row counts and roster caps**, blocked on one measurement only: the real height budget from a browser prototype. *Erasure percentage is no longer a parameter — the generator targets a chain length and the cell count is whatever reaching it costs (§31).* **Puzzle quality outranks board size — if the measurement says the board is too small to produce hard puzzles, the board changes**, and §6 records that the question has become "how many rows do we want" rather than "how many fit".
 
 **Game core**
 
-- [ ] Erasure algorithm: how many cells, in what order, whether the pattern is symmetric
+- [ ] **Erasure algorithm.** Its input is a **target chain length**, not a cell count: chain length grades more cleanly than how many cells are blank (§31), so erasure is the means and the cell count is whatever reaching the target costs. Still open: in what order cells come out, whether the pattern is symmetric, and — after the compressibility measurement — whether the target needs a companion constraint on zero density, since a cascade of zero-forcings counts as a long chain without being hard (§5)
 - [x] ~~Which cells are never erased~~ — **resolved:** the line score, by width constraint (§6)
 - [ ] Error handling: progressive reveal already forces row validation; still to define whether there's an error limit and what happens on failure
 - [ ] What exactly a hint is: reveal a cell, flag a contradiction, or suggest a technique?
