@@ -153,33 +153,45 @@ class TestSolutionShape:
         assert solution.mean_frontier is None
 
     def test_independent_deductions_do_not_lengthen_the_chain(self, cubs_at_braves_1968: Direction) -> None:
-        # Two blanks in different columns that never depend on each other. Both are one step deep,
-        # and the frontier is two because either could have been taken first.
+        # Two blanks in different columns that never depend on each other, so both are one step deep.
         solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts"),
         )
 
         assert solution.chain_length == 1
-        assert solution.narrowest_frontier == 2
-        assert solution.mean_frontier == 2.0
 
-    def test_a_dependent_pair_bottlenecks_where_an_independent_pair_does_not(
-        self, cubs_at_braves_1968: Direction
-    ) -> None:
-        # The distinction the frontier is meant to capture. Both boards erase two cells; one leaves
-        # the player a choice of where to start and the other does not.
-        dependent = solve(
-            shape_of(cubs_at_braves_1968),
-            _erase(cubs_at_braves_1968, "batting_totals.hits", "batting[0].hits"),
-        )
-        independent = solve(
+    def test_reports_no_frontier_for_a_board_that_is_all_tail(self, cubs_at_braves_1968: Direction) -> None:
+        # A solution narrows by exhaustion as it runs out of cells, so the closing steps say nothing
+        # about difficulty and are ignored. A board short enough to be nothing but closing steps has
+        # no width worth reporting at all.
+        solution = solve(
             shape_of(cubs_at_braves_1968),
             _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts"),
         )
 
-        assert dependent.narrowest_frontier == 1
-        assert independent.narrowest_frontier == 2
+        assert solution.narrowest_frontier is None
+        assert solution.mean_frontier is None
+
+    def test_a_bottleneck_shows_up_once_the_board_is_long_enough(self, cubs_at_braves_1968: Direction) -> None:
+        # Six blanks spread across columns. The width reported is what the player faced while there
+        # was still a board to scan, not what was left at the end.
+        solution = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(
+                cubs_at_braves_1968,
+                "batting[0].hits",
+                "batting[1].runs",
+                "batting[2].strikeouts",
+                "batting[3].walks",
+                "batting[4].at_bats",
+                "batting[5].plate_appearances",
+            ),
+        )
+
+        assert solution.is_complete
+        assert solution.narrowest_frontier == 4
+        assert solution.mean_frontier is not None
 
 
 class TestTallies:
