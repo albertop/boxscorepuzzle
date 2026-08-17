@@ -33,12 +33,15 @@
      no toggle, no mode, nothing hidden. */
   #scroller { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; min-height: 0; position: relative; }
   table.grid { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  table.grid th, table.grid td { text-align: right; padding: 0; border: 1px solid #ccc;
-                                 font-variant-numeric: tabular-nums; }
+  /* Centred on both axes. Right alignment exists to line up units across mixed-width numbers, and
+     almost every editable cell here holds a single digit — there are no units to align, and a lone
+     digit shoved against the right edge unbalances the grid. */
+  table.grid th, table.grid td { text-align: center; vertical-align: middle; padding: 0;
+                                 border: 1px solid #ccc; font-variant-numeric: tabular-nums; }
   th.label, td.label { text-align: left; width: 62px; padding-left: 3px; font-size: 11px;
                        overflow: hidden; white-space: nowrap; }
   td.cell, th.col { width: calc((100% - 62px) / 6); }
-  td.cell { height: 44px; font-size: 15px; padding-right: 5px; }
+  td.cell { height: 44px; font-size: 15px; }
   td.cell.blank { background: #f4f4f4; }
   td.cell.selected { outline: 2px solid #06c; outline-offset: -2px; }
   thead th { position: sticky; top: 0; z-index: 2; background: #ddd; height: 22px; font-size: 11px; }
