@@ -79,9 +79,9 @@ boxscorepuzzle/
 **A single private Git repository on GitHub: `boxscorepuzzle`.** One push backs up everything, which
 matters because the repository's primary job is being the backup.
 
-**The repository stays private permanently** — `forge/` holds the generator algorithm and the T1–T5
-guarantee, which is trade secret (§16). Never push any part of it to a public gist, issue, or paste
-service.
+**The repository stays private permanently** — `forge/` holds the generator algorithm and the
+human-solvability guarantee, which is trade secret (§16). Never push any part of it to a public gist,
+issue, or paste service.
 
 **No cross-imports between `forge/` and `serve/`.** They share no code and no deployment cycle. The
 only thing that crosses is a signed package of validated puzzles. **Deployment ships `serve/` only** —
@@ -107,28 +107,34 @@ Violating any of these is a defect, not a tradeoff.
 
 ### 1. Human-solvability guarantee (§4)
 
-A puzzle ships only if a solver implementing **exclusively** techniques T1–T5 solves it **without backtracking**. If it needs to guess even one cell, discard it or give a cell back as a hint.
+A puzzle ships only if the solver (propagation, then bounding) solves it **without backtracking**. If it needs to guess even one cell, discard it or give a cell back as a hint.
 
-| Level | Technique |
-|-------|-----------|
-| T1 | Equation with a single unknown → direct solve |
-| T2 | T1 propagated to fixed point |
-| T3 | Two equations sharing unknowns → 2×2 system |
-| T4 | Bounding by inequality (AB ≥ H, ER ≤ R, non-negativity) |
-| T5 | Global team identity: PA = Outs + R + LOB |
-
-**⚠️ The T1–T5 ladder is superseded (§4).** T3 is unreachable and no column set changes that: every
-identity is a sum over a row or a column, so two of them share at most the one cell where a row
-crosses a column, never the two a 2×2 needs. With it gone, T1 and T2 are the same operation and T5 is
-one more equation inside it. **Two axes replace the ladder:**
+**What the solver reports:**
 
 | Axis | Values |
 |---|---|
 | Technique | propagation · propagation plus bounding |
 | Equation family | column sums · row identity · cross-team · global identity |
 
+*The T1–T5 ladder this section used to carry is superseded and kept only in §4, where the reasoning
+lives. The short version: the 2×2 rung cannot fire on any board of this constraint family, and with
+it gone the first two rungs are one operation and the last is one more equation inside it.*
+
+**And three numbers that describe the solution path** (§31), independent of each other and of zero
+density when measured off the compressibility ceiling:
+
+| Number | Measures |
+|---|---|
+| Chain length | Effort. **The generator's control variable** — its input is a target chain, not a cell count |
+| Search cost | How hard the next move is to find |
+| Resolution p90 | How much arithmetic a step demands. **p90, never max** — the max is 8 or 9 on every board |
+
 **The publication rule is unchanged:** a puzzle ships only if the solver finishes without
 backtracking.
+
+**⚠️ Read the metrics off the ceiling, never at it.** A board erased to its compressibility limit has
+a maximally hard step somewhere, so every board scores alike and the numbers look broken. That error
+nearly cost the whole approach.
 
 **⚠️ The board's difficulty ceiling is topological.** A constraint graph that is a forest has no
 middle difficulty — one blank per equation is a subtraction, two in one equation are usually
@@ -144,7 +150,7 @@ Four layers, each able to reject on its own:
 
 1. Validate the boxscore against all identities before admitting it to the pool
 2. Prove solution uniqueness
-3. Require the T1–T5 solver to finish without guessing
+3. Require the human-technique solver to finish without guessing
 4. End-to-end: take the published puzzle, solve from scratch, compare against the original boxscore
 
 **The verifier must not import or reuse generator code.** If it shares functions it inherits bugs and the validation is theater. Implement independently, even at the cost of duplication.
@@ -192,7 +198,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 
 ### 7. Puzzle quality outranks everything (§31, §22)
 
-If a measurement shows the board is too small to produce puzzles that require T3–T5, **the board
+If a measurement shows the board is too small to produce puzzles that require the cross-team and global identities, **the board
 changes.** Screen budget constrains the board; it does not get to make the puzzle trivial.
 
 **Do not invent numeric parameters that shape the product.** Cell counts, thresholds, percentages,
@@ -247,8 +253,20 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 ### Pool quality filter (§5)
 
-- Compressibility — max % of cells removable while preserving uniqueness (expensive; run last)
-- Zero density — penalize; forced-by-zero cells are not puzzles
+**⚠️ Rewritten after measurement — the original criterion was wrong at the root (§5).**
+
+1. **Roster compactness** — hard filter, asymmetric: the *offensive* team needs ≤10 batters, the
+   *defensive* team ≤3 pitchers. **Caps still provisional**, blocked only on the browser prototype.
+2. **Zero-density gate: below 30%, decided.** It removes every shutout and the three-run games while
+   keeping seven-run ones. Direct and cheap — it attacks the cause instead of scoring it.
+3. **Compressibility is a viability constraint, not a ranking.** It measures how much can be removed,
+   not whether what remains is worth solving: it correlates **+0.79 with zero density**, so ranking
+   on it selects boredom. A board must be able to lose enough cells to be a puzzle; above that floor,
+   compressing further is not better.
+4. **Chain length, search cost and resolution p90** grade what survives (§31).
+
+*Line score variety and digit range are dropped. They were proxies for compressibility, and
+correlating with the wrong target is not a reason to keep a filter.*
 - **Roster compactness, asymmetric:** the *offensive* team needs ≤10 batters, the *defensive* team ≤3 pitchers. Only those appear on the board.
 - Line score variety
 - Digit range — numbers > 3 in several columns

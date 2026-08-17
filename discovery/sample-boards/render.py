@@ -30,10 +30,12 @@ FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifi
 BLANK = "  ·"
 SEED = 20260819
 
-# Boards with more nought than this leave the pool. Provisional: the measured distribution has its
-# median at 34.5%, and this keeps a little over half the pool, which is forty-six years of calendar
-# against the 674 directions a year the week consumes.
-GATE = 0.35
+# Boards with more nought than this leave the pool. Not chosen for being near the measured median —
+# a median has no properties, it is only where the sample fell. Chosen because between 30% and 35%
+# the boards passing through have a median of three runs, and because 30% still leaves 21 years of
+# calendar against a requirement of five months of forward inventory. With that much slack a generous
+# threshold buys nothing and a strict one costs almost nothing.
+GATE = 0.30
 
 
 def _innings(outs: int) -> str:
@@ -163,8 +165,7 @@ def main() -> None:
     rng = random.Random(SEED)
     everything = [item for item in load(6) if not find_violations(item.direction)]
 
-    # The gate, applied. The threshold is provisional — the distribution puts the median at 34.5%,
-    # so this keeps a little over half the pool and about forty-six years of calendar.
+    # The gate, applied.
     pool = sorted((item for item in everything if zero_density(item) < GATE), key=lambda item: item.game_id)
     print(f"{len(everything)} directions, {len(pool)} below {GATE:.0%} zero density")
 

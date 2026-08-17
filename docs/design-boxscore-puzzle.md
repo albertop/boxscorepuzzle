@@ -47,7 +47,7 @@ Approved as explicit product boundaries:
 
 Consequences:
 
-- Vocabulary (AB, R, H, RBI, BB, K, IP, ER) is assumed known. No need to teach it.
+- Vocabulary (PA, AB, R, H, BB, K, IP, ER) is assumed known. No need to teach it.
 - Keep the **canonical boxscore format**. Visual familiarity *is* part of onboarding. Do not "simplify" the design.
 - The risk inverts: the danger isn't that baseball scares people off — it's that the fan **isn't a puzzle person** and lacks patience for constraint propagation. The opening curve must be gentler than a sudoku site's.
 - Distribution channel: baseball communities (newsletters, SABR, forums), not puzzle communities.
@@ -117,9 +117,13 @@ quantity the player cannot see is not a deduction they can make.*
 ### A footnote whose row is ambiguous is a constraint, not a defect
 
 A position label does not always name one row: with ten batters a substitute shares the starter's
-label, so `HBP: SS` can mean either of two rows (§7). That is stated by leaving both candidate cells
-unknown — the footnote's own column sum already says the pair adds to one — and settled by bounding
-rather than by trying each in turn, which would be backtracking.
+label, so `HBP: SS` can mean either of two rows (§7).
+
+**Stated as a domain, not as a choice.** Both candidate cells are left unknown, each with a domain of
+{0, 1}, and the footnote's own column sum already says the pair adds to one. Nothing extra is needed
+to express it. It is then settled by **bounding** — narrowing until one value is left standing —
+rather than by trying each placement in turn, which would be backtracking and is what the publication
+rule forbids. Usually the row's own identity settles it immediately.
 
 **Measured, it is rarely more than bookkeeping:** across 31 ambiguous groups tried under 20 erasure
 patterns each, the assignment was irrelevant in 56.6% of patterns and load-bearing in 13.5%, and
@@ -180,10 +184,11 @@ would need a different *family* of constraint, not a different column. Treat it 
 
 A tree-like graph has only two regimes and nothing between them.
 
-- Erase one cell per equation and T1 recovers it with a single subtraction.
-- Erase two from the same equation and nothing can move. T1 needs a lone unknown, T3 cannot fire,
-  and T4 only settles a cell when the bound happens to be tight. Most of the time two blanks in one
-  column sum are not *hard* — they are **ambiguous**, and §22 correctly throws the puzzle away.
+- Erase one cell per equation and propagation recovers it with a single subtraction.
+- Erase two from the same equation and nothing can move. Propagation needs a lone unknown, the 2×2
+  rung cannot fire, and bounding only settles a cell when the bound happens to be tight. Most of the
+  time two blanks in one column sum are not *hard* — they are **ambiguous**, and §22 correctly throws
+  the puzzle away.
 
 So the generator converges on the trivial regime, and not because the erasure algorithm is wrong:
 it is the only thing that survives the correctness rules. **The ceiling is topological, not
@@ -213,17 +218,17 @@ At-bats and walks then live in two equations each — their column sum and their
 the graph stops being a forest: **independent cycles go from 0 to 16, and cells appearing in two or
 more equations from 10 to 35.** Erasing two cells from the at-bats column stops being ambiguous,
 because one of them comes back through its row and the other follows from the column. That is
-chaining and ordering restored, and it is done with T1 and T2 rather than with T3.
+chaining and ordering restored, and it is done by propagation rather than by any 2×2 rule.
 
-**⚠️ Open decision — the column set (§6).** The six-column ceiling is a real calculation and does
-not move, so one column has to go. Measurements and a recommendation are below in §6; the decision
-has not been taken.
+**The column set that followed from this is decided: `PA, AB, R, H, BB, K` (§6).**
 
 A test in the forge holds the interconnection line. Its assertion is the **cyclomatic number**, not
 the overlap: overlap can never reach two, so testing for it would be testing for something that
 cannot happen.
 
-Secondary benefit: difficulty derives itself — the highest technique required and how many times.
+Secondary benefit: difficulty derives itself. Not from "the highest technique required and how many
+times", which is the phrasing this line carried while the ladder existed — the solver reports three
+numbers instead, and which of the four equation families the path needed (§31).
 
 ### Two properties that bring it close to sudoku
 
@@ -240,21 +245,72 @@ In sudoku all 81 cells mean the same thing. Here each column has its own semanti
 
 **Criterion: random among games with good puzzle shape.** Not anniversaries, not historical significance.
 
-This makes the **quality metric** a central design piece:
+### The quality criterion (rewritten August 2026 — the original was wrong at the root)
 
-- **Compressibility** — max % of cells removable while preserving uniqueness. The primary metric, expensive to compute; only run on candidates that pass the prefilter.
-- **Zero density** — a 3-hit game leaves almost everything at 0 and cells force themselves. Penalize.
+This section used to name **compressibility as the primary metric** with three cheap screens
+approximating it. Measurement showed both halves of that to be wrong, and the correction matters
+enough to state before anything else:
 
-> **⚠️ Measured August 2026, and the prefilter assumption is wrong — see "What compressibility
-> actually correlates with" below.** The cheap screens do predict compressibility, strongly, but with
-> the opposite sign to the one this list assumes.
+> **Compressibility is a volume metric, not a quality one.** It measures how much can be taken away,
+> not whether what remains gives the player anything to think about. **Maximising it selects
+> boredom** — a column summing to nothing forces every blank in it, so the most compressible boards
+> are the emptiest ones.
+>
+> **The three screens do not approximate it. They anticorrelate with what we want.** Zero density
+> predicts compressibility at **+0.79** and digit range at **−0.70**, so screening *for*
+> compressibility selects exactly the low-scoring games the original list wanted to exclude.
 
-- **Roster compactness** — hard filter. **⚠️ Thresholds provisional** (≤10 batters in the offensive
-  team, ≤3 pitchers in the defensive team). These are unvalidated estimates pending the measurements
-  in §6. Note the filter is **asymmetric**: only the offensive team's batters and the defensive
-  team's pitchers appear on the board.
-- **Line score variety** — discard 0-0-0-0-0-0-1-0-0.
-- **Digit range** — numbers > 3 should appear in several columns.
+**What replaces it, in order:**
+
+1. **Roster compactness** — hard filter. **⚠️ Caps still provisional** (≤10 batters in the offensive
+   team, ≤3 pitchers in the defensive team), blocked on the browser prototype's real row ceiling.
+   The filter is **asymmetric**: only the offensive team's batters and the defensive team's pitchers
+   appear on the board.
+2. **The zero-density gate — below 30%, decided.** Direct, cheap, and it attacks the cause instead of
+   trying to score it.
+3. **Compressibility as a viability constraint, not a ranking.** A board must be able to lose enough
+   cells to be a puzzle at all. Above that floor, compressing further is not better and does not
+   order one candidate above another.
+4. **Chain length, search cost and resolution p90** — the three numbers that grade what survives
+   (§31). These are properties of an erasure, not of a direction, so they belong to the generator
+   rather than to pool admission.
+
+*Line score variety and digit range are dropped as filters. They were proposed as proxies for
+compressibility, they do correlate with it, and correlating with the wrong target is not a reason to
+keep them.*
+
+### What the gate costs and what it removes
+
+Measured over 300 directions. Zero density runs from 14.3% to 56.4% with its median at 34.5%.
+
+| Threshold | Pool kept | Years of calendar |
+|---|---:|---:|
+| below 25% | 7.0% | 5.7 |
+| **below 30% — decided** | **26.7%** | **21.8** |
+| below 35% | 56.7% | 46.3 |
+| below 40% | 80.7% | 65.9 |
+
+**Why 30% and not the median.** A median has no properties; it is where the sample happened to fall.
+Between 30% and 35% the boards passing through have a median of **three runs**, which is the shape
+being excluded in the first place. And with 21 years of calendar against a five-month forward
+inventory requirement (§33), a generous threshold buys nothing while a strict one costs almost
+nothing. **25% is the option if it ever needs tightening** — 5.7 years, still enough, and the cost of
+that choice is visible here rather than discovered later.
+
+**It removes the right boards, not merely the correlated ones:**
+
+| | Boards | Median runs | Median hits | Shutouts |
+|---|---:|---:|---:|---:|
+| Excluded at 30% | 220 | **3** | 7 | 18 |
+| Excluded at 35% | 130 | **2** | 6 | 18 |
+| **Kept below 30%** | 80 | **7** | — | **0** |
+
+Every shutout goes; three-run games go; seven-run games stay. **And family variety survives the
+filter** at every chain target, so the gate does not buy quality by flattening character.
+
+*One side effect, small and in the wrong direction: filtering makes hard boards slightly more
+uniform in the families they demand — 79% → 96% requiring all four at a chain target of 20. That is
+consistent with a collapse already recorded in §31 rather than a new problem.*
 
 **Measured funnel (August 2026), counted by direction:**
 
@@ -265,12 +321,13 @@ This makes the **quality metric** a central design piece:
 | Roster fits the board (provisional caps) | 65,522 | 16.3% |
 | Minus discrepancies against official data in board columns | 55,024 | 84.0% |
 
-**The pool holds.** Even if the remaining quality filters cut 80%, that leaves ~11,000 puzzles —
-thirty years of daily play, plus a substantial archive at launch (§10).
+**The pool holds with room to spare.** The zero-density gate takes 55,024 down to roughly 14,700,
+which is **21 years of calendar** against the 674 directions a year the week consumes (§31). The
+five-month forward inventory §33 requires is not remotely in question.
 
-**55,024 is an upper bound, not the pool.** Compressibility, zero density, line score variety, and
-digit range are still to be applied, and compressibility is the expensive one that actually decides
-whether a boxscore is a puzzle. Expect a significant further cut.
+*Superseded: this paragraph used to read "even if the remaining quality filters cut 80%, that leaves
+~11,000 puzzles". The estimate happened to land close, but it was reasoning from an invented cut
+rather than from a measured one.*
 
 **Caveat:** the discrepancy filter only covers 1898–1986. From 1987 on, "no reduction" means "not
 measured," not "clean" — though modern rosters barely pass the roster filter anyway, so those years
@@ -305,16 +362,21 @@ selecting zero-heavy, low-scoring games — exactly the boards §5 wanted to exc
 compresses beautifully because a column summing to nothing forces every blank in it, and that is a
 long solution made of trivial steps.
 
-**⚠️ Consequences that need deciding, not assuming:**
+**✅ Consequences, now resolved** *(this list was open; each item below has since been decided or
+measured, and the resolutions are recorded at the top of this section and in §31)*:
 
 1. **Compressibility on its own is not a quality metric.** Maximising it selects for boredom. It
    measures how much can be taken away, not whether taking it away leaves anything to think about.
+   → **Demoted to a viability constraint.** It no longer ranks anything.
 2. **Chain length may be gameable the same way.** It counts dependent steps without weighting how
-   hard each one is, so a cascade of zero-forcings scores as a long chain. That bears directly on
-   §31's decision to make chain length the generator's control variable — it may need a companion
-   constraint on zero density rather than standing alone.
-3. **The screens keep their value as screens, with their sign flipped back to §5's intent.** They are
-   cheap and they are strongly informative; they simply predict the wrong target.
+   hard each one is, so a cascade of zero-forcings scores as a long chain.
+   → **Answered twice over.** The zero-density gate removes the boards that would game it, and §31's
+   search cost and resolution p90 grade what a step actually costs. Chain length does not stand
+   alone, but its companion is not a zero-density side constraint on the generator — it is the pool
+   gate plus two orthogonal numbers.
+3. **The screens keep their value as screens, with their sign flipped back to §5's intent.**
+   → **Dropped instead.** A screen that predicts the wrong target is not saved by reading it
+   backwards; the gate attacks the cause directly and the three numbers do the ranking.
 
 **Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 55,024 that is **70 hours** —
 a long batch rather than an impossibility, so the expensive measurement can run pool-wide if it is
@@ -381,7 +443,7 @@ Reasonable worst case: 375px minus margins ≈ **343px usable**.
 
 The hard floor isn't typography — it's the **44px minimum touch target**. With a ~70px label column, 273px remain → **six data columns maximum**.
 
-- Batting line (AB, R, H, RBI, BB, K) = 6 columns. **Fits, with zero margin.**
+- Batting line (PA, AB, R, H, BB, K) = 6 columns. **Fits, with zero margin.** *(RBI was the sixth here until the column set was decided; see below.)*
 - Pitching line (IP, H, R, ER, BB, K) = 6 columns. **Fits, with zero margin.**
 - **Consequence: a seventh column cannot be added.** No HBP, no 2B/3B/HR as their own columns.
 
@@ -410,7 +472,7 @@ iPhone SE: ~667px, minus browser chrome, minus the custom numeric keypad (250–
 **These numbers are unvalidated estimates and must not be treated as decided.**
 
 - Line score for both teams + R/H/E — **complete, read-only, never erased** *(this part is decided)*
-- Offense for **one team only**: rows × AB, R, H, RBI, BB, K + totals
+- Offense for **one team only**: rows × PA, AB, R, H, BB, K + totals
 - Pitching for the **opposing team**: rows × IP, H, R, ER, BB, K + totals
 - **Footnote line: LOB, HBP, SF, SH** — given, read-only, never erased *(decided; see below)*
 
@@ -421,13 +483,12 @@ the footnote line.
 ### The footnote line — why the board needs one
 
 **Found while starting the solver (August 2026): the column sets alone cannot express two of the
-five identity families.**
+four equation families.**
 
-- **T5 is `PA = Outs + R + LOB`.** `Outs` derives from the opposing `IP` and `R` is in the line
-  score, but **LOB appears nowhere.** Without it, the most powerful rung of the ladder is not
-  applicable at all.
-- **The batter line is `PA = AB + BB + HBP + SF + SH`** (§8, tutorial step P2). The last three
-  cannot be columns — the width budget closed that above.
+- **The global identity is `PA = Outs + R + LOB`.** `Outs` derives from the opposing `IP` and `R` is
+  in the line score, but **LOB appears nowhere.** Without it the family is not applicable at all.
+- **The row identity is `PA = AB + BB + HBP + SF + SH + CI`** (§3). Those last four cannot be
+  columns — the width budget closed that above.
 
 **This is not a defect in the column choice.** A printed boxscore publishes exactly these values as
 footnotes rather than columns: LOB, 2B, 3B, HR, SF, SH, HBP, DP. The width budget forbids a seventh
@@ -531,20 +592,19 @@ waits on the browser prototype, because none of this says how many rows actually
 
 ### How these get resolved
 
-**Two independent measurements, both required before fixing these numbers:**
+**Two measurements were required before fixing these numbers. One is done.**
 
 1. **Height budget, measured not estimated.** Prototype the board in a browser with real data at
    375px and count how many rows actually fit above the keypad. That gives the true row ceiling,
-   which sets the roster caps.
+   which sets the roster caps. **⚠️ Still outstanding, and now the only thing blocking them.**
 
-2. **Compressibility and technique distribution across the pool.** For a sample of surviving
-   directions: how many cells can be erased while preserving uniqueness *and* T1–T5 derivability,
-   and which techniques the result demands. **This is the measurement that decides whether a board
-   this size produces hard puzzles at all.**
+2. ~~Compressibility and technique distribution across the pool.~~ **Done (August 2026).** The board
+   does produce hard puzzles: chains run past twenty steps, the search cost of finding the next move
+   spans 0.25 to 0.92, and all four equation families appear. The measurements are in §5 and §31.
 
-If most of the sample resolves with T1 and T2 only, the board is too small and the caps must be
-loosened — accepting fewer rows on screen is not an option, so that would mean revisiting the
-column set or the board's shape.
+*The fear this pair was meant to settle — that the board might be too small, most of the sample
+resolving by plain propagation alone — did not materialise. What the measurements did overturn was
+the quality criterion (§5), not the board size.*
 
 **If pool size ever needs loosening, the lever is the batter cap, not the pitcher cap.** Measured:
 only 18.5% of directions pass ≤10 batters, while 66.9% pass ≤3 pitchers. The batter cap is what
@@ -552,10 +612,15 @@ constrains the pool, and it is also what produces the 1910–1949 era skew.
 
 ### On the relationship between board size and difficulty
 
-Fewer rows does **not** mean an easier puzzle. Difficulty in a deduction puzzle comes from how many
-equations intersect and which techniques must be chained, not from row count. A 26-row board solvable
-entirely by column sums is trivial and long; a 12-row board requiring T5 and the pitching cross is
-hard and short.
+Fewer rows does **not** mean an easier puzzle. Difficulty comes from how many equations intersect and
+how long a chain of dependent steps runs, not from row count. A 26-row board solvable entirely by
+column sums is trivial and long; a 12-row board that needs the global identity and the pitching cross
+is hard and short.
+
+**Measured, and it went further than that.** Harder boards ask for *less* arithmetic per step, not
+more: resolution p90 falls from 8 additions to 5 as difficulty rises, while the cost of finding the
+next move climbs from 0.50 to 0.92. Difficulty on this board is searching, not calculating. Nobody
+designed that — it emerged from the format (§31).
 
 The effect actually runs the other way: **more rows means more equations, and more equations makes
 uniqueness easier to reach** — more redundant paths to deduce each cell. That is what produces easy
@@ -892,7 +957,7 @@ It depends on three still-open items: how many puzzles the archive has at launch
 **Worth doing:**
 
 - Register the name as a trademark
-- **Don't publish the generator algorithm.** It's a trade secret and the genuinely hard piece to replicate — above all the T1–T5 human-solvability guarantee.
+- **Don't publish the generator algorithm.** It's a trade secret and the genuinely hard piece to replicate — above all the human-solvability guarantee.
 
 **The real defenses:**
 
@@ -1013,6 +1078,11 @@ extension.
 
 **A single offline run producing thousands of puzzles.** The generator runs offline against Retrosheet and publishes the batch as static files.
 
+**Its input is a target chain length, not a number of cells to erase.** Chain length grades effort
+more cleanly than cell count does, so erasure is the means and the chain is the objective; how many
+cells come out is whatever reaching the target costs (§31, §36). Admission to the pool happens before
+that, on the roster caps and the 30% zero-density gate (§5).
+
 **Double idempotence — two distinct things that must not be conflated:**
 
 1. **Puzzle idempotence** — the same Retrosheet game always produces the same puzzle with the same ID. Regenerating the batch creates no duplicates.
@@ -1064,7 +1134,7 @@ With customers paying from day 0, a broken puzzle isn't a bug: it's a refund and
 | **Multiple solutions** | Cells were erased that weren't forced |
 | **Unique but not derivable** | **The worst.** Looks correct and the player is trapped guessing |
 
-The last one demands the real work, and is covered by the T1–T5 no-backtracking rule (§4).
+The last one demands the real work, and is covered by the no-backtracking rule (§4).
 
 ### Independent layers, each able to reject on its own
 
@@ -1321,7 +1391,7 @@ It isn't decided now that there will be a platform, but **the name is chosen and
 **Out — trivia and crosswords.**
 
 - **Trivia uses a different faculty.** One recalls, the other reasons. It's the anti-goal approved in §1, and Immaculate Grid already owns that space and does it well.
-- **None of what's built transfers.** The generator, the uniqueness proof, the T1–T5 solver, and layered validation serve deduction games and are worthless for trivia. It would be starting from zero.
+- **None of what's built transfers.** The generator, the uniqueness proof, the human-technique solver, and layered validation serve deduction games and are worthless for trivia. It would be starting from zero.
 - **Crosswords are built by humans** and don't come from the data.
 
 **The real risk isn't failing at trivia, it's the umbrella ceasing to mean anything.** With "baseball puzzles" you compete head-on with the incumbent. With "deduction on real baseball data" there's nobody.
@@ -1380,7 +1450,40 @@ ten, 35% at twelve. It grades effort, badly, and adds no dimension. Closed.
 
 **Chain length is the control variable, not cell count.** Of the three effort metrics it is the one
 that grades cleanly, so the erasure algorithm takes a target chain length and lets the cell count
-fall out of reaching it (§36), and the bands are set on chain length.
+fall out of reaching it (§21, §36), and the bands are set on chain length.
+
+### The three numbers (measured off the ceiling, August 2026)
+
+| Number | Measures | Form |
+|---|---|---|
+| **Chain length** | Effort — how long the solve runs | — |
+| **Search cost** | How hard the next move is to find | max or p90 |
+| **Resolution p90** | How much arithmetic a step demands | **p90, never max** |
+
+**They are independent of each other and of zero density**, which is what makes them three numbers
+rather than one restated. At chain targets of 5 and 10: search against zero density −0.09 and −0.07,
+resolution p90 against chain length −0.04 and −0.07, and the two components against each other +0.01
+and −0.13.
+
+**⚠️ All of this was nearly discarded on a measurement error.** The same figures taken at each
+board's *compressibility ceiling* said the opposite — search correlated with zero density at +0.48
+and separation vanished — because a board pushed to its limit has a maximally hard step somewhere, so
+every board scores alike. **No puzzle ships at its ceiling.** The metrics have to be read where
+puzzles will actually live. Recorded because it is the kind of error that looks like a failed metric.
+
+**Resolution p90, never its maximum.** The hardest resolution step is almost always a column sum over
+nine or ten rows, so the maximum is 8 or 9 on every board and grades nothing. The p90 runs 2 to 9.
+
+**They saturate near the ceiling, in the same direction the character axis collapses.** Search cost
+separates by 0.61 at a chain of 5, by 0.47 at 10, by 0.27 at 20, and by 0.02 at the ceiling. Two
+independent things going dark in the same place is evidence the saturation is real rather than an
+artefact of either measurement — and it is another argument for Sunday sitting mid-difficulty, where
+all of this works.
+
+**Hard boards ask for less arithmetic and more searching.** Across the six rendered sample boards,
+resolution p90 falls from 8 to 5 as difficulty rises while search cost climbs from 0.50 to 0.92.
+**Nobody designed that**; it emerged from the format, and it is worth recording as a property of the
+board: difficulty here is scanning, not calculating.
 
 ### ⚠️ The character axis narrows as difficulty rises, and dies at the top
 
@@ -1403,11 +1506,23 @@ That is a smaller loss than it looks. Monday and Tuesday are the days played mos
 forms, so the variety sits where it is used. And **Saturday covers itself**: if every hard board needs
 all four families, Saturday has character by being the only day the global identity appears at all.
 
-**Saturday's variation has to come from board selection instead.** With the family axis flat at high
-difficulty, what distinguishes one hard board from another is the boxscore: a pitchers' duel and a
-blowout with three relievers feel different to solve even when both demand all four families. The
-candidate dimensions are roster shape, live footnotes, total runs and their spread across innings,
-and zero density — treated as *character* rather than as difficulty.
+**Saturday's variation has to come from somewhere other than the families, and it is not the roster.**
+Board character was measured against the solve and mostly does not separate it:
+
+| Board property | vs search | vs resolution | vs chain |
+|---|---:|---:|---:|
+| Pitching rows | +0.05 | +0.09 | +0.08 |
+| Live footnotes | −0.12 | +0.01 | −0.14 |
+| Batting rows | +0.10 | **+0.45** | +0.31 |
+| Total runs | −0.34 | −0.05 | **−0.54** |
+
+One, two and three pitching rows give identical search, identical resolution and near-identical chain
+length. **Roster shape is not the Saturday lever**, and neither are live footnotes. Only batting rows
+(through resolution) and total runs (through effort) move anything.
+
+**So Saturday's character is that it is the only day the global identity appears at all** — 82% of
+boards at a chain target of 20 need all four families against 8% at a target of 5. That is a real
+distinction, and it is the one the format actually offers.
 
 ### Sunday is the character day, and the week is an arc rather than a ramp
 
@@ -1541,7 +1656,7 @@ can drift; a provenance column is permanent, queryable data — and §22's layer
 
 Retrosheet proofs **offensive and pitching** statistics closely. **Defensive** ones — putouts and assists — are proofed less, because they were known to be kept far less reliably.
 
-The §6 board uses AB, R, H, RBI, BB, K and IP, H, R, ER, BB, K: **all from the well-proofed side.** The problematic columns are exactly the ones dropped for lack of screen space. **The mobile constraint prevented a data problem.**
+The §6 board uses PA, AB, R, H, BB, K and IP, H, R, ER, BB, K: **all from the well-proofed side.** The problematic columns are exactly the ones dropped for lack of screen space. **The mobile constraint prevented a data problem.**
 
 ### Evaluated and rejected: chadwickbureau/data-boxscores
 
@@ -1576,7 +1691,7 @@ The §6 board uses AB, R, H, RBI, BB, K and IP, H, R, ER, BB, K: **all from the 
 - cwbox and the rest of the Chadwick tools
 - Pool quality filter (§5)
 - Generator and erasure algorithm
-- T1–T5 validation solver (§4)
+- Human-technique validation solver (§4)
 - End-to-end verification (§22)
 - Calendar construction (§21)
 
@@ -1703,7 +1818,7 @@ A single root containing everything, with this section's separation visible in t
 
 **A single private Git repository on GitHub: `boxscorepuzzle`.** Rationale: one push backs up everything, which matters because the repository's primary job is being the backup. The forge/serve separation is enforced where it actually matters — in deployment configuration and in the no-cross-imports rule — not by repository boundaries. **Deployment ships `serve/` only; generator code must never reach the VPS.**
 
-**The repository stays private permanently.** `forge/` holds the generator algorithm and the T1–T5 solvability guarantee — the trade secret identified in §16.
+**The repository stays private permanently.** `forge/` holds the generator algorithm and the solvability guarantee — the trade secret identified in §16.
 
 **GitHub is also the backup that consequence 3 requires.** Pushing is not optional hygiene, it's the disaster recovery plan: push at the end of every working session.
 
@@ -1722,7 +1837,7 @@ That second row is the design rule: **make the pipeline reproducible rather than
 
 **`CLAUDE.md` at the root** with the non-negotiable constraints, so they're read every working session:
 
-- The T1–T5 no-backtracking guarantee (§4)
+- The no-backtracking guarantee (§4)
 - Layered validation with code independent of the generator (§22)
 - Double idempotence (§21)
 - The calendar extends, never rewrites (§21)
@@ -1832,7 +1947,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Saving, pausing, resuming~~ — **resolved:** the puzzle stays open all day and saves itself (§27)
 - [ ] What time the puzzle rolls over: local midnight or UTC
 - [x] ~~What breaks the streak and whether there's grace~~ — **resolved:** midnight close for streak purposes, free monthly grace day, streak insurance in the paid tier (§27)
-- [x] ~~Weekly difficulty curve~~ — **resolved:** easy Monday, hard Saturday, with technique randomness within each level (§31)
+- [x] ~~Weekly difficulty curve~~ — **resolved and since revised:** an arc rather than a ramp. Rising effort Monday to Saturday, then a mid-difficulty Sunday chosen for board character. Three dimensions on easy and mid days, two on hard ones (§31)
 
 **Presentation**
 
@@ -1860,14 +1975,16 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 **Data**
 
-- [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions before quality filters
+- [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions, roughly 14,700 after the zero-density gate
 - [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
 - [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
-- [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the three-dimensional calendar model is in §31
-- [ ] **Compressibility as a pool quality metric.** §31 measured the solution path under *random* erasure, which is the right comparison between boards. What is still open is the per-direction question §5 asks: the maximum share of cells a given boxscore can lose while staying derivable, which is what ranks one candidate against another
-- [ ] **Erasure ordering.** Random erasure was enough to measure; the real algorithm is not decided. **Its input is a target chain length, not a number of cells to erase** — chain length grades more cleanly than cell count (r = −0.81 against frontier width, against +0.66 for cell count), so erasure is the means and chain length is the objective. Cell count is whatever falls out of reaching it. **The difficulty bands, when they are set, are set on chain length.**
+- [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the calendar model is in §31
+- [x] ~~Compressibility as a pool quality metric~~ — **measured, and it is not one (August 2026).** Median 58.6% of the grid removable, against the 25–35% that had been invented. But it correlates +0.79 with zero density, so ranking on it selects boredom. **Demoted to a viability constraint**; the quality criterion is the zero-density gate plus the three numbers (§5, §31)
+- [x] ~~The quality criterion~~ — **resolved: the 30% zero-density gate**, then chain length, search cost and resolution p90. The gate removes every shutout and the three-run games while keeping seven-run ones, and family variety survives it (§5)
 - [x] ~~Bottleneck frequency as a difficulty dimension~~ — **measured and rejected (August 2026).** No board pinches to a single move more than twice, and the frequency rises monotonically with erasure count rather than varying within a level, so there is nothing in it to grade. Closed; do not propose it again (§31)
-- [ ] Re-measure era distribution after quality filters, before deciding whether the calendar needs era weighting (§5)
+- [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
+- [ ] **Erasure ordering.** The real algorithm is not decided. **Its input is a target chain length, not a number of cells to erase** — chain length grades more cleanly than cell count, so erasure is the means and the chain is the objective (§21). Still open: the order cells come out in, and whether the pattern is symmetric. **The difficulty bands, when they are set, are set on chain length**, against real solving times from the January beta rather than anyone's estimate
+- [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
 - [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
 - [x] ~~No-repetition policy~~ — **resolved:** at batch generation (§21)
