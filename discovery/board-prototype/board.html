@@ -25,7 +25,8 @@
   #linescore { flex: 0 0 auto; width: 100%; border-collapse: collapse; font-size: 9px; }
   #linescore td, #linescore th { border: 1px solid #ddd; padding: 0 1px; height: 16px;
                                  text-align: center; vertical-align: middle; }
-  #linescore th.side, #linescore td.side { width: 38px; font-weight: 700; }
+  #linescore th.side, #linescore td.side { width: 38px; font-weight: 700; text-align: left;
+                                           padding-left: 4px; }
   /* The nine innings are one thing and R/H/E are another. Without a rule the line score reads as
      twelve equivalent columns. */
   #linescore .summary { border-left: 2px solid #999; }
@@ -45,8 +46,12 @@
   /* Seven characters, fixed. Whole surnames go from 55% at six to 76% at seven for one pixel of
      cell width, and a fixed width is a stable interface element where conditional truncation is an
      erratic one — the player cannot learn what the column will show if it varies. */
-  th.label, td.label { text-align: left; width: 66px; padding-left: 3px; font-size: 11px;
-                       overflow: hidden; white-space: nowrap; }
+  /* `table.grid th` outweighs `th.label` on specificity — same class count, one more element — so
+     the centring rule above was silently winning here and the labels came out ragged, each name
+     starting at a different x. A column of names that does not share a left edge cannot be scanned,
+     which defeats the point of giving them a fixed width in the first place. */
+  table.grid th.label, table.grid td.label { text-align: left; width: 66px; padding-left: 4px;
+                       font-size: 11px; overflow: hidden; white-space: nowrap; }
   td.cell, th.col { width: calc((100% - 66px) / 6); }
   td.cell { height: 44px; font-size: 15px; }
   td.cell.blank { background: #f4f4f4; }
