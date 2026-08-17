@@ -55,6 +55,8 @@ from boxscore_forge.solver import Solution, solve  # noqa: E402
 CONNECTION = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
 ERASURE_COUNTS = (2, 4, 6, 8, 10, 12)
 TRIALS_PER_COUNT = 15
+AMBIGUITY_TRIALS = 20
+TAIL_TRIM = 3
 SEED = 20260817
 
 
@@ -217,10 +219,14 @@ def survey(sample: list[Loaded]) -> None:
     print("erased  solved%  chain p50/p90/max   frontier min p50   mean frontier   footnote-needed%")
     rows_for_correlation: list[tuple[int, int, int]] = []
 
+    bottleneck_counts: dict[int, Counter[int]] = {}
+    attempts_per_puzzle: dict[int, float] = {}
+
     for count in ERASURE_COUNTS:
         chains: list[int] = []
         narrow_widths: list[int] = []
         mean_widths: list[float] = []
+        bottlenecks: Counter[int] = Counter()
         family_sets: Counter[tuple[str, ...]] = Counter()
         solved = trials = footnote_needed = 0
         for loaded in sample:
@@ -242,12 +248,21 @@ def survey(sample: list[Loaded]) -> None:
                     narrow_widths.append(solution.narrowest_frontier)
                 if solution.mean_frontier is not None:
                     mean_widths.append(solution.mean_frontier)
+                if len(solution.deductions) > TAIL_TRIM:
+                    # How often the board pinched, not just whether it ever did. One width-one step
+                    # and six of them are very different solves and the minimum calls both "one".
+                    bottlenecks[
+                        sum(1 for d in solution.deductions[:-TAIL_TRIM] if d.frontier == 1)
+                    ] += 1
                 family_sets[tuple(sorted(f.value for f in solution.families_used))] += 1
                 if leaned_on_a_footnote(loaded.direction, solution):
                     footnote_needed += 1
-                rows_for_correlation.append(
-                    (count, solution.chain_length, solution.narrowest_frontier or 0)
-                )
+                # Only boards long enough to have a frontier at all. Substituting a zero for the
+                # ones that do not would put a fabricated value into the correlation.
+                if solution.narrowest_frontier is not None:
+                    rows_for_correlation.append(
+                        (count, solution.chain_length, solution.narrowest_frontier)
+                    )
 
         if not chains:
             print(f"{count:>6}  {0.0:>6.1f}%  no complete solutions")
@@ -260,9 +275,37 @@ def survey(sample: list[Loaded]) -> None:
             f"{100.0 * footnote_needed / max(solved, 1):>15.1f}%"
         )
         print(f"          families: {_top_families(family_sets)}")
+        bottleneck_counts[count] = bottlenecks
+        attempts_per_puzzle[count] = trials / max(solved, 1)
 
+    _bottleneck_table(bottleneck_counts)
+    _pool_cost(attempts_per_puzzle)
     _correlations(rows_for_correlation)
     _frontier_tail(sample, rng)
+
+
+def _bottleneck_table(counts: dict[int, Counter[int]]) -> None:
+    print("\n=== HOW OFTEN A BOARD PINCHES TO ONE MOVE (3-step tail trimmed) ===")
+    print("erased   0     1     2     3    4+   mean")
+    for erased, histogram in counts.items():
+        total = sum(histogram.values()) or 1
+        buckets = [100.0 * histogram[n] / total for n in range(4)]
+        buckets.append(100.0 * sum(v for k, v in histogram.items() if k >= 4) / total)
+        mean = sum(k * v for k, v in histogram.items()) / total
+        print(f"{erased:>6}  " + "  ".join(f"{b:4.0f}%" for b in buckets) + f"  {mean:5.2f}")
+
+
+def _pool_cost(attempts: dict[int, float]) -> None:
+    print("\n=== WHAT EACH DIFFICULTY LEVEL COSTS THE POOL ===")
+    print("  erased   attempts per valid puzzle")
+    for erased, cost in attempts.items():
+        print(f"  {erased:>6}   {cost:>6.2f}")
+    print("\n  Illustration only — the mapping from weekday to erasure count is not decided.")
+    print("  Taking one day each at 2, 4, 6, 8, 10 and 12 cells, a seven-day week with two easy days:")
+    weekly = 2 * attempts[2] + attempts[4] + attempts[6] + attempts[8] + attempts[10] + attempts[12]
+    print(f"    directions consumed per week : {weekly:.1f}")
+    print(f"    per year                     : {weekly * 52:.0f}")
+    print(f"    years of calendar from 55,024: {55024 / (weekly * 52):.1f}")
 
 
 def _q(values: list[int], fraction: float) -> float:
@@ -328,6 +371,8 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
     print("\n=== AMBIGUOUS FOOTNOTE ATTRIBUTION ===")
     never_mattered = had_to_be_resolved = non_unique = boards = 0
     families_when_it_mattered: Counter[str] = Counter()
+    stuck_share: list[float] = []
+    per_pattern: Counter[str] = Counter()
 
     for loaded in sample:
         groups: dict[str, list[int]] = {}
@@ -346,35 +391,54 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
             if not ambiguous:
                 continue
             boards += 1
-            grid = rng.sample(erasable_cells(loaded.direction), 6)
-            puzzle = {k: v for k, v in values.items() if k not in ambiguous and k not in grid}
-            try:
-                solution = solve(shape_of(loaded.direction), puzzle)
-            except ContradictionError:
+            # Many erasure patterns, not one. Whether the ambiguity resolves depends on which cells
+            # are blank, so a single pattern cannot tell a bad direction from a bad erasure.
+            outcomes: Counter[str] = Counter()
+            for _ in range(AMBIGUITY_TRIALS):
+                grid = rng.sample(erasable_cells(loaded.direction), 6)
+                puzzle = {k: v for k, v in values.items() if k not in ambiguous and k not in grid}
+                try:
+                    solution = solve(shape_of(loaded.direction), puzzle)
+                except ContradictionError:
+                    outcomes["stuck"] += 1
+                    per_pattern["stuck"] += 1
+                    continue
+                if not solution.is_complete:
+                    outcomes["stuck"] += 1
+                    per_pattern["stuck"] += 1
+                    continue
+                settled = {deduction.cell for deduction in solution.deductions} & set(ambiguous)
+                depended = any(
+                    deduction.cell not in ambiguous and deduction.depends_on & settled
+                    for deduction in solution.deductions
+                )
+                outcomes["mattered" if depended else "irrelevant"] += 1
+                per_pattern[("mattered" if depended else "irrelevant")] += 1
+                if depended:
+                    for family in solution.families_used:
+                        families_when_it_mattered[family.value] += 1
+
+            if outcomes["stuck"] == AMBIGUITY_TRIALS:
                 non_unique += 1
-                continue
-            if not solution.is_complete:
-                non_unique += 1
-                continue
-            # Did anything outside the footnote group have to wait for the assignment?
-            settled = {deduction.cell for deduction in solution.deductions} & set(ambiguous)
-            depended = any(
-                deduction.cell not in ambiguous and deduction.depends_on & settled
-                for deduction in solution.deductions
-            )
-            if depended:
+            elif outcomes["mattered"]:
                 had_to_be_resolved += 1
-                for family in solution.families_used:
-                    families_when_it_mattered[family.value] += 1
             else:
                 never_mattered += 1
+            stuck_share.append(outcomes["stuck"] / AMBIGUITY_TRIALS)
 
-    print(f"  ambiguous groups carrying a footnote : {boards}")
-    print(f"  solved, assignment never mattered    : {never_mattered}")
-    print(f"  solved, assignment had to be settled : {had_to_be_resolved}")
-    print(f"  left non-unique or unsolvable        : {non_unique}")
+    print(f"  ambiguous groups carrying a footnote      : {boards}")
+    print(f"  never mattered under any erasure tried    : {never_mattered}")
+    print(f"  mattered under at least one erasure       : {had_to_be_resolved}")
+    print(f"  stuck under EVERY erasure tried           : {non_unique}")
+    if stuck_share:
+        print(f"  mean share of erasure patterns that stick: {statistics.fmean(stuck_share):.1%}")
+        print(f"  groups that never stick at all           : {sum(1 for s in stuck_share if s == 0)}")
+    total_patterns = sum(per_pattern.values()) or 1
+    print("\n  per erasure pattern, not per group:")
+    for outcome in ("irrelevant", "mattered", "stuck"):
+        print(f"    {outcome:<11}: {per_pattern[outcome]:>5}  ({100.0 * per_pattern[outcome] / total_patterns:.1f}%)")
     if families_when_it_mattered:
-        print(f"  families used when it mattered       : {dict(families_when_it_mattered)}")
+        print(f"  families used when it mattered            : {dict(families_when_it_mattered)}")
 
 
 def main() -> None:
