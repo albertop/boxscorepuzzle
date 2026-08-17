@@ -9,7 +9,7 @@ import dataclasses
 
 import pytest
 
-from boxscore_forge.boxscore import BattingLine, Direction, Footnotes, LineScore, PitchingLine
+from boxscore_forge.boxscore import BattingLine, Direction, LineScore, PitchingLine
 from boxscore_forge.identities import Identity, find_violations
 
 
@@ -83,6 +83,41 @@ class TestPlateAppearanceIdentity:
         broken = dataclasses.replace(
             cubs_at_braves_1968,
             footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=7),
+        )
+
+        violations = find_violations(broken)
+
+        assert Identity.PLATE_APPEARANCES in {violation.identity for violation in violations}
+
+    def test_accepts_a_batter_who_reached_on_defensive_interference(self, cubs_at_braves_1968: Direction) -> None:
+        # Reaching on catcher's interference is a plate appearance that is not an at-bat and not
+        # any of the other four categories. Verified against the whole Retrosheet database: with it
+        # the forward count of plate appearances balances in all 407,816 team-games, and without it
+        # 1,933 of them break.
+        #
+        # Turn one at-bat that made an out into an interference: the batter is no longer charged an
+        # at-bat, one fewer out is recorded, and he is left on base instead.
+        balanced = dataclasses.replace(
+            cubs_at_braves_1968,
+            batting=(
+                dataclasses.replace(cubs_at_braves_1968.batting[0], at_bats=3),
+                *cubs_at_braves_1968.batting[1:],
+            ),
+            batting_totals=dataclasses.replace(cubs_at_braves_1968.batting_totals, at_bats=35),
+            pitching=(
+                dataclasses.replace(cubs_at_braves_1968.pitching[0], outs=19),
+                cubs_at_braves_1968.pitching[1],
+            ),
+            pitching_totals=dataclasses.replace(cubs_at_braves_1968.pitching_totals, outs=26),
+            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=9, reached_on_interference=1),
+        )
+
+        assert find_violations(balanced) == ()
+
+    def test_detects_interference_left_out_of_the_count(self, cubs_at_braves_1968: Direction) -> None:
+        broken = dataclasses.replace(
+            cubs_at_braves_1968,
+            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, reached_on_interference=1),
         )
 
         violations = find_violations(broken)
@@ -168,7 +203,7 @@ class TestBounds:
     def test_detects_a_negative_value(self, cubs_at_braves_1968: Direction) -> None:
         broken = dataclasses.replace(
             cubs_at_braves_1968,
-            footnotes=Footnotes(left_on_base=-1, hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1),
+            footnotes=dataclasses.replace(cubs_at_braves_1968.footnotes, left_on_base=-1),
         )
 
         violations = find_violations(broken)

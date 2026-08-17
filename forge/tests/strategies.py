@@ -38,8 +38,9 @@ def valid_directions(draw: DrawFn) -> Direction:
         draw(st.integers(min_value=0, max_value=2)),
         draw(st.integers(min_value=0, max_value=2)),
         draw(st.integers(min_value=0, max_value=2)),
+        draw(st.integers(min_value=0, max_value=1)),
     )
-    hit_by_pitch, sacrifice_flies, sacrifice_hits = footnotes_without_left_on_base
+    hit_by_pitch, sacrifice_flies, sacrifice_hits, reached_on_interference = footnotes_without_left_on_base
     plate_appearances = batting_totals.at_bats + batting_totals.walks + sum(footnotes_without_left_on_base)
 
     # Outs plus runs plus runners left on base must account for every plate appearance, so once the
@@ -59,6 +60,7 @@ def valid_directions(draw: DrawFn) -> Direction:
             hit_by_pitch=hit_by_pitch,
             sacrifice_flies=sacrifice_flies,
             sacrifice_hits=sacrifice_hits,
+            reached_on_interference=reached_on_interference,
         ),
         line_score=_draw_line_score(draw, batting_totals),
     )

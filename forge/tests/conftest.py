@@ -44,7 +44,9 @@ def cubs_at_braves_1968() -> Direction:
         batting_totals=BattingLine(at_bats=36, runs=4, hits=11, runs_batted_in=4, walks=2, strikeouts=5),
         pitching=pitching,
         pitching_totals=PitchingLine(outs=27, hits=11, runs=4, earned_runs=4, walks=2, strikeouts=5),
-        footnotes=Footnotes(left_on_base=8, hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1),
+        footnotes=Footnotes(
+            left_on_base=8, hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1, reached_on_interference=0
+        ),
         line_score=LineScore(
             offense_by_inning=(1, 0, 1, 0, 0, 0, 2, 0, 0),
             defense_by_inning=(0, 0, 0, 0, 0, 0, 0, 0, 0),

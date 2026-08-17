@@ -112,6 +112,12 @@ def _check_plate_appearances(direction: Direction) -> Iterator[Violation]:
     On this board the batter line and the global team identity close as one equation, because plate
     appearances are not a column: counting them forward from at-bats has to agree with counting them
     backward from outs, runs and runners left on.
+
+    The backward count assumes every runner arrived by way of a plate appearance. That has been true
+    of every team-game before 2020 bar eleven, which are source errors. It is not true since: extra
+    innings begin with a runner already on second who never batted, so those games break this
+    identity on the board as surely as they break it here, and rejecting them is correct rather than
+    a false negative.
     """
     footnotes = direction.footnotes
     from_batting = (
@@ -120,6 +126,7 @@ def _check_plate_appearances(direction: Direction) -> Iterator[Violation]:
         + footnotes.hit_by_pitch
         + footnotes.sacrifice_flies
         + footnotes.sacrifice_hits
+        + footnotes.reached_on_interference
     )
     from_outs = direction.pitching_totals.outs + direction.batting_totals.runs + footnotes.left_on_base
     if from_batting != from_outs:

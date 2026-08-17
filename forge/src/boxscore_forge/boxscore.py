@@ -51,13 +51,19 @@ class Footnotes:
     are never erased.
 
     Without `left_on_base` the plate appearance identity cannot be expressed at all, and without the
-    three sacrifice-related counts it does not close.
+    remaining counts it does not close.
+
+    `reached_on_interference` is the category that is easy to forget, because it almost never
+    happens and a boxscore missing it still looks right. Checked against every team-game Retrosheet
+    has: counting it, the plate appearance total balances in all 407,816; leaving it out, 1,933 of
+    them silently fail to.
     """
 
     left_on_base: int
     hit_by_pitch: int
     sacrifice_flies: int
     sacrifice_hits: int
+    reached_on_interference: int
 
 
 @dataclass(frozen=True, slots=True)

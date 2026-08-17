@@ -240,6 +240,37 @@ It would have improved the era balance as a side effect — the sacrifice bunt w
 dead-ball era, so requiring zero pushes the pool forward in time — but paying 57% of the pool to
 avoid a line of footnotes that real boxscores print anyway is the wrong trade.
 
+### Two corrections found by reading cwbox and checking against the database
+
+**1. A fifth footnote quantity was missing: reaching base on defensive interference.** It is a plate
+appearance that is not an at-bat and not any of the other four categories, and a boxscore missing it
+still looks right — which is why it went unnoticed. Measured across every batter row Retrosheet has:
+
+| Forward count of plate appearances | Rows that fail |
+|---|---:|
+| `AB + BB + HBP + SF + SH + XI` | **0** of 5,325,173 |
+| `AB + BB + HBP + SF + SH` | 1,956 |
+
+It affects 1,933 team-games, roughly one in every 200. **Decision needed:** either the footnote line
+carries a fifth value that is zero in 99.5% of games, or the pool excludes those games. Excluding
+costs almost nothing and keeps the footnote line shorter on a 375px board, which argues for it —
+but the identity itself must know about interference either way, so that a rejection happens for
+the stated reason rather than by accident.
+
+**2. The backward count stops holding in 2020.** `PA = Outs + R + LOB` assumes every runner arrived
+by way of a plate appearance. Extra innings now begin with a runner already on second who never
+batted, so the identity breaks by exactly the number of extra half-innings:
+
+| Era | Team-games that fail | Of those, in extra innings |
+|---|---:|---:|
+| 2020 onward | 2,304 | 2,252 |
+| Before 2020 | **11** | 1 |
+
+Eleven failures in more than 400,000 team-games before 2020 — those are source errors, and catching
+them is what layer 1 is for. **Rejecting the modern extra-inning games is correct, not a false
+negative:** the board genuinely cannot express that identity for them, so they are not solvable
+puzzles regardless.
+
 **⚠️ Still open: attribution granularity.** Whether HBP, SF and SH are given per team or per player.
 A printed boxscore attributes them by name ("SF: Aparicio"). Per player makes the batter identity a
 per-row equation, which is a T1/T2 workhorse; per team collapses it to a single team-level equation
