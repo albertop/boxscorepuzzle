@@ -6,6 +6,7 @@ work out. Stronger, and it would deduce from a rule the board never states.
 """
 
 import dataclasses
+import itertools
 
 from hypothesis import given
 
@@ -62,6 +63,27 @@ class TestAgreementWithTheIdentities:
         ]
 
         assert disagreements == []
+
+
+class TestTheTwoByTwoRungIsUnreachable:
+    @given(valid_directions())
+    def test_no_two_equations_share_more_than_one_cell(self, direction: Direction) -> None:
+        # Solving a 2x2 system needs two equations whose unknowns are the same pair, which needs
+        # them to share two cells. Nothing here shares more than one, so that rung of the ladder
+        # cannot fire on this board — the constraint graph is tree-like, and every hard step has to
+        # come from bounding or from the global identity instead.
+        #
+        # This is a tripwire, not a decoration. If the board ever gains a column or moves the
+        # footnotes to per-player attribution, overlaps appear, the rung becomes reachable, and this
+        # failing is the notice that it now has to be implemented.
+        system = equations(shape_of(direction))
+        overlaps = [
+            (first.origin, second.origin, sorted(shared))
+            for first, second in itertools.combinations(system, 2)
+            if len(shared := {term.cell for term in first.terms} & {term.cell for term in second.terms}) > 1
+        ]
+
+        assert overlaps == []
 
 
 class TestShape:

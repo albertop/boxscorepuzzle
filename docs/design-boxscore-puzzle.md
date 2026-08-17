@@ -100,6 +100,33 @@ A uniqueness proof guarantees one answer exists, but does **not** guarantee a hu
 
 **Publication rule:** a puzzle ships only if a solver implementing exclusively T1–T5 solves it **without backtracking**. If it needs to guess a single cell, it's discarded or given one cell back as a hint.
 
+### ⚠️ T3 is unreachable on this board (measured, August 2026)
+
+Solving a 2×2 system needs two equations whose unknowns are the **same pair**, which requires those
+two equations to share two cells. Across the board's full system — 21 equations, including the
+global identity — **no two equations share more than one cell.**
+
+The reason is structural, not a matter of degree: 90 of the 99 cells appear in exactly one equation,
+because an individual batter's or pitcher's cell lives only in its own column sum. The nine that
+appear in more are the team totals and the line score's runs, and no pair of equations contains two
+of them together. The constraint graph is tree-like.
+
+**Consequences:**
+
+- The effective ladder for this board is **T1, T2, T4, T5**. The difficulty measurement's verdict
+  therefore rests on bounding and the global identity alone.
+- **T4 becomes the technique that decides whether this board can be hard.** Single-unknown
+  propagation handles anything where a cell is alone in its equation; when several cells in one
+  equation are missing, neither T1 nor T3 can move, and only bounding narrows them.
+- §8's tutorial is built as five steps mapping to five identities. With P2 and P5 already collapsed
+  into one equation (§6) and T3 unreachable, that structure needs revisiting.
+- Adding rows would not change this. What would is a board where an individual cell appears in a
+  second equation — per-player footnote attribution was checked and does not do it, because plate
+  appearances are not a column.
+
+A test in the forge asserts the overlap stays at one cell, so if the board ever changes and the rung
+becomes reachable, it says so.
+
 Secondary benefit: difficulty derives itself — the highest technique required and how many times.
 
 ### Two properties that bring it close to sudoku

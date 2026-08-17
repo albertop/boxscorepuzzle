@@ -129,13 +129,21 @@ def cell_values(direction: Direction) -> dict[str, int]:
     return values
 
 
-def constrained_cells(shape: BoardShape) -> frozenset[str]:
+def constrained_cells(shape: BoardShape, *, including_global: bool = True) -> frozenset[str]:
     """Cells that appear in at least one equation, and so can be deduced when they are missing.
 
     The rest — the error columns, and the defending team's hit total — are printed and never
     reasoned about. Erasing one of those would produce a puzzle with no answer.
+
+    With `including_global` off, the answer is what a solver can still reach while the global team
+    identity is withheld. The footnotes live in that equation alone, so they fall outside.
     """
-    return frozenset(term.cell for equation in equations(shape) for term in equation.terms)
+    return frozenset(
+        term.cell
+        for equation in equations(shape)
+        if including_global or not equation.is_global
+        for term in equation.terms
+    )
 
 
 def equations(shape: BoardShape) -> tuple[Equation, ...]:

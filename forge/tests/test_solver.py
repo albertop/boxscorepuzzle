@@ -87,10 +87,13 @@ class TestTheGlobalIdentityIsWithheld:
 class TestItNeverGuesses:
     @given(valid_directions(), st.data())
     def test_recovers_any_single_erased_cell_exactly(self, direction: Direction, data: st.DataObject) -> None:
-        # Every cell that takes part in an equation is reachable when it is the only one missing,
-        # and what comes back must be the number that was there. A solver that returns a plausible
-        # value instead of the true one is the failure mode the whole design exists to prevent.
-        cell = data.draw(st.sampled_from(sorted(constrained_cells(shape_of(direction)))))
+        # Every cell the current ladder can reach must come back exactly, when it is the only one
+        # missing. A solver that returns a plausible value instead of the true one is the failure
+        # mode the whole design exists to prevent.
+        #
+        # The footnotes are excluded because they appear in the global identity alone, which is
+        # still withheld. When that rung is implemented this filter comes off.
+        cell = data.draw(st.sampled_from(sorted(constrained_cells(shape_of(direction), including_global=False))))
         original = cell_values(direction)
 
         solution = solve(shape_of(direction), _erase(direction, cell))
