@@ -117,6 +117,19 @@ A puzzle ships only if a solver implementing **exclusively** techniques T1–T5 
 | T4 | Bounding by inequality (AB ≥ H, ER ≤ R, non-negativity) |
 | T5 | Global team identity: PA = Outs + R + LOB |
 
+**⚠️ T3 is unreachable and no column set changes that (§4).** Every identity is a sum over a row or
+over a column, so two of them share at most the one cell where a row crosses a column — never the
+two that a 2×2 needs. The working ladder is **T1, T2, T4, T5**.
+
+**⚠️ The consequence is bigger than the missing rung.** A tree-like constraint graph has no middle
+difficulty: one blank per equation is a subtraction, two blanks in one equation are usually
+*ambiguous* rather than hard, and §22 discards them. The generator therefore converges on trivial
+puzzles — nine independent subtractions, no chaining. **The ceiling is topological, not algorithmic;
+do not try to fix it in the erasure algorithm.** The fix under consideration is putting plate
+appearances on the board so each row gains its own identity (§4, §6). **The column set is an open
+decision — do not treat the current six as settled, and do not run the compressibility measurement
+until it is.**
+
 Uniqueness alone is **not** sufficient. A puzzle can have exactly one solution and still be humanly underivable — that is the worst failure mode because it looks correct.
 
 ### 2. Layered validation with independent code (§22)

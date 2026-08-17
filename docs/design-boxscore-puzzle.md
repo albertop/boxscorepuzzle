@@ -111,21 +111,58 @@ because an individual batter's or pitcher's cell lives only in its own column su
 appear in more are the team totals and the line score's runs, and no pair of equations contains two
 of them together. The constraint graph is tree-like.
 
-**Consequences:**
+**No column set fixes this.** The measurement was repeated against four candidate boards, including
+ones with plate appearances as a column and with footnotes attributed per player: **the maximum
+overlap is one cell in every case.** The reason is that every identity here is a sum over a row or
+over a column, so two of them can share at most the single cell where a row crosses a column. T3
+would need a different *family* of constraint, not a different column. Treat it as closed.
 
-- The effective ladder for this board is **T1, T2, T4, T5**. The difficulty measurement's verdict
-  therefore rests on bounding and the global identity alone.
-- **T4 becomes the technique that decides whether this board can be hard.** Single-unknown
-  propagation handles anything where a cell is alone in its equation; when several cells in one
-  equation are missing, neither T1 nor T3 can move, and only bounding narrows them.
-- §8's tutorial is built as five steps mapping to five identities. With P2 and P5 already collapsed
-  into one equation (§6) and T3 unreachable, that structure needs revisiting.
-- Adding rows would not change this. What would is a board where an individual cell appears in a
-  second equation — per-player footnote attribution was checked and does not do it, because plate
-  appearances are not a column.
+### The consequence T3 carries: a board with no middle difficulty
 
-A test in the forge asserts the overlap stays at one cell, so if the board ever changes and the rung
-becomes reachable, it says so.
+A tree-like graph has only two regimes and nothing between them.
+
+- Erase one cell per equation and T1 recovers it with a single subtraction.
+- Erase two from the same equation and nothing can move. T1 needs a lone unknown, T3 cannot fire,
+  and T4 only settles a cell when the bound happens to be tight. Most of the time two blanks in one
+  column sum are not *hard* — they are **ambiguous**, and §22 correctly throws the puzzle away.
+
+So the generator converges on the trivial regime, and not because the erasure algorithm is wrong:
+it is the only thing that survives the correctness rules. **The ceiling is topological, not
+algorithmic.** The resulting puzzle is nine independent subtractions — solving the hits cell tells
+you nothing about the strikeouts cell. Nine one-move puzzles rather than one nine-move puzzle.
+
+Measured, as the share of random erasures that a T1/T2 solver finishes — which is the share that
+could survive validation as anything other than trivial:
+
+| Batting cells erased | Current board | With PA as a column | PA plus per-player footnotes |
+|---|---:|---:|---:|
+| 2 | 87.5% | 93.8% | 96.4% |
+| 4 | 39.7% | 69.3% | 80.2% |
+| **6** | **8.3%** | **43.4%** | **57.0%** |
+| 8 | 0.3% | 20.6% | 35.3% |
+| 10 | 0.0% | 7.9% | 17.2% |
+
+### What restores the middle regime
+
+Making **plate appearances a column** gives every batter row its own identity:
+
+```
+PA = AB + BB + HBP + SF + SH + XI
+```
+
+At-bats and walks then live in two equations each — their column sum and their row identity — and
+the graph stops being a forest: **independent cycles go from 0 to 16, and cells appearing in two or
+more equations from 10 to 35.** Erasing two cells from the at-bats column stops being ambiguous,
+because one of them comes back through its row and the other follows from the column. That is
+chaining and ordering restored, and it is done with T1 and T2 rather than with T3.
+
+**⚠️ Open decision — the column set (§6).** The six-column ceiling is a real calculation and does
+not move, so one column has to go. Measurements and a recommendation are below in §6; the decision
+has not been taken.
+
+A test in the forge holds the interconnection line. Its assertion is the **cyclomatic number**, not
+the overlap: overlap can never reach two, so testing for it would be testing for something that
+cannot happen.
 
 Secondary benefit: difficulty derives itself — the highest technique required and how many times.
 
@@ -300,11 +337,35 @@ them is what layer 1 is for. **Rejecting the modern extra-inning games is correc
 negative:** the board genuinely cannot express that identity for them, so they are not solvable
 puzzles regardless.
 
-**⚠️ Still open: attribution granularity.** Whether HBP, SF and SH are given per team or per player.
-A printed boxscore attributes them by name ("SF: Aparicio"). Per player makes the batter identity a
-per-row equation, which is a T1/T2 workhorse; per team collapses it to a single team-level equation
-and removes one constraint per row. **This materially changes puzzle difficulty and must be decided
-before the erasure algorithm.**
+### ⚠️ Open decision: the column set
+
+The board's difficulty ceiling is set by how interconnected its constraint graph is, not by its size
+(§4). The current set leaves the graph a forest, which caps every puzzle at the trivial regime.
+Restoring the middle regime means putting **plate appearances** on the board, and the six-column
+ceiling means something has to leave.
+
+**Recommended: `PA, AB, R, H, BB, K`, with footnotes attributed per player.**
+
+**Why RBI is the column to drop.** It is the only batting column with neither a cross-team
+counterpart nor a place in the row identity — all ten of its cells have degree one, participating in
+its own column sum and in the inequality `RBI ≤ R` and nothing else. The alternative of dropping
+strikeouts was measured and scores the same on solvability (57.3% against 57.0% at six erasures),
+but it costs one of only four cross-team links, and §3 identifies that cross as the part without
+which the puzzle degenerates into row arithmetic.
+
+**Why attribution goes per player.** This reverses the earlier reading above, which was correct only
+while plate appearances were not a column: with PA on the board, an attributed footnote closes a row
+identity instead of sitting inert. It is worth 14 points of survival at six erasures (57.0% against
+43.4%), and it is how a printed boxscore already writes them ("SF: Aparicio").
+
+**Availability was checked before recommending it.** The row identity holds in **all 5,325,173
+batter rows** Retrosheet has. Between 87.5% (the 1910s, the pool's heaviest decade) and 94% of rows
+close on `PA = AB + BB` alone, needing no footnote term at all; per-team attribution would leave
+roughly one row per game without a usable identity, and per-player leaves none.
+
+**Consequences to work through if this is adopted:** §3 gains the row identity as a board-level
+constraint, §8's tutorial loses RBI from its vocabulary, and the compressibility measurement must run
+against the new board rather than the current one.
 
 **What is NOT decided:**
 
@@ -1495,7 +1556,9 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Data**
 
 - [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions before quality filters
-- [ ] **⚠️ Next measurement, and the one that matters most: compressibility and technique distribution.** For a sample of surviving directions — how many cells can be erased preserving uniqueness *and* T1–T5 derivability, and which techniques the result demands. **This decides whether the board size produces hard puzzles.** Everything about board dimensions is blocked on it (§6)
+- [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
+- [ ] **⚠️ Blocking: the column set.** The current board's constraint graph is a forest, which caps every puzzle at the trivial regime. Recommendation and measurements in §6; **the compressibility measurement should not run until this is settled**, because it would measure a board that is about to change
+- [ ] **⚠️ Then: compressibility and technique distribution.** For a sample of surviving directions — how many cells can be erased preserving uniqueness *and* derivability, and which techniques the result demands. **This decides whether the board size produces hard puzzles.** Everything about board dimensions is blocked on it (§6)
 - [ ] Re-measure era distribution after quality filters, before deciding whether the calendar needs era weighting (§5)
 - [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
