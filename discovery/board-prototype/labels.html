@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Label column widths</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font: 13px/1.1 -apple-system, "Segoe UI", system-ui, sans-serif; padding: 6px; background: #fff; }
+  h2 { font-size: 12px; margin: 10px 0 3px; font-weight: 600; }
+  p.note { font-size: 11px; color: #555; margin-bottom: 4px; }
+  .row { display: flex; gap: 6px; align-items: flex-start; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; height: 44px; text-align: center; vertical-align: middle; font-size: 15px; }
+  th.label { text-align: left; padding-left: 3px; font-size: 11px; font-weight: 700;
+             overflow: hidden; white-space: nowrap; }
+  td.cell { width: 44px; }
+  .cap { font-size: 10px; color: #444; padding: 2px 0; }
+  .clash th.label { background: #ffecec; }
+</style>
+</head>
+<body>
+<h2>Pittsburgh at Brooklyn, 14 May 1927 — a real board with a real collision</h2>
+<p class="note">Lloyd Waner leads off, Paul Waner bats third. Same surname, not a truncation artefact:
+6.6% of boards in the pool carry a genuine duplicate. Long names shown for width, tinted rows are
+the collision.</p>
+<div class="row" id="out"></div>
+
+<script>
+const ROSTER = [
+  ["Lloyd","Waner","LF"], ["Kiki","Cuyler","CF"], ["Paul","Waner","RF"],
+  ["Glenn","Wright","SS"], ["George","Grantham","2B"], ["Pie","Traynor","3B"],
+  ["Joe","Harris","1B"], ["Roy","Spencer","C"], ["Ray","Kremer","P"],
+  // Two long names dropped in, to show the widest case the register produces.
+  ["Carl","Yastrzemski","DH"], ["Red","Schoendienst","PH"],
+];
+const CELLS = [[4,4,1,2,0,0],[5,4,0,1,0,1],[4,3,2,2,1,0],[4,4,0,0,0,1],[4,4,1,1,0,0],
+               [4,4,0,2,0,0],[3,3,0,0,0,1],[3,3,0,0,0,0],[3,2,0,0,0,1],[4,4,1,1,0,1],[1,1,0,0,0,0]];
+
+function abbreviate(chars, useInitial) {
+  const seen = {};
+  ROSTER.forEach(([, last]) => { const k = last.slice(0, chars); seen[k] = (seen[k] || 0) + 1; });
+  return ROSTER.map(([first, last]) => {
+    const stem = last.slice(0, chars) + (last.length > chars ? "." : "");
+    const clash = seen[last.slice(0, chars)] > 1;
+    return { text: (clash && useInitial ? first[0] + ". " : "") + stem, clash };
+  });
+}
+
+const out = document.getElementById("out");
+for (const [chars, px] of [[5, 50], [6, 58], [7, 66], [8, 74]]) {
+  const labels = abbreviate(chars, true);
+  let html = `<div><div class="cap">${chars} chars &middot; label ${px}px &middot; cell ${Math.floor((320 - px) / 6)}px at 320</div><table>`;
+  labels.forEach((l, r) => {
+    html += `<tr class="${l.clash ? "clash" : ""}"><th class="label" style="width:${px}px">${l.text}</th>` +
+      CELLS[r].map(v => `<td class="cell" style="width:${Math.floor((320 - px) / 6)}px">${v}</td>`).join("") + "</tr>";
+  });
+  out.insertAdjacentHTML("beforeend", html + "</table></div>");
+}
+
+// Report whether any label actually clips at its width.
+requestAnimationFrame(() => {
+  const clipped = [...document.querySelectorAll("th.label")].filter(e => e.scrollWidth > e.clientWidth + 1);
+  window.CLIPPED = clipped.map(e => e.textContent + " @" + e.style.width);
+});
+</script>
+</body>
+</html>
