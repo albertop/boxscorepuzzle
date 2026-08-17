@@ -38,7 +38,11 @@ product's own interface language and legal documents.
 - Every function does one thing. If you need the word "and" to describe it, split it.
 - Fail fast, fail loud. No silent swallowing of errors.
 - Design for testability: inject dependencies, keep I/O at the edges.
-- Do not reinvent the wheel. If a well-known library exists, use it.
+- **Do not reinvent the wheel.** Order of preference: the standard library first, then an
+  established and widely known third-party library, and only then new code of our own. Writing a
+  hand-rolled version of something the stdlib or a well-known library already does is a defect, not
+  a shortcut — it carries bugs the alternative fixed years ago. Adding the dependency is still a
+  decision, not a reflex; see Dependencies.
 - **Correctness beats convenience.** Where a rule below conflicts with shipping faster, the rule wins.
 
 ---
