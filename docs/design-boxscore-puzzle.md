@@ -1350,11 +1350,11 @@ What they provide is **variation within a constant form**: difficulty changes, t
 Over 420 real directions, 35 per decade, solved under random erasure. This replaces the invented
 scale that used to sit here.
 
-| Dimension | Lever | What it controls |
-|---|---|---|
-| **Effort** | Erasure count | How long and how chained the solve is |
-| **Character** | Equation families required | Which technique opens the board |
-| **Attention** | A live footnote on the direction | Whether the player *can* be made to notice a non-zero footnote |
+| Dimension | Lever | What it controls | Available |
+|---|---|---|---|
+| **Effort** | Target chain length | How long and how chained the solve is | Every day |
+| **Character** | Equation families required | Which technique opens the board | Easy and mid days only |
+| **Attention** | A live footnote on the direction | Whether the player *can* be made to notice a non-zero footnote | Every day |
 
 **Effort is one variable with three names.** Chain length and narrowest frontier width are near
 mirror images of each other (r = −0.81), and erasure count predicts both only moderately (+0.66 and
@@ -1382,8 +1382,54 @@ ten, 35% at twelve. It grades effort, badly, and adds no dimension. Closed.
 that grades cleanly, so the erasure algorithm takes a target chain length and lets the cell count
 fall out of reaching it (§36), and the bands are set on chain length.
 
-**Character is the independent lever, and it is what §31 was asking for.** At a fixed effort level
-the families vary widely:
+### ⚠️ The character axis narrows as difficulty rises, and dies at the top
+
+Measured under **chain-targeted erasure**, which is what the generator will actually do — the earlier
+figures came from random erasure at fixed cell counts and overstated the variety.
+
+| Erasure aimed at | Reachable family combinations |
+|---|---|
+| chain 5 | col+cross+row 48%, col+row 38%, all four 8%, col+global+row 3%, col alone 1% |
+| chain 10 | col+cross+row 58%, all four 29%, col+row 12%, col+global+row 2% |
+| chain 20 | all four 81%, col+cross+row 19% |
+| the compressibility ceiling | **all four, 100%** |
+
+**So the week has three dimensions early and two late.**
+
+- **Easy and mid days:** effort, character (family combination), attention (live footnote).
+- **Hard days:** effort and attention only. Family combination is not a lever there, measured.
+
+That is a smaller loss than it looks. Monday and Tuesday are the days played most and where the habit
+forms, so the variety sits where it is used. And **Saturday covers itself**: if every hard board needs
+all four families, Saturday has character by being the only day the global identity appears at all.
+
+**Saturday's variation has to come from board selection instead.** With the family axis flat at high
+difficulty, what distinguishes one hard board from another is the boxscore: a pitchers' duel and a
+blowout with three relievers feel different to solve even when both demand all four families. The
+candidate dimensions are roster shape, live footnotes, total runs and their spread across innings,
+and zero density — treated as *character* rather than as difficulty.
+
+### Sunday is the character day, and the week is an arc rather than a ramp
+
+Sunday had been missing from every version of this curve. The crossword answer does not transfer: the
+NYT Sunday is Thursday-difficulty at much larger size, and **this board cannot grow** — six columns is
+a hard ceiling and the height is screen-limited.
+
+- **Monday → Saturday:** rising effort, Saturday the peak.
+- **Sunday:** mid difficulty, chosen for the **memorable game** rather than for effort. A shutout, a
+  pitchers' duel, a twenty-run game.
+
+Two reasons. **A gentle Sunday recovers the player who broke on Saturday** — with streaks as the
+retention mechanism (§27), someone who just lost one needs a reason to come back rather than another
+wall. And Sunday is the one day with room for the selection dimension above to work, because it is
+not pinned at the compressibility ceiling.
+
+Seven days with distinct identity: six graded by effort, one distinguished by nature.
+
+### The family distribution under random erasure, for reference
+
+Superseded by the chain-targeted figures above, and kept because it shows how much the erasure
+strategy changes the answer. At a fixed cell count the families look far more varied than they are.
 
 | Families required | at 6 cells | at 12 cells |
 |---|---:|---:|

@@ -171,14 +171,15 @@ def main() -> None:
             if aimed is not None:
                 counter[families_of(aimed)] += 1
         for step in solution.deductions:
-            if not step.has_a_comparable_cost:
+            if step.search_cost is None:
                 continue
-            (trivial_costs if step.is_trivial else real_costs).append(step.scan_cost)
+            (trivial_costs if step.is_trivial else real_costs).append(step.search_cost)
         rows.append((loaded, cells, solution, seconds, proxies(loaded)))
         print(
             f"  [{index:>3}/{len(sample)}] {loaded.game_id} {loaded.season}: "
             f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {solution.chain_length}, "
-            f"max {solution.hardest_step or 0:.1f}, trivial {solution.trivial_share or 0:.0%}, "
+            f"search {solution.hardest_search or 0:.2f}, res {solution.hardest_resolution or 0}, "
+            f"trivial {solution.trivial_share or 0:.0%}, "
             f"{families_of(solution)}, {seconds:.1f}s",
             flush=True,
         )
@@ -215,8 +216,10 @@ def main() -> None:
     )
     print(f"  compressibility vs chain at the ceiling: r = {_pearson(shares, [float(c) for c in chains]):+.3f}")
 
-    hardest = [row[2].hardest_step or 0.0 for row in rows]
-    p90 = [row[2].ninetieth_percentile_step or 0.0 for row in rows]
+    search = [row[2].hardest_search or 0.0 for row in rows]
+    resolution = [float(row[2].hardest_resolution or 0) for row in rows]
+    search_p90 = [row[2].ninetieth_percentile_search or 0.0 for row in rows]
+    resolution_p90 = [float(row[2].ninetieth_percentile_resolution or 0) for row in rows]
     trivial = [row[2].trivial_share or 0.0 for row in rows]
 
     print("\n=== ⚠️ IS THERE A CHARACTER AXIS AT ALL ===")
@@ -228,42 +231,92 @@ def main() -> None:
         shown = ", ".join(f"{k} {100.0 * v / total:.0f}%" for k, v in counter.most_common(5))
         print(f"  {label:<16} (n={total:>3}): {shown}")
 
-    print("\n=== HARDEST STEP AND P90 AT THE CEILING ===")
-    for label, series in (("max", hardest), ("p90", p90)):
+    print("\n=== THE TWO COMPONENTS AT THE CEILING ===")
+    for label, series in (
+        ("search max", search),
+        ("search p90", search_p90),
+        ("resolution max", resolution),
+        ("resolution p90", resolution_p90),
+    ):
         ordered = sorted(series)
         print(
-            f"  {label}: min {ordered[0]:5.1f}  p10 {ordered[len(ordered) // 10]:5.1f}  "
-            f"p50 {statistics.median(ordered):5.1f}  p90 {ordered[9 * len(ordered) // 10]:5.1f}  "
-            f"max {ordered[-1]:5.1f}"
+            f"  {label:<15} min {ordered[0]:5.2f}  p10 {ordered[len(ordered) // 10]:5.2f}  "
+            f"p50 {statistics.median(ordered):5.2f}  p90 {ordered[9 * len(ordered) // 10]:5.2f}  "
+            f"max {ordered[-1]:5.2f}"
         )
     print(f"  share of steps that were trivial: median {statistics.median(trivial):.0%}")
+    print(f"\n  ARE THE TWO COMPONENTS INDEPENDENT OF EACH OTHER?  r = {_pearson(search, resolution):+.3f}")
+    print("  (near zero means three numbers rather than two, which is the better outcome)")
 
-    print("\n=== THE FALSIFICATION TEST: DOES IT STILL REWARD BOREDOM ===")
-    print("  flat or negative against zero density means the metric works")
+    print("\n=== THE FALSIFICATION TEST: DOES EITHER STILL REWARD BOREDOM ===")
+    print("  flat or negative against zero density means the component works")
     for name in ("zero_density", "digit_range", "line_score_variety", "scoring_innings"):
         column = [row[4][name] for row in rows]
         print(
             f"  {name:<19} compressibility {_pearson(shares, column):+.3f}   "
-            f"max {_pearson(hardest, column):+.3f}   p90 {_pearson(p90, column):+.3f}"
+            f"search {_pearson(search, column):+.3f}   resolution {_pearson(resolution, column):+.3f}"
         )
 
     print("\n=== ARE THEY INDEPENDENT OF EFFORT ===")
-    print("  low correlation with chain length is the point: two numbers, not one twice")
-    print(f"  max vs raw chain length   r = {_pearson(hardest, [float(c) for c in chains]):+.3f}")
-    print(f"  p90 vs raw chain length   r = {_pearson(p90, [float(c) for c in chains]):+.3f}")
-    print(f"  max vs compressibility    r = {_pearson(hardest, shares):+.3f}")
+    floats = [float(c) for c in chains]
+    print(f"  search     vs raw chain length   r = {_pearson(search, floats):+.3f}")
+    print(f"  resolution vs raw chain length   r = {_pearson(resolution, floats):+.3f}")
+    print(f"  search     vs compressibility    r = {_pearson(search, shares):+.3f}")
+    print(f"  resolution vs compressibility    r = {_pearson(resolution, shares):+.3f}")
 
-    print("\n=== DOES IT SEPARATE BOARDS RAW CHAIN CALLS EQUAL ===")
-    grouped: dict[int, list[float]] = {}
+    print("\n=== DOES EITHER SEPARATE BOARDS RAW CHAIN CALLS EQUAL ===")
+    grouped: dict[int, list[tuple[float, float]]] = {}
     for row in rows:
-        grouped.setdefault(row[2].chain_length, []).append(row[2].hardest_step or 0.0)
-    for chain_length, values in sorted(grouped.items()):
-        if len(values) < 3:
+        grouped.setdefault(row[2].chain_length, []).append(
+            (row[2].hardest_search or 0.0, float(row[2].hardest_resolution or 0))
+        )
+    for chain_length, pairs in sorted(grouped.items()):
+        if len(pairs) < 3:
             continue
+        searches = [p[0] for p in pairs]
+        resolutions = [p[1] for p in pairs]
         print(
-            f"  raw chain {chain_length:>2} ({len(values):>2} boards): max step "
-            f"{min(values):5.1f} to {max(values):5.1f}, spread {max(values) - min(values):5.1f}, "
-            f"median {statistics.median(values):5.1f}"
+            f"  chain {chain_length:>2} ({len(pairs):>2} boards): "
+            f"search {min(searches):.2f}-{max(searches):.2f} (spread {max(searches) - min(searches):.2f})   "
+            f"resolution {min(resolutions):.0f}-{max(resolutions):.0f} (spread {max(resolutions) - min(resolutions):.0f})"
+        )
+
+    print("\n=== SATURDAY'S LEVER: DOES BOARD CHARACTER SEPARATE THE SOLVE ===")
+    print("  if the family axis is dead at high difficulty, the variation must come from the")
+    print("  boxscore itself. These are properties of the direction, fixed before any erasure.")
+    character = {
+        "pitching_rows": [float(len(row[0].direction.pitching)) for row in rows],
+        "batting_rows": [float(len(row[0].direction.batting)) for row in rows],
+        "live_footnotes": [
+            float(
+                sum(
+                    1
+                    for f in row[0].direction.batter_footnotes
+                    if f.hit_by_pitch or f.sacrifice_flies or f.sacrifice_hits or f.reached_on_interference
+                )
+            )
+            for row in rows
+        ],
+        "total_runs": [float(row[0].direction.batting_totals.runs) for row in rows],
+        "zero_density": [row[4]["zero_density"] for row in rows],
+    }
+    for name, column in character.items():
+        print(
+            f"  {name:<16} search {_pearson(search, column):+.3f}   "
+            f"resolution {_pearson(resolution, column):+.3f}   chain {_pearson(floats, column):+.3f}"
+        )
+
+    print("\n  by pitching rows, holding nothing else:")
+    by_pitchers: dict[int, list[tuple[float, float, int]]] = {}
+    for row in rows:
+        by_pitchers.setdefault(len(row[0].direction.pitching), []).append(
+            (row[2].hardest_search or 0.0, float(row[2].hardest_resolution or 0), row[2].chain_length)
+        )
+    for count, triples in sorted(by_pitchers.items()):
+        print(
+            f"    {count} pitcher(s), n={len(triples):>3}: search {statistics.median([t[0] for t in triples]):.2f}   "
+            f"resolution {statistics.median([t[1] for t in triples]):.0f}   "
+            f"chain {statistics.median([t[2] for t in triples]):.0f}"
         )
 
     print("\n=== IS THE TRIVIAL DISCOUNT THROWING AWAY SEARCH EFFORT ===")

@@ -78,13 +78,32 @@ class Deduction:
     known_terms_combined: int | None
 
     @property
-    def scan_cost(self) -> float:
-        """How much of the board had to be looked at to find this move.
+    def search_cost(self) -> float | None:
+        """How hard this move was to *find*, as a share of the board that led nowhere.
 
-        One solvable equation among twenty live ones is a harder thing to spot than one among three,
-        and counting steps alone cannot tell those apart.
+        Zero when every live equation was ready to give; approaching one when almost none were. It is
+        deliberately a fraction rather than a count: an earlier version divided live equations by
+        ready ones, which grows without bound as a board empties out, so it smuggled the board's
+        emptiness back in through the numerator and correlated with zero density all over again.
+
+        None for a bounding step, whose moves are narrowed domains rather than ready equations and
+        so are not on this scale.
         """
-        return self.equations_live / max(self.equations_solvable, 1)
+        if not self.has_a_comparable_cost or self.equations_live == 0:
+            return None
+        return 1.0 - self.equations_solvable / self.equations_live
+
+    @property
+    def resolution_cost(self) -> int | None:
+        """How hard the arithmetic was once the move had been found: how many additions it took.
+
+        Combining k numbers takes k-1 additions, so a value copied or a zero falling out of an empty
+        column costs nothing. Kept apart from search cost on purpose — scanning and calculating are
+        different activities, and the data says a step can be free to resolve and expensive to find.
+        """
+        if self.known_terms_combined is None:
+            return None
+        return max(self.known_terms_combined - 1, 0)
 
     @property
     def is_trivial(self) -> bool:
@@ -166,34 +185,40 @@ class Solution:
         return max((deduction.depth for deduction in self.deductions), default=0)
 
     @property
-    def _real_step_costs(self) -> list[float]:
-        """Scan cost of every step that asked for actual work and has a comparable cost."""
-        return sorted(
-            deduction.scan_cost
-            for deduction in self.deductions
-            if deduction.has_a_comparable_cost and not deduction.is_trivial
-        )
+    def hardest_search(self) -> float | None:
+        """The move that took the most looking for. Applies to every step, trivial or not.
 
-    @property
-    def hardest_step(self) -> float | None:
-        """The most expensive single step, which is what makes a board hard.
+        Kept apart from resolution rather than folded into one index. Searching and calculating are
+        different things to a player, and measured they behave differently: steps that ask for no
+        arithmetic at all are, on average, the *most* expensive ones to find. An index that zeroed
+        both together threw that away.
 
-        Not a sum. A total over all steps grows with how many there are, so a board of forty cheap
-        steps outscores one with three genuinely difficult ones — which is backwards, and is how a
-        zero-heavy board that compresses far ends up looking like the hardest thing in the pool.
-        A maximum is immune to that by construction and needs no statistical correction.
-
-        None when nothing on the board required work: every step was a value copied or a zero
-        falling out of an empty column.
+        A maximum rather than a total, because a sum grows with the number of steps and a board of
+        forty cheap ones would outscore one with three hard ones.
         """
-        costs = self._real_step_costs
-        return costs[-1] if costs else None
+        return _largest(self._search_costs)
 
     @property
-    def ninetieth_percentile_step(self) -> float | None:
-        """The same idea, less hostage to one freak step."""
-        costs = self._real_step_costs
-        return costs[min(int(0.9 * len(costs)), len(costs) - 1)] if costs else None
+    def ninetieth_percentile_search(self) -> float | None:
+        """The same, less hostage to one freak step."""
+        return _percentile(self._search_costs)
+
+    @property
+    def hardest_resolution(self) -> int | None:
+        """The most arithmetic any single step demanded."""
+        return _largest(self._resolution_costs)
+
+    @property
+    def ninetieth_percentile_resolution(self) -> int | None:
+        return _percentile(self._resolution_costs)
+
+    @property
+    def _search_costs(self) -> list[float]:
+        return sorted(cost for cost in (deduction.search_cost for deduction in self.deductions) if cost is not None)
+
+    @property
+    def _resolution_costs(self) -> list[int]:
+        return sorted(cost for cost in (deduction.resolution_cost for deduction in self.deductions) if cost is not None)
 
     @property
     def bounding_steps(self) -> int:
@@ -231,6 +256,14 @@ class Solution:
             return None
         kept = self.deductions[:-_TAIL_STEPS_IGNORED]
         return sum(deduction.frontier for deduction in kept) / len(kept)
+
+
+def _largest[T: (int, float)](costs: list[T]) -> T | None:
+    return costs[-1] if costs else None
+
+
+def _percentile[T: (int, float)](costs: list[T]) -> T | None:
+    return costs[min(int(0.9 * len(costs)), len(costs) - 1)] if costs else None
 
 
 def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:

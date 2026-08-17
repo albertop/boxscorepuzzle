@@ -202,15 +202,46 @@ class TestWeightedChain:
         solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
 
         assert solution.deductions[0].is_trivial
-        assert solution.hardest_step is None
+        assert solution.hardest_resolution == 0
         assert solution.chain_length == 1
+
+    def test_a_trivial_step_can_still_have_been_hard_to_find(self, cubs_at_braves_1968: Direction) -> None:
+        # The finding that split the metric in two: costing nothing to resolve says nothing about
+        # what it cost to find. Both numbers exist for this step and only one of them is zero.
+        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
+        step = solution.deductions[0]
+
+        assert step.resolution_cost == 0
+        assert step.search_cost is not None
 
     def test_charges_for_a_step_that_does_combine_numbers(self, cubs_at_braves_1968: Direction) -> None:
         # The hits column has seven non-zero entries to add up before the blank falls out.
         solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
         assert not solution.deductions[0].is_trivial
-        assert solution.hardest_step is not None
+        assert solution.hardest_resolution is not None
+        assert solution.hardest_resolution > 0
+
+    def test_search_cost_is_a_fraction_and_cannot_grow_with_the_board(self, cubs_at_braves_1968: Direction) -> None:
+        # The defect that failed falsification: the old form divided live equations by ready ones,
+        # which grows without bound as a board empties and smuggled emptiness back in. A share of
+        # the board that led nowhere is bounded by construction.
+        few = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+        many = solve(
+            shape_of(cubs_at_braves_1968),
+            _erase(
+                cubs_at_braves_1968,
+                "batting[3].hits",
+                "batting[6].strikeouts",
+                "batting[2].walks",
+                "batting[5].at_bats",
+                "pitching[1].walks",
+            ),
+        )
+
+        for solution in (few, many):
+            assert solution.hardest_search is not None
+            assert 0.0 <= solution.hardest_search < 1.0
 
     def test_separates_two_boards_that_raw_chain_length_calls_equal(self, cubs_at_braves_1968: Direction) -> None:
         # This is the whole point. Both boards are one step long; one is arithmetic and the other is
@@ -219,8 +250,9 @@ class TestWeightedChain:
         real = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
         assert boring.chain_length == real.chain_length
-        assert boring.hardest_step is None
-        assert real.hardest_step is not None
+        assert boring.hardest_resolution == 0
+        assert real.hardest_resolution is not None
+        assert real.hardest_resolution > 0
 
     def test_a_long_cheap_solve_does_not_outscore_a_short_expensive_one(self, cubs_at_braves_1968: Direction) -> None:
         # The failure a summed metric has by construction: many cheap steps beating a few costly
@@ -239,8 +271,9 @@ class TestWeightedChain:
         one_real = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
 
         assert len(many_cheap.deductions) > len(one_real.deductions)
-        assert many_cheap.hardest_step is None
-        assert one_real.hardest_step is not None
+        assert many_cheap.hardest_resolution == 0
+        assert one_real.hardest_resolution is not None
+        assert one_real.hardest_resolution > 0
 
     def test_bounding_is_counted_rather_than_costed(self, cubs_at_braves_1968: Direction) -> None:
         # Bounding draws on the whole board, so any scan cost given to it would be invented — and
@@ -263,17 +296,20 @@ class TestWeightedChain:
             _erase(cubs_at_braves_1968, "batting[3].hits", "batting[6].strikeouts", "batting[2].walks"),
         )
 
-        assert solution.ninetieth_percentile_step is not None
-        assert solution.hardest_step is not None
-        assert solution.ninetieth_percentile_step <= solution.hardest_step
+        for percentile, largest in (
+            (solution.ninetieth_percentile_search, solution.hardest_search),
+            (solution.ninetieth_percentile_resolution, solution.hardest_resolution),
+        ):
+            assert percentile is not None
+            assert largest is not None
+            assert percentile <= largest
 
     def test_a_step_costs_more_when_fewer_equations_are_ready(self, cubs_at_braves_1968: Direction) -> None:
-        # Scan cost is the share of live equations that are ready to give. One opening among many
-        # live equations is a harder thing to spot than one among few.
-        solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))
+        # One opening among many live equations is a harder thing to spot than one among few.
+        step = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits")).deductions[0]
 
-        assert solution.deductions[0].scan_cost >= 1.0
-        assert solution.deductions[0].equations_solvable >= 1
+        assert step.equations_solvable >= 1
+        assert step.search_cost == 1.0 - step.equations_solvable / step.equations_live
 
     def test_reports_how_much_of_the_solve_was_trivial(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "footnotes[3].sacrifice_flies"))
@@ -283,8 +319,8 @@ class TestWeightedChain:
     def test_an_untouched_board_costs_nothing(self, cubs_at_braves_1968: Direction) -> None:
         solution = solve(shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968))
 
-        assert solution.hardest_step is None
-        assert solution.ninetieth_percentile_step is None
+        assert solution.hardest_search is None
+        assert solution.hardest_resolution is None
         assert solution.trivial_share is None
         assert solution.bounding_steps == 0
 
