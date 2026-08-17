@@ -209,9 +209,42 @@ iPhone SE: ~667px, minus browser chrome, minus the custom numeric keypad (250–
 - Line score for both teams + R/H/E — **complete, read-only, never erased** *(this part is decided)*
 - Offense for **one team only**: rows × AB, R, H, RBI, BB, K + totals
 - Pitching for the **opposing team**: rows × IP, H, R, ER, BB, K + totals
+- **Footnote line: LOB, HBP, SF, SH** — given, read-only, never erased *(decided; see below)*
 
 **What is actually decided:** six data columns maximum (derived from the width budget above), the
-column sets, one team's offense against the other team's pitching, and the line score as anchor.
+column sets, one team's offense against the other team's pitching, the line score as anchor, and
+the footnote line.
+
+### The footnote line — why the board needs one
+
+**Found while starting the solver (August 2026): the column sets alone cannot express two of the
+five identity families.**
+
+- **T5 is `PA = Outs + R + LOB`.** `Outs` derives from the opposing `IP` and `R` is in the line
+  score, but **LOB appears nowhere.** Without it, the most powerful rung of the ladder is not
+  applicable at all.
+- **The batter line is `PA = AB + BB + HBP + SF + SH`** (§8, tutorial step P2). The last three
+  cannot be columns — the width budget closed that above.
+
+**This is not a defect in the column choice.** A printed boxscore publishes exactly these values as
+footnotes rather than columns: LOB, 2B, 3B, HR, SF, SH, HBP, DP. The width budget forbids a seventh
+**column** because of the 44px touch target; a footnote line consumes no column width and needs no
+touch target, because like the line score it is given and never erased.
+
+It also plays in favour of §2, which says keeping the canonical boxscore format *is* part of
+onboarding. A board with footnotes looks more like a real boxscore, not less.
+
+**The alternative was measured and rejected:** restricting the pool to games where HBP, SF and SH
+are all zero would cost 57% of surviving directions (85,497 instead of 195,359 at a 15-row budget).
+It would have improved the era balance as a side effect — the sacrifice bunt was constant in the
+dead-ball era, so requiring zero pushes the pool forward in time — but paying 57% of the pool to
+avoid a line of footnotes that real boxscores print anyway is the wrong trade.
+
+**⚠️ Still open: attribution granularity.** Whether HBP, SF and SH are given per team or per player.
+A printed boxscore attributes them by name ("SF: Aparicio"). Per player makes the batter identity a
+per-row equation, which is a T1/T2 workhorse; per team collapses it to a single team-level equation
+and removes one constraint per row. **This materially changes puzzle difficulty and must be decided
+before the erasure algorithm.**
 
 **What is NOT decided:**
 

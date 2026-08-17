@@ -161,6 +161,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Six data columns maximum.** 375px minus margins, 44px minimum touch target, ~70px label column. A seventh column does not fit and cannot be added.
 - Batting: AB, R, H, RBI, BB, K. Pitching: IP, H, R, ER, BB, K.
 - **The line score is always shown complete and never erased.** It is the puzzle's anchor, read-only, so it needs no touch target.
+- **A footnote line gives LOB, HBP, SF and SH** — read-only and never erased, like the line score. Without LOB the board cannot express T5 at all, and without HBP/SF/SH the batter identity does not close. Footnotes cost no column width and need no touch target, and printed boxscores publish exactly these values this way. **Open: whether they are attributed per team or per player** — that decides whether the batter identity is a per-row equation or a single team-level one (§6).
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
 - The board is identical on all screens. Desktop gets more whitespace, not more content.
