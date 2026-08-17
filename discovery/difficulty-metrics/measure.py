@@ -107,7 +107,11 @@ def load(limit: int) -> list[Loaded]:
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
-    WHERE o.batters <= 10 AND d.pitchers <= 3 AND l.VisLineScore IS NOT NULL
+    -- The caps the browser prototype settled on (§6): 13 batting rows and 2 pitching rows fit at
+    -- 320px. They replace the provisional 10/3 every measurement before the prototype used, and
+    -- they are not interchangeable — the pitcher count changes the constraint graph, so anything
+    -- measured under the old pair describes a board that is not being built.
+    WHERE o.batters <= 13 AND d.pitchers <= 2 AND l.VisLineScore IS NOT NULL
       AND g.SEASON BETWEEN ? AND ?
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """

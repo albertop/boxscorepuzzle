@@ -5,6 +5,12 @@ stand on real data, before any generator code is written.
 
 Run date: 2026-08-17. Source: `DGL` on `LocalServer`, Retrosheet regular season 1910–2025.
 
+> **The caps below are the provisional pair this run used (≤10 batters, ≤3 pitchers).** The browser
+> prototype later settled on **≤13 batters and ≤2 pitchers**, which more than doubles the surviving
+> pool. `era_after_gate.ps1` re-runs the last steps under the decided caps and adds the zero-density
+> gate; its numbers, not these, are the current ones. Nothing here is rewritten — the run happened as
+> described.
+
 Counted by **direction**, not by game. A direction is one team's offense against the opposing team's
 pitching. A game yields up to two, and can qualify in one direction while failing in the other (§5).
 

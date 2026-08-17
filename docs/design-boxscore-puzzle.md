@@ -262,10 +262,10 @@ enough to state before anything else:
 
 **What replaces it, in order:**
 
-1. **Roster compactness** — hard filter. **⚠️ Caps still provisional** (≤10 batters in the offensive
-   team, ≤3 pitchers in the defensive team), blocked on the browser prototype's real row ceiling.
-   The filter is **asymmetric**: only the offensive team's batters and the defensive team's pitchers
-   appear on the board.
+1. **Roster compactness** — hard filter, **≤13 batters in the offensive team and ≤2 pitchers in the
+   defensive team**, decided by the browser prototype's measured row ceiling (§6). The filter is
+   **asymmetric**: only the offensive team's batters and the defensive team's pitchers appear on the
+   board.
 2. **The zero-density gate — below 30%, decided.** Direct, cheap, and it attacks the cause instead of
    trying to score it.
 3. **Compressibility as a viability constraint, not a ranking.** A board must be able to lose enough
@@ -281,23 +281,31 @@ keep them.*
 
 ### What the gate costs and what it removes
 
-Measured over 300 directions. Zero density runs from 14.3% to 56.4% with its median at 34.5%.
+**Re-measured over the whole pool under the decided caps (August 2026).** The earlier table came
+from 300 sampled directions under the provisional ≤10/≤3 pair and is superseded: loosening the
+batter cap to 13 admits bench rows that are mostly noughts, so the distribution moved up by about
+five points and every threshold now keeps less than it used to. Zero density runs from 10.3% to
+68.9% with its **median at 40.0%** and its p10 at 29.2%.
 
-| Threshold | Pool kept | Years of calendar |
-|---|---:|---:|
-| below 25% | 7.0% | 5.7 |
-| **below 30% — decided** | **26.7%** | **21.8** |
-| below 35% | 56.7% | 46.3 |
-| below 40% | 80.7% | 65.9 |
+| Threshold | Directions kept | Pool kept | Years of calendar |
+|---|---:|---:|---:|
+| **below 30% — decided** | **12,456** | **10.9%** | **18.5** |
+| below 35% | 30,226 | 26.5% | 44.8 |
+| below 40% | 53,088 | 46.6% | 78.8 |
 
-**Why 30% and not the median.** A median has no properties; it is where the sample happened to fall.
+*Computed in SQL over all 113,974 surviving directions rather than sampled, and checked cell for
+cell against the board's own definition on twelve directions spanning every decade — the two agree
+to the sixth place.*
+
+**Why 30% and not the median.** A median has no properties; it is where the pool happens to sit.
 Between 30% and 35% the boards passing through have a median of **three runs**, which is the shape
-being excluded in the first place. And with 21 years of calendar against a five-month forward
+being excluded in the first place. And with 18.5 years of calendar against a five-month forward
 inventory requirement (§33), a generous threshold buys nothing while a strict one costs almost
-nothing. **25% is the option if it ever needs tightening** — 5.7 years, still enough, and the cost of
-that choice is visible here rather than discovered later.
+nothing. That reasoning survives the re-measurement: the threshold now sits near the pool's tenth
+percentile rather than a third of the way up it, and 18.5 years is still far more calendar than the
+product needs.
 
-**It removes the right boards, not merely the correlated ones:**
+**It removes the right boards, not merely the correlated ones** (300-direction sample, old caps):
 
 | | Boards | Median runs | Median hits | Shutouts |
 |---|---:|---:|---:|---:|
@@ -307,6 +315,38 @@ that choice is visible here rather than discovered later.
 
 Every shutout goes; three-run games go; seven-run games stay. **And family variety survives the
 filter** at every chain target, so the gate does not buy quality by flattening character.
+
+### ⚠️ What the gate does to the eras — open
+
+The gate is not era-neutral, and under the decided caps it is dramatically so. Mean zero density
+rises with every decade, from **0.367 in the 1910s to 0.475 in the 2020s**, because a modern board
+carries more bench rows and spreads the same counting stats over more of them.
+
+| Decade | After caps | Below 30% | Survives | Share of the gated pool |
+|---|---:|---:|---:|---:|
+| 1910s | 20,717 | 4,367 | 21.1% | 26.8% |
+| 1920s | 15,897 | 3,177 | 20.0% | 19.5% |
+| 1930s | 15,974 | 3,088 | 19.3% | 19.0% |
+| 1940s | 13,774 | 2,133 | 15.5% | 13.1% |
+| 1950s | 9,676 | 1,169 | 12.1% | 7.2% |
+| 1960s | 10,625 | 795 | 7.5% | 4.9% |
+| 1970s | 14,684 | 819 | 5.6% | 5.0% |
+| 1980s | 11,934 | 398 | 3.3% | 2.4% |
+| 1990s | 7,042 | 192 | 2.7% | 1.2% |
+| 2000s | 4,632 | 96 | 2.1% | 0.6% |
+| 2010s | 3,057 | 50 | 1.6% | 0.3% |
+| 2020s | 754 | 12 | 1.6% | 0.1% |
+
+**Four decades before 1950 make up 78% of what ships.** Everything from 1980 on is 4.6%. The two
+filters compound: the ≤2 pitcher cap already selects complete games, which modern baseball barely
+produces, and the gate then removes the low-scoring remainder.
+
+Whether that matters is a product question, not a pool question — 12,456 directions is 18.5 years of
+calendar regardless of which decade they come from, and the deduction does not care what year it is.
+It matters if the progressive reveal (§7) is expected to land on names a player recognises. **Not
+decided.** The levers, in order of cost: loosen the pitcher cap back towards 3 and accept fewer
+visible batting rows; raise the gate to 35% (44.8 years, but three-run boards return); or stratify
+the calendar by era deliberately so a thin decade is rationed rather than crowded out.
 
 *One side effect, small and in the wrong direction: filtering makes hard boards slightly more
 uniform in the families they demand — 79% → 96% requiring all four at a chain target of 20. That is
@@ -318,12 +358,13 @@ consistent with a collapse already recorded in §31 rather than a new problem.*
 |---|---|---|
 | Games with event files (203,908) | 407,816 | — |
 | Minus deduced (3,465 games) | 400,886 | 98.3% |
-| Roster fits the board (provisional caps) | 65,522 | 16.3% |
-| Minus discrepancies against official data in board columns | 55,024 | 84.0% |
+| Roster fits the board (≤13 batters, ≤2 pitchers) | 128,766 | 32.1% |
+| Minus discrepancies against official data in board columns | 113,974 | 88.5% |
+| Minus the zero-density gate at 30% | **12,456** | 10.9% |
 
-**The pool holds with room to spare.** The zero-density gate takes 55,024 down to roughly 14,700,
-which is **21 years of calendar** against the 674 directions a year the week consumes (§31). The
-five-month forward inventory §33 requires is not remotely in question.
+**The pool holds with room to spare.** 12,456 directions is **18.5 years of calendar** against the
+674 directions a year the week consumes (§31). The five-month forward inventory §33 requires is not
+remotely in question.
 
 *Superseded: this paragraph used to read "even if the remaining quality filters cut 80%, that leaves
 ~11,000 puzzles". The estimate happened to land close, but it was reasoning from an invented cut
@@ -378,7 +419,7 @@ measured, and the resolutions are recorded at the top of this section and in §3
    → **Dropped instead.** A screen that predicts the wrong target is not saved by reading it
    backwards; the gate attacks the cause directly and the three numbers do the ranking.
 
-**Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 55,024 that is **70 hours** —
+**Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 113,974 that is **145 hours** —
 a long batch rather than an impossibility, so the expensive measurement can run pool-wide if it is
 worth doing. The search is randomised greedy with five restarts, which finds a *maximal* erasure
 rather than a *maximum* one, so every figure above is a lower bound.
@@ -399,8 +440,8 @@ directions are consumed to produce one publishable board.
 
 **The calendar is not close to constrained.** Illustratively — the mapping from weekday to erasure
 count is not decided — a week using each level once with two easy days consumes about 13 directions,
-so roughly 674 a year. Against 55,024 surviving directions that is **over eighty years of calendar**.
-Reusing a direction at a different difficulty years apart is available and not needed.
+so roughly 674 a year. Against the 12,456 directions that survive the gate that is **18.5 years of
+calendar**. Reusing a direction at a different difficulty years apart is available and not needed.
 
 ### The footnote ambiguity is a constraint on erasure, not on the pool
 
@@ -418,10 +459,14 @@ originally assumed. The 2020s contribute 66 directions against 13,782 from the 1
 is the cause, not a historical preference.
 
 This is acceptable: the target market is the United States (§20), and 1910–1949 is the most
-mythologized era of American baseball. **Do not weight the calendar by era yet** — the measurement
-is pre-quality-filter, and both zero density and digit range select *against* low-scoring games,
-which are concentrated in the dead-ball era. The distribution may shift forward on its own. Re-measure
-after compressibility.
+mythologized era of American baseball.
+
+**Re-measured after the gate, and the guess above was backwards.** The paragraph that stood here
+predicted the distribution would shift forward on its own, on the reasoning that zero density selects
+against low-scoring games and those cluster in the dead-ball era. It does select against them — and
+it removes *more* modern boards than old ones anyway, because a modern board carries more bench rows
+and each of them is mostly noughts. After the gate the pool is **78% pre-1950 and 4.6% post-1980**.
+The table and the open question are in §5.
 
 ---
 
@@ -2046,7 +2091,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 **Data**
 
-- [x] ~~Retrosheet coverage~~ — **measured (August 2026):** funnel in §5. 55,024 surviving directions, roughly 14,700 after the zero-density gate
+- [x] ~~Retrosheet coverage~~ — **measured (August 2026), re-measured under the decided caps:** funnel in §5. 113,974 surviving directions, **12,456** after the zero-density gate — 18.5 years of calendar
+- [ ] **The era the gate leaves behind.** 78% of the shippable pool is pre-1950 and 4.6% is post-1980, and both filters push the same way. A product question about the reveal (§7), not a pool question — the levers are in §5
 - [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
 - [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
 - [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the calendar model is in §31
