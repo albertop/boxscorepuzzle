@@ -34,26 +34,26 @@ from measure import Loaded, erasable_cells, load  # noqa: F401
 from boxscore_forge.constraints import cell_values, shape_of
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
-from boxscore_forge.solver import solve
+from boxscore_forge.solver import Solution, solve
 
 PER_DECADE = 10
 RESTARTS = 5
 SEED = 20260818
 
 
-def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, int, float, float, float]:
-    """Best maximal erasure found: cells, raw chain, weighted chain, trivial share, seconds."""
+def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, Solution | None, float]:
+    """Best maximal erasure found, the solution it produced, and seconds spent."""
     started = time.perf_counter()
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
     candidates = erasable_cells(loaded.direction)
-    best_cells, best_chain, best_weighted, best_trivial = 0, 0, 0.0, 0.0
+    best_cells, best_solution = 0, None
 
     for _ in range(RESTARTS):
         order = candidates[:]
         rng.shuffle(order)
         erased: set[str] = set()
-        chain, weighted, trivial = 0, 0.0, 0.0
+        found = None
         for cell in order:
             trial = erased | {cell}
             puzzle = {k: v for k, v in values.items() if k not in trial}
@@ -62,14 +62,44 @@ def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, int, float, float,
             except ContradictionError:
                 continue
             if solution.is_complete:
-                erased = trial
-                chain = solution.chain_length
-                weighted = solution.weighted_chain_length
-                trivial = solution.trivial_share or 0.0
+                erased, found = trial, solution
         if len(erased) > best_cells:
-            best_cells, best_chain, best_weighted, best_trivial = len(erased), chain, weighted, trivial
+            best_cells, best_solution = len(erased), found
 
-    return best_cells, best_chain, best_weighted, best_trivial, time.perf_counter() - started
+    return best_cells, best_solution, time.perf_counter() - started
+
+
+def chain_targeted(loaded: Loaded, target: int, rng: random.Random) -> Solution | None:
+    """Erase greedily until the solve is `target` steps deep — the planned difficulty control.
+
+    Family variety was measured under random erasure at fixed cell counts. If the generator instead
+    aims at a chain length, the variety it produces may be different, and the calendar's character
+    axis depends on which is true.
+    """
+    shape = shape_of(loaded.direction)
+    values = cell_values(loaded.direction)
+    order = erasable_cells(loaded.direction)
+    rng.shuffle(order)
+
+    erased: set[str] = set()
+    best: Solution | None = None
+    for cell in order:
+        trial = erased | {cell}
+        try:
+            solution = solve(shape, {k: v for k, v in values.items() if k not in trial})
+        except ContradictionError:
+            continue
+        if not solution.is_complete:
+            continue
+        erased, best = trial, solution
+        if solution.chain_length >= target:
+            break
+    return best
+
+
+def families_of(solution: Solution) -> str:
+    short = {"column_sum": "col", "row_identity": "row", "cross_team": "cross", "global_identity": "global"}
+    return "+".join(short[f.value] for f in sorted(solution.families_used, key=lambda f: f.value))
 
 
 def at_fixed_erasure(loaded: Loaded, counts: tuple[int, ...], rng: random.Random) -> dict[int, float | None]:
@@ -128,20 +158,34 @@ def main() -> None:
     print(f"decades: {dict(sorted(Counter((i.season // 10) * 10 for i in sample).items()))}\n")
 
     rows = []
+    targeted: dict[int, Counter[str]] = {5: Counter(), 10: Counter(), 20: Counter()}
+    trivial_costs: list[float] = []
+    real_costs: list[float] = []
+
     for index, loaded in enumerate(sample, start=1):
-        cells, chain, weighted, trivial, seconds = ceiling(loaded, rng)
-        below = at_fixed_erasure(loaded, (6, 10), rng)
-        rows.append((loaded, cells, chain, seconds, proxies(loaded), weighted, trivial, below))
+        cells, solution, seconds = ceiling(loaded, rng)
+        if solution is None:
+            continue
+        for target, counter in targeted.items():
+            aimed = chain_targeted(loaded, target, rng)
+            if aimed is not None:
+                counter[families_of(aimed)] += 1
+        for step in solution.deductions:
+            if not step.has_a_comparable_cost:
+                continue
+            (trivial_costs if step.is_trivial else real_costs).append(step.scan_cost)
+        rows.append((loaded, cells, solution, seconds, proxies(loaded)))
         print(
             f"  [{index:>3}/{len(sample)}] {loaded.game_id} {loaded.season}: "
-            f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {chain}, "
-            f"weighted {weighted:.1f}, trivial {trivial:.0%}, {seconds:.1f}s",
+            f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {solution.chain_length}, "
+            f"max {solution.hardest_step or 0:.1f}, trivial {solution.trivial_share or 0:.0%}, "
+            f"{families_of(solution)}, {seconds:.1f}s",
             flush=True,
         )
 
     erasable = [len(erasable_cells(loaded.direction)) for loaded, *_ in rows]
     shares = [100.0 * cells / total for (_, cells, *_), total in zip(rows, erasable, strict=True)]
-    chains = [row[2] for row in rows]
+    chains = [row[2].chain_length for row in rows]
     seconds = [row[3] for row in rows]
 
     print("=== HOW FAR A BOXSCORE COMPRESSES (share of the grid removable) ===")
@@ -164,68 +208,78 @@ def main() -> None:
         print(f"  {decade}: median {statistics.median(values):5.1f}%   n={len(values)}")
 
     print("\n=== CHAIN LENGTH ACHIEVED AT THE CEILING ===")
-    histogram = Counter(chains)
-    for length, count in sorted(histogram.items()):
-        print(f"  chain {length:>2}: {count:>3} directions ({100.0 * count / len(chains):.0f}%)")
-    print(f"  correlation, compressibility vs chain at the ceiling: r = {_pearson(shares, [float(c) for c in chains]):+.3f}")
+    ordered_chains = sorted(chains)
+    print(
+        f"  min {ordered_chains[0]}  p50 {statistics.median(ordered_chains):.0f}  "
+        f"p90 {ordered_chains[9 * len(ordered_chains) // 10]}  max {ordered_chains[-1]}"
+    )
+    print(f"  compressibility vs chain at the ceiling: r = {_pearson(shares, [float(c) for c in chains]):+.3f}")
 
-    print("\n=== DO THE CHEAP SCREENS PREDICT IT ===")
-    for name in ("zero_density", "digit_range", "line_score_variety", "scoring_innings"):
-        column = [row[4][name] for row in rows]
-        print(f"  {name:<19} r = {_pearson(shares, column):+.3f}")
+    hardest = [row[2].hardest_step or 0.0 for row in rows]
+    p90 = [row[2].ninetieth_percentile_step or 0.0 for row in rows]
+    trivial = [row[2].trivial_share or 0.0 for row in rows]
 
-    weighted = [row[5] for row in rows]
-    trivial = [row[6] for row in rows]
+    print("\n=== ⚠️ IS THERE A CHARACTER AXIS AT ALL ===")
+    print("  Which equation families a solution actually needed. If nearly every board needs the")
+    print("  same combination, the calendar cannot vary character and section 31 loses a dimension.")
+    at_ceiling: Counter[str] = Counter(families_of(row[2]) for row in rows)
+    for label, counter in (("at the ceiling", at_ceiling), *((f"chain target {t}", c) for t, c in targeted.items())):
+        total = sum(counter.values()) or 1
+        shown = ", ".join(f"{k} {100.0 * v / total:.0f}%" for k, v in counter.most_common(5))
+        print(f"  {label:<16} (n={total:>3}): {shown}")
 
-    print("\n=== WEIGHTED CHAIN LENGTH AT THE CEILING ===")
-    ordered_weighted = sorted(weighted)
-    for label, value in (
-        ("min", ordered_weighted[0]),
-        ("p10", ordered_weighted[len(ordered_weighted) // 10]),
-        ("p50", statistics.median(ordered_weighted)),
-        ("p90", ordered_weighted[9 * len(ordered_weighted) // 10]),
-        ("max", ordered_weighted[-1]),
-    ):
-        print(f"  {label:>4}: {value:7.1f}")
+    print("\n=== HARDEST STEP AND P90 AT THE CEILING ===")
+    for label, series in (("max", hardest), ("p90", p90)):
+        ordered = sorted(series)
+        print(
+            f"  {label}: min {ordered[0]:5.1f}  p10 {ordered[len(ordered) // 10]:5.1f}  "
+            f"p50 {statistics.median(ordered):5.1f}  p90 {ordered[9 * len(ordered) // 10]:5.1f}  "
+            f"max {ordered[-1]:5.1f}"
+        )
     print(f"  share of steps that were trivial: median {statistics.median(trivial):.0%}")
 
-    # Volume-controlled: cost per cell removed, and the same cell count on every board.
-    intensity = [row[5] / max(row[1], 1) for row in rows]
-    print(f"  cost per cell removed: median {statistics.median(intensity):.2f}")
-    for count in (6, 10):
-        column = [row[7][count] for row in rows if row[7][count] is not None]
-        print(f"  at {count:>2} cells on every board: median {statistics.median(column):6.1f} (n={len(column)})")
-
-    print("\n=== DOES THE WEIGHTING ADD ANYTHING ===")
-    print(f"  weighted vs raw chain length     r = {_pearson(weighted, [float(c) for c in chains]):+.3f}")
-    print(f"  weighted vs compressibility      r = {_pearson(weighted, shares):+.3f}")
-    print("  (a very high correlation with raw chain means the weighting changed nothing)")
-
-    print("\n=== THE TEST THAT MATTERS: DOES IT STILL REWARD BOREDOM ===")
-    print("  three readings of weighted chain: at each board's ceiling, per cell removed, and at a")
-    print("  fixed ten cells on every board. Only the last two hold volume constant.")
-    at_ten = [(row[4], row[7][10]) for row in rows if row[7][10] is not None]
+    print("\n=== THE FALSIFICATION TEST: DOES IT STILL REWARD BOREDOM ===")
+    print("  flat or negative against zero density means the metric works")
     for name in ("zero_density", "digit_range", "line_score_variety", "scoring_innings"):
         column = [row[4][name] for row in rows]
         print(
             f"  {name:<19} compressibility {_pearson(shares, column):+.3f}   "
-            f"ceiling {_pearson(weighted, column):+.3f}   "
-            f"per-cell {_pearson(intensity, column):+.3f}   "
-            f"at-10 {_pearson([p[name] for p, _ in at_ten], [w for _, w in at_ten]):+.3f}"
+            f"max {_pearson(hardest, column):+.3f}   p90 {_pearson(p90, column):+.3f}"
         )
+
+    print("\n=== ARE THEY INDEPENDENT OF EFFORT ===")
+    print("  low correlation with chain length is the point: two numbers, not one twice")
+    print(f"  max vs raw chain length   r = {_pearson(hardest, [float(c) for c in chains]):+.3f}")
+    print(f"  p90 vs raw chain length   r = {_pearson(p90, [float(c) for c in chains]):+.3f}")
+    print(f"  max vs compressibility    r = {_pearson(hardest, shares):+.3f}")
 
     print("\n=== DOES IT SEPARATE BOARDS RAW CHAIN CALLS EQUAL ===")
     grouped: dict[int, list[float]] = {}
     for row in rows:
-        grouped.setdefault(row[2], []).append(row[5])
+        grouped.setdefault(row[2].chain_length, []).append(row[2].hardest_step or 0.0)
     for chain_length, values in sorted(grouped.items()):
         if len(values) < 3:
             continue
-        spread = max(values) - min(values)
         print(
-            f"  raw chain {chain_length:>2} ({len(values):>2} boards): weighted "
-            f"{min(values):6.1f} to {max(values):6.1f}, spread {spread:5.1f}, median {statistics.median(values):6.1f}"
+            f"  raw chain {chain_length:>2} ({len(values):>2} boards): max step "
+            f"{min(values):5.1f} to {max(values):5.1f}, spread {max(values) - min(values):5.1f}, "
+            f"median {statistics.median(values):5.1f}"
         )
+
+    print("\n=== IS THE TRIVIAL DISCOUNT THROWING AWAY SEARCH EFFORT ===")
+    print("  a step can be trivial to resolve and still expensive to find")
+    for label, costs in (("trivial steps", trivial_costs), ("real steps", real_costs)):
+        if not costs:
+            continue
+        ordered = sorted(costs)
+        print(
+            f"  {label:<14} n={len(costs):>5}  mean {statistics.fmean(costs):5.1f}  "
+            f"p50 {statistics.median(ordered):5.1f}  p90 {ordered[9 * len(ordered) // 10]:5.1f}  "
+            f"max {ordered[-1]:5.1f}"
+        )
+    for threshold in (5, 10, 20):
+        share = sum(1 for cost in trivial_costs if cost >= threshold) / max(len(trivial_costs), 1)
+        print(f"  trivial steps with scan cost >= {threshold:>2}: {share:.1%}")
 
     print("\n=== SEARCH COST ===")
     print(f"  per direction: mean {statistics.fmean(seconds):.2f}s, max {max(seconds):.2f}s")
