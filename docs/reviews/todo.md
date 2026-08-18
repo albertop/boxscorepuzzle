@@ -735,6 +735,26 @@ not only the aggregates. A null that survives that is a null; the earlier one wa
 
 ## Noticed in passing
 
+### I rebuilt the driver that ignores a non-zero exit
+
+`compressibility.py` died two thirds of the way through its report with a `UnicodeEncodeError`: a `⚠️`
+in a `print`, stdout redirected to a file, and Windows defaulting the stream to cp1252. Fifty minutes of
+compute produced three sections of a report and no correlation figures.
+
+**The part that matters is not the crash.** The run was launched as `cmd > log 2>&1; echo "exit $?"`, so
+the shell's own exit status came from `echo` and was always zero. The task notification said *completed
+(exit code 0)*. The real status was 1, printed inside the log where nothing was looking.
+
+That is verbatim one of the seven entries in `CLAUDE.md`'s record — *a driver that reported COMPLETE on
+a non-zero exit* — and it was rebuilt today, in the command form used to launch three measurements in a
+row. The other two happened to finish.
+
+**Fixed by construction, not by care.** Long runs are launched without a trailing command, so the
+harness reports the process's own status, and with `PYTHONIOENCODING=utf-8` so a report cannot die on
+its own output. A discovery script that prints `⚠️` — most of them do — is not portable to a redirected
+stream on this machine otherwise.
+
+
 ### A maximum compared against a median, repeated without either of us noticing
 
 The ceiling pack was reported as landing *higher* than the earlier run — 19 against 16 to 18. Those are

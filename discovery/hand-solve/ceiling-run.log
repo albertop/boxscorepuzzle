@@ -1,12 +1,5 @@
-48 gated directions; walking each to its stall ceiling
-  10/48 walked, best so far 18
-  20/48 walked, best so far 18
-  30/48 walked, best so far 18
-  40/48 walked, best so far 19
-
-ceiling across the sample: [19, 18, 18, 18, 18, 18, 17, 17, 17, 17]
-chosen (printed order): [18, 18, 19, 18, 18]
-blanks: [23, 23, 23, 22, 22] in the batting grid
-uncertified by layer 3b: 5 of 5
-wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\hand-solve
-(build_pack's own targets are (5, 7, 9, 11), which are chain rungs and not used here)
+48 gated directions x 9 paths (('column_first', 'random', 'row_first') against seeds (1, 2, 3))
+  10/48 searched, best so far 17
+  20/48 searched, best so far 18
+  30/48 searched, best so far 20
+  40/48 searched, best so far 20
