@@ -212,6 +212,67 @@ def boredom(sample: list[Loaded], per_direction: dict[int, list[list[Snapshot]]]
     print(f"\n  r(zero density, chain ceiling) = {_pearson(densities, [float(c) for c in ceilings]):+.3f}")
 
 
+def resolution_ceiling(sample: list[Loaded], per_direction: dict[int, list[list[Snapshot]]]) -> None:
+    """What an absolute resolution ceiling would quietly throw away.
+
+    Resolution p90 is now a ceiling rather than a target. But it correlates +0.45 with batting rows
+    (§31) and modern boards carry more rows, so **an absolute ceiling is a covert batter cap** — and
+    a covert batter cap works directly against the pitcher-cap decision, which exists to buy the
+    modern era. If the discard skews modern, the ceiling has to scale with row count instead.
+    """
+    print("\n=== WOULD A RESOLUTION CEILING BE A COVERT BATTER CAP ===")
+    at_target: dict[int, tuple[int, int, int]] = {}
+    for index, loaded in enumerate(sample):
+        hits = [hit for run in per_direction[index] if (hit := first_reaching(run, 11))]
+        resolutions = [hit.resolution for hit in hits if hit.resolution is not None]
+        if resolutions:
+            at_target[index] = (
+                int(statistics.median(resolutions)),
+                len(loaded.direction.batting),
+                (loaded.season // 10) * 10,
+            )
+    if not at_target:
+        return
+
+    print(f"{'batting rows':>13}{'boards':>8}{'resolution p50':>16}")
+    by_rows: dict[int, list[int]] = {}
+    for resolution, rows, _ in at_target.values():
+        by_rows.setdefault(rows, []).append(resolution)
+    for rows in sorted(by_rows):
+        print(f"{rows:>13}{len(by_rows[rows]):>8}{statistics.median(by_rows[rows]):>16.0f}")
+
+    print(f"\n{'decade':>8}{'boards':>8}{'resolution p50':>16}   discarded by an absolute ceiling of")
+    ceilings = (7, 8, 9, 10)
+    print(f"{'':>32}" + "".join(f"{ceiling:>9}" for ceiling in ceilings))
+    by_decade: dict[int, list[tuple[int, int]]] = {}
+    for resolution, rows, decade in at_target.values():
+        by_decade.setdefault(decade, []).append((resolution, rows))
+    for decade in sorted(by_decade):
+        entries = by_decade[decade]
+        resolutions = [resolution for resolution, _ in entries]
+        cut = "".join(
+            f"{100.0 * sum(1 for value in resolutions if value > ceiling) / len(resolutions):>8.0f}%"
+            for ceiling in ceilings
+        )
+        print(f"{decade:>8}{len(entries):>8}{statistics.median(resolutions):>16.0f}   {cut}")
+
+    # The alternative: a ceiling that scales with the rows the board actually has, which is what the
+    # +0.45 correlation says the number is partly measuring anyway.
+    print("\n  scaled instead of absolute — a ceiling of k x batting rows:")
+    print(f"{'k':>8}{'discarded overall':>20}   by decade, worst to best")
+    for k in (0.6, 0.7, 0.8):
+        cut_by_decade = {
+            decade: 100.0 * sum(1 for resolution, rows in entries if resolution > k * rows) / len(entries)
+            for decade, entries in by_decade.items()
+        }
+        overall = 100.0 * sum(
+            1 for resolution, rows, _ in at_target.values() if resolution > k * rows
+        ) / len(at_target)
+        worst = sorted(cut_by_decade.items(), key=lambda pair: -pair[1])[:3]
+        print(f"{k:>8.1f}{overall:>19.0f}%   " + ", ".join(f"{decade}s {share:.0f}%" for decade, share in worst))
+    print("  A ceiling that discards evenly across decades is not a batter cap in disguise.")
+
+
 def _pc[T: (int, float)](values: list[T], fraction: float) -> float:
     ordered = sorted(values)
     if not ordered:
@@ -242,6 +303,7 @@ def main() -> None:
     bands(runs)
     independence(runs)
     families(runs)
+    resolution_ceiling(sample, per_direction)
     boredom(sample, per_direction)
 
 
