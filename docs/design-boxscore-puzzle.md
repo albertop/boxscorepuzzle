@@ -956,7 +956,37 @@ three constraint families, including the cross-team constraint that §3 identifi
 ---
 
 
-### ⛔ Proposal on hold: a lineup-slot column
+### ✅ Decided: short row labels, `CF-3`, and no slot column
+
+The label keeps the number, because the number is what identifies a row and a slot cannot — several
+rows share a slot, which is what broke the slot-column proposal. And once the label keeps the number
+it can be short: **progressive reveal was dropped, so no label carries a surname**, and the 66px
+column was sized for "Aparicio".
+
+| Form | Label | Data | Per cell | Clears the 44px target |
+|---|---|---|---|---|
+| `CF3` | 32px | 311px | 51.8px | yes |
+| **`CF-3`** | **42px** | **301px** | **50.2px** | **yes — chosen** |
+| today, seven characters | 66px | 277px | 46.2px | yes |
+
+**`CF-3` over `CF3`.** The 1.6px the compact form saves buys nothing, and the hyphen stops `P2` reading
+as a position — there is no second pitcher's position, but the string looks like one.
+
+**The suffix never exceeds one digit.** The largest slot group anywhere in the pool under the caps is
+**five rows**, so four characters is the worst real case rather than an assumption.
+
+**This gains width rather than spending it:** 50.2px per data cell against 46.2px today. No new column,
+no `rowspan`, and no scroll problem — the merged cell that vanished with its starter was a risk that
+now does not exist. The four-variant sample is cancelled: two of its variants were moot once the slot
+could not identify a row, and the other two are unnecessary once the width passes without a column.
+
+**Grouping is carried by order and indentation instead** — `CF`, `CF-2`, `CF-3` consecutive, the
+substitutes indented — which is the printed convention and what the row-order fix has to do anyway.
+
+⚠️ **What is still open is not the label.** Whether a footnote left unassigned across a group resolves
+by deduction is a separate question, measured per group size and per term count; if large groups with
+several terms go non-unique, the answer is that the generator must not leave one open there, which
+discards erasures rather than directions.
 
 ⚠️ **The width arithmetic below assumes the label can shrink to 50px because the suffix is gone, and
 the suffix cannot go.** A slot disambiguates positions repeated across *different* slots — 42.1% of
