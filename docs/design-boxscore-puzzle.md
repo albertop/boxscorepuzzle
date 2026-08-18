@@ -955,6 +955,50 @@ three constraint families, including the cross-team constraint that §3 identifi
 
 ---
 
+
+### 🔬 Proposal, not decided: a lineup-slot column
+
+**This is a change to §6 rather than a rendering improvement**, which is why it is written here as a
+proposal with its arithmetic rather than applied as a side effect of correcting row labels.
+
+**What it is.** A read-only column carrying the batting-order slot, `rowspan`-merged across the rows
+that share one. Measured across the whole pool: the slot is **always 1 to 9**, never wider than one
+character, and every direction has **exactly nine distinct slots** — 407,815 of 407,816, the single
+exception being a source error the check would rightly reject.
+
+**The width, which is what makes it possible.** With a slot column the label stops carrying a suffix,
+so §7's seven characters can shrink and the budget closes. The slot needs no touch target — it is
+read-only like the line score — so its 16px does not compete with the 44px minimum.
+
+| Reparto of the 343px inside the margins | Per data cell | Fits the 44px target |
+|---|---|---|
+| 66 label + 16 slot + 261 data | 43.5px | **no**, by half a pixel |
+| 50 label + 16 slot + 277 data | 46.2px | yes |
+
+**What it fixes, in order.**
+
+1. **`SF: P` stops being ambiguous, and without a suffix.** A slot is unique by definition; a position
+   is not — measured, **42.1% of repeated position labels span more than one lineup slot**, so `P-2`
+   routinely names a man who never replaced anybody.
+2. **The relationship §7 says the player loses comes back.** Rows sharing a slot are the ones whose
+   plate appearances sum against that slot, and the grouping makes that visible instead of implied.
+3. **The three pitchers stop lying.** Three `P` rows at slots 7, 10 and 11 read as three slot-holders
+   rather than as a substitution chain that never happened.
+
+⚠️ **The risk is specific to the merged form and is not cosmetic.** If the starter's row scrolls out of
+view, the merged cell goes with it and the substitute is left with no visible slot — the information
+disappearing exactly when the player is working on that row, and a `SF: 7` is no use with slot 7
+off-screen. **A slot holding three rows is the case that splits**; two rarely does. The sample must
+carry one and be scrolled.
+
+**Four things the sample must let the operator judge**, none of them settled here: merged against
+repeated-and-dimmed; and `SF: 7` against `SF: 7 P`. Slot-only is better if a slot is unique by
+definition — redundancy in a label invites the two halves to contradict each other, which is the
+pattern this project has spent the week fighting — but both get rendered rather than argued.
+
+**Nothing on the board changes until the sample is judged.** When it is, the label rule, the footnote
+attribution and the row grouping are one change, with both hand-solve packs rebuilt afterwards.
+
 ## 7. Game identity — progressive reveal
 
 **Decision: progressive reveal.**
