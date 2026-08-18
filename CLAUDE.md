@@ -143,6 +143,22 @@ habit.
 malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
 the absence of a check reading as the presence of a passing one.
 
+**A defect noticed in passing gets written down before continuing.** Even when it is not fixed then,
+even when it seems small, even mid-investigation. The conversation is not a tracking system: a defect
+mentioned in prose and not recorded is a defect nobody will find again until a review finds it. This
+rule exists because the fabricated hit anchor — a line score total summed from the very rows it is
+supposed to verify — was spotted in passing, described out loud, and left in place. It went to
+`docs/reviews/todo.md` only after a static review found it hours later.
+
+**And each of the failure forms above must fail on its own.** Writing the pattern down was not enough:
+fresh instances of all four appeared afterwards. An anchor derived from what it verifies needs a test
+asserting every total is loaded independently, per field. A filter that passes on absence gets written
+as `EXISTS` over an acceptance list, never `NOT EXISTS` over an exclusion list, with a test that an
+absent row is *rejected*. A function defined twice is caught by lint — enable the rule rather than
+trusting review, and keep discovery inside the lint scope, because that is where it happened. A check
+that exists but is never called needs a test asserting the publication boundary invokes every
+implemented check, so adding one without wiring it in fails.
+
 **Verify against the real artifact, not against what you believe you wrote.** Parse the file before
 running three hours of compute against it.
 

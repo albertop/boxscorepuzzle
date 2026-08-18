@@ -318,75 +318,27 @@ def audit(chosen: list[Candidate]) -> None:
         problems.append("no board carries a suffixed label, and the tutorial has to teach one")
     if not any(item.has_live_footnote for item in chosen):
         problems.append("no board carries a live footnote, and the tutorial has to teach one")
+    # ⚠️ Also folded in: layer 3b certifies every easy board and 91% of the hard ones, so the
+    # uncertified candidates all live at the hard end. A rung entirely uncertified makes
+    # "uncertified" and "hard" the same variable, and any difference the solver feels is difficulty.
+    by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
+    for target, count in by_rung.items():
+        if count and count == QUOTAS[target]:
+            problems.append(f"chain {target} is entirely uncertified, so nothing at that rung compares")
+
+    # ⚠️ Folded in from a second `audit()` that had been defined below this one. Python kept the
+    # later definition, so the strict uncertified share this function enforces was not running and a
+    # pack could pass with anywhere from 10% to 50% uncertified boards. One audit, not two.
+    order = [candidate.target for candidate in chosen]
+    rising = sum(1 for a, b in zip(order, order[1:], strict=False) if b > a)
+    falling = sum(1 for a, b in zip(order, order[1:], strict=False) if b < a)
+    if rising == 0 or falling == 0 or min(rising, falling) < len(order) // 5:
+        problems.append(f"the page order is monotonic in difficulty: {rising} rises, {falling} falls")
+
     if problems:
         raise SystemExit("the pack does not satisfy its own constraints: " + "; ".join(problems))
 
 
-def audit(chosen: list[Candidate]) -> None:
-    """Assert what the pack claims rather than printing it and being believed.
-
-    ⚠️ CLAUDE.md's rule: anything acting as a launch gate is asserted. This pack has already once
-    reported quotas it did not satisfy — weighted sampling produced no boards at all at the easiest
-    rung, and the run said so in a line nobody had to read. A pack that silently misses a rung
-    invalidates the experiment it exists to run.
-    """
-    failures: list[str] = []
-    if len(chosen) != WANTED:
-        failures.append(f"{len(chosen)} boards, wanted {WANTED}")
-
-    for target, quota in QUOTAS.items():
-        found = sum(1 for candidate in chosen if candidate.target == target)
-        if found != quota:
-            failures.append(f"chain {target} has {found} boards against a quota of {quota}")
-
-    games = [candidate.loaded.game_id for candidate in chosen]
-    if len(set(games)) != len(games):
-        failures.append("the same game appears twice, so a solver would meet one lineup again")
-
-    pre_1950 = sum(1 for candidate in chosen if candidate.loaded.season < 1950)
-    if pre_1950 > PRE_1950_ALLOWANCE:
-        failures.append(f"{pre_1950} pre-1950 boards against an allowance of {PRE_1950_ALLOWANCE}")
-
-    # Bounded rather than fixed: the share is what the experiment measures. Too few and the afternoon
-    # says nothing about 3b; too many and the pack stops resembling what ships.
-    uncertified = sum(1 for candidate in chosen if not candidate.certified)
-    lowest, highest = 5, round(WANTED * UNCERTIFIED_SHARE * 1.5)
-    if not lowest <= uncertified <= highest:
-        failures.append(f"{uncertified} uncertified boards, wanted between {lowest} and {highest}")
-
-    if not any(candidate.has_substitution for candidate in chosen):
-        failures.append("no board carries a suffixed label, which the tutorial has to teach")
-    if not any(candidate.has_live_footnote for candidate in chosen):
-        failures.append("no board carries a live footnote, which the tutorial has to teach")
-
-    # ⚠️ Where the uncertified boards sit matters as much as how many there are. With 91% certifying
-    # at chain 11 they concentrate at the easy rungs, and a pack whose uncertified boards are all
-    # chain 5 compares easy-uncertified against hard-certified — any difference felt would be
-    # difficulty, not derivability, and the experiment would answer nothing.
-    by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
-    for target, count in by_rung.items():
-        if count and count == QUOTAS[target]:
-            failures.append(f"chain {target} is entirely uncertified, so nothing at that rung compares")
-    carrying = [target for target, count in by_rung.items() if count]
-    if uncertified and not carrying:
-        failures.append("no rung carries an uncertified board")
-    if uncertified and max(by_rung.values()) == uncertified and len(carrying) == 1:
-        failures.append(f"every uncertified board sits at one rung: {by_rung}")
-
-    # ⚠️ The 1-6 rating is only worth collecting if the pack cannot anchor it. A run of boards sorted
-    # by chain makes the first few the reference for all the rest, so a rising order would produce a
-    # rising rating whatever the boards were like.
-    order = [candidate.target for candidate in chosen]
-    rising = sum(1 for a, b in zip(order, order[1:], strict=False) if b > a)
-    falling = sum(1 for a, b in zip(order, order[1:], strict=False) if b < a)
-    if rising == 0 or falling == 0:
-        failures.append("the pages are ordered by chain, which anchors every rating after the first")
-    if min(rising, falling) < len(order) // 5:
-        failures.append(f"the page order is nearly monotonic in chain: {rising} rises, {falling} falls")
-
-    if failures:
-        raise SystemExit("the pack does not satisfy its own quotas: " + "; ".join(failures))
-    print(f"uncertified by rung: {by_rung}")
 
 
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:

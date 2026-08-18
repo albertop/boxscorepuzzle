@@ -28,6 +28,9 @@ build-backend = "hatchling.build"
 packages = ["src/boxscore_forge", "src/boxscore_verify", "src/boxscore_package"]
 
 [tool.ruff]
+# Discovery is linted too. The duplicate `audit()` that disabled a launch-gate check lived there,
+# outside the lint scope, so the rule that catches it could not see the file.
+extend-include = ["../discovery/**/*.py"]
 line-length = 120
 target-version = "py313"
 
