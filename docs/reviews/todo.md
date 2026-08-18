@@ -432,6 +432,66 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## v03 — verified, none rejected
+
+Seven findings, every one checked against the code rather than against the report. **No no-go was
+declared, and one is aimed at a measurement that was running while the review was read.**
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P1-01 evidence is not bound to a game | real | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
+| P1-02 three erasable definitions | real | one is stale, one **duplicates every footnote cell** |
+| P2-01 global identity still partial | real | two docstrings in one call chain state the opposite rule |
+| P2-02 duplicate staged puzzle | real | `seen` is built after both entries are appended |
+| P2-03 envelope accepts malformed values | real | `schema: true` passes, because `True == 1` |
+| P2-04 HMAC lets the server forge | real | symmetric key, asymmetric architecture |
+| P2-05 the RBI/HR run is not paired | real | one seed, and zero density counts the grid only |
+
+### v03-P1-02 — `erasable()` already includes the footnotes, and one instrument adds them again
+
+`stall-targeted/measure.py` builds its candidate list as `list(erasable(direction))` plus every
+footnote cell, and `erasable()` has carried those since the v02 round. **Every footnote cell is in the
+list twice.** The duplicates are no-ops against the erased set, so nothing is wrong with the boards;
+what is wrong is the trajectory. `_row_first` buckets by row, so `footnotes[3]` holds eight entries
+instead of four and keeps taking round-robin turns that erase nothing — footnote cells therefore enter
+at roughly half the rate production gives them, and every seeded order downstream shifts with them.
+
+`difficulty-metrics/measure.py` carries a third definition, `erasable_cells()`, which says the
+footnotes are given. That was true when it was written and has not been true since.
+
+**So the stall model's numbers were measured on a board no generator produces.** Not wrong boards —
+a different erasure path over the right boards. Everything read off that run is suspect until it is
+regenerated: the ceiling, the blanks at each target, the pool coverage, the family mix.
+
+### v03-P2-01 — the two docstrings say opposite things and the code follows one
+
+`_bounding_moves` says *the global identity stays out of the narrowing for the same reason it stays
+out of propagation's first pass*. It then calls `narrow`, whose own docstring says *the global identity
+is in here with everything else*, and which builds from `equations(shape)`. The second is what runs.
+
+This is the project's named failure shape at its shortest range: two places that should agree, three
+lines apart, and nothing checking. The v02 repair fixed propagation's phase order and did not reach
+bounding — and separately, `_scan_size` is computed over the whole system *before* the phase that
+supplied the move is known, so a local deduction's search cost counts a global equation the player is
+not expected to have reached for.
+
+### v03-P2-05 — aimed at the measurement that was running
+
+Two claims, both correct. The variants call `row_first` with one seed over candidate lists of
+different lengths, so the common cells do not keep their order and part of any difference between
+configurations is the shuffle rather than the columns — the script's own docstring says *the columns
+and nothing else*, and that is overstated. And `zero_density` counts the batting and pitching grids
+only, so a home-run **column** contributes its 92% of noughts and the identical per-batter home-run
+**footnote** contributes nothing, while the report calls it density over each configuration's own cells.
+
+Grid-only is not itself wrong — it is exactly the denominator §5's gate uses in SQL. What is wrong is
+the label, and the conclusion it invites: the footnote placement does not *avoid* zero density, the
+gate simply does not look there. Both numbers are needed, each named.
+
+**The run in flight is not discarded.** What it can answer stands: what each configuration builds, the
+width arithmetic, and whether the home-run cross ever resolves a cell. What needs the paired re-run is
+any claim that one configuration reaches a target in fewer blanks than another.
+
 ## Noticed in passing
 
 ### `extend-include` claims discovery is linted and nothing lints it
