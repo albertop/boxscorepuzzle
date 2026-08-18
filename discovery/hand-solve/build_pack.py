@@ -31,7 +31,6 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from measure import Loaded, load  # noqa: E402
-from rejection_rates import to_board  # noqa: E402
 from reportlab.lib import colors  # noqa: E402
 from reportlab.lib.pagesizes import A4  # noqa: E402
 from reportlab.lib.styles import ParagraphStyle  # noqa: E402
@@ -39,6 +38,7 @@ from reportlab.lib.units import mm  # noqa: E402
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # noqa: E402
 
 from boxscore_forge.erasure import erase  # noqa: E402
+from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
@@ -100,12 +100,12 @@ def footnote_line(loaded: Loaded) -> str:
 def candidates(sample: list[Loaded]) -> list[Candidate]:
     found: list[Candidate] = []
     for loaded in sample:
-        source = to_board(loaded, None)
+        source = to_board(loaded.direction, None)
         for target in TARGETS:
             produced = erase(loaded.direction, target_chain=target, seed=SEED)
             if produced is None:
                 continue
-            board = to_board(loaded, produced.erased)
+            board = to_board(loaded.direction, produced.erased)
             package = PuzzlePackage(puzzle_id="pack", puzzle=board, solution=source)
             if not verify(package, secret=UNSIGNED).accepted:
                 continue

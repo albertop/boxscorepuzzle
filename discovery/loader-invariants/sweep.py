@@ -32,8 +32,8 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from measure import CONNECTION, Loaded, load  # noqa: E402
-from rejection_rates import to_board  # noqa: E402
 
+from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_verify.plausibility import faults  # noqa: E402
 
 SAMPLE_PER_DECADE = 40
@@ -116,7 +116,7 @@ def against_an_independent_source(sample: list[Loaded]) -> Counter[str]:
 def plausibility(sample: list[Loaded]) -> Counter[str]:
     broken: Counter[str] = Counter()
     for item in sample:
-        for fault in faults(to_board(item, None), max_batters=13):
+        for fault in faults(to_board(item.direction, None), max_batters=13):
             broken[fault.what] += 1
     return broken
 

@@ -190,11 +190,28 @@ its own would have lost two guarantees while fixing one.
 the lint scope because that is where it happened — a rule that cannot see the file is not a rule.
 Verified against a deliberate duplicate rather than assumed.
 
+### v02-P1-01 — the adapter lived in a discovery experiment and dropped footnote erasures
+
+The production path imported its `Direction` → `Board` conversion from
+`discovery/verifier/rejection_rates.py`, and that conversion consulted the erased set for batting and
+pitching rows while copying every footnote value unconditionally. The generator could erase a footnote,
+grade a solution path that used it as an unknown, and the package would hand the value back — the
+verifier validating an easier board than the one measured, with the metadata describing neither.
+
+**What I did.** `boxscore_forge.publish.to_board` is the one conversion, owned by the side that
+*produces* a package — §22 forbids the verifier sharing code with the generator, and the format belongs
+to neither. The erased set is applied through a single `cell()` rule used by every section, so the bug
+cannot recur in the shape it took: a section with its own handling. Every caller now imports it;
+`rejection_rates.to_board` is a two-line wrapper that only unpacks `Loaded`.
+
+**Test.** `tests/test_publish_adapter.py`, **written per section rather than as one blanket check**, so
+a section added later without the rule fails here instead of shipping quietly. Batting cell, batting
+total, pitching cell, pitching total, footnote cell, footnote total, team footnote — plus that an empty
+erased set gives the whole board and that naming a line-score cell does *not* blank it, since the anchor
+is never erased.
+
 ## Open, in the agreed order
 
-1. **v02-P1-01** — move the `Direction` → `Board` adapter out of a discovery experiment into a
-   production module, and apply the erased set uniformly to batting, pitching, totals and footnotes.
-   Footnotes are given again, so it cannot currently fire; what remains is structural and real.
 2. **v02-P1-04** — provenance fails open. Rewrite as `EXISTS` over an acceptance list, with a test that
    a game with **no** provenance row is *rejected*.
 3. **v02-P1-05** — `offense_hits` is summed from the batting rows it is meant to anchor. Load it from

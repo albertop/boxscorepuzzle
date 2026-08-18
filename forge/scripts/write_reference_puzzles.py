@@ -24,10 +24,10 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from measure import Loaded, load  # noqa: E402
-from rejection_rates import to_board  # noqa: E402
 
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
+from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign  # noqa: E402
 from boxscore_verify.plausibility import reveal_faults  # noqa: E402
@@ -71,8 +71,8 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
     package = sign(
         Package(
             puzzle_id=puzzle_id(loaded.game_id, loaded.offense_team),
-            puzzle=to_board(loaded, produced.erased),
-            solution=to_board(loaded, None),
+            puzzle=to_board(loaded.direction, produced.erased),
+            solution=to_board(loaded.direction, None),
             labels=loaded.labels,
             pitcher_labels=loaded.pitcher_labels,
             reveal=reveal_for(loaded),

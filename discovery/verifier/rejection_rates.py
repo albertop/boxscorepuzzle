@@ -37,6 +37,7 @@ from measure import Loaded, load  # noqa: E402
 
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
+from boxscore_forge.publish import to_board as production_board  # noqa: E402
 from boxscore_package.format import Board, LineScore, Package  # noqa: E402
 from boxscore_package.signing import sign  # noqa: E402
 from boxscore_verify.verify import LAYERS, Layer, Rejection, derivable_in_view, verify  # noqa: E402
@@ -57,61 +58,14 @@ class Outcome:
 
 
 def to_board(loaded: Loaded, erased: frozenset[str] | None) -> Board:
-    """The adapter. `erased` names cells the generator's way; everything else is read positionally.
+    """Thin wrapper over the production adapter.
 
-    The generator names cells `batting[0].hits`; the verifier names them `bat[0].hits`; the format
-    names nothing at all and stores arrays. Translating happens once, here.
+    ⚠️ This function used to *be* the adapter, and the production path imported it from here. It also
+    copied every footnote value without consulting the erased set, so a footnote erasure vanished on
+    the way into the package. Both are fixed by the conversion living in
+    `boxscore_forge.publish`; this only unwraps `Loaded`.
     """
-    direction = loaded.direction
-    blanks = erased or frozenset()
-
-    def batting_row(index: int, line: object) -> tuple[int | None, ...]:
-        fields = ("plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts")
-        return tuple(
-            None if f"batting[{index}].{field}" in blanks else getattr(line, field) for field in fields
-        )
-
-    def pitching_row(index: int, line: object) -> tuple[int | None, ...]:
-        fields = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
-        return tuple(
-            None if f"pitching[{index}].{field}" in blanks else getattr(line, field) for field in fields
-        )
-
-    score = direction.line_score
-    return Board(
-        batting=tuple(batting_row(index, line) for index, line in enumerate(direction.batting)),
-        batting_totals=tuple(
-            None if f"batting_totals.{field}" in blanks else getattr(direction.batting_totals, field)
-            for field in ("plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts")
-        ),
-        footnotes=tuple(
-            tuple(
-                getattr(note, field)
-                for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
-            )
-            for note in direction.batter_footnotes
-        ),
-        footnote_totals=tuple(
-            getattr(direction.footnote_totals, field)
-            for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
-        ),
-        left_on_base=direction.team_footnotes.left_on_base,
-        pitching=tuple(pitching_row(index, line) for index, line in enumerate(direction.pitching)),
-        pitching_totals=tuple(
-            None if f"pitching_totals.{field}" in blanks else getattr(direction.pitching_totals, field)
-            for field in ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
-        ),
-        line_score=LineScore(
-            offense_by_inning=score.offense_by_inning,
-            defense_by_inning=score.defense_by_inning,
-            offense_runs=score.offense_runs,
-            offense_hits=score.offense_hits,
-            offense_errors=score.offense_errors,
-            defense_runs=score.defense_runs,
-            defense_hits=score.defense_hits,
-            defense_errors=score.defense_errors,
-        ),
-    )
+    return production_board(loaded.direction, erased)
 
 
 def run(sample: list[Loaded]) -> list[Outcome]:
