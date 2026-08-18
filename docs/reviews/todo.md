@@ -166,3 +166,69 @@ the game log were this bug. They went to zero. Leaving them open rather than exp
 what made them useful when the cause turned up.
 
 Full suite after the round: **248 tests, 97.46% coverage, ruff and mypy clean.**
+
+
+---
+
+# Code review v02 — accepted, repair in progress
+
+All ten findings accepted. **No-go stands: no pack, no reference packages and no difficulty labels
+until the P1s are closed and the artifacts regenerated.**
+
+## Closed
+
+### v02-P1-03 — a duplicate `audit()` disabled the strict quota
+
+`build_pack.py` defined `audit()` twice and Python kept the later one, so the strict uncertified share
+from the v01 fix was not running: a pack could pass with anywhere from 10% to 50% uncertified boards.
+
+**What I did.** Kept the strict definition and **folded in the two rules only the later one carried** —
+no rung entirely uncertified, no page order monotonic in difficulty. Deleting the second function on
+its own would have lost two guarantees while fixing one.
+
+**Made self-enforcing.** Ruff's `F811` catches a duplicate definition, and `discovery/` is now inside
+the lint scope because that is where it happened — a rule that cannot see the file is not a rule.
+Verified against a deliberate duplicate rather than assumed.
+
+## Open, in the agreed order
+
+1. **v02-P1-01** — move the `Direction` → `Board` adapter out of a discovery experiment into a
+   production module, and apply the erased set uniformly to batting, pitching, totals and footnotes.
+   Footnotes are given again, so it cannot currently fire; what remains is structural and real.
+2. **v02-P1-04** — provenance fails open. Rewrite as `EXISTS` over an acceptance list, with a test that
+   a game with **no** provenance row is *rejected*.
+3. **v02-P1-05** — `offense_hits` is summed from the batting rows it is meant to anchor. Load it from
+   an independent source, with a test **per line-score field** so a future one cannot be added silently.
+4. **v02-P1-06** — build `certify_for_publication()`: package verification, board plausibility, reveal
+   plausibility, provenance completeness, independent-source correspondence. Every writer calls it.
+   With a test asserting it invokes every implemented check, so adding one without wiring it in fails.
+5. **v02-P1-02** — migrate the writers to `target_stalls`; chain becomes descriptive telemetry.
+6. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
+   exhausted.
+
+   ⚠️ **This one owes a before-and-after on the same boards**, not new figures: stall counts, family
+   distribution, chain length, stall position. The recorded path is the source of all four, so if the
+   solver has been admitting the global identity too early, every measurement built on that path
+   inherits the error.
+
+   **Decisions that rest on those numbers and need re-examining if they move:** the ceiling at 10
+   (family saturation at 11 versus 8), the pitcher cap at 4 (cross-team 100% → 78%, global 51% → 78% —
+   *exactly* the distribution in question), the zero-density gate at 25%, the `row_first` ordering, and
+   the chain-versus-stall comparison itself. If nothing moves, say so plainly: that is a useful result
+   and it means the body of measurement stands.
+7. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
+   since the bounding step itself carries no identity.
+8. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
+   visible drift is the two-pitcher cap and the footnote line.
+9. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
+   the published set only on success. Never delete the last known-good set first.
+
+## Void rather than confirming anything
+
+The **grouped-versus-separate footnote comparison** was measured through the adapter that restores
+footnote values, so the boards graded and the boards measured were different objects. The decision went
+to **separate** on a reason the numbers cannot touch — no printed boxscore carries a grouped footnote
+column, and §2 commits to the canonical format.
+
+And **five stalls was an example, not a standard.** Nothing is labelled easy, medium or hard until the
+pack comes back.
