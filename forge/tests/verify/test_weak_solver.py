@@ -80,9 +80,9 @@ class TestTheReportedProperty:
     def test_a_derivable_board_certifies(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(3, 3)]})
 
-        assert derivable_in_view(Package(puzzle_id="p", puzzle=puzzle, source=board))
+        assert derivable_in_view(Package(puzzle_id="p", puzzle=puzzle, solution=board))
 
     def test_an_ambiguous_board_does_not(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        assert not derivable_in_view(Package(puzzle_id="p", puzzle=puzzle, source=board))
+        assert not derivable_in_view(Package(puzzle_id="p", puzzle=puzzle, solution=board))

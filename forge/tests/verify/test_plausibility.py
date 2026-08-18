@@ -18,7 +18,7 @@ SECRET = b"a test secret"
 
 
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="plausibility", puzzle=puzzle, source=source)
+    return Package(puzzle_id="plausibility", puzzle=puzzle, solution=source)
 
 
 def with_phantom_row(board: Board, replace: Replace) -> Board:

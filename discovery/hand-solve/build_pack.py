@@ -101,7 +101,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
             if produced is None:
                 continue
             board = to_board(loaded, produced.erased)
-            package = PuzzlePackage(puzzle_id="pack", puzzle=board, source=source)
+            package = PuzzlePackage(puzzle_id="pack", puzzle=board, solution=source)
             if not verify(package, secret=UNSIGNED).accepted:
                 continue
             found.append(
@@ -109,7 +109,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                     loaded=loaded,
                     target=target,
                     puzzle=board,
-                    source=source,
+                    solution=source,
                     certified=derivable_in_view(package),
                     has_substitution=any("-" in label for label in loaded.labels),
                     has_live_footnote=any(
@@ -315,15 +315,15 @@ def audit(chosen: list[Candidate]) -> None:
     for target, quota in QUOTAS.items():
         found = sum(1 for candidate in chosen if candidate.target == target)
         if found != quota:
-            failures.append(f"chain {target}: {found} boards against a quota of {quota}")
+            failures.append(f"chain {target} has {found} boards against a quota of {quota}")
 
     games = [candidate.loaded.game_id for candidate in chosen]
     if len(set(games)) != len(games):
-        failures.append("a game appears twice, so a solver would meet the same lineup again")
+        failures.append("the same game appears twice, so a solver would meet one lineup again")
 
     pre_1950 = sum(1 for candidate in chosen if candidate.loaded.season < 1950)
     if pre_1950 > PRE_1950_ALLOWANCE:
-        failures.append(f"{pre_1950} boards before 1950 against an allowance of {PRE_1950_ALLOWANCE}")
+        failures.append(f"{pre_1950} pre-1950 boards against an allowance of {PRE_1950_ALLOWANCE}")
 
     # Bounded rather than fixed: the share is what the experiment measures. Too few and the afternoon
     # says nothing about 3b; too many and the pack stops resembling what ships.

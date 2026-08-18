@@ -34,7 +34,14 @@ class SignatureError(Exception):
 
 
 def canonical_bytes(package: Package) -> bytes:
-    """The exact bytes the signature covers: the published half, compact, keys sorted."""
+    """The exact bytes the signature covers: the published half, compact, keys sorted.
+
+    ⚠️ **The solution and the reveal are inside it now.** They used to be stripped before signing,
+    because the published half did not carry them — and §23 has since put them in the file, since a
+    client with the backend down cannot fetch a name when a row is completed. Anything that travels
+    is signed; a solution outside the signature would be a board a corrupted transfer could alter
+    without the check noticing, which is exactly what §33 wants caught.
+    """
     document = package.published().as_json()
     document.pop("signature", None)
     return json.dumps(document, sort_keys=True, separators=(",", ":")).encode(_ENCODING)
@@ -46,7 +53,10 @@ def sign(package: Package, secret: bytes) -> Package:
     return type(package)(
         puzzle_id=package.puzzle_id,
         puzzle=package.puzzle,
-        source=package.source,
+        solution=package.solution,
+        labels=package.labels,
+        pitcher_labels=package.pitcher_labels,
+        reveal=package.reveal,
         metadata=package.metadata,
         schema=package.schema,
         signature=digest,

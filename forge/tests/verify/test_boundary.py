@@ -26,7 +26,7 @@ from boxscore_verify.verify import UNSIGNED, verify
 
 
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
-    document = Package(puzzle_id="p", puzzle=board, source=board).as_json()
+    document = Package(puzzle_id="p", puzzle=board, solution=board).as_json()
     for key, value in changes.items():
         section, _, field = key.partition("__")
         if field:
@@ -102,7 +102,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
         # ⚠️ The finding. A publish path whose secret is unset would previously verify nothing and
         # report a pass — misconfiguration reading as success.
         with pytest.raises(ValueError, match="pass UNSIGNED"):
-            verify(Package(puzzle_id="p", puzzle=board, source=board), secret=None)
+            verify(Package(puzzle_id="p", puzzle=board, solution=board), secret=None)
 
     def test_there_is_no_default_to_forget(self) -> None:
         parameter = inspect.signature(verify).parameters["secret"]
@@ -111,7 +111,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
         assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
     def test_skipping_it_deliberately_is_allowed(self, board: Board) -> None:
-        assert verify(Package(puzzle_id="p", puzzle=board, source=board), secret=UNSIGNED).accepted
+        assert verify(Package(puzzle_id="p", puzzle=board, solution=board), secret=UNSIGNED).accepted
 
 
 class TestTheTwoSidesUseTheSameVocabulary:

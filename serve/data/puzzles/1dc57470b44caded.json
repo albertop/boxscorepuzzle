@@ -1,0 +1,487 @@
+{
+ "labels": [
+  "RF",
+  "LF",
+  "1B",
+  "CF",
+  "3B-1",
+  "3B-2",
+  "SS",
+  "C",
+  "2B",
+  "P"
+ ],
+ "metadata": {
+  "batters": 10,
+  "chain_length": 6,
+  "chain_target": 5,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "note": "reference data for serve, not inventory",
+  "pitchers": 2
+ },
+ "pitcher_labels": [
+  "SP",
+  "RP-1"
+ ],
+ "puzzle": {
+  "batting": [
+   [
+    5,
+    null,
+    0,
+    0,
+    0,
+    null
+   ],
+   [
+    5,
+    null,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    null,
+    null,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
+    3,
+    null,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    null,
+    1
+   ],
+   [
+    2,
+    null,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    4,
+    null,
+    2,
+    1,
+    null,
+    1
+   ],
+   [
+    4,
+    null,
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
+    4,
+    null,
+    2,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    0,
+    null,
+    0,
+    null
+   ]
+  ],
+  "batting_totals": [
+   38,
+   35,
+   6,
+   12,
+   2,
+   null
+  ],
+  "footnote_totals": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 8,
+  "line_score": {
+   "defense_by_inning": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0
+   ],
+   "defense_errors": 1,
+   "defense_hits": 6,
+   "defense_runs": 3,
+   "offense_by_inning": [
+    0,
+    0,
+    0,
+    2,
+    4,
+    0,
+    0,
+    0
+   ],
+   "offense_errors": 4,
+   "offense_hits": 12,
+   "offense_runs": 6
+  },
+  "pitching": [
+   [
+    12,
+    6,
+    2,
+    null,
+    1,
+    4
+   ],
+   [
+    12,
+    6,
+    null,
+    4,
+    1,
+    2
+   ]
+  ],
+  "pitching_totals": [
+   24,
+   12,
+   6,
+   6,
+   null,
+   6
+  ]
+ },
+ "puzzle_id": "1dc57470b44caded",
+ "reveal": {
+  "batter_names": [
+   "Max Flack",
+   "Taylor Douthit",
+   "Jim Bottomley",
+   "Heinie Mueller",
+   "Milt Stock",
+   "Jake Flowers",
+   "Les Bell",
+   "Harry McCurdy",
+   "Howard Freigau",
+   "Johnny Stuart"
+  ],
+  "card": "",
+  "defense_team": "OPP",
+  "offense_team": "SLN",
+  "pitcher_names": [
+   "Pitcher 1",
+   "Pitcher 2"
+  ],
+  "played_on": "1923-10-07"
+ },
+ "schema": 1,
+ "signature": "4c26b307f1397cc437d77d5f5fdb6cc37067662a0b8edba08b343606c6a93af7",
+ "solution": {
+  "batting": [
+   [
+    5,
+    5,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    5,
+    5,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    4,
+    3,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
+    3,
+    0,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    4,
+    3,
+    2,
+    1,
+    1,
+    1
+   ],
+   [
+    4,
+    3,
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
+    4,
+    0,
+    2,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    0,
+    2,
+    0,
+    0
+   ]
+  ],
+  "batting_totals": [
+   38,
+   35,
+   6,
+   12,
+   2,
+   6
+  ],
+  "footnote_totals": [
+   1,
+   0,
+   0,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 8,
+  "line_score": {
+   "defense_by_inning": [
+    1,
+    0,
+    0,
+    0,
+    0,
+    2,
+    0,
+    0,
+    0
+   ],
+   "defense_errors": 1,
+   "defense_hits": 6,
+   "defense_runs": 3,
+   "offense_by_inning": [
+    0,
+    0,
+    0,
+    2,
+    4,
+    0,
+    0,
+    0
+   ],
+   "offense_errors": 4,
+   "offense_hits": 12,
+   "offense_runs": 6
+  },
+  "pitching": [
+   [
+    12,
+    6,
+    2,
+    2,
+    1,
+    4
+   ],
+   [
+    12,
+    6,
+    4,
+    4,
+    1,
+    2
+   ]
+  ],
+  "pitching_totals": [
+   24,
+   12,
+   6,
+   6,
+   2,
+   6
+  ]
+ }
+}

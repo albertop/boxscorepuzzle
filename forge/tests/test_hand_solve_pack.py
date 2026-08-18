@@ -51,10 +51,13 @@ def a_valid_pack() -> list[SimpleNamespace]:
     index = 0
     uncertified_left = round(WANTED / 3)
     for target, quota in QUOTAS.items():
-        for _ in range(quota):
-            certified = uncertified_left <= 0
-            uncertified_left -= 0 if certified else 1
-            pack.append(board(target, index, certified=certified))
+        # Spread across rungs, and never a whole rung. Layer 3b's uncertified boards concentrate at
+        # the hard end, and a pack where one rung is entirely uncertified compares that rung against
+        # the rest — difficulty wearing certification's clothes.
+        here = min(uncertified_left, quota // 2)
+        uncertified_left -= here
+        for position in range(quota):
+            pack.append(board(target, index, certified=position >= here))
             index += 1
     return pack
 
@@ -99,6 +102,16 @@ class TestTheAuditRejects:
         pack[1].loaded.game_id = pack[0].loaded.game_id
 
         with pytest.raises(SystemExit, match="the same game appears twice"):
+            audit(pack)
+
+    def test_a_rung_that_is_entirely_uncertified(self) -> None:
+        # ⚠️ The confound the real pack fell into: layer 3b certifies every chain-5 board and 91% of
+        # chain-11 ones, so filling the hardest rung first made all seventeen uncertified boards
+        # chain 11 — and every chain-11 board uncertified. Uncertified and hard would have been the
+        # same variable and the afternoon would have measured difficulty.
+        pack = [board(item.target, index, certified=item.target != 5) for index, item in enumerate(a_valid_pack())]
+
+        with pytest.raises(SystemExit, match="entirely uncertified"):
             audit(pack)
 
     def test_no_board_with_a_suffixed_label(self) -> None:

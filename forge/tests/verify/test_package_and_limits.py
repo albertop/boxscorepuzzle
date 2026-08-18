@@ -27,7 +27,9 @@ SECRET = b"a test secret"
 
 class TestTheFormatSurvivesDisk:
     def test_a_package_round_trips(self, tmp_path: Path, board: Board) -> None:
-        original = sign(Package(puzzle_id="round-trip", puzzle=board, source=board, metadata={"season": 1968}), SECRET)
+        original = sign(
+            Package(puzzle_id="round-trip", puzzle=board, solution=board, metadata={"season": 1968}), SECRET
+        )
         path = tmp_path / "puzzle.json"
 
         write(path, original)
@@ -36,18 +38,29 @@ class TestTheFormatSurvivesDisk:
         assert restored == original
         verify_signature(restored, SECRET)
 
-    def test_the_published_half_leaves_the_answer_behind(self, board: Board) -> None:
-        # The source boxscore is the answer key. Everything that travels goes through `published`,
-        # and if it ever starts carrying the source the puzzle ships with its own solution.
-        full = Package(puzzle_id="p", puzzle=board, source=board)
+    def test_the_published_half_keeps_the_answer_and_drops_what_would_spoil_it(self, board: Board) -> None:
+        # ⚠️ This reverses an earlier promise, on purpose. The published half used to strip the
+        # solution as an answer key; §23 requires the game to work with the backend down, so the
+        # client cannot fetch a name when a row completes and the solution has to be in the file.
+        # §9 accepts that devtools can read it. What travels loses instead the metadata that would
+        # hand over the mystery — an opaque puzzle id beside a `game_id` protects nothing.
+        full = Package(
+            puzzle_id="p",
+            puzzle=board,
+            solution=board,
+            metadata={"game_id": "ATL196808080", "chain_target": 9},
+        )
 
-        assert full.published().source is None
-        assert "source" not in full.published().as_json()
+        published = full.published()
+
+        assert published.solution == board
+        assert "game_id" not in published.as_json()["metadata"]
+        assert published.as_json()["metadata"]["chain_target"] == 9
 
     def test_a_signature_written_over_the_full_package_still_checks_on_the_published_half(
         self, tmp_path: Path, board: Board
     ) -> None:
-        signed = sign(Package(puzzle_id="p", puzzle=board, source=board), SECRET)
+        signed = sign(Package(puzzle_id="p", puzzle=board, solution=board), SECRET)
         path = tmp_path / "published.json"
 
         write(path, signed.published())
@@ -105,7 +118,7 @@ class TestItSaysWhenItCannotAnswer:
         monkeypatch.setattr(reason, "NODE_BUDGET", 3)
         puzzle = blank(board, {"batting": [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=puzzle, source=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=puzzle, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.UNDECIDED
@@ -134,7 +147,7 @@ class TestMalformedPackages:
         # rather than that the puzzle is hard.
         holed = blank(board, {"batting": [(0, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=board, source=holed), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=board, solution=holed), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -151,7 +164,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=shorter, source=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=shorter, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -171,7 +184,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=without, source=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=without, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -199,7 +212,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=elsewhere, source=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=elsewhere, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -227,7 +240,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=broken, source=broken), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="p", puzzle=broken, solution=broken), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.BAD_DATA
@@ -239,9 +252,9 @@ class TestTheTally:
         # The distribution is what says whether the generator is behaving, so it has to distinguish
         # layers rather than only count failures.
         verdicts = [
-            verify(Package(puzzle_id="a", puzzle=board, source=board), secret=UNSIGNED),
+            verify(Package(puzzle_id="a", puzzle=board, solution=board), secret=UNSIGNED),
             verify(
-                Package(puzzle_id="b", puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}), source=board),
+                Package(puzzle_id="b", puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}), solution=board),
                 secret=UNSIGNED,
             ),
             verify(Package(puzzle_id="c", puzzle=board), secret=UNSIGNED),

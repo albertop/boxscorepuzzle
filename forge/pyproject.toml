@@ -59,6 +59,9 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
+# Runnable scripts print: that is their interface. And the name of an environment variable is not a
+# secret, whatever it looks like to a pattern matcher.
+"scripts/*.py" = ["T201", "S105"]
 "tests/**" = ["S101", "PLR2004"]   # asserts and magic numbers are fine in tests
 
 [tool.pytest.ini_options]

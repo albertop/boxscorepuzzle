@@ -203,6 +203,75 @@ class Board:
         )
 
 
+LEAKING_METADATA: Final = frozenset({"game_id", "retrosheet_id", "season", "date", "teams"})
+"""Metadata keys that would hand over the mystery, removed by `published()`.
+
+⚠️ Found while writing the schema down. The opaque puzzle id exists so that nothing in the URL names
+the teams or the date (§7), and `metadata` is deliberately loose so seam C3 can carry anything — which
+means the loose half is the hole. An id that reveals nothing beside a metadata block holding
+`game_id` protects nothing.
+"""
+
+
+@dataclass(frozen=True, slots=True)
+class Reveal:
+    """What the player earns: the names, the teams, the date, and the card (§7, §29).
+
+    ⚠️ **This is the answer to the mystery and it ships inside the package.** §23 requires the game to
+    work with the backend down, so the client cannot fetch the reveal when a row is completed — it has
+    to be holding it already. §9 accepts that a determined player can read it in devtools, and that is
+    a deliberate trade rather than an oversight: the alternative is a network dependency in the play
+    path, which is the one thing §23 forbids.
+
+    Nothing here may reach the board's labels, and nothing here may be encoded in the puzzle id.
+    """
+
+    batter_names: tuple[str, ...]
+    pitcher_names: tuple[str, ...]
+    offense_team: str
+    defense_team: str
+    played_on: str
+    card: str = ""
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "batter_names": list(self.batter_names),
+            "pitcher_names": list(self.pitcher_names),
+            "offense_team": self.offense_team,
+            "defense_team": self.defense_team,
+            "played_on": self.played_on,
+            "card": self.card,
+        }
+
+    @classmethod
+    def from_json(cls, raw: object) -> Self:
+        if not isinstance(raw, dict):
+            message = f"reveal is {type(raw).__name__}, expected an object"
+            raise PackageError(message)
+        return cls(
+            batter_names=tuple(_strings(raw.get("batter_names"), "reveal.batter_names")),
+            pitcher_names=tuple(_strings(raw.get("pitcher_names"), "reveal.pitcher_names")),
+            offense_team=_text(raw.get("offense_team"), "reveal.offense_team"),
+            defense_team=_text(raw.get("defense_team"), "reveal.defense_team"),
+            played_on=_text(raw.get("played_on"), "reveal.played_on"),
+            card=_text(raw.get("card", ""), "reveal.card"),
+        )
+
+
+def _text(raw: object, where: str) -> str:
+    if not isinstance(raw, str):
+        message = f"{where} is {type(raw).__name__}, expected a string"
+        raise PackageError(message)
+    return raw
+
+
+def _strings(raw: object, where: str) -> list[str]:
+    if not isinstance(raw, list):
+        message = f"{where} is {type(raw).__name__}, expected a list of strings"
+        raise PackageError(message)
+    return [_text(value, f"{where}[{index}]") for index, value in enumerate(raw)]
+
+
 @dataclass(frozen=True, slots=True)
 class Package:
     """What the forge produces for one puzzle.
@@ -214,18 +283,37 @@ class Package:
 
     puzzle_id: str
     puzzle: Board
-    source: Board | None = None
+    solution: Board | None = None
+    """The completed board. Ships with the puzzle — see `Reveal` for why, and §9 for the trade."""
+
+    labels: tuple[str, ...] = ()
+    """One per batting row: the position, suffixed by order of appearance where it repeats (§5, §7)."""
+
+    pitcher_labels: tuple[str, ...] = ()
+    """`SP`, then `RP-1` onwards in order of appearance. Never a bare `P` (§5)."""
+
+    reveal: Reveal | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     schema: int = SCHEMA_VERSION
     signature: str | None = None
 
     def published(self) -> Self:
-        """The half that travels: no source boxscore, because it is the answer key."""
+        """The shape that travels.
+
+        ⚠️ **It no longer removes the solution**, and that reversal is worth stating. The earlier
+        version stripped it as an answer key, which contradicts §23: with the backend down the client
+        cannot fetch a name when a row is completed, so the reveal and the solution have to be in the
+        file. What travels instead loses the metadata keys that would give the game away, because a
+        deliberately opaque id beside a `game_id` in the metadata protects nothing.
+        """
         return type(self)(
             puzzle_id=self.puzzle_id,
             puzzle=self.puzzle,
-            source=None,
-            metadata=self.metadata,
+            solution=self.solution,
+            labels=self.labels,
+            pitcher_labels=self.pitcher_labels,
+            reveal=self.reveal,
+            metadata={key: value for key, value in self.metadata.items() if key not in LEAKING_METADATA},
             schema=self.schema,
             signature=self.signature,
         )
@@ -237,8 +325,12 @@ class Package:
             "puzzle": self.puzzle.as_json(),
             "metadata": self.metadata,
         }
-        if self.source is not None:
-            document["source"] = self.source.as_json()
+        document["labels"] = list(self.labels)
+        document["pitcher_labels"] = list(self.pitcher_labels)
+        if self.solution is not None:
+            document["solution"] = self.solution.as_json()
+        if self.reveal is not None:
+            document["reveal"] = self.reveal.as_json()
         if self.signature is not None:
             document["signature"] = self.signature
         return document
@@ -253,7 +345,10 @@ class Package:
             return cls(
                 puzzle_id=raw["puzzle_id"],
                 puzzle=Board.from_json(raw["puzzle"]),
-                source=Board.from_json(raw["source"]) if raw.get("source") is not None else None,
+                solution=Board.from_json(raw["solution"]) if raw.get("solution") is not None else None,
+                labels=tuple(_strings(raw.get("labels", []), "labels")),
+                pitcher_labels=tuple(_strings(raw.get("pitcher_labels", []), "pitcher_labels")),
+                reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
                 metadata=_metadata(raw.get("metadata", {})),
                 schema=schema,
                 signature=raw.get("signature"),

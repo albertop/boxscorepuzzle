@@ -140,28 +140,28 @@ def check_identities(package: Package, _: bytes | Unsigned | None) -> Rejection 
     never erased, so a puzzle that erased one is malformed rather than hard, and a puzzle whose line
     score disagrees with its source is not a puzzle about that game at all.
     """
-    if package.source is None:
-        return Rejection(Layer.IDENTITIES, Fault.MALFORMED, "no source boxscore to verify against")
+    if package.solution is None:
+        return Rejection(Layer.IDENTITIES, Fault.MALFORMED, "no solution to verify the puzzle against")
 
-    faults = _structure_faults(package.puzzle, package.source)
+    faults = _structure_faults(package.puzzle, package.solution)
     if faults:
         return Rejection(Layer.IDENTITIES, Fault.MALFORMED, "; ".join(faults))
 
-    faults = line_score_faults(package.source)
+    faults = line_score_faults(package.solution)
     if faults:
         return Rejection(Layer.IDENTITIES, Fault.BAD_DATA, "; ".join(faults))
 
-    missing = [cell for cell in all_cells(package.source) if cell not in values_of(package.source)]
+    missing = [cell for cell in all_cells(package.solution) if cell not in values_of(package.solution)]
     if missing:
         return Rejection(
             Layer.IDENTITIES,
             Fault.MALFORMED,
-            f"the source boxscore is incomplete: {len(missing)} cells absent, first {missing[0]}",
+            f"the solution board is incomplete: {len(missing)} cells absent, first {missing[0]}",
         )
 
-    known = values_of(package.source)
+    known = values_of(package.solution)
     broken: list[str] = []
-    for relation in relations(package.source):
+    for relation in relations(package.solution):
         total = sum(coefficient * known[cell] for cell, coefficient in relation.terms)
         if relation.equality and total != relation.constant:
             broken.append(f"{relation.origin} is off by {total - relation.constant}")
@@ -228,7 +228,7 @@ def check_end_to_end(package: Package, _: bytes | Unsigned | None) -> Rejection 
     one that catches a puzzle which is perfectly consistent and about a different game — a given cell
     quietly altered after generation, for instance.
     """
-    if package.source is None:  # pragma: no cover - layer 1 already rejected this
+    if package.solution is None:  # pragma: no cover - layer 1 already rejected this
         return Rejection(Layer.END_TO_END, Fault.MALFORMED, "no source boxscore to compare against")
     board = package.puzzle
     try:
@@ -240,7 +240,7 @@ def check_end_to_end(package: Package, _: bytes | Unsigned | None) -> Rejection 
     if not found:
         return Rejection(Layer.END_TO_END, Fault.NO_SOLUTION, "the published board cannot be completed")
 
-    original = values_of(package.source)
+    original = values_of(package.solution)
     solved = found[0]
     differing = sorted(cell for cell in original if solved.get(cell) != original[cell])
     if differing:

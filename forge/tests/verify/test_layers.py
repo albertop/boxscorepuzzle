@@ -20,7 +20,7 @@ SECRET = b"a test secret, not the one that signs anything real"
 
 
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="test", puzzle=puzzle, source=source)
+    return Package(puzzle_id="test", puzzle=puzzle, solution=source)
 
 
 def replacing(board: Board, **changes: object) -> Board:
@@ -189,7 +189,7 @@ class TestTheSignatureCatchesCorruptionInTransit:
         tampered = Package(
             puzzle_id=signed.puzzle_id,
             puzzle=blank(board, {"batting": [(0, 3)]}),
-            source=signed.source,
+            solution=signed.solution,
             metadata=signed.metadata,
             signature=signed.signature,
         )

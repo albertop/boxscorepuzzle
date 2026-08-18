@@ -92,7 +92,7 @@ def boards(draw: st.DrawFn) -> Board:
 
 
 def _package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="property", puzzle=puzzle, source=source)
+    return Package(puzzle_id="property", puzzle=puzzle, solution=source)
 
 
 class TestABoardBuiltFromTheIdentitiesSatisfiesThem:
@@ -178,7 +178,7 @@ class TestTheSignatureTracksTheContent:
                 pitching_totals=board.pitching_totals,
                 line_score=board.line_score,
             ),
-            source=signed.source,
+            solution=signed.solution,
             metadata=signed.metadata,
             signature=signed.signature,
         )
@@ -187,13 +187,40 @@ class TestTheSignatureTracksTheContent:
             verify_signature(tampered, SECRET)
 
     @given(board=boards())
-    def test_the_source_boxscore_is_outside_the_signature(self, board: Board) -> None:
-        # Deliberate: the source never leaves the forge, so a receiver holding only the published
-        # half must still be able to check the signature. If this ever fails, the signature has
-        # become unverifiable at the one place it matters.
+    def test_the_signature_survives_the_publishing_step(self, board: Board) -> None:
+        # The receiver holds only the published half, so the signature has to check there or it is
+        # unverifiable at the one place it matters. What publishing removes is the leaking metadata,
+        # and the signature is taken over the published shape so removing it changes nothing.
         signed = sign(_package(board, board), SECRET)
 
         verify_signature(signed.published(), SECRET)
+
+    @given(board=boards())
+    def test_altering_the_solution_breaks_the_signature(self, board: Board) -> None:
+        # ⚠️ New, and the reason the signing payload changed. The solution now travels with the
+        # puzzle (§23), so a corrupted transfer could alter the answer a player is shown at the end.
+        # Anything that travels is signed.
+        signed = sign(_package(board, board), SECRET)
+        rows = [list(row) for row in board.batting]
+        rows[0][3] = (rows[0][3] or 0) + 1
+        altered = Package(
+            puzzle_id=signed.puzzle_id,
+            puzzle=signed.puzzle,
+            solution=Board(
+                batting=tuple(tuple(entry) for entry in rows),
+                batting_totals=board.batting_totals,
+                footnotes=board.footnotes,
+                footnote_totals=board.footnote_totals,
+                left_on_base=board.left_on_base,
+                pitching=board.pitching,
+                pitching_totals=board.pitching_totals,
+                line_score=board.line_score,
+            ),
+            signature=signed.signature,
+        )
+
+        with pytest.raises(SignatureError):
+            verify_signature(altered, SECRET)
 
 
 class TestRejectionsAreAttributed:

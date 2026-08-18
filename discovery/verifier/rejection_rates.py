@@ -126,7 +126,7 @@ def run(sample: list[Loaded]) -> list[Outcome]:
                 Package(
                     puzzle_id=puzzle_id(loaded.game_id, f"offense{target}"),
                     puzzle=to_board(loaded, produced.erased),
-                    source=source,
+                    solution=source,
                     metadata={"season": loaded.season, "target_chain": target},
                 ),
                 SECRET,
