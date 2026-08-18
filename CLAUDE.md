@@ -289,7 +289,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
 - The board is identical on all screens. Desktop gets more whitespace, not more content.
-- **Roster caps: ≤13 batters, ≤2 pitchers. Measured, not estimated** (§6). Rows on screen turned out not to bind — with the active section's totals pinned they never scroll away, and 70% of steps touch rows within a five-row window. Erasure percentage is superseded: the generator targets a chain length.
+- **Roster caps: ≤13 batters, ≤4 pitchers. Measured, not estimated** (§6). Rows on screen turned out not to bind — with the active section's totals pinned they never scroll away, and 70% of steps touch rows within a five-row window. That finding is what freed the batter cap from 10 to 13, and it was later applied to pitchers too: the two-pitcher cap rested on screen cost after the argument for it had already been retired. Erasure percentage is superseded, and so is chain length: **the generator targets a stall count**.
 - **The label column is 66px, seven characters, fixed.** Never full names truncated only where they overflow. **Disambiguation by first initial is mandatory** — 6.64% of boards carry two genuinely identical surnames, so it is not a truncation artefact (§7).
 
 ### 7. Puzzle quality outranks everything (§31, §22)

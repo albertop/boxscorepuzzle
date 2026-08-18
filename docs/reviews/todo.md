@@ -177,9 +177,9 @@ until the P1s are closed and the artifacts regenerated.**
 
 ## Where v02 stands
 
-**All six P1 findings are closed.** The no-go was on the P1s and the artifacts, so what remains
-blocking publication is not a P1 but the hand-solve pack itself: nothing is labelled easy, medium or
-hard until it comes back.
+**All ten findings are closed.** The no-go was on the P1s and the artifacts; what remains blocking
+publication is not a review finding but the hand-solve pack itself. **Nothing is labelled easy, medium
+or hard until it comes back.**
 
 | Finding | State |
 |---|---|
@@ -191,8 +191,8 @@ hard until it comes back.
 | P1-06 no publication gate | closed — `certify_for_publication`, writers wired |
 | P2-01 global identity admission | closed — fixed, and **nothing moved** |
 | P2-02 stall attribution | closed — and it found a character dimension |
-| P2-03 documents disagree with code | open |
-| P2-04 non-atomic regeneration | open |
+| P2-03 documents disagree with code | closed |
+| P2-04 non-atomic regeneration | closed |
 
 **What the P1s cost the pool: nothing measurable.** Provenance rejects 0 games, the anchor check
 rejects 2 in 397,142. Every decision about caps, gate and composition stands on that side — which is a
@@ -405,10 +405,24 @@ that break the hard moments.*
 
 ## Open, in the agreed order
 
-1. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
-   visible drift is the two-pitcher cap and the footnote line.
-2. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
-   the published set only on success. Never delete the last known-good set first.
+### v02-P2-03 — the contracts described a board the code had left behind
+
+`CLAUDE.md` and `docs/package-format-v1.md` are presented as current contracts, so a contributor
+following them would have reintroduced the two-pitcher cap, restored the footnote line, or kept
+grading on chain length. Each drift already existed in the code.
+
+**Fixed:** the cap reads ≤4 pitchers in all four places it appeared; the footnote entry says the
+per-batter cells are erasable and the totals row and LOB are not, with the reason; and chain is named
+as telemetry with stalls as the difficulty variable. The format document gains a difficulty-metadata
+section so a reader of an older artefact knows not to compare it — and states that **no difficulty
+label exists yet**.
+
+### v02-P2-04 — regeneration deleted the published set before a replacement existed
+
+A loader error, an exhausted pool, an interrupt or a full disk left `serve/data/puzzles` empty or
+half-written. Everything is now built and certified in a sibling staging directory and the published
+files are replaced only once the batch is whole. **A failed run leaves staging behind as evidence and
+the published set untouched.**
 
 ## Void rather than confirming anything
 
