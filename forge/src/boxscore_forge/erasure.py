@@ -1,8 +1,13 @@
 """Taking cells away until the board is a puzzle.
 
-The input is a **target chain length**, not a number of cells. Of the three metrics that describe a
-solution path, chain length is the one that grades effort cleanly, so it is the objective and the
-cell count is whatever reaching it costs (§21, §31).
+The input is a target and the cell count is whatever reaching it costs (§21, §31). Two targets exist
+and **the one that grades difficulty is `target_stalls`**.
+
+⚠️ **`target_chain` measures length, not difficulty.** A chain-10 board is ten subtractions in single
+file and one was solved by hand in under a minute. A *stall* is the moment propagation runs dry and
+something beyond direct substitution is needed to restart it, which is where the thinking happens.
+Chain is kept because every measurement before this one used it and they have to stay comparable, but
+a board meant to be hard is erased towards stalls.
 
 ⚠️ **This module contains one of the two solvers the project deliberately keeps.** The generator
 needs a solver to know when to stop; the verifier needs one to confirm the result is derivable, and
@@ -122,7 +127,8 @@ easy board — 12% trivial steps at a chain target of 5 against 19-20% for the o
 def erase(
     direction: Direction,
     *,
-    target_chain: int,
+    target_chain: int | None = None,
+    target_stalls: int | None = None,
     seed: int,
     ordering: str = DEFAULT_ORDERING,
 ) -> Puzzle | None:
@@ -135,6 +141,9 @@ def erase(
     `seed` makes the result reproducible, which is §21's idempotence at this step — regenerating a
     batch has to produce the same puzzle for the same game or the no-repetition promise breaks.
     """
+    if (target_chain is None) == (target_stalls is None):
+        message = "give exactly one of target_chain or target_stalls"
+        raise ValueError(message)
     if ordering not in ORDERINGS:
         message = f"unknown erasure ordering {ordering!r}; have {sorted(ORDERINGS)}"
         raise ValueError(message)
@@ -159,6 +168,8 @@ def erase(
         if not solution.is_complete:
             continue
         erased = trial
-        if solution.chain_length >= target_chain:
+        reached = solution.stalls if target_stalls is not None else solution.chain_length
+        wanted = target_stalls if target_stalls is not None else target_chain
+        if wanted is not None and reached >= wanted:
             return Puzzle(shape=shape, given=given, erased=frozenset(erased), solution=solution)
     return None
