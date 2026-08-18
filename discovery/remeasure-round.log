@@ -2,3 +2,9 @@ parses: ../discovery/pool-at-4-pitchers/remeasure.py
 parses: ../discovery/verifier/rejection_rates.py
 parses: ../discovery/pitcher-cap/measure_pitching.py
 === running ../discovery/pool-at-4-pitchers/remeasure.py ===
+=== finished ../discovery/pool-at-4-pitchers/remeasure.py ===
+=== running ../discovery/verifier/rejection_rates.py ===
+=== finished ../discovery/verifier/rejection_rates.py ===
+=== running ../discovery/pitcher-cap/measure_pitching.py ===
+=== finished ../discovery/pitcher-cap/measure_pitching.py ===
+ALL RE-MEASUREMENTS COMPLETE

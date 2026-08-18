@@ -1,0 +1,102 @@
+72 gated directions at ≤13 batters and ≤4 pitchers, ordering 'row_first'
+decades: {1910: 6, 1920: 6, 1930: 6, 1940: 6, 1950: 6, 1960: 6, 1970: 6, 1980: 6, 1990: 6, 2000: 6, 2010: 6, 2020: 6}
+pitchers per board: {1: 8, 2: 18, 3: 28, 4: 18}
+
+6 boards written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\pool-at-4-pitchers\look-at-these.html — look at them before trusting anything below
+
+=== HOW FAR A GATED ≤4 BOARD GOES ===
+  runs                    : 216
+  max chain p10/p50/p90   : 15 / 23 / 32
+  cells erased at ceiling : 40 (p50)
+
+=== BANDS AND WHERE THEY CLOSE ===
+ target  reached  erased    search p10-p90   width   resolution p10-p90   width  trivial
+      3     100%      11      0.25-0.50       0.25            6-10          4.0     0.08
+      5     100%      14      0.31-0.50       0.19            7-10          3.0     0.13
+      7     100%      18      0.33-0.73       0.39            6-10          4.0     0.17
+      9      99%      23      0.41-0.83       0.42            6-9           3.0     0.20
+     11      97%      27      0.50-0.88       0.38            6-9           3.0     0.21
+     13      96%      29      0.60-0.89       0.29            5-8           3.0     0.21
+     15      91%      31      0.67-0.90       0.23            5-8           3.0     0.21
+     17      81%      33      0.70-0.91       0.21            5-8           3.0     0.20
+     19      75%      35      0.75-0.91       0.16            5-8           3.0     0.20
+     21      64%      36      0.80-0.92       0.12            6-8           2.0     0.19
+  A width approaching zero means every board scores alike and the metric has stopped
+  separating them. That is the end of the usable range, not a hard board.
+
+=== ARE THE THREE STILL INDEPENDENT ===
+ target     n   r(chain,search)   r(chain,resolution)   r(search,resolution)
+      3   216             0.148                 0.114                 -0.036
+      5   216             0.191                -0.089                 -0.124
+      7   216             0.268                -0.127                 -0.224
+      9   213             0.282                -0.087                 -0.169
+     11   210             0.265                -0.126                 -0.172
+     13   207             0.295                 0.059                  0.018
+     15   196             0.114                 0.075                  0.060
+     17   174             0.232                 0.099                  0.092
+     19   161             0.245                 0.108                  0.105
+     21   138             0.189                 0.136                  0.171
+
+=== FAMILIES REACHABLE AT EACH CHAIN TARGET ===
+ target  boards  all four      column_sum    row_identity      cross_team global_identity
+      3     216        2%            100%             77%             37%              6%
+      5     216        6%            100%             95%             56%             12%
+      7     216       20%            100%             99%             70%             26%
+      9     213       37%            100%            100%             81%             42%
+     11     210       59%            100%            100%             90%             63%
+     13     207       77%            100%            100%             96%             79%
+     15     196       84%            100%            100%             98%             86%
+     17     174       89%            100%            100%            100%             89%
+     19     161       94%            100%            100%            100%             94%
+     21     138       97%            100%            100%            100%             97%
+
+  most common combinations, by target:
+    chain  3: column+row 41%, column+cross_team+row 31%, column 18%
+    chain  5: column+cross_team+row 46%, column+row 38%, column+global+row 6%
+    chain  7: column+cross_team+row 49%, column+row 24%, column+cross_team+global+row 20%
+    chain  9: column+cross_team+row 44%, column+cross_team+global+row 37%, column+row 15%
+    chain 11: column+cross_team+global+row 59%, column+cross_team+row 30%, column+row 7%
+    chain 13: column+cross_team+global+row 77%, column+cross_team+row 19%, column+global+row 2%
+    chain 15: column+cross_team+global+row 84%, column+cross_team+row 14%, column+global+row 2%
+    chain 17: column+cross_team+global+row 89%, column+cross_team+row 11%
+    chain 19: column+cross_team+global+row 94%, column+cross_team+row 6%
+    chain 21: column+cross_team+global+row 97%, column+cross_team+row 3%
+
+=== WOULD A RESOLUTION CEILING BE A COVERT BATTER CAP ===
+ batting rows  boards  resolution p50
+            9      34               7
+           10      22               7
+           11       9               7
+           12       6               8
+           13       1              11
+
+  decade  boards  resolution p50   discarded by an absolute ceiling of
+                                        7        8        9       10
+    1910       6               8         50%      17%       0%       0%
+    1920       6               7         17%      17%       0%       0%
+    1930       6               8         50%       0%       0%       0%
+    1940       6               6         17%       0%       0%       0%
+    1950       6               6         33%      17%       0%       0%
+    1960       6               7         17%      17%       0%       0%
+    1970       6               8         67%      33%      17%       0%
+    1980       6               6         17%       0%       0%       0%
+    1990       6               6         17%      17%       0%       0%
+    2000       6               6         17%       0%       0%       0%
+    2010       6               8         83%      33%      17%      17%
+    2020       6               8         50%       0%       0%       0%
+
+  scaled instead of absolute — a ceiling of k x batting rows:
+       k   discarded overall   by decade, worst to best
+     0.6                 78%   1920s 100%, 1930s 100%, 1990s 100%
+     0.7                 46%   2010s 83%, 2020s 83%, 1930s 67%
+     0.8                 21%   1930s 50%, 1910s 33%, 1970s 33%
+  A ceiling that discards evenly across decades is not a batter cap in disguise.
+
+=== DOES THE HARDEST DAY BRING BACK BORING BOARDS ===
+ target  reached n  zero density reached  zero density failed     gap
+     17         70                26.4%               20.9%   +5.5%
+     19         67                26.5%               21.9%   +4.6%
+     21         63                26.9%               21.2%   +5.7%
+  A positive gap means the hardest boards are the emptiest ones the gate let through.
+
+  r(zero density, chain ceiling) = +0.478
