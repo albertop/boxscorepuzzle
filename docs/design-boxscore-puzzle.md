@@ -1979,7 +1979,39 @@ more puts several blanks in each column, so each step combines fewer known terms
 is therefore highest where the board is fullest, which is the easy end. See the resolution-ceiling
 finding below.
 
-### ✅ The week runs from chain 5 to chain 13 — decided
+### ✅ The week runs from chain 5 to chain 11 — decided
+
+> *⚠️ Was 5 → 13, and before that 5 → 20. Both earlier figures are kept below rather than restated,
+> because the gap between them is the record of what a contaminated loader cost. The 13 was measured
+> on boards carrying phantom rows; the 20 was measured at the compressibility ceiling.*
+
+**The family table decides it.** At a chain target of 11, **41% of boards do not require all four
+families**, across two real routes. At 13 it is 19% down a single route:
+
+| Chain target | All four | Second route | Third |
+|---:|---:|---|---|
+| 9 | 37% | col+cross+row 44% | col+cross+global+row 37% |
+| **11** | **59%** | col+cross+row 30% | col+row 7% |
+| 13 | 77% | col+cross+row 19% | col+global+row 2% |
+
+Double the variety for two rungs, on a scale that only spans 5 to 11.
+
+**And the character axis goes dark between 11 and 13, not near the ceiling.** §31 spent several
+measurements watching it collapse and each time concluded "structural property". The collapse starts
+two rungs below where anyone was looking — the same mis-scaling that put the week at 20 also put
+Saturday two rungs too high, twice over.
+
+**With the week at 5 → 11, all three dimensions are live on all seven days**, which is what this
+section wanted from the beginning and never had. The cost is a slightly easier Saturday, and that is
+acceptable: §2's audience is baseball fans who are not necessarily puzzle people, and the first-week
+risk was always too hard rather than too soft.
+
+*Record alongside it: on the corrected pool **resolution separates boards out to chain 19 at a width
+of 3.0**, where it used to flatten at 15. That does not argue for a harder Saturday, but it means
+resolution stays informative across the whole publishable range. And the boredom effect weakened
+rather than vanished — the gap is 5.5 points where it was 8.2, and r = +0.478 where it was +0.575.*
+
+### The measurements that set the earlier ceiling of 13
 
 **Not to 20.** Two independent measurements on the ≤4 pool converge on the same ceiling, and the
 second one is the serious one.

@@ -44,8 +44,8 @@ from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
 
-TARGETS = (5, 7, 9, 11, 13)
-QUOTAS = {5: 5, 7: 7, 9: 9, 11: 13, 13: 16}
+TARGETS = (5, 7, 9, 11)
+QUOTAS = {5: 8, 7: 11, 9: 14, 11: 17}
 """Every rung of the week present, weighted towards the hard end where the uncertainty is.
 
 Explicit quotas rather than weighted sampling. A first version drew by weight and produced no chain-5
@@ -56,7 +56,10 @@ reached, and a pack missing a rung cannot say anything about that rung.
 WANTED = 50
 UNCERTIFIED_SHARE = 1 / 3
 PRE_1950_ALLOWANCE = 2
-"""§5's 5% quota, applied to the sample so it looks like what will actually ship."""
+"""§5's pre-1950 preference, applied so the pack looks like what will actually ship."""
+
+GATE = 0.25
+"""§5's zero-density gate at its strict end. The corrected pool is abundant enough to afford it."""
 
 SEED = 50
 SAMPLE_PER_DECADE = 8
@@ -229,6 +232,47 @@ def audit(chosen: list[Candidate]) -> None:
         raise SystemExit("the pack does not satisfy its own constraints: " + "; ".join(problems))
 
 
+def audit(chosen: list[Candidate]) -> None:
+    """Assert what the pack claims rather than printing it and being believed.
+
+    ⚠️ CLAUDE.md's rule: anything acting as a launch gate is asserted. This pack has already once
+    reported quotas it did not satisfy — weighted sampling produced no boards at all at the easiest
+    rung, and the run said so in a line nobody had to read. A pack that silently misses a rung
+    invalidates the experiment it exists to run.
+    """
+    failures: list[str] = []
+    if len(chosen) != WANTED:
+        failures.append(f"{len(chosen)} boards, wanted {WANTED}")
+
+    for target, quota in QUOTAS.items():
+        found = sum(1 for candidate in chosen if candidate.target == target)
+        if found != quota:
+            failures.append(f"chain {target}: {found} boards against a quota of {quota}")
+
+    games = [candidate.loaded.game_id for candidate in chosen]
+    if len(set(games)) != len(games):
+        failures.append("a game appears twice, so a solver would meet the same lineup again")
+
+    pre_1950 = sum(1 for candidate in chosen if candidate.loaded.season < 1950)
+    if pre_1950 > PRE_1950_ALLOWANCE:
+        failures.append(f"{pre_1950} boards before 1950 against an allowance of {PRE_1950_ALLOWANCE}")
+
+    # Bounded rather than fixed: the share is what the experiment measures. Too few and the afternoon
+    # says nothing about 3b; too many and the pack stops resembling what ships.
+    uncertified = sum(1 for candidate in chosen if not candidate.certified)
+    lowest, highest = 5, round(WANTED * UNCERTIFIED_SHARE * 1.5)
+    if not lowest <= uncertified <= highest:
+        failures.append(f"{uncertified} uncertified boards, wanted between {lowest} and {highest}")
+
+    if not any(candidate.has_substitution for candidate in chosen):
+        failures.append("no board carries a suffixed label, which the tutorial has to teach")
+    if not any(candidate.has_live_footnote for candidate in chosen):
+        failures.append("no board carries a live footnote, which the tutorial has to teach")
+
+    if failures:
+        raise SystemExit("the pack does not satisfy its own quotas: " + "; ".join(failures))
+
+
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     rows: list[list[str]] = [["", *BATTING_HEADS]]
     spans: list[tuple[str, tuple[int, int], tuple[int, int], object]] = []
@@ -376,9 +420,10 @@ def write_sheet(path: Path, count: int) -> None:
 
 def main() -> None:
     rng = random.Random(SEED)
-    sample = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
     pool = candidates(sample)
     chosen = choose(pool, rng)
+    audit(chosen)
 
     out = Path(__file__).resolve().parent
     build_pdf(out / "boards.pdf", chosen, answers=False)
