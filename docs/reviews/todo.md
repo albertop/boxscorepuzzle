@@ -198,8 +198,8 @@ or hard until it comes back.**
 rejects 2 in 397,142. Every decision about caps, gate and composition stands on that side — which is a
 result rather than an absence of one, because it was not knowable before the checks existed.
 
-**What is still unknown is P2-01.** It is the only open item with decisions hanging off it, and it
-must close with five verdicts rather than one sentence.
+**No review finding is open.** What blocks publication now is work rather than repair, and it is
+listed at the end of this file under *What is actually left*.
 
 ## Closed
 
@@ -403,26 +403,27 @@ set the board merely *contains*.
 anything is built on the distribution: the two families that most distinguish boards are not the ones
 that break the hard moments.*
 
-## Open, in the agreed order
+## What is actually left
 
-### v02-P2-03 — the contracts described a board the code had left behind
+Not review findings — these are the things the repairs unblocked.
 
-`CLAUDE.md` and `docs/package-format-v1.md` are presented as current contracts, so a contributor
-following them would have reintroduced the two-pitcher cap, restored the footnote line, or kept
-grading on chain length. Each drift already existed in the code.
+1. **The fifty-board hand-solve pack.** Boards spanning a range of stall counts, the count in the key
+   rather than on the page, randomised order, the `stalls` column in `key.csv`, and the PDF check
+   green. **`build_pack.py` still targets chain and its `audit()` still speaks in chain rungs** — that
+   is the last chain-targeted producer.
+2. **What the pack answers**, in order of what it settles: whether the marked 1–6 tracks stall count
+   at all — if it does not, stalls are measuring something the player does not experience, and that is
+   as important as the chain finding was; whether the uncertified third is felt, which decides layer
+   3b; and whether the boards are interesting, which the *tedious* and *boring* ticks answer.
+3. **The RBI and HR columns**, with `SO` for `K` and the canonical order, and a measurement of what
+   they buy — all of it recorded in §6 and none of it built.
+4. **The generator at volume, the calendar builder, and signed packaging in batch.** Nothing in the
+   forge yet produces an inventory; the six reference packages are a format sample.
+5. **`serve` is at zero.** Six real packages exist for it to be built against, and February is the
+   window.
 
-**Fixed:** the cap reads ≤4 pitchers in all four places it appeared; the footnote entry says the
-per-batter cells are erasable and the totals row and LOB are not, with the reason; and chain is named
-as telemetry with stalls as the difficulty variable. The format document gains a difficulty-metadata
-section so a reader of an older artefact knows not to compare it — and states that **no difficulty
-label exists yet**.
-
-### v02-P2-04 — regeneration deleted the published set before a replacement existed
-
-A loader error, an exhausted pool, an interrupt or a full disk left `serve/data/puzzles` empty or
-half-written. Everything is now built and certified in a sibling staging directory and the published
-files are replaced only once the batch is whole. **A failed run leaves staging behind as evidence and
-the published set untouched.**
+**Nothing is labelled easy, medium or hard until the pack comes back.** Five stalls was an example the
+operator gave, not a standard.
 
 ## Void rather than confirming anything
 
