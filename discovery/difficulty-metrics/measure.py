@@ -122,6 +122,16 @@ class Loaded:
     loading and packaging and cannot catch a board that never happened. These two can. `None` means
     the game log has no row, which is 1.5% of games and concentrated in the 1930s to 1960s."""
 
+    slots: tuple[int, ...] = ()
+    """The batting-order slot of each row, in the same order as `direction.batting`.
+
+    Rows sharing a slot are the men who followed one another in it, and that is a real relationship
+    the board was discarding: their plate appearances sum against the same slot, and a footnote left
+    unassigned falls to one of them by elimination. Position labels do not carry it — **42.1% of
+    repeated position labels span more than one slot**, so two `CF` rows are usually two men who never
+    replaced each other.
+    """
+
     batter_rbi: tuple[int, ...] = ()
     """Runs batted in and home runs, per row and in lineup order, carried alongside `direction`
     rather than inside it.
@@ -378,7 +388,11 @@ def load(
        ORDER BY s.EVENT_ID) AS entered_fielding,
       (SELECT TOP 1 s.SUB_FLD_CD FROM dbo.retroSubstitutionsReg s
        WHERE s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID
-       ORDER BY s.EVENT_ID) AS entered_as
+       ORDER BY s.EVENT_ID) AS entered_as,
+      -- The batting-order slot. Always 1 to 9, and every direction has exactly nine distinct ones —
+      -- 407,815 of 407,816, the exception being a source error. It was already used to order the
+      -- rows; carrying it makes the grouping part of the board rather than a detail of the ORDER BY.
+      d.SLOT_CT
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
@@ -510,6 +524,7 @@ def load(
                     bool(is_deduced),
                     official_at_bats,
                     official_left_on_base,
+                    tuple(r[18] for r in batting_rows),
                     tuple(r[14] for r in batting_rows),
                     tuple(r[15] for r in batting_rows),
                     tuple(p[9] for p in pitching_rows),
