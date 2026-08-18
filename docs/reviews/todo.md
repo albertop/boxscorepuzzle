@@ -231,6 +231,12 @@ needing a DSN is a test that gets skipped in CI and then never runs. **Weaker th
 said so in the file.** What it does catch is the shape of the mistake returning, which is how it
 arrived: the same words in a different file.
 
+**Coverage, and it rejects nothing today.** Of 203,908 games: **0 missing provenance**, 3,465 deduced,
+1,872 excluded source, **198,571 accepted (97.4%)**. So the fail-open case does not currently fire and
+the pool does not shrink — which is the useful answer rather than a disappointing one. The old filter
+was not admitting unknown-source games *yet*; it was one incomplete import away from doing so, and the
+completeness it depended on was never stated or checked. **P1-06 is unblocked from this side.**
+
 ## Open, in the agreed order
 
 3. **v02-P1-05** — `offense_hits` is summed from the batting rows it is meant to anchor. Load it from
