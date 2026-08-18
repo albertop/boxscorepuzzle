@@ -333,10 +333,18 @@ def _next_step(
     An exact value beats a narrowed range: taking the bounded move while a plain subtraction is
     still available would credit the harder technique for work the easier one could have done.
     """
-    whole_system = system + global_equations
-    live, solvable = _scan_size(whole_system, values)
+    # ⚠️ **Two phases, and the order is the finding.** `constraints.py` says the global identity is
+    # held back until the simpler families are exhausted, and this function used to recombine the two
+    # sets on its first line — so a global move could be taken while a column sum or a row identity
+    # was still available. The board still reached the right numbers; the *recorded path* was not one
+    # a player would follow, and that path is where chain length, family usage and stall position all
+    # come from. A measurement-correctness defect rather than a stylistic one.
+    #
+    # `PA = Outs + R + LOB` is the identity §8 teaches last because nobody knows it. Crediting it for
+    # work a subtraction could have done overstates what the board demanded.
+    live, solvable = _scan_size(system + global_equations, values)
 
-    available = _propagation_moves(whole_system, values)
+    available = _propagation_moves(system, values) or _propagation_moves(system + global_equations, values)
     if available:
         cell, equation = available[0]
         leaned_on = frozenset(term.cell for term in equation.terms if term.cell != cell and term.cell in depths)
@@ -353,6 +361,9 @@ def _next_step(
             known_terms_combined=sum(1 for term in equation.terms if term.cell != cell and values[term.cell] != 0),
         )
 
+    # Bounding is admitted only after propagation has nothing left in *either* phase, and it narrows
+    # against the whole system: a range is not a family, so holding the global identity out of it
+    # would model a player who can bound with some relations and not others.
     bounded = _bounding_moves(shape, values)
     if bounded:
         cell, value = bounded[0]

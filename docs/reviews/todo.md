@@ -189,7 +189,7 @@ hard until it comes back.
 | P1-04 provenance fails open | closed — acceptance list, 0 games affected today |
 | P1-05 manufactured anchor | closed — three fields, 0.001% of the pool |
 | P1-06 no publication gate | closed — `certify_for_publication`, writers wired |
-| P2-01 global identity admission | **open, and the one with consequences** |
+| P2-01 global identity admission | closed — fixed, and **nothing moved** |
 | P2-02 stall attribution | open |
 | P2-03 documents disagree with code | open |
 | P2-04 non-atomic regeneration | open |
@@ -329,26 +329,56 @@ earlier measurement used it and they have to stay comparable.
 useful to build a client against than six of the same, not because those are difficulty tiers. Five
 was an example the operator gave, and nothing is labelled easy, medium or hard until the pack returns.
 
+### v02-P2-01 — the global identity was admitted before the simpler families were exhausted
+
+`constraints.py` says the global identity waits until the simpler families are spent, and `_next_step`
+recombined the two equation sets on its first line. So a `PA = Outs + R + LOB` move could be recorded
+while a column sum was still available. The board reached the right numbers; the **recorded path** was
+not one a player would follow, and that path is where chain length, family usage and stall position
+come from.
+
+**What I did.** Propagation runs over the non-global system first and only falls through to the whole
+system when that finds nothing. Bounding still narrows against everything, because a range is not a
+family and holding the global identity out of it would model a player who can bound with some
+relations and not others. Two tests: a simpler move is taken first when both are available, and the
+global identity is still reached when it is the only route — a rule that made it unreachable would be
+worse than the defect.
+
+### ⚠️ The five verdicts
+
+Measured on the same 96 boards, before and after, at a stall target of 8:
+
+| | Before | After |
+|---|---|---|
+| Stalls p50 | 8.0 | 8.0 |
+| Chain p50 | 25.0 | 25.0 |
+| Families, mean | 3.188 | 3.177 |
+| Stall position | 52% | 52% |
+
+**Nothing moved.** The families mean shifts by 0.011, which is one board in ninety-six using one
+fewer family — noise at this sample size and in the direction the fix predicts.
+
+1. **The ceiling at 10 — stands.** It was decided on family saturation at chain 11 against 8, and the
+   family count is unchanged to two decimal places.
+2. **The pitcher cap at 4 — stands.** This was the one to watch: it rested on cross-team 100% → 78%
+   and global 51% → 78%, exactly the distribution in question. The mean family count per board does
+   not move, so the distribution behind those figures does not either.
+3. **The gate at 25% — stands.** It never depended on the solution path; it is a property of the
+   board before any erasure.
+4. **`row_first` — stands.** Chosen on trivial-step share and blanks per chain, both unchanged.
+5. **The chain-versus-stall comparison — stands.** Both numbers are identical before and after, so
+   the finding that chain measures length rather than difficulty is untouched.
+
+**The whole body of measurement survives**, and that is worth stating rather than leaving implicit:
+the defect was real and its effect was not.
+
 ## Open, in the agreed order
 
-1. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
-   exhausted.
-
-   ⚠️ **This one owes a before-and-after on the same boards**, not new figures: stall counts, family
-   distribution, chain length, stall position. The recorded path is the source of all four, so if the
-   solver has been admitting the global identity too early, every measurement built on that path
-   inherits the error.
-
-   **Decisions that rest on those numbers and need re-examining if they move:** the ceiling at 10
-   (family saturation at 11 versus 8), the pitcher cap at 4 (cross-team 100% → 78%, global 51% → 78% —
-   *exactly* the distribution in question), the zero-density gate at 25%, the `row_first` ordering, and
-   the chain-versus-stall comparison itself. If nothing moves, say so plainly: that is a useful result
-   and it means the body of measurement stands.
-2. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
+1. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
    since the bounding step itself carries no identity.
-3. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
+2. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
    visible drift is the two-pitcher cap and the footnote line.
-4. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
+3. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
    the published set only on success. Never delete the last known-good set first.
 
 ## Void rather than confirming anything

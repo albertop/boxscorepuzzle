@@ -12,9 +12,16 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from boxscore_forge.boxscore import Direction
-from boxscore_forge.constraints import cell_values, cells_in_family, constrained_cells, shape_of
+from boxscore_forge.constraints import (
+    batting_cell,
+    cell_values,
+    cells_in_family,
+    constrained_cells,
+    shape_of,
+    team_footnote_cell,
+)
 from boxscore_forge.errors import ContradictionError
-from boxscore_forge.identities import Family
+from boxscore_forge.identities import FAMILY_OF, Family
 from boxscore_forge.solver import Technique, solve
 from tests.strategies import valid_directions
 
@@ -389,3 +396,40 @@ class TestContradiction:
 
         with pytest.raises(ContradictionError):
             solve(shape_of(cubs_at_braves_1968), values)
+
+
+class TestTheGlobalIdentityWaitsItsTurn:
+    """`PA = Outs + R + LOB` is admitted only when nothing simpler is available.
+
+    ⚠️ The solver used to recombine the global equations with the rest before propagating, so a global
+    move could be recorded while a column sum was still on the table. The numbers reached were right
+    and the *path* was not one a player would follow — and the path is where chain length, family
+    usage and stall position come from, so it was a measurement defect rather than a stylistic one.
+    """
+
+    def test_a_simpler_move_is_taken_first(self, cubs_at_braves_1968: Direction) -> None:
+        # Left-on-base and one batting cell blank together. The global identity could resolve LOB
+        # immediately; a column sum resolves the batting cell. The column sum must come first.
+        shape = shape_of(cubs_at_braves_1968)
+        values = cell_values(cubs_at_braves_1968)
+        blanks = {team_footnote_cell("left_on_base"), batting_cell(0, "hits")}
+        given = {name: value for name, value in values.items() if name not in blanks}
+
+        solution = solve(shape, given)
+
+        assert solution.is_complete
+        first = solution.deductions[0]
+        assert first.from_identity is not None
+        assert FAMILY_OF[first.from_identity] is not Family.GLOBAL_IDENTITY
+
+    def test_the_global_identity_is_still_reachable(self, cubs_at_braves_1968: Direction) -> None:
+        # Holding it back must not mean never using it: with only left-on-base unknown, it is the
+        # only route and the solver has to take it.
+        shape = shape_of(cubs_at_braves_1968)
+        values = cell_values(cubs_at_braves_1968)
+        given = {name: value for name, value in values.items() if name != team_footnote_cell("left_on_base")}
+
+        solution = solve(shape, given)
+
+        assert solution.is_complete
+        assert Family.GLOBAL_IDENTITY in solution.families_used
