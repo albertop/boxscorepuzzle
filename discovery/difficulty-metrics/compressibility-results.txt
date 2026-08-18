@@ -1,0 +1,5 @@
+120 directions, 5 restarts each, greedy maximal search
+decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 1980: 10, 1990: 10, 2000: 10, 2010: 10, 2020: 10}
+
+  [  1/120] SLN191310050 1913: 83/118 cells, chain 70, search 0.95, res 9, trivial 18%, col+cross+global+row, 22.2s
+  [  2/120] SLN191310040 1913: 84/118 cells, chain 70, search 0.95, res 9, trivial 18%, col+cross+global+row, 23.3s
