@@ -1,30 +1,4 @@
-+ UV=/c/Users/aperd/AppData/Local/Microsoft/WinGet/Packages/astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe/uv.exe
-+ cd C:/Users/aperd/Documents/DGLv2/apps/boxscorepuzzle/forge
-+ export PYTHONIOENCODING=utf-8
-+ PYTHONIOENCODING=utf-8
-+ for job in "../discovery/pool-at-4-pitchers/remeasure.py|../discovery/pool-at-4-pitchers/results.txt" "../discovery/verifier/rejection_rates.py|../discovery/verifier/results.txt" "../discovery/pitcher-cap/measure_pitching.py|../discovery/pitcher-cap/quality_results.txt"
-+ script=../discovery/pool-at-4-pitchers/remeasure.py
-+ out=../discovery/pool-at-4-pitchers/results.txt
-+ echo '=== running ../discovery/pool-at-4-pitchers/remeasure.py ==='
+parses: ../discovery/pool-at-4-pitchers/remeasure.py
+parses: ../discovery/verifier/rejection_rates.py
+parses: ../discovery/pitcher-cap/measure_pitching.py
 === running ../discovery/pool-at-4-pitchers/remeasure.py ===
-+ /c/Users/aperd/AppData/Local/Microsoft/WinGet/Packages/astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe/uv.exe run python -u ../discovery/pool-at-4-pitchers/remeasure.py
-+ echo '=== finished ../discovery/pool-at-4-pitchers/remeasure.py exit=0 ==='
-=== finished ../discovery/pool-at-4-pitchers/remeasure.py exit=0 ===
-+ for job in "../discovery/pool-at-4-pitchers/remeasure.py|../discovery/pool-at-4-pitchers/results.txt" "../discovery/verifier/rejection_rates.py|../discovery/verifier/results.txt" "../discovery/pitcher-cap/measure_pitching.py|../discovery/pitcher-cap/quality_results.txt"
-+ script=../discovery/verifier/rejection_rates.py
-+ out=../discovery/verifier/results.txt
-+ echo '=== running ../discovery/verifier/rejection_rates.py ==='
-=== running ../discovery/verifier/rejection_rates.py ===
-+ /c/Users/aperd/AppData/Local/Microsoft/WinGet/Packages/astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe/uv.exe run python -u ../discovery/verifier/rejection_rates.py
-+ echo '=== finished ../discovery/verifier/rejection_rates.py exit=1 ==='
-=== finished ../discovery/verifier/rejection_rates.py exit=1 ===
-+ for job in "../discovery/pool-at-4-pitchers/remeasure.py|../discovery/pool-at-4-pitchers/results.txt" "../discovery/verifier/rejection_rates.py|../discovery/verifier/results.txt" "../discovery/pitcher-cap/measure_pitching.py|../discovery/pitcher-cap/quality_results.txt"
-+ script=../discovery/pitcher-cap/measure_pitching.py
-+ out=../discovery/pitcher-cap/quality_results.txt
-+ echo '=== running ../discovery/pitcher-cap/measure_pitching.py ==='
-=== running ../discovery/pitcher-cap/measure_pitching.py ===
-+ /c/Users/aperd/AppData/Local/Microsoft/WinGet/Packages/astral-sh.uv_Microsoft.Winget.Source_8wekyb3d8bbwe/uv.exe run python -u ../discovery/pitcher-cap/measure_pitching.py
-+ echo '=== finished ../discovery/pitcher-cap/measure_pitching.py exit=0 ==='
-=== finished ../discovery/pitcher-cap/measure_pitching.py exit=0 ===
-+ echo 'ALL RE-MEASUREMENTS COMPLETE'
-ALL RE-MEASUREMENTS COMPLETE
