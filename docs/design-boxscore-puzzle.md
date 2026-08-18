@@ -2068,6 +2068,46 @@ of the four on every axis**: most cells erased for a given chain, most trivial s
 and it overshot its target (§31). Recorded here so the analogy does not get proposed again from the
 same intuition.
 
+### ⚠️ Two things called "the character axis", and only one of them is difficulty
+
+**Which families a board *contains* and which families *make the player think* are different, and
+this section spent weeks measuring the first while meaning the second.**
+
+The evidence is blunt. Attributing each stall to the identity that restarts propagation afterwards:
+
+| Stalls | What restarts them |
+|---|---|
+| 5 | column_sum 60%, row_identity 40% |
+| 8 | row_identity 54%, column_sum 46% |
+| 12 | row_identity 63%, column_sum 37% |
+
+**Neither cross-team nor the global identity ever restarts a stall.** Those are the two families that
+most distinguish boards — and the two the four-pitcher cap was decided on, at 100% → 78% and 51% →
+78%. They separate boards without being where the difficulty lives.
+
+*Same class of correction as chain-versus-stalls: not a missing measurement, but two things sharing a
+name.* The family set a board contains is a real property and a usable one for variety; it is simply
+not what makes a board hard.
+
+### 🔬 Candidate, not a task: selecting on the restart mix
+
+The mix **shifts with difficulty** — column sums dominate the easy end, the row identity the hard end.
+If the generator could favour boards where the row identity breaks most of the stalls, that would give
+**variety without touching difficulty**: two boards at eight stalls that open differently.
+
+That is what this section wanted from the character axis and never got, because it was selecting on
+families *contained* rather than on families that do the work.
+
+- **Why it is promising:** it sits exactly where the thinking happens, and the solver already reports
+  it, so testing costs nothing beyond a measurement run.
+- **Why it is unproven:** nobody has checked whether the mix is *selectable*. It may be a property of
+  the boxscore that erasure cannot steer, in which case the generator can report it and not aim at it.
+- **What would settle it:** erase the same board towards the same stall count under different
+  orderings and seeds, and see whether the restart mix moves. If it does not, the candidate is closed.
+
+**Not built.** Recorded so that someone reading in six months knows what was found and what was never
+tried.
+
 ### ✅ The week runs from chain 5 to chain 11 — decided
 
 > *⚠️ Was 5 → 13, and before that 5 → 20. Both earlier figures are kept below rather than restated,

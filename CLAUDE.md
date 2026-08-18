@@ -164,6 +164,12 @@ habit.
 malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
 the absence of a check reading as the presence of a passing one.
 
+**Never propose pausing, stopping for the day, continuing tomorrow, or deferring to a later session
+— in any form, including softened ones.** The operator decides when work stops; nobody else raises the
+question. A true technical fact about the work is welcome — "an incomplete publication gate looks like
+a gate and is not one" — but it is a reason to finish the thing, not a reason to postpone it. State
+the constraint, then do the work.
+
 **A defect noticed in passing gets written down before continuing.** Even when it is not fixed then,
 even when it seems small, even mid-investigation. The conversation is not a tracking system: a defect
 mentioned in prose and not recorded is a defect nobody will find again until a review finds it. This
@@ -344,7 +350,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 - **Exclude deduced event files.** They are reconstructions from partial information and will not balance.
 - Offensive and pitching stats are well proofed by Retrosheet. Defensive stats (PO, A) are not — and are not used by the board anyway.
-- The Chadwick Bureau person register resolves player identities for the progressive reveal.
+- The Chadwick Bureau person register resolves player identities for the final reveal (§7).
 - Chadwick tools are GPL; running them as CLI does not affect our licensing. Do not vendor their source.
 
 ### Pool quality filter (§5)
@@ -379,7 +385,7 @@ The VPS holds **five months of forward inventory** at all times; alert below thr
 
 ## Product rules that constrain implementation
 
-- **Progressive reveal (§7):** rows start labeled by position (C, 1B, 2B, SS...). On completing and validating a row, that player's name appears. Teams, date, and context at the end. Requires row-level validation. The name does not fit in the label column on mobile — render it elsewhere.
+- **No names during play (§7).** Rows are labelled by position throughout — `CF`, `SS`, `LF-1`, `LF-2` — and **the real boxscore is drawn complete at the end**, with names, teams and date. *Progressive reveal was dropped: knowing a name mid-solve helps nobody deduce anything and costs width.* Row-level validation stops being mandatory with it, since it existed only to know when to reveal.
 - **The share grid must never leak the solution or player names.**
 - **Tutorial is not skippable on first play (§8).** It teaches the identities, not baseball vocabulary.
 - **Everyone gets the same puzzle on the same date.** Never derive the day's puzzle from device-local state.

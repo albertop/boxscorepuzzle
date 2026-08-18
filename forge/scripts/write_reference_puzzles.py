@@ -121,6 +121,24 @@ def evidence_for(loaded: Loaded) -> Evidence:
     )
 
 
+def _publish(staging: Path) -> None:
+    """Swap the staged batch in, one atomic rename at a time.
+
+    ⚠️ **Replace first, delete afterwards.** `Path.replace` is an atomic rename within a filesystem, so
+    a reader sees either the old file or the new one and never a truncated one. Deleting the published
+    set first and then moving files in would leave a window with nothing published at all — the same
+    defect one step smaller than the one the staging directory fixes.
+    """
+    written = set()
+    for finished in staging.glob("*.json"):
+        finished.replace(OUT / finished.name)
+        written.add(finished.name)
+    for stale in OUT.glob("*.json"):
+        if stale.name not in written:
+            stale.unlink()
+    staging.rmdir()
+
+
 def main() -> None:
     secret = os.environ.get(SECRET_VARIABLE, "").encode() or FALLBACK_SECRET
     sample = load(4, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
@@ -195,12 +213,7 @@ def main() -> None:
         message = f"wrote {written} puzzles, wanted {len(TARGETS)} — published set left as it was"
         raise SystemExit(message)
 
-    # The batch is whole and every file certified from disk. Only now does the published set change.
-    for previous in OUT.glob("*.json"):
-        previous.unlink()
-    for finished in staging.glob("*.json"):
-        finished.replace(OUT / finished.name)
-    staging.rmdir()
+    _publish(staging)
     print(f"{written} puzzles in {OUT}, each read back and verified with the real secret")
 
 
