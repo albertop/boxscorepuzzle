@@ -24,7 +24,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final
 
-from boxscore_package.format import Package
+from boxscore_package.format import BATTING_COLUMNS, Package
+from boxscore_verify.expected_id import expected_puzzle_id
 from boxscore_verify.plausibility import faults, reveal_faults
 from boxscore_verify.verify import UNSIGNED, Unsigned, Verdict, verify
 
@@ -43,12 +44,31 @@ class Evidence:
 
     Every field is required. A default would let a writer publish by omission, which is exactly the
     failure this boundary exists to prevent.
+
+    ⚠️ **Evidence used to name no game.** It carried a source type, a deduced flag and two offensive
+    totals, so evidence from a *different* game with the same runs and hits satisfied the gate. The
+    package deliberately carries no game id (§7), and the identifier is the only thing that ties it to
+    one — so the game and the batting team are here, and the gate recomputes the identifier from them.
+
+    **Not every field it carries is independent, and saying which is the point.** The line score's
+    R/H/E come from the same query that fills the line score, so comparing them catches corruption
+    between loading and packaging and cannot catch a board that never happened. `official_at_bats` and
+    `official_left_on_base` come from `retroGameLogs`, a table the board is not built from, and those
+    two are the only correspondence in the strict sense.
     """
 
+    game_id: str
+    offense_team: str
     source_type: str
     is_deduced: bool
     official_hits: int
     official_runs: int
+    official_errors: int
+    official_defense_runs: int
+    official_defense_hits: int
+    official_defense_errors: int
+    official_at_bats: int | None
+    official_left_on_base: int | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +103,21 @@ def check_reveal_is_complete(package: Package, evidence: Evidence, secret: bytes
     return [f"broken reveal: {fault.what}" for fault in reveal_faults(package)]
 
 
+def check_evidence_is_about_this_package(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+    """Does the evidence describe *this* puzzle, or merely some puzzle?
+
+    Recomputed rather than compared to a value the producer supplies: an expected id handed over by
+    the same code that set the package's id would agree with itself by construction.
+    """
+    del secret
+    if not evidence.game_id or not evidence.offense_team:
+        return ["the evidence names no game, so nothing binds it to this package"]
+    expected = expected_puzzle_id(evidence.game_id, evidence.offense_team)
+    if expected != package.puzzle_id:
+        return [f"the evidence describes puzzle {expected}, this package is {package.puzzle_id}"]
+    return []
+
+
 def check_provenance(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
     """An accepted source, named rather than merely not excluded."""
     del package, secret
@@ -95,26 +130,53 @@ def check_provenance(package: Package, evidence: Evidence, secret: bytes | Unsig
 
 
 def check_independent_correspondence(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
-    """The board against a source that did not come from its own rows.
+    """The board against sources that did not come from its own rows.
 
-    Both totals used to be computed from the rows they were meant to anchor, so the identity checking
-    them could not fail. These come from the game tables.
+    Two kinds of comparison, and conflating them is how this check was weaker than it looked.
+
+    The **complete line score** is compared because it is signed and player-visible: a defensive run
+    total or an error column altered in transport is a false historical claim even though no identity
+    on the board would notice. But those values are loaded from the same query that fills the line
+    score, so this catches corruption between loading and packaging and *cannot* catch fabrication.
+
+    **At-bats and runners left on base come from the game log**, a table the board is not built from.
+    They are the only strict correspondence here, and their absence is a refusal rather than a pass:
+    1.5% of games have no game-log row, and a game that cannot be corroborated is discarded (§22),
+    never published on the strength of the checks that did run.
     """
     del secret
     board = package.solution or package.puzzle
+    score = board.line_score
     refusals: list[str] = []
-    if board.line_score.offense_hits != evidence.official_hits:
+    for what, on_the_board, official in (
+        ("hits", score.offense_hits, evidence.official_hits),
+        ("runs", score.offense_runs, evidence.official_runs),
+        ("errors", score.offense_errors, evidence.official_errors),
+        ("defensive runs", score.defense_runs, evidence.official_defense_runs),
+        ("defensive hits", score.defense_hits, evidence.official_defense_hits),
+        ("defensive errors", score.defense_errors, evidence.official_defense_errors),
+    ):
+        if on_the_board != official:
+            refusals.append(f"{what} disagree with the official total: {on_the_board} against {official}")
+
+    if evidence.official_at_bats is None or evidence.official_left_on_base is None:
+        refusals.append("the game log has no row for this game, so nothing independent corroborates the board")
+        return refusals
+    # Named rather than indexed. The column order is part of the format and stated in one place;
+    # a literal 1 here would be a second copy of it that nothing checks.
+    at_bats = board.batting_totals[BATTING_COLUMNS.index("at_bats")]
+    if at_bats is not None and at_bats != evidence.official_at_bats:
+        refusals.append(f"at-bats disagree with the game log: {at_bats} against {evidence.official_at_bats}")
+    if board.left_on_base is not None and board.left_on_base != evidence.official_left_on_base:
         refusals.append(
-            f"hits disagree with the official total: {board.line_score.offense_hits} against {evidence.official_hits}"
-        )
-    if board.line_score.offense_runs != evidence.official_runs:
-        refusals.append(
-            f"runs disagree with the official total: {board.line_score.offense_runs} against {evidence.official_runs}"
+            f"runners left on base disagree with the game log: "
+            f"{board.left_on_base} against {evidence.official_left_on_base}"
         )
     return refusals
 
 
 CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, bytes | Unsigned], list[str]]]] = {
+    "evidence_is_about_this_package": check_evidence_is_about_this_package,
     "mathematics": check_mathematics,
     "board_is_possible": check_board_is_possible,
     "reveal_is_complete": check_reveal_is_complete,

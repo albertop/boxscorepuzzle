@@ -108,6 +108,20 @@ class Loaded:
     official_hits: int = 0
     official_runs: int = 0
 
+    is_deduced: bool = False
+    """The provenance row's own flag. §32 excludes deduced event files, and the writer used to derive
+    this from the source type's spelling — two places encoding one rule, which is this project's
+    named failure shape."""
+
+    official_at_bats: int | None = None
+    official_left_on_base: int | None = None
+    """From `retroGameLogs`, which is neither of the tables the board is built from.
+
+    Everything else the gate can compare comes from `retroGamesReg`, the same query that fills the
+    line score, so comparing those checks a value against itself — it catches corruption between
+    loading and packaging and cannot catch a board that never happened. These two can. `None` means
+    the game log has no row, which is 1.5% of games and concentrated in the 1930s to 1960s."""
+
     batter_rbi: tuple[int, ...] = ()
     """Runs batted in and home runs, per row and in lineup order, carried alongside `direction`
     rather than inside it.
@@ -272,7 +286,19 @@ def load(
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.VisRunsScored ELSE l.HomeRunsScore END AS defense_runs,
            -- Evidence for the publication gate. It has no database and must not grow one (§22), so
            -- the producer carries what it knows and the gate refuses when it is missing.
-           (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS source_type
+           (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS source_type,
+           -- ⚠️ The provenance row's own flag, not a guess from the source name. The writer used to
+           -- rebuild it as source_type LIKE 'ED%', which is a second copy of a rule the schema
+           -- already states, and a deduced record filed under an accepted source type would have
+           -- passed the publication gate.
+           (SELECT TOP 1 p.is_deduced FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS is_deduced,
+           -- ⚠️ retroGameLogs is a different table from both retroDailyReg and retroGamesReg, which
+           -- is the whole point: at-bats and runners left on base can be compared against the board
+           -- without the comparison being a value checked against itself.
+           (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeAB ELSE l.VisAB END
+            FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_at_bats,
+           (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
+            FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
     FROM dbo.retroGamesReg g
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
@@ -361,6 +387,9 @@ def load(
             offense_runs,
             defense_runs,
             source_type,
+            is_deduced,
+            official_at_bats,
+            official_left_on_base,
         ) in candidates:
             batting_rows = connection.cursor().execute(rows_query, game_id, offense).fetchall()
             pitching_rows = connection.cursor().execute(pitch_query, game_id, defense).fetchall()
@@ -430,6 +459,9 @@ def load(
                     source_type or "",
                     offense_hits,
                     offense_runs,
+                    bool(is_deduced),
+                    official_at_bats,
+                    official_left_on_base,
                     tuple(r[14] for r in batting_rows),
                     tuple(r[15] for r in batting_rows),
                     tuple(p[9] for p in pitching_rows),

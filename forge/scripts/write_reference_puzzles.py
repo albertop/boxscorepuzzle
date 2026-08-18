@@ -112,12 +112,25 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
 
 
 def evidence_for(loaded: Loaded) -> Evidence:
-    """What the producer knows and the package cannot say for itself."""
+    """What the producer knows and the package cannot say for itself.
+
+    ⚠️ **`is_deduced` is the provenance row's own value now.** It used to be rebuilt here as
+    `source_type.startswith("ED")`, which is a second copy of a rule the database already states — so a
+    deduced record filed under an accepted source type would have passed §32's exclusion.
+    """
     return Evidence(
+        game_id=loaded.game_id,
+        offense_team=loaded.offense_team,
         source_type=loaded.source_type,
-        is_deduced=loaded.source_type.startswith("ED"),
+        is_deduced=loaded.is_deduced,
         official_hits=loaded.official_hits,
         official_runs=loaded.official_runs,
+        official_errors=loaded.direction.line_score.offense_errors,
+        official_defense_runs=loaded.direction.line_score.defense_runs,
+        official_defense_hits=loaded.direction.line_score.defense_hits,
+        official_defense_errors=loaded.direction.line_score.defense_errors,
+        official_at_bats=loaded.official_at_bats,
+        official_left_on_base=loaded.official_left_on_base,
     )
 
 

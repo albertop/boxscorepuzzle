@@ -8,9 +8,10 @@ registry, and the list still says everything is covered. This walks the modules 
 
 import ast
 import inspect
+from dataclasses import replace
 from pathlib import Path
 
-from boxscore_package.format import Board, Package
+from boxscore_package.format import BATTING_COLUMNS, Board, Package
 from boxscore_verify import certify as certification
 from boxscore_verify import plausibility
 from boxscore_verify.certify import (
@@ -19,16 +20,30 @@ from boxscore_verify.certify import (
     Evidence,
     certify_for_publication,
 )
+from boxscore_verify.expected_id import expected_puzzle_id
 
 LOADER = Path(__file__).resolve().parents[3] / "discovery" / "difficulty-metrics" / "measure.py"
 
 
+GAME = "SLN19680808"
+OFFENSE = "CHN"
+
+
 def good_evidence(board: Board) -> Evidence:
+    """Evidence that describes this board and this game, with every field it can be checked on."""
     return Evidence(
+        game_id=GAME,
+        offense_team=OFFENSE,
         source_type="EVN",
         is_deduced=False,
         official_hits=board.line_score.offense_hits,
         official_runs=board.line_score.offense_runs,
+        official_errors=board.line_score.offense_errors,
+        official_defense_runs=board.line_score.defense_runs,
+        official_defense_hits=board.line_score.defense_hits,
+        official_defense_errors=board.line_score.defense_errors,
+        official_at_bats=board.batting_totals[BATTING_COLUMNS.index("at_bats")],
+        official_left_on_base=board.left_on_base,
     )
 
 
@@ -36,7 +51,9 @@ def package_for(board: Board) -> Package:
     from boxscore_package.format import Reveal  # noqa: PLC0415
 
     return Package(
-        puzzle_id="certify",
+        # The identifier the evidence implies. It used to be an arbitrary string, which is exactly the
+        # gap: nothing tied a package to the game its evidence described.
+        puzzle_id=expected_puzzle_id(GAME, OFFENSE),
         puzzle=board,
         solution=board,
         labels=tuple("C" for _ in board.batting),
@@ -95,36 +112,21 @@ class TestItFailsClosed:
         assert "no evidence" in result.refusals[0]
 
     def test_a_deduced_game_is_refused(self, board: Board) -> None:
-        evidence = Evidence(
-            source_type="EDN",
-            is_deduced=True,
-            official_hits=board.line_score.offense_hits,
-            official_runs=board.line_score.offense_runs,
-        )
+        evidence = replace(good_evidence(board), source_type="EDN", is_deduced=True)
 
         result = certify_for_publication(package_for(board), evidence=evidence, secret=UNSIGNED)
 
         assert any("deduced" in refusal for refusal in result.refusals)
 
     def test_an_unaccepted_source_is_refused(self, board: Board) -> None:
-        evidence = Evidence(
-            source_type="EVR",
-            is_deduced=False,
-            official_hits=board.line_score.offense_hits,
-            official_runs=board.line_score.offense_runs,
-        )
+        evidence = replace(good_evidence(board), source_type="EVR")
 
         result = certify_for_publication(package_for(board), evidence=evidence, secret=UNSIGNED)
 
         assert any("EVR" in refusal for refusal in result.refusals)
 
     def test_disagreeing_with_the_official_total_is_refused(self, board: Board) -> None:
-        evidence = Evidence(
-            source_type="EVN",
-            is_deduced=False,
-            official_hits=board.line_score.offense_hits + 1,
-            official_runs=board.line_score.offense_runs,
-        )
+        evidence = replace(good_evidence(board), official_hits=board.line_score.offense_hits + 1)
 
         result = certify_for_publication(package_for(board), evidence=evidence, secret=UNSIGNED)
 
@@ -171,3 +173,91 @@ class TestTheDuplicatedSourceListAgrees:
         )
 
         assert loader_sources == certification.ACCEPTED_SOURCES
+
+
+class TestEvidenceMustBeAboutThisPackage:
+    """The gap the gate had: `Evidence` was an unbound assertion by the producer that built the board.
+
+    Nothing in it named a game, and the published package carries no game id by design (§7), so
+    evidence from a different game satisfied every check as long as the totals happened to match.
+    """
+
+    def test_evidence_for_another_game_is_refused(self, board: Board) -> None:
+        # The two games agree on every total the gate used to compare. Only the identifier separates
+        # them, which is why the identifier is what the gate recomputes.
+        elsewhere = replace(good_evidence(board), game_id="BOS19680808")
+
+        result = certify_for_publication(package_for(board), evidence=elsewhere, secret=UNSIGNED)
+
+        assert not result.publishable
+        assert any("describes puzzle" in refusal for refusal in result.refusals)
+
+    def test_evidence_for_the_other_direction_of_the_same_game_is_refused(self, board: Board) -> None:
+        # A game yields up to two puzzles and they are different puzzles. The batting team is part of
+        # the identifier for exactly this reason.
+        other_way = replace(good_evidence(board), offense_team="SLN")
+
+        result = certify_for_publication(package_for(board), evidence=other_way, secret=UNSIGNED)
+
+        assert any("describes puzzle" in refusal for refusal in result.refusals)
+
+    def test_evidence_naming_no_game_is_refused(self, board: Board) -> None:
+        # Fail closed rather than raise. An empty game id would hash to a stable value and bind
+        # nothing, so it is refused before it is hashed.
+        nameless = replace(good_evidence(board), game_id="")
+
+        result = certify_for_publication(package_for(board), evidence=nameless, secret=UNSIGNED)
+
+        assert any("names no game" in refusal for refusal in result.refusals)
+
+
+class TestTheCompleteLineScoreIsChecked:
+    """Every player-visible R/H/E field, each on its own.
+
+    The gate compared two of the six. The other four are signed and shown, so an alteration in any of
+    them is a false historical claim that no identity on the board would notice - the defensive hit
+    total in particular takes part in nothing.
+    """
+
+    def test_each_line_score_field_is_checked_independently(self, board: Board) -> None:
+        fields = (
+            "official_hits",
+            "official_runs",
+            "official_errors",
+            "official_defense_runs",
+            "official_defense_hits",
+            "official_defense_errors",
+        )
+        for field in fields:
+            altered = replace(good_evidence(board), **{field: getattr(good_evidence(board), field) + 1})
+
+            result = certify_for_publication(package_for(board), evidence=altered, secret=UNSIGNED)
+
+            assert not result.publishable, f"{field} was not checked"
+
+    def test_at_bats_are_checked_against_the_game_log(self, board: Board) -> None:
+        # The only strict correspondence the gate has: the game log is neither of the tables the
+        # board is built from. Everything else compares a value against the query that produced it.
+        wrong = replace(good_evidence(board), official_at_bats=good_evidence(board).official_at_bats + 1)
+
+        result = certify_for_publication(package_for(board), evidence=wrong, secret=UNSIGNED)
+
+        assert any("at-bats disagree with the game log" in refusal for refusal in result.refusals)
+
+    def test_runners_left_on_base_are_checked_against_the_game_log(self, board: Board) -> None:
+        wrong = replace(good_evidence(board), official_left_on_base=(board.left_on_base or 0) + 1)
+
+        result = certify_for_publication(package_for(board), evidence=wrong, secret=UNSIGNED)
+
+        assert any("left on base disagree" in refusal for refusal in result.refusals)
+
+    def test_a_game_with_no_log_row_is_refused_rather_than_waved_through(self, board: Board) -> None:
+        # ⚠️ Absence is a refusal. 1.5% of games have no game-log row, concentrated in the 1930s to
+        # 1960s, and a game nothing independent corroborates is discarded rather than published on
+        # the strength of the checks that happened to run.
+        uncorroborated = replace(good_evidence(board), official_at_bats=None, official_left_on_base=None)
+
+        result = certify_for_publication(package_for(board), evidence=uncorroborated, secret=UNSIGNED)
+
+        assert not result.publishable
+        assert any("nothing independent corroborates" in refusal for refusal in result.refusals)
