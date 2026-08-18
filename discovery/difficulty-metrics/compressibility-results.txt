@@ -63,3 +63,10 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 60/120] BOS196408270 1964: 90/136 cells, chain 80, search 0.96, res 9, trivial 11%, col+cross+global+row, 50.1s
   [ 61/120] HOU197410020 1974: 115/166 cells, chain 106, search 0.96, res 12, trivial 7%, col+cross+global+row, 86.5s
   [ 62/120] ATL197408180 1974: 77/120 cells, chain 68, search 0.96, res 8, trivial 13%, col+cross+global+row, 28.4s
+  [ 63/120] ATL197408140 1974: 105/138 cells, chain 93, search 0.96, res 11, trivial 14%, col+cross+global+row, 53.4s
+  [ 64/120] ATL197408200 1974: 100/144 cells, chain 90, search 0.96, res 11, trivial 11%, col+cross+global+row, 52.1s
+  [ 65/120] ATL197408210 1974: 113/154 cells, chain 102, search 0.96, res 12, trivial 8%, col+cross+global+row, 74.4s
+  [ 66/120] ATL197408160 1974: 98/138 cells, chain 87, search 0.96, res 11, trivial 15%, col+cross+global+row, 43.9s
+  [ 67/120] ATL197408130 1974: 108/144 cells, chain 100, search 0.96, res 11, trivial 10%, col+cross+global+row, 44.6s
+  [ 68/120] ATL197408190 1974: 97/156 cells, chain 88, search 0.96, res 11, trivial 8%, col+cross+global+row, 47.7s
+  [ 69/120] ATL197408180 1974: 115/148 cells, chain 103, search 0.96, res 12, trivial 13%, col+cross+global+row, 47.7s
