@@ -256,11 +256,38 @@ it looks identical from the outside.
 **Cost: 2 directions in 397,142 — 0.001%**, both in the 2020s. Scattered rather than clustered, so it
 is data noise rather than a loader problem, and the pool does not move.
 
+### v02-P1-06 — the publication path called `verify()` and nothing else
+
+`verify()` answers a mathematical question: does the board balance, is the completion unique, is it
+reachable without guessing, does the published half match its source. All four can be true of a board
+that could not have happened — this package's own test suite holds one that passes every layer and is
+not a baseball game. The checks for that existed and the publication path never called them.
+
+**What I did.** `boxscore_verify.certify.certify_for_publication()` composes five checks: the four
+§22 layers plus the signature, board plausibility, reveal plausibility, provenance, and correspondence
+to an independent source. It **fails closed** — a check that cannot run is a refusal, never a pass —
+and unlike `verify()` it does not stop at the first refusal, because a writer discarding a candidate
+wants everything wrong with it rather than the first thing.
+
+**Evidence is required, not optional.** Provenance and independent correspondence are facts about
+where a game came from, and §22 forbids the verifier growing a database to learn them. The producer
+supplies them; **omitting them is a refusal**, so a writer cannot obtain publication by not looking.
+
+**The test discovers the checks rather than listing them**, which is what the review asked for: it
+walks the module for `check_*` functions and asserts each is in the registry, and walks the
+plausibility module for public `*_faults` and asserts the gate calls each. Adding a check without
+wiring it in fails on its own. It also asserts the two copies of the accepted-source list agree —
+they exist twice because §22 forbids the verifier importing from the generator, and two copies of a
+rule drift.
+
+It caught one thing while being written: the discovery originally swept private helpers too, which
+would have made the gate depend on how plausibility is implemented rather than on what it offers.
+
+**Still open on this item:** the writers do not call it yet. `write_reference_puzzles.py` still gates
+on `verify()` plus a reveal check, which is the subset the finding is about.
+
 ## Open, in the agreed order
 
-4. **v02-P1-06** — build `certify_for_publication()`: package verification, board plausibility, reveal
-   plausibility, provenance completeness, independent-source correspondence. Every writer calls it.
-   With a test asserting it invokes every implemented check, so adding one without wiring it in fails.
 5. **v02-P1-02** — migrate the writers to `target_stalls`; chain becomes descriptive telemetry.
 6. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
    exhausted.
