@@ -432,6 +432,25 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## Noticed in passing
+
+### `extend-include` claims discovery is linted and nothing lints it
+
+`forge/pyproject.toml` adds `../discovery/**/*.py` to ruff's file patterns, with a comment saying the
+duplicate `audit()` lived outside the lint scope and the rule that catches it could not see the file.
+The pattern makes discovery *lintable*; it does not put it in any command's argument list, and there is
+no CI workflow yet. Run explicitly, `ruff check ../discovery/` reports 597 errors — 403 of them `T201`,
+because a discovery script's interface *is* printing and the `per-file-ignores` entry that exempts
+`scripts/*.py` was never extended to it.
+
+So the config reads as a guarantee and is not one, which is this project's own failure shape: two places
+that should agree, and nothing checking. **`F811` genuinely does fire** — that was proved against a
+deliberate duplicate — but it fires only when someone remembers to point ruff at the directory.
+
+**Not fixed here.** The fix is a `per-file-ignores` entry for `../discovery/**` covering `T201`, `E402`
+(the `sys.path` preamble every script needs) and `S311`, and then a lint command that names both trees —
+which belongs with the CI workflow, and CI does not exist yet. Recorded so it is not rediscovered.
+
 ## What is actually left
 
 Not review findings — these are the things the repairs unblocked.
