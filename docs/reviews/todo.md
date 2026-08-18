@@ -437,17 +437,40 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
 Seven findings, every one checked against the code rather than against the report. **No no-go was
 declared, and one is aimed at a measurement that was running while the review was read.**
 
-| Finding | Verdict | What was confirmed |
-|---|---|---|
-| P1-01 evidence is not bound to a game | real | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
-| P1-02 three erasable definitions | real | one is stale, one **duplicates every footnote cell** |
-| P2-01 global identity still partial | real | two docstrings in one call chain state the opposite rule |
-| P2-02 duplicate staged puzzle | real | `seen` is built after both entries are appended |
-| P2-03 envelope accepts malformed values | real | `schema: true` passes, because `True == 1` |
-| P2-04 HMAC lets the server forge | real | symmetric key, asymmetric architecture |
-| P2-05 the RBI/HR run is not paired | real | one seed, and zero density counts the grid only |
+| Finding | Verdict | State | What was confirmed |
+|---|---|---|---|
+| P1-02 three erasable definitions | real | **closed** | one stale, one duplicating every footnote cell |
+| P2-01 global identity still partial | real | *in repair* | two docstrings in one call chain state the opposite rule |
+| P1-01 evidence is not bound to a game | real | open | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
+| P2-02 duplicate staged puzzle | real | open | `seen` is built after both entries are appended |
+| P2-03 envelope accepts malformed values | real | open | `schema: true` passes, because `True == 1` |
+| P2-04 HMAC lets the server forge | real | open | symmetric key, asymmetric architecture |
+| P2-05 the RBI/HR run is not paired | real | open | one seed, and zero density counts the grid only |
 
-### v03-P1-02 — `erasable()` already includes the footnotes, and one instrument adds them again
+**The order is the operator's:** P1-02 first because it invalidates evidence everything else is measured
+on top of, then P2-01 with the before-and-after redone, then P1-01, and P2-05 when the re-run comes.
+
+### v03-P1-02 — closed
+
+All three definitions are gone; every instrument consumes `boxscore_forge.erasure.erasable()`.
+
+**The failure form now fails on its own.** All three orderings reject a candidate list naming a cell
+twice, with a test per ordering that a repeat raises *and* that the canonical list is accepted — a
+guard that rejects everything is not a guard. A third test states that the canonical list carries the
+footnote cells, so no instrument has to re-derive the fact that caused this.
+
+**Wider than the review named.** The grid-only definition was also feeding `compressibility.py`, which
+is §5's viability constraint. That ceiling was measured over a smaller board than production erases,
+so the compressibility numbers and the +0.79 correlation with zero density are both measured low.
+
+**And the repointing was verified by compiling and walking the AST, not by reading the diff.** The
+rename left three uses of `erasable` as a list value in `compressibility.py` — it compiles cleanly and
+dies at runtime on `zip` over a function. Same shape as the `sed` that renamed a dataclass field.
+
+**Still owed:** regenerating everything measured on the old trajectory — the stall ceiling, the 100%
+coverage with footnotes open, and compressibility. Queued behind the runs in flight.
+
+### v03-P1-02 — what it was: `erasable()` already includes the footnotes, and one instrument adds them again
 
 `stall-targeted/measure.py` builds its candidate list as `list(erasable(direction))` plus every
 footnote cell, and `erasable()` has carried those since the v02 round. **Every footnote cell is in the
