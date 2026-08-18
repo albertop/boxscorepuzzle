@@ -30,7 +30,10 @@
   /* The nine innings are one thing and R/H/E are another. Without a rule the line score reads as
      twelve equivalent columns. */
   #linescore .summary { border-left: 2px solid #999; }
-  #linescore tr.ours { background: #eef4ff; }
+  /* No tint on the batting team's row. It is not that section's property: its runs and hits are what
+     the batting section reconciles *and* what the pitching section conceded, which is the object the
+     cross-team family passes through. Marking it as belonging to one section works against the
+     family the team-named section headers exist to support. */
 
   #footnotes { flex: 0 0 auto; font-size: 11px; padding: 3px 6px; border-bottom: 1px solid #ccc; }
 
@@ -82,465 +85,14 @@
 <script>
 const BOARDS = [
  {
-  "id": "BAL199404260",
-  "season": 1994,
-  "note": "widest \u2014 5 of 6 columns carry a two-digit value",
-  "labels": [
-   "P",
-   "CF",
-   "RF",
-   "1B",
-   "SS",
-   "C",
-   "DH",
-   "3B",
-   "2B",
-   "LF"
-  ],
-  "offenseIsHome": true,
-  "batting": [
-   [
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    5,
-    5,
-    4,
-    4,
-    0,
-    1
-   ],
-   [
-    5,
-    4,
-    1,
-    1,
-    0,
-    0
-   ],
-   [
-    5,
-    4,
-    2,
-    1,
-    1,
-    2
-   ],
-   [
-    5,
-    3,
-    2,
-    0,
-    2,
-    1
-   ],
-   [
-    4,
-    3,
-    1,
-    2,
-    1,
-    0
-   ],
-   [
-    4,
-    3,
-    0,
-    0,
-    1,
-    3
-   ],
-   [
-    4,
-    3,
-    0,
-    0,
-    1,
-    2
-   ],
-   [
-    4,
-    4,
-    0,
-    2,
-    0,
-    1
-   ],
-   [
-    4,
-    4,
-    0,
-    0,
-    0,
-    1
-   ]
-  ],
-  "battingTotals": [
-   40,
-   33,
-   10,
-   10,
-   6,
-   11
-  ],
-  "pitching": [
-   [
-    "5.0",
-    7,
-    7,
-    4,
-    4,
-    7
-   ],
-   [
-    "2.1",
-    1,
-    1,
-    1,
-    1,
-    3
-   ],
-   [
-    "0.2",
-    2,
-    2,
-    2,
-    1,
-    1
-   ]
-  ],
-  "pitchingTotals": [
-   "8.0",
-   10,
-   10,
-   7,
-   6,
-   11
-  ],
-  "lineScore": {
-   "offense": [
-    4,
-    2,
-    0,
-    1,
-    0,
-    3,
-    0,
-    0
-   ],
-   "defense": [
-    0,
-    1,
-    0,
-    3,
-    0,
-    0,
-    0,
-    0,
-    0
-   ],
-   "offenseRHE": [
-    10,
-    10,
-    1
-   ],
-   "defenseRHE": [
-    4,
-    3,
-    1
-   ]
-  },
-  "footnotes": [
-   "SH: RF",
-   "LOB: 6"
-  ],
-  "names": [
-   {
-    "first": "Arthur",
-    "last": "Rhodes"
-   },
-   {
-    "first": "Brady",
-    "last": "Anderson"
-   },
-   {
-    "first": "Mark",
-    "last": "McLemore"
-   },
-   {
-    "first": "Rafael",
-    "last": "Palmeiro"
-   },
-   {
-    "first": "Cal",
-    "last": "Ripken"
-   },
-   {
-    "first": "Chris",
-    "last": "Hoiles"
-   },
-   {
-    "first": "Lonnie",
-    "last": "Smith"
-   },
-   {
-    "first": "Leo",
-    "last": "G\u00f3mez"
-   },
-   {
-    "first": "Tim",
-    "last": "Hulett"
-   },
-   {
-    "first": "Jack",
-    "last": "Voigt"
-   }
-  ],
-  "revealed": {
-   "0": "Arthur Rhodes",
-   "1": "Brady Anderson",
-   "2": "Mark McLemore",
-   "3": "Rafael Palmeiro",
-   "4": "Cal Ripken",
-   "5": "Chris Hoiles",
-   "6": "Lonnie Smith",
-   "7": "Leo G\u00f3mez",
-   "8": "Tim Hulett",
-   "9": "Jack Voigt"
-  }
- },
- {
-  "id": "SLN191310050",
-  "season": 1913,
-  "note": "ten batters, the tallest roster the caps allow",
-  "labels": [
-   "2B",
-   "LF",
-   "3B",
-   "CF",
-   "1B",
-   "RF",
-   "SS",
-   "C",
-   "P",
-   "P"
-  ],
-  "offenseIsHome": true,
-  "batting": [
-   [
-    4,
-    4,
-    1,
-    1,
-    0,
-    1
-   ],
-   [
-    4,
-    4,
-    1,
-    2,
-    0,
-    1
-   ],
-   [
-    4,
-    4,
-    0,
-    1,
-    0,
-    2
-   ],
-   [
-    4,
-    4,
-    1,
-    3,
-    0,
-    0
-   ],
-   [
-    3,
-    3,
-    1,
-    1,
-    0,
-    1
-   ],
-   [
-    3,
-    2,
-    0,
-    1,
-    0,
-    1
-   ],
-   [
-    3,
-    3,
-    0,
-    1,
-    0,
-    0
-   ],
-   [
-    3,
-    2,
-    0,
-    0,
-    0,
-    1
-   ],
-   [
-    2,
-    2,
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    1,
-    1,
-    0,
-    0,
-    0,
-    1
-   ]
-  ],
-  "battingTotals": [
-   31,
-   29,
-   4,
-   10,
-   0,
-   8
-  ],
-  "pitching": [
-   [
-    "8.0",
-    10,
-    4,
-    4,
-    0,
-    8
-   ]
-  ],
-  "pitchingTotals": [
-   "8.0",
-   10,
-   4,
-   4,
-   0,
-   8
-  ],
-  "lineScore": {
-   "offense": [
-    3,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0
-   ],
-   "defense": [
-    0,
-    0,
-    0,
-    0,
-    1,
-    0,
-    0,
-    0,
-    0
-   ],
-   "offenseRHE": [
-    4,
-    10,
-    1
-   ],
-   "defenseRHE": [
-    1,
-    8,
-    0
-   ]
-  },
-  "footnotes": [
-   "SF: C",
-   "SH: RF",
-   "LOB: 3"
-  ],
-  "names": [
-   {
-    "first": "Miller",
-    "last": "Huggins"
-   },
-   {
-    "first": "Lee",
-    "last": "Magee"
-   },
-   {
-    "first": "Zinn",
-    "last": "Beck"
-   },
-   {
-    "first": "Rebel",
-    "last": "Oakes"
-   },
-   {
-    "first": "Ed",
-    "last": "Konetchy"
-   },
-   {
-    "first": "George",
-    "last": "Whitted"
-   },
-   {
-    "first": "Charley",
-    "last": "O'Leary"
-   },
-   {
-    "first": "Ivey",
-    "last": "Wingo"
-   },
-   {
-    "first": "Bob",
-    "last": "Harmon"
-   },
-   {
-    "first": "Bill",
-    "last": "Doak"
-   }
-  ],
-  "revealed": {
-   "0": "Miller Huggins",
-   "1": "Lee Magee",
-   "2": "Zinn Beck",
-   "3": "Rebel Oakes",
-   "4": "Ed Konetchy",
-   "5": "George Whitted",
-   "6": "Charley O'Leary",
-   "7": "Ivey Wingo",
-   "8": "Bob Harmon",
-   "9": "Bill Doak"
-  }
- },
- {
   "id": "SLN191310040",
   "season": 1913,
-  "note": "carries a live footnote",
+  "note": "widest \u2014 4 of 6 columns carry a two-digit value",
   "labels": [
    "2B",
    "LF",
-   "3B",
-   "3B",
+   "3B-1",
+   "3B-2",
    "CF",
    "1B",
    "RF",
@@ -695,6 +247,9 @@ const BOARDS = [
    "SH: LF, RF",
    "LOB: 6"
   ],
+  "pitcherLabels": [
+   "SP"
+  ],
   "names": [
    {
     "first": "Miller",
@@ -751,7 +306,457 @@ const BOARDS = [
   }
  },
  {
-  "id": "WS1191304220",
+  "id": "SLN191310050",
+  "season": 1913,
+  "note": "ten batters, the tallest roster the caps allow",
+  "labels": [
+   "2B",
+   "LF",
+   "3B",
+   "CF",
+   "1B",
+   "RF",
+   "SS",
+   "C",
+   "P-1",
+   "P-2"
+  ],
+  "offenseIsHome": true,
+  "batting": [
+   [
+    4,
+    4,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    1,
+    2,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    0,
+    1,
+    0,
+    2
+   ],
+   [
+    4,
+    4,
+    1,
+    3,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    3,
+    2,
+    0,
+    1,
+    0,
+    1
+   ],
+   [
+    3,
+    3,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    3,
+    2,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
+    1
+   ]
+  ],
+  "battingTotals": [
+   31,
+   29,
+   4,
+   10,
+   0,
+   8
+  ],
+  "pitching": [
+   [
+    "8.0",
+    10,
+    4,
+    4,
+    0,
+    8
+   ]
+  ],
+  "pitchingTotals": [
+   "8.0",
+   10,
+   4,
+   4,
+   0,
+   8
+  ],
+  "lineScore": {
+   "offense": [
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "defense": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "offenseRHE": [
+    4,
+    10,
+    1
+   ],
+   "defenseRHE": [
+    1,
+    8,
+    0
+   ]
+  },
+  "footnotes": [
+   "SF: C",
+   "SH: RF",
+   "LOB: 3"
+  ],
+  "pitcherLabels": [
+   "SP"
+  ],
+  "names": [
+   {
+    "first": "Miller",
+    "last": "Huggins"
+   },
+   {
+    "first": "Lee",
+    "last": "Magee"
+   },
+   {
+    "first": "Zinn",
+    "last": "Beck"
+   },
+   {
+    "first": "Rebel",
+    "last": "Oakes"
+   },
+   {
+    "first": "Ed",
+    "last": "Konetchy"
+   },
+   {
+    "first": "George",
+    "last": "Whitted"
+   },
+   {
+    "first": "Charley",
+    "last": "O'Leary"
+   },
+   {
+    "first": "Ivey",
+    "last": "Wingo"
+   },
+   {
+    "first": "Bob",
+    "last": "Harmon"
+   },
+   {
+    "first": "Bill",
+    "last": "Doak"
+   }
+  ],
+  "revealed": {
+   "0": "Miller Huggins",
+   "1": "Lee Magee",
+   "2": "Zinn Beck",
+   "3": "Rebel Oakes",
+   "4": "Ed Konetchy",
+   "5": "George Whitted",
+   "6": "Charley O'Leary",
+   "7": "Ivey Wingo",
+   "8": "Bob Harmon",
+   "9": "Bill Doak"
+  }
+ },
+ {
+  "id": "SLN191310050",
+  "season": 1913,
+  "note": "carries a live footnote",
+  "labels": [
+   "LF",
+   "RF",
+   "2B",
+   "CF",
+   "1B",
+   "3B",
+   "SS",
+   "C",
+   "P",
+   "PH"
+  ],
+  "offenseIsHome": false,
+  "batting": [
+   [
+    5,
+    2,
+    0,
+    0,
+    3,
+    1
+   ],
+   [
+    5,
+    5,
+    0,
+    1,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    0,
+    2,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    4,
+    3,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
+    2,
+    0,
+    1
+   ],
+   [
+    3,
+    2,
+    0,
+    1,
+    1,
+    0
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "battingTotals": [
+   38,
+   33,
+   1,
+   8,
+   4,
+   5
+  ],
+  "pitching": [
+   [
+    "6.0",
+    4,
+    1,
+    1,
+    2,
+    0
+   ],
+   [
+    "3.0",
+    4,
+    0,
+    0,
+    2,
+    5
+   ]
+  ],
+  "pitchingTotals": [
+   "9.0",
+   8,
+   1,
+   1,
+   4,
+   5
+  ],
+  "lineScore": {
+   "offense": [
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   "defense": [
+    3,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0
+   ],
+   "offenseRHE": [
+    1,
+    8,
+    0
+   ],
+   "defenseRHE": [
+    4,
+    10,
+    1
+   ]
+  },
+  "footnotes": [
+   "HBP: SS",
+   "LOB: 10"
+  ],
+  "pitcherLabels": [
+   "SP",
+   "RP-1"
+  ],
+  "names": [
+   {
+    "first": "Bob",
+    "last": "Bescher"
+   },
+   {
+    "first": "Johnny",
+    "last": "Bates"
+   },
+   {
+    "first": "Heinie",
+    "last": "Groh"
+   },
+   {
+    "first": "Al",
+    "last": "Wickland"
+   },
+   {
+    "first": "Armando",
+    "last": "Marsans"
+   },
+   {
+    "first": "Bert",
+    "last": "Niehoff"
+   },
+   {
+    "first": "Marty",
+    "last": "Berghammer"
+   },
+   {
+    "first": "Earl",
+    "last": "Blackburn"
+   },
+   {
+    "first": "Jack",
+    "last": "Rowan"
+   },
+   {
+    "first": "John",
+    "last": "Dodge"
+   }
+  ],
+  "revealed": {
+   "0": "Bob Bescher",
+   "1": "Johnny Bates",
+   "2": "Heinie Groh",
+   "3": "Al Wickland",
+   "4": "Armando Marsans",
+   "5": "Bert Niehoff",
+   "6": "Marty Berghammer",
+   "7": "Earl Blackburn",
+   "8": "Jack Rowan",
+   "9": "John Dodge"
+  }
+ },
+ {
+  "id": "WS1191304250",
   "season": 1913,
   "note": "three pitching rows, the tallest pitching half",
   "labels": [
@@ -763,162 +768,192 @@ const BOARDS = [
    "1B",
    "SS",
    "C",
-   "P"
+   "PH-1",
+   "P-1",
+   "P-2",
+   "PH-2"
   ],
   "offenseIsHome": false,
   "batting": [
    [
-    5,
     4,
-    2,
+    4,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    4,
     3,
+    0,
+    1,
     1,
     0
    ],
    [
-    5,
     4,
-    0,
+    4,
     1,
-    1,
-    0
-   ],
-   [
-    5,
-    5,
-    1,
-    1,
-    0,
-    0
-   ],
-   [
-    5,
-    5,
-    0,
-    2,
-    0,
-    2
-   ],
-   [
-    5,
-    5,
-    0,
     2,
     0,
     0
    ],
    [
-    5,
-    3,
-    1,
-    1,
-    1,
-    0
-   ],
-   [
     4,
-    3,
+    4,
     1,
+    3,
     0,
-    1,
     0
    ],
    [
     4,
-    3,
-    1,
+    4,
     0,
-    1,
+    0,
+    0,
     0
    ],
    [
     4,
-    3,
+    4,
+    1,
     2,
     0,
+    0
+   ],
+   [
+    4,
+    4,
+    0,
     1,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    0,
+    1,
+    0,
+    1
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    3,
+    3,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
     0
    ]
   ],
   "battingTotals": [
-   42,
+   36,
    35,
-   8,
-   10,
-   6,
-   2
+   4,
+   11,
+   1,
+   4
   ],
   "pitching": [
    [
-    "1.1",
+    "6.0",
+    8,
     4,
     4,
-    4,
-    3,
-    0
+    1,
+    2
    ],
    [
-    "1.0",
+    "2.0",
     1,
     0,
     0,
     0,
-    0
+    1
    ],
    [
-    "6.2",
-    5,
-    4,
-    4,
-    3,
-    2
+    "1.0",
+    2,
+    0,
+    0,
+    0,
+    1
    ]
   ],
   "pitchingTotals": [
    "9.0",
-   10,
-   8,
-   8,
-   6,
-   2
+   11,
+   4,
+   4,
+   1,
+   4
   ],
   "lineScore": {
    "offense": [
+    0,
+    0,
+    0,
+    0,
     2,
     2,
-    0,
-    0,
-    0,
-    4,
     0,
     0,
     0
    ],
    "defense": [
     0,
-    2,
+    0,
+    0,
+    0,
+    0,
+    0,
     1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-   ],
-   "offenseRHE": [
-    8,
-    10,
     4
    ],
+   "offenseRHE": [
+    4,
+    11,
+    0
+   ],
    "defenseRHE": [
-    3,
-    10,
+    5,
+    12,
     1
    ]
   },
   "footnotes": [
-   "HBP: 1B",
-   "LOB: 7"
+   "LOB: 5"
+  ],
+  "pitcherLabels": [
+   "SP",
+   "RP-1",
+   "RP-2"
   ],
   "names": [
    {
@@ -926,8 +961,8 @@ const BOARDS = [
     "last": "Hooper"
    },
    {
-    "first": "Steve",
-    "last": "Yerkes"
+    "first": "Neal",
+    "last": "Ball"
    },
    {
     "first": "Tris",
@@ -950,24 +985,39 @@ const BOARDS = [
     "last": "Wagner"
    },
    {
-    "first": "Bill",
-    "last": "Carrigan"
+    "first": "Les",
+    "last": "Nunamaker"
    },
    {
-    "first": "Dutch",
-    "last": "Leonard"
+    "first": "Olaf",
+    "last": "Henriksen"
+   },
+   {
+    "first": "Buck",
+    "last": "O'Brien"
+   },
+   {
+    "first": "Charley",
+    "last": "Hall"
+   },
+   {
+    "first": "Steve",
+    "last": "Yerkes"
    }
   ],
   "revealed": {
    "0": "Harry Hooper",
-   "1": "Steve Yerkes",
+   "1": "Neal Ball",
    "2": "Tris Speaker",
    "3": "Duffy Lewis",
    "4": "Larry Gardner",
    "5": "Clyde Engle",
    "6": "Heinie Wagner",
-   "7": "Bill Carrigan",
-   "8": "Dutch Leonard"
+   "7": "Les Nunamaker",
+   "8": "Olaf Henriksen",
+   "9": "Buck O'Brien",
+   "10": "Charley Hall",
+   "11": "Steve Yerkes"
   }
  }
 ];
@@ -980,17 +1030,17 @@ function lineScore(b) {
     Array.from({length: n}, (_, i) => "<th>" + (i + 1) + "</th>").join("") +
     "<th class='summary'>R</th><th>H</th><th>E</th></tr>";
   // AWAY and HOME, because both teams batted and both fielded — offence and defence do not name
-  // the rows of a line score. The batting section's team is tinted so the player can connect them.
-  const row = (side, innings, rhe, ours) =>
-    "<tr class='" + (ours ? "ours" : "") + "'><td class='side'>" + side + "</td>" +
+  // the rows of a line score. Neither row is tinted; the section headers name the teams instead.
+  const row = (side, innings, rhe) =>
+    "<tr><td class='side'>" + side + "</td>" +
     Array.from({length: n}, (_, i) => "<td>" + (innings[i] ?? "x") + "</td>").join("") +
     rhe.map((v, i) => "<td class='" + (i === 0 ? "summary" : "") + "'><b>" + v + "</b></td>").join("") + "</tr>";
   const weAreHome = b.offenseIsHome;
   return head +
     row("AWAY", weAreHome ? b.lineScore.defense : b.lineScore.offense,
-        weAreHome ? b.lineScore.defenseRHE : b.lineScore.offenseRHE, !weAreHome) +
+        weAreHome ? b.lineScore.defenseRHE : b.lineScore.offenseRHE) +
     row("HOME", weAreHome ? b.lineScore.offense : b.lineScore.defense,
-        weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE, weAreHome);
+        weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE);
 }
 
 const ABBREVIATION = 7;
@@ -1024,20 +1074,32 @@ function grid(b) {
     "<td class='cell" + (blanks.includes(i) ? " blank" : "") + "' tabindex='0'>" +
     (blanks.includes(i) ? "" : v) + "</td>").join("");
 
+  // A board carrying `blanks` was erased by the real algorithm and is shown exactly as the player
+  // would meet it. Without it the pattern below is decorative — enough to measure widths and
+  // pinning, which is all the first version of this instrument needed.
+  const bat = r => b.blanks ? b.blanks.batting[r] : [(r * 2) % 6, (r * 3 + 1) % 6];
+  const pit = r => b.blanks ? b.blanks.pitching[r] : [(r + 2) % 6];
+
   let html = "<thead>" + head(BAT) + "</thead><tbody>";
-  html += "<tr class='section'><td colspan='7'>BATTING</td></tr>";
+  // Team first, then role. The batting-pitching cross is unusable until the player sees that the
+  // hits allowed below belong to the other team, and the two sections are always opposites.
+  const battingTeam = b.offenseIsHome ? "HOME" : "AWAY", pitchingTeam = b.offenseIsHome ? "AWAY" : "HOME";
+  html += "<tr class='section'><td colspan='7'>" + battingTeam + " BATTING</td></tr>";
   b.batting.forEach((row, r) => {
-    html += "<tr><th class='label'>" + label(b, r) + "</th>" + cells(row, [(r * 2) % 6, (r * 3 + 1) % 6]) + "</tr>";
+    html += "<tr><th class='label'>" + label(b, r) + "</th>" + cells(row, bat(r)) + "</tr>";
   });
   html += "<tr class='totals' id='batTotals'><td class='label'>TOTALS</td>" +
-    b.battingTotals.map(v => "<td class='cell'>" + v + "</td>").join("") + "</tr>";
-  html += "<tr class='section'><td colspan='7'>PITCHING</td></tr>";
+    cells(b.battingTotals, b.blanks ? b.blanks.battingTotals : []) + "</tr>";
+  html += "<tr class='section'><td colspan='7'>" + pitchingTeam + " PITCHING</td></tr>";
   html += "<tr><th class='label'></th>" + PIT.map(x => "<th class='col' style='font-size:11px'>" + x + "</th>").join("") + "</tr>";
   b.pitching.forEach((row, r) => {
-    html += "<tr><th class='label'>P" + (r + 1) + "</th>" + cells(row, [(r + 2) % 6]) + "</tr>";
+    // SP and RP-n rather than P1..P4. The label carries deduction: a starter is where the long
+    // innings are, so a fan can bound the IP column before touching an equation.
+    const name = b.pitcherLabels ? b.pitcherLabels[r] : "P" + (r + 1);
+    html += "<tr><th class='label'>" + name + "</th>" + cells(row, pit(r)) + "</tr>";
   });
   html += "<tr class='totals' id='pitTotals'><td class='label'>TOTALS</td>" +
-    b.pitchingTotals.map(v => "<td class='cell'>" + v + "</td>").join("") + "</tr></tbody>";
+    cells(b.pitchingTotals, b.blanks ? b.blanks.pitchingTotals : []) + "</tr></tbody>";
   return html;
 }
 
@@ -1086,6 +1148,8 @@ function measure() {
     anchor: px(document.getElementById("batTotals")),
     scrollerVisible: px(scroller),
     cellHeight: px(document.querySelector("#grid td.cell")),
+    keypadRows: Math.round(px(document.getElementById("keypad")) / (px(document.querySelector("#keypad button")) + 3)),
+    keyWidth: Math.round(document.querySelector("#keypad button").getBoundingClientRect().width),
     dataColWidth: Math.round(document.querySelector("#grid td.cell").getBoundingClientRect().width),
     labelWidth: Math.round(document.querySelector("#grid th.label").getBoundingClientRect().width),
     lineScoreFits: document.getElementById("linescore").scrollWidth <= document.getElementById("linescore").clientWidth,
@@ -1102,7 +1166,16 @@ const pick = document.getElementById("pick");
 BOARDS.forEach((b, i) => pick.add(new Option(`${b.id} — ${b.note}`, i)));
 BOARDS.forEach(b => { b.abbreviated = abbreviate(b.names); });
 pick.addEventListener("change", () => { board = BOARDS[pick.value]; render(); });
-"0123456789".split("").forEach(d => {
+// Twelve keys, not ten. Innings pitched is the one cell whose value is not a plain integer: `4.1` is
+// four innings and one out, so the enterable domain is whole innings plus `.1` or `.2` and never
+// `.3`. Two explicit keys make that domain visible and a wrong value unenterable; a decimal point
+// would allow `.3` through `.9` to be typed and then refused.
+//
+// They are present always rather than appearing on IP cells only. A keypad that changes shape under
+// the player's finger is the reflow problem that argued against the system keyboard in the first
+// place, and the measurement below is what the cost of keeping them is judged on.
+const KEYS = ["0","1","2","3","4","5","6","7","8","9",".1",".2"];
+KEYS.forEach(d => {
   const btn = document.createElement("button"); btn.textContent = d;
   btn.onclick = () => { if (selected) selected.textContent = d; };
   document.getElementById("keypad").appendChild(btn);

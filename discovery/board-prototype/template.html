@@ -69,7 +69,11 @@
   #anchor { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
             background: #ddd; border-top: 2px solid #999; }
 
-  #keypad { flex: 0 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px;
+  /* Six columns rather than five, because the keypad carries twelve keys: the ten digits plus `.1`
+     and `.2` for innings pitched. At five it needs a third row and costs 51px of board; at six it
+     stays two rows and costs nothing, with keys 59px wide at 375px and 50px at 320px — both above
+     the 44px touch minimum. */
+  #keypad { flex: 0 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px;
             padding: 4px; background: #e8e8e8; }
   #keypad button { height: 48px; font-size: 18px; border: 1px solid #bbb; background: #fff; }
 </style>
@@ -211,6 +215,8 @@ function measure() {
     anchor: px(document.getElementById("batTotals")),
     scrollerVisible: px(scroller),
     cellHeight: px(document.querySelector("#grid td.cell")),
+    keypadRows: Math.round(px(document.getElementById("keypad")) / (px(document.querySelector("#keypad button")) + 3)),
+    keyWidth: Math.round(document.querySelector("#keypad button").getBoundingClientRect().width),
     dataColWidth: Math.round(document.querySelector("#grid td.cell").getBoundingClientRect().width),
     labelWidth: Math.round(document.querySelector("#grid th.label").getBoundingClientRect().width),
     lineScoreFits: document.getElementById("linescore").scrollWidth <= document.getElementById("linescore").clientWidth,
@@ -227,7 +233,16 @@ const pick = document.getElementById("pick");
 BOARDS.forEach((b, i) => pick.add(new Option(`${b.id} — ${b.note}`, i)));
 BOARDS.forEach(b => { b.abbreviated = abbreviate(b.names); });
 pick.addEventListener("change", () => { board = BOARDS[pick.value]; render(); });
-"0123456789".split("").forEach(d => {
+// Twelve keys, not ten. Innings pitched is the one cell whose value is not a plain integer: `4.1` is
+// four innings and one out, so the enterable domain is whole innings plus `.1` or `.2` and never
+// `.3`. Two explicit keys make that domain visible and a wrong value unenterable; a decimal point
+// would allow `.3` through `.9` to be typed and then refused.
+//
+// They are present always rather than appearing on IP cells only. A keypad that changes shape under
+// the player's finger is the reflow problem that argued against the system keyboard in the first
+// place, and the measurement below is what the cost of keeping them is judged on.
+const KEYS = ["0","1","2","3","4","5","6","7","8","9",".1",".2"];
+KEYS.forEach(d => {
   const btn = document.createElement("button"); btn.textContent = d;
   btn.onclick = () => { if (selected) selected.textContent = d; };
   document.getElementById("keypad").appendChild(btn);

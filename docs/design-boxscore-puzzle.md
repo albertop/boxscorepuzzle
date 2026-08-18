@@ -900,6 +900,36 @@ innings are and a third reliever is where they are not. **Never a bare `P` there
 batting section has `P` rows of its own, and never `SP` in the batting section either — the pitching
 rows belong to the **opposing** team, so the same symbol would name two different men.*
 
+### ✅ Innings pitched: outs inside, thirds on the keypad
+
+**`4.1` is not a decimal.** It is four innings and one out, so the value is held as an **integer count
+of outs** everywhere — loader, solver, format, renderer — and converted only where it is printed.
+Audited: nothing in the pipeline turns it into a float. That matters beyond tidiness, because the
+identity linking the pitching section to the global count is `Outs = 3 x IP`, and a decimal
+representation makes that multiplication a source of boards that fail validation for no visible
+reason.
+
+**The editable domain is thirds.** A cell may hold `.0`, `.1` or `.2` and never `.3` — three outs is
+a whole inning. That is information rather than a limitation: a board that accepted `4.7` would be a
+board whose pitching column stops adding to the defensive innings.
+
+**Twelve keys, always present, and no decimal point.** A decimal-point key would let `.3` through
+`.9` be typed and then refused; two explicit keys make the domain visible and a wrong value
+unenterable. They stay on screen for every cell rather than appearing on IP cells only, because a
+keypad that changes shape under the player's finger is the reflow problem that argued against the
+system keyboard in the first place.
+
+**And it costs nothing vertically.** Measured in the prototype:
+
+| Keypad layout | Height | Key size | Rows of board visible |
+|---|---:|---:|---:|
+| 5 columns, 12 keys | 158px | 71 x 48 | 11 |
+| **6 columns, 12 keys — decided** | **107px** | **59 x 48** | **12** |
+| *(the same at 320px)* | 107px | 50 x 48 | 12 |
+
+The five-column layout needs a third row and takes 51px of board. Six keeps two rows at the height
+§6's budget was measured with, and the keys stay above the 44px touch minimum at both widths.
+
 ### ✅ Section headers name the team, and the line score is left neutral
 
 Headers read **`AWAY BATTING`** and **`HOME PITCHING`** — team first, then role, the way a boxscore
