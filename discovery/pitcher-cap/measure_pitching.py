@@ -43,7 +43,7 @@ from boxscore_forge.constraints import (  # noqa: E402
     shape_of,
 )
 from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
-from boxscore_forge.identities import find_violations  # noqa: E402
+from boxscore_forge.identities import Family, find_violations  # noqa: E402
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 
 PITCHER_COUNTS = (2, 3, 4, 5)
@@ -178,7 +178,11 @@ def families(runs: dict[int, list[list[Snapshot]]], label: str) -> None:
     rows were dead weight this is where it would show.
     """
     print(f"\n=== FAMILIES REQUIRED AT A CHAIN TARGET OF 11 — {label} ===")
-    print(f"{'pitchers':>9}{'boards':>8}{'all four':>10}{'cross-team':>12}{'global':>9}{'row identity':>14}")
+    # Read off the enum, never off hand-written strings. The first version of this table looked up
+    # "global" against a family whose value is "global_identity" and reported it as never used.
+    names = [family.value for family in Family]
+    header = "".join(f"{name:>16}" for name in names)
+    print(f"{'pitchers':>9}{'boards':>8}{'all four':>10}{header}")
     for count in PITCHER_COUNTS:
         found = [hit for run in runs[count] if (hit := first_reaching(run, 11))]
         if not found:
@@ -188,13 +192,9 @@ def families(runs: dict[int, list[list[Snapshot]]], label: str) -> None:
             for family in hit.families:
                 counter[family] += 1
         total = len(found)
-        all_four = sum(1 for hit in found if len(hit.families) == 4)
-        print(
-            f"{count:>9}{total:>8}{100.0 * all_four / total:>9.0f}%"
-            f"{100.0 * counter['cross_team'] / total:>11.0f}%"
-            f"{100.0 * counter['global'] / total:>8.0f}%"
-            f"{100.0 * counter['row_identity'] / total:>13.0f}%"
-        )
+        all_four = sum(1 for hit in found if len(hit.families) == len(names))
+        shares = "".join(f"{100.0 * counter[name] / total:>15.0f}%" for name in names)
+        print(f"{count:>9}{total:>8}{100.0 * all_four / total:>9.0f}%{shares}")
 
 
 def _median[T: (int, float)](values: list[T]) -> float:

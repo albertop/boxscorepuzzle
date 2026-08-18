@@ -94,7 +94,7 @@ def load(
     gate: float = 0.30,
     max_batters: int = 13,
     min_pitchers: int = 0,
-    max_pitchers: int = 2,
+    max_pitchers: int = 4,
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
 
@@ -157,9 +157,10 @@ def load(
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
-    -- Caps are arguments, not constants. The pitcher cap in particular is under review: its
-    -- justification was screen cost, and the working-set measurement retired that argument without
-    -- the cap being revisited (§6).
+    -- Caps are arguments, not constants, and the defaults are the decided pair: ≤13 batters and
+    -- ≤4 pitchers (§5, §6). Anything measured under ≤2 pitchers describes a board that is no longer
+    -- being built — the pitcher cap changed after its screen-cost justification turned out to have
+    -- been retired by the working-set measurement without anyone revisiting it.
     WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
       AND l.VisLineScore IS NOT NULL
       AND g.SEASON BETWEEN ? AND ?

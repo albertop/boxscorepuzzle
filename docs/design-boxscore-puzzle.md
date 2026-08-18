@@ -357,20 +357,26 @@ puzzle in twenty, everything else has to come from the modern half:
 
 > years of calendar = post-1950 directions ÷ 0.95 ÷ 674 a year
 
-### ⚠️ And that is where the pitcher cap fails
+### ✅ And that is why the pitcher cap moved to ≤4
 
-At ≤2 pitchers the modern half is **3,405 directions — 5.3 years of calendar.** The cap is not
-expensive at the margin; it is the whole constraint.
+At ≤2 pitchers the modern half is **3,405 directions — 5.3 years of calendar.** The cap was not
+expensive at the margin; it was the whole constraint.
 
 | Pitcher cap | Directions | From 1950 on | **Years under the quota** |
 |---|---:|---:|---:|
-| **≤2 — current** | 12,218 | 3,405 | **5.3** |
+| ≤2 *(the old cap)* | 12,218 | 3,405 | 5.3 |
 | ≤3 | 20,507 | 8,200 | 12.8 |
-| ≤4 | 25,270 | 11,884 | 18.6 |
+| **≤4 — decided** | **25,270** | **11,884** | **18.6** |
 | ≤5 | 26,877 | 13,262 | 20.7 |
 
 *Batters ≤13, gate 30%. Raising the batter cap to 14 or 15 moves these by about 1% — the batter cap
 is no longer a lever at all.*
+
+**≤5 is not worth the row.** 2→3 buys 141% more modern calendar, 3→4 buys 45%, 4→5 buys 12%.
+
+**The gate is not spent to buy era.** 35% would give 46.5 years at ≤4 and it is tempting, but
+pitchers buy era while the gate sells quality: between 30% and 35% the three-run boards return, which
+is the shape the gate exists to remove. **Spend on caps, not on the gate.**
 
 **The screen-cost justification for ≤2 was wrong, and it is retired.** The argument was that a third
 pitcher takes visible batting rows from 9 to 8 at 375px. The working-set measurement in §6 had
@@ -383,10 +389,56 @@ zero-dense. Mean zero density by exact pitcher count runs 0.421 at one, 0.385 at
 0.382 at four, 0.386 at five. The zero-dense board is the complete-game shutout, not the bullpen
 game.*
 
-**What remains open is whether it costs puzzle**, and it is a real hypothesis rather than an
-objection: a pitching line crosses the offense only through totals, so four pitching rows may give
-nearly the same constraints as two and lengthen the board without improving it. Measured in
-`discovery/pitcher-cap/`.
+### The hypothesis that the extra rows would be filler — measured, and wrong
+
+It was a real hypothesis, not an objection: a pitching line crosses the offense only through totals,
+so four pitching rows might give nearly the same constraints as two, lengthening the board without
+improving it. It predicted weakly participating rows and more free steps.
+
+**Its structural half was exactly right.** Constraints per row fall as pitchers are added, and three
+extra rows buy less than one extra equation:
+
+| Pitchers | Rows | Equations | Per row | Cycles per row |
+|---:|---:|---:|---:|---:|
+| 2 | 11.9 | 35.9 | **3.03** | 4.99 |
+| 3 | 13.2 | 36.2 | 2.76 | 4.62 |
+| **4** | 14.6 | 36.6 | **2.52** | 4.34 |
+| 5 | 15.7 | 36.7 | 2.35 | 4.08 |
+
+**And it did not matter.** At a chain target of 14 with the same ~30 cells erased:
+
+| Pitchers | Ceiling | Reached | Trivial steps | Steps touching pitching | Search | Resolution |
+|---:|---:|---:|---:|---:|---:|---:|
+| 2 | 23 | 94% | **0.23** | **23.9%** | 0.82 | 7 |
+| 3 | 25 | 92% | 0.20 | 26.3% | 0.71 | 7 |
+| **4** | 24 | 93% | **0.20** | **29.1%** | 0.75 | 7 |
+| 5 | 27 | 98% | 0.18 | 30.3% | 0.75 | 8 |
+
+Trivial steps **fall** rather than rise, which is the clearest evidence the hypothesis predicted and
+got backwards. The ceiling holds. The extra rows participate more than proportionally: with two
+pitchers the section is 17% of the rows and 24% of the steps, and it displaces free steps as it
+grows.
+
+**The control window is what makes this readable.** Pitcher count and era are nearly the same
+variable in this data, so everything was repeated on 1970–2009 where all four counts coexist:
+trivial steps 0.22 → 0.18, pitching steps 22.6% → 30.5%. Same result. *Without that window the whole
+measurement would have been era wearing a pitcher-count costume.*
+
+*⚠️ 20 directions per cell in the control window. The ceiling oscillates there (22 at four pitchers,
+28 at five) and that is noise, not depth.*
+
+### The one real change: cross-team stops being compulsory
+
+At a chain target of 11, the cross-team family is required by **100% of two-pitcher boards and
+77–85% of boards with three or more.**
+
+**This is a gain, not a loss.** What disappears is not the family but its compulsoriness, and that
+was an artefact of the shape: with two pitching rows the totals are nearly determined by those two
+rows, so any pitching cell forces a crossing. A board where the cross is inevitable is not better
+than one where it is one of several routes — it is less varied.
+
+It also feeds §31's character axis, which has been collapsing across several measurements. **A family
+demanded by 100% of boards distinguishes nothing.** At ≤4 it distinguishes.
 
 *One side effect, small and in the wrong direction: filtering makes hard boards slightly more
 uniform in the families they demand — 79% → 96% requiring all four at a chain target of 20. That is
@@ -660,13 +712,13 @@ identity, and §31 rests on measurements taken against this board rather than th
 
 ### ✅ The roster caps, decided (browser prototype, August 2026)
 
-> **⚠️ The pitcher half of this was wrong and is reopened.** The screen-cost argument below does not
-> hold: the working-set measurement in this very section retired it, and the cap was left at ≤2 out
-> of inertia. Four pitchers is a fifteen-row board and fits with scrolling exactly as thirteen
-> batters does. What follows is kept as the reasoning that was actually used; the correction is in
-> **§5, "the pitcher cap"**, and the batter cap of ≤13 is unaffected.
+> **⚠️ The pitcher half of this was wrong and has been corrected: the cap is ≤4, not ≤2.** The
+> screen-cost argument below does not hold — the working-set measurement in this very section retired
+> it, and the cap was left at ≤2 out of inertia. Four pitchers is a fifteen-row board and scrolls
+> exactly as thirteen batters does. What follows is kept as the reasoning that was actually used at
+> the time; the decision and its measurement are in **§5**. The batter cap of ≤13 is unaffected.
 
-**≤13 batters in the offensive team, ≤2 pitchers in the defensive team.** Nothing in §6 is
+**≤13 batters in the offensive team, ≤4 pitchers in the defensive team.** Nothing in §6 is
 provisional any more.
 
 **Rows on screen turned out not to be the binding constraint.** With the active section's totals
@@ -687,7 +739,7 @@ cap is by far the more expensive of the two (§5).*
 |---|---:|---:|
 | ≤10 batters, ≤3 pitchers *(the old provisional pair)* | 65,522 | — |
 | ≤12, ≤2 | 103,304 | +58% |
-| **≤13, ≤2 — decided** | **125,625** | **+92%** |
+| ≤13, ≤2 *(decided here, superseded in §5)* | 125,625 | +92% |
 | ≤14, ≤2 | 148,815 | +127% |
 
 So the old caps were **dominated**: loosening batters and tightening pitchers buys more pool *and*
@@ -709,6 +761,10 @@ The 1970s and 1980s roughly triple, which is where the recognisability deficit f
 reveal sat. The 1910–1949 skew softens from 68% to around 57%. **⚠️ Accepted rather than solved:**
 the modern game is still thin — 754 directions in the 2020s against 21,040 in the 1910s — because a
 game with seven relievers cannot fit a board of any size this project will build.
+
+*⚠️ Pre-cap-change. Everything in this subsection is measured at ≤2 pitchers and is kept as the
+record of that decision. The ≤4 numbers, and the era quota that made the pitcher cap the binding
+constraint, are in §5.*
 
 ### Other measured values, no longer estimates
 
@@ -1683,6 +1739,13 @@ board: difficulty here is scanning, not calculating.
 
 ### ⚠️ The character axis narrows as difficulty rises, and dies at the top
 
+> **⚠️ Pre-cap-change, and the cap change works in the axis's favour.** Everything below was measured
+> at ≤2 pitchers, where **cross-team is required by 100% of boards at a chain target of 11** — a
+> family every board demands distinguishes nothing, so a share of this collapse was the shape of the
+> board rather than the difficulty. At ≤4 pitchers that falls to 77–85% (§5). The axis is not
+> repaired by that alone, but it is measured on a board where cross-team is one route among several
+> instead of the only one. **Re-measure before treating the collapse as settled.**
+
 Measured under **chain-targeted erasure**, which is what the generator will actually do — the earlier
 figures came from random erasure at fixed cell counts and overstated the variety.
 
@@ -1715,6 +1778,10 @@ Board character was measured against the solve and mostly does not separate it:
 One, two and three pitching rows give identical search, identical resolution and near-identical chain
 length. **Roster shape is not the Saturday lever**, and neither are live footnotes. Only batting rows
 (through resolution) and total runs (through effort) move anything.
+
+*That row survives the cap change and is worth keeping in view: pitching rows still do not move the
+three numbers at four or five pitchers either (§5). What the extra rows changed is not difficulty but
+which families a board can be solved through — the axis this section is about.*
 
 **So Saturday's character is that it is the only day the global identity appears at all** — 82% of
 boards at a chain target of 20 need all four families against 8% at a target of 5. That is a real
