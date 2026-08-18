@@ -30,3 +30,19 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 27/120] WS1193305180 1933: 78/108 cells, chain 65, search 0.95, res 8, trivial 21%, col+cross+global+row, 18.0s
   [ 28/120] WS1193305240 1933: 80/108 cells, chain 67, search 0.95, res 8, trivial 19%, col+cross+global+row, 21.1s
   [ 29/120] WS1193305170 1933: 82/108 cells, chain 69, search 0.95, res 8, trivial 18%, col+cross+global+row, 22.8s
+  [ 30/120] WS1193305311 1933: 104/156 cells, chain 94, search 0.96, res 11, trivial 10%, col+cross+global+row, 72.5s
+  [ 31/120] BSN194409180 1944: 75/124 cells, chain 63, search 0.96, res 9, trivial 19%, col+cross+global+row, 26.4s
+  [ 32/120] BSN194409161 1944: 100/144 cells, chain 89, search 0.96, res 11, trivial 9%, col+cross+global+row, 56.6s
+  [ 33/120] BSN194409162 1944: 83/114 cells, chain 72, search 0.96, res 8, trivial 14%, col+cross+global+row, 23.7s
+  [ 34/120] BSN194409171 1944: 88/114 cells, chain 79, search 0.96, res 8, trivial 11%, col+cross+global+row, 26.1s
+  [ 35/120] BSN194409172 1944: 119/154 cells, chain 109, search 0.96, res 11, trivial 10%, col+cross+global+row, 78.5s
+  [ 36/120] BSN194409172 1944: 75/114 cells, chain 63, search 0.95, res 8, trivial 13%, col+cross+global+row, 19.7s
+  [ 37/120] BSN194409171 1944: 104/128 cells, chain 93, search 0.96, res 10, trivial 15%, col+cross+global+row, 38.0s
+  [ 38/120] BSN194409162 1944: 118/148 cells, chain 108, search 0.96, res 12, trivial 14%, col+cross+global+row, 68.1s
+  [ 39/120] BSN194409161 1944: 84/124 cells, chain 74, search 0.96, res 9, trivial 11%, col+cross+global+row, 25.9s
+  [ 40/120] BSN194409220 1944: 110/138 cells, chain 98, search 0.96, res 11, trivial 15%, col+cross+global+row, 52.2s
+  [ 41/120] BOS195408220 1954: 73/124 cells, chain 61, search 0.96, res 9, trivial 10%, col+cross+global+row, 21.9s
+  [ 42/120] BAL195409110 1954: 83/108 cells, chain 72, search 0.95, res 8, trivial 18%, col+cross+global+row, 16.3s
+  [ 43/120] BRO195408030 1954: 96/128 cells, chain 84, search 0.96, res 10, trivial 17%, col+cross+global+row, 35.4s
+  [ 44/120] BOS195408200 1954: 75/108 cells, chain 61, search 0.95, res 8, trivial 20%, col+cross+global+row, 17.0s
+  [ 45/120] BAL195409100 1954: 71/108 cells, chain 58, search 0.95, res 8, trivial 21%, col+cross+global+row, 14.0s

@@ -980,6 +980,23 @@ no `rowspan`, and no scroll problem — the merged cell that vanished with its s
 now does not exist. The four-variant sample is cancelled: two of its variants were moot once the slot
 could not identify a row, and the other two are unnecessary once the width passes without a column.
 
+### ✅ Settled: the batting rows as a boxscore shows them
+
+- **Position column stays.** A boxscore without positions stops reading as a boxscore, and the three
+  defects it caused are closed by the entry-position rule rather than by removing it.
+- **Slot column stays**, carrying the *full* reference in every cell — `9` where a slot holds one row,
+  `9a`/`9b`/`9c` where it is shared. The letter is the signal that a substitution happened rather than
+  noise on every row, and the cell says literally what the footnote says, so the search is recognition
+  and there are not two representations of one thing to drift apart.
+- **Footnotes reference slot plus letter**, never `2a` when there is no `2b`.
+- **Labels are bare positions**, no suffix. The reference left the label, so the suffix has no work.
+- **Indentation plus a rule between slots** as the visual cue.
+- **Home runs stay out** — measured: no new independent cycles in any configuration.
+
+⚠️ **One function produces both the cell and the footnote reference.** Two places applying one
+condition is the defect this project has spent the day closing; a test asserts the two strings come
+from the same call for the same row.
+
 **Grouping is carried by order, indentation and a rule between slots — form B, chosen by eye.** The
 difference between indentation alone and indentation with a rule shows on a board where a substitute is
 *buried mid-lineup* rather than trailing at the end: with four pinch hitters grouped at the bottom the
