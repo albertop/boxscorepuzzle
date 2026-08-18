@@ -489,9 +489,11 @@ day the VPS verifies packages is the day the verification key leaves the laptop,
 from theoretical to real at that moment. Until then there is exactly one key and it is on the machine
 that is allowed to sign.
 
-**Decided:** amend schema 1 rather than bump to 2. Nothing has been published, `serve` does not exist,
-and there are no consumers — the *frozen* heading is a promise to stop churning the format, not a
-promise made to anybody yet.
+**Decided: schema 1 is not amended.** Frozen means frozen — the fact that nothing has shipped is not a
+licence to edit a version that has been declared closed, because a format that gets edited whenever it
+is convenient is not a contract. The Ed25519 envelope is therefore a new schema version, and what that
+costs — a reader that must handle both, or a clean break while there are no consumers — is the call to
+make when the dependency is unblocked, not before.
 
 **Blocking:** Ed25519 is not in the standard library and `cryptography` is not installed. `uv` is not
 on this environment's PATH; `ensurepip` can bootstrap `pip` into the venv, but installing that way
