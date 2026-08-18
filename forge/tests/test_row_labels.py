@@ -6,7 +6,7 @@ anyway — the labels are outside the arithmetic, so all four §22 layers pass a
 named wrong.
 
 The label is not decoration. §7 makes it the row's only identity during play, and a footnote is
-attributed to a *row*: `SF: CF-2` means one specific line, with its own plate appearances and its own
+attributed to a *row*: `SF: CF-1` means one specific line, with its own plate appearances and its own
 row identity. Send the term to the wrong row and that row stops balancing while the other one does
 not — arithmetic broken in a way the column totals cannot reveal, because the term is present, just
 in the wrong place.
@@ -68,9 +68,13 @@ class TestThePositionRule:
     ) -> None:
         assert _loader()._position(appeared_at, entered_fielding, entered_as) == expected
 
-    def test_a_repeated_position_is_suffixed_in_order_of_appearance(self) -> None:
-        # Suffixing is what keeps a footnote resolvable when two men really did share a position.
-        assert _loader()._batting_labels(["CF", "SS", "CF"]) == ("CF-1", "SS", "CF-2")
+    def test_the_starter_has_no_suffix_and_the_first_substitute_is_one(self) -> None:
+        # The suffix counts substitutes. `CF-1` on the starter says a man came before him, and it
+        # made every substitute's number one too high.
+        assert _loader()._batting_labels(["CF", "SS", "CF"]) == ("CF", "SS", "CF-1")
+
+    def test_further_substitutes_keep_counting(self) -> None:
+        assert _loader()._batting_labels(["P", "P", "P"]) == ("P", "P-1", "P-2")
 
     def test_a_position_held_by_one_man_is_not_suffixed(self) -> None:
         assert _loader()._batting_labels(["CF", "SS"]) == ("CF", "SS")
@@ -88,13 +92,13 @@ class TestAFootnoteBelongsToARowAndNotToAPosition:
         return (starter, substitute), (nothing, sacrifice)
 
     def test_the_rendered_footnote_names_the_suffixed_label(self) -> None:
-        # `SF: CF` on a board where the rows are CF-1 and CF-2 is unresolvable: the player cannot tell
+        # `SF: CF` on a board where the rows are CF and CF-1 is ambiguous: the player cannot tell
         # which line the term belongs to, and the row identity is what needs it.
         labels = _loader()._batting_labels(["CF", "CF"])
         _, footnotes = self._lineup()
         carriers = [labels[index] for index, note in enumerate(footnotes) if note.sacrifice_flies]
 
-        assert carriers == ["CF-2"]
+        assert carriers == ["CF-1"]
 
     def _board(
         self, footnotes: tuple[BatterFootnotes, ...], rows: tuple[BattingLine, ...]
