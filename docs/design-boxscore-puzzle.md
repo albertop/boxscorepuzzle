@@ -1455,9 +1455,93 @@ The last one demands the real work, and is covered by the no-backtracking rule (
 - **Sign every published puzzle** and verify the signature before serving, to catch post-generation corruption.
 - **Have an escape hatch:** a pre-verified backup puzzle and a switch to substitute the day's. "Virtually impossible" is not "impossible," and with 30,000 people playing you find out fast.
 
-### The layer no automated test replaces
+### The worked case that justifies the redundancy
 
-**Solve a sample by hand.** Fifty puzzles before launch. That's where what no test detects shows up: correct but boring, or brutally hard.
+Layer 4 re-solves a board the earlier layers already cleared, and it is fair to ask what that buys.
+This is what:
+
+> Take a valid, published puzzle and **swap two batters' hits values**. Every column still sums
+> correctly. Every row identity still closes, because hits appear in no row identity. The cross-team
+> link still holds, `AB ≥ H` still holds for both rows, the board still has **exactly one**
+> completion, and that completion is still reachable without a guess.
+>
+> **Layers 1, 2 and 3 pass it entirely.** The puzzle is internally perfect and is about a different
+> game.
+
+Only a comparison against the original boxscore sees it, which is what layer 4 is. Every other layer
+asks whether the board is consistent; layer 4 is the only one that asks whether it is *true*. That
+distinction is the argument for keeping a layer whose work looks duplicated.
+
+### ⚠️ What layer 3 actually certifies, which is not what this section claims
+
+**§22 believes it has a human-derivability barrier. What it has is an interval propagator running to
+a fixed point over forty-odd simultaneous relations.** A narrowing found in the pitching column is
+instantly available to a row identity twelve rows up. Nobody solves like that. **A board can pass
+layer 3 and still be underivable by a person**, and nothing in the four layers would say so.
+
+*This was found by writing the verifier against this document rather than against the generator: §4
+names the techniques as propagation and then bounding, and never says how strong the bounding step
+may be. The ambiguity is the finding.*
+
+**A search for a counterexample found none** — roughly 24,000 random erasures across 400 generated
+boards produced no board that was unique and yet underivable. **That is not reassurance.** It says
+that *at this bounding strength* uniqueness appears to imply derivability, which is a claim about the
+solver rather than about the player.
+
+#### Layer 3b: a lower bound on humanness, measured
+
+So the verifier also carries a deliberately weak solver — one relation in view at a time, never
+carrying a narrowed range from one relation to the next. Layer 3 is an upper bound on what a person
+can do; this is a lower one, and the gap between them is uncertainty that was previously invisible.
+
+**Measured over 298 puzzles from the real generator:**
+
+| Chain target | Published boards | Also derivable one relation at a time |
+|---:|---:|---:|
+| 5 | 60 | **100%** |
+| 7 | 60 | 98% |
+| 9 | 60 | 93% |
+| 11 | 60 | 80% |
+| **13 — Saturday** | 58 | **71%** |
+
+**The gap is real and it concentrates where the week peaks.** At Saturday's target, **29% of
+published boards cannot be certified derivable under a conservative reading.** That does not mean
+they are unsolvable — a person sits somewhere between the two solvers, so the truth is between 71%
+and 100% — but it does mean the guarantee §22 believes it has is weaker at the hard end than
+anywhere else.
+
+**Not yet decided: whether 3b becomes a gate.** The argument for is that the discard cost is 29% at
+the worst target, and this section already declares throwing away 30% to cost nothing. The argument
+against is that the weak solver is a caricature of a person in the other direction, and gating on it
+would discard boards a player would have solved comfortably.
+
+### ⚠️ Known residual risk: the verifier is not independently authored
+
+§22's critical requirement is that the verifier share no code with the generator. **It does not** —
+separate package, identities restated from §3, its own cell naming, and the one thing both genuinely
+need (the file format) in a third package owned by neither.
+
+**But the same author wrote both.** No code is shared and the generator's implementation was not
+consulted while the verifier was written, which removes inherited bugs but not shared blind spots. A
+misreading of §3 would be made twice and agree with itself. **This is a residual risk, not a solved
+problem**, and it is recorded here rather than only in a docstring so that it is visible when the
+guarantee is being relied on.
+
+### The layer no automated test replaces — now load-bearing
+
+**Solve a sample by hand. Fifty puzzles before launch, and this cannot be skipped.**
+
+It was written as a sanity check for what no test detects: correct but boring, or brutally hard. It
+has been promoted, because the two findings above leave it carrying more weight than that:
+
+- **It is the only real verification of human derivability that exists.** Layer 3 certifies a machine
+  can do it; layer 3b says 29% of Saturday boards are not certifiable under a weak reading; a person
+  is between them and nothing automated resolves where.
+- **It is the only check the same-author risk does not touch.** A blind spot shared between generator
+  and verifier survives every automated layer and does not survive somebody solving the board.
+
+Record for each: whether it was solvable, where it stalled, and whether it was boring. A board that
+was solved only by guessing is the failure §22 calls the worst, and it will not announce itself.
 
 ---
 

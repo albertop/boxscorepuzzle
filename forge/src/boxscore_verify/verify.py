@@ -29,7 +29,7 @@ from enum import StrEnum
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import SignatureError
 from boxscore_package.signing import verify as verify_signature
-from boxscore_verify.reason import ContradictionError, UndecidedError, derive, narrow, solutions
+from boxscore_verify.reason import ContradictionError, UndecidedError, derive, derive_in_view, narrow, solutions
 from boxscore_verify.rules import all_cells, line_score_faults, relations, values_of
 
 
@@ -260,6 +260,25 @@ def tally(verdicts: Iterable[Verdict]) -> dict[str, int]:
     return counts
 
 
+def derivable_in_view(package: Package) -> bool:
+    """Layer 3b, **reported rather than enforced**: derivable by the weak solver too.
+
+    Layer 3 certifies that no guess is needed by a propagator that holds every relation in mind at
+    once. This asks the same question of a solver that holds one relation at a time, which is a lower
+    bound on what a person can do where layer 3 is an upper one.
+
+    It is not in `LAYERS` and does not reject anything. Whether it should become a gate is a question
+    about how many currently-passing boards survive it — if nearly all do, the concern was
+    theoretical; if many fail, the gap between the two solvers is real and worth gating on. That
+    measurement comes before the decision, not after.
+    """
+    board = package.puzzle
+    try:
+        return derive_in_view(relations(board), all_cells(board), values_of(board)).is_complete
+    except ContradictionError:  # pragma: no cover - a contradictory board is rejected at layer 2
+        return False
+
+
 LAYERS: dict[Layer, Callable[[Package, bytes | None], Rejection | None]] = {
     Layer.SIGNATURE: check_signature,
     Layer.IDENTITIES: check_identities,
@@ -286,6 +305,7 @@ __all__ = [
     "check_identities",
     "check_signature",
     "check_uniqueness",
+    "derivable_in_view",
     "narrow",
     "tally",
     "verify",

@@ -131,6 +131,88 @@ def derive(relations: Iterable[Relation], cells: Iterable[str], given: Mapping[s
     return Derivation(values=values, unresolved=unresolved)
 
 
+def derive_in_view(
+    relations: Iterable[Relation],
+    cells: Iterable[str],
+    given: Mapping[str, int],
+    *,
+    allow_bounding: bool = True,
+) -> Derivation:
+    """A deliberately weaker solver: one relation in view at a time.
+
+    ⚠️ **`derive` is almost certainly stronger than a person.** It runs interval propagation to a
+    fixed point across every relation at once, so a narrowing found in the pitching column is
+    instantly available to the row identity twelve rows up. Nobody solves like that. §22 believes
+    layer 3 is a human-derivability barrier; what layer 3 actually certifies is that *a machine with
+    perfect simultaneous bookkeeping* needs no guess.
+
+    This is the other end of the bracket. It looks at one relation at a time and never carries a
+    narrowed range from one to the next:
+
+      * an equality with exactly one unknown is a subtraction, which anyone can do
+      * with `allow_bounding`, a single relation is also read against non-negativity alone — "these
+        four are at least nought, so this one cannot exceed nine" — which is the bounding step §4
+        describes, done the way a person does it rather than to a fixed point
+
+    A board that passes **both** is derivable under a weak reading and unique under a strong one. The
+    gap between them is uncertainty we otherwise cannot see, which is the whole reason this exists.
+    """
+    relations = tuple(relations)
+    cells = tuple(cells)
+    values = dict(given)
+
+    while True:
+        progressed = False
+        for relation in relations:
+            if not relation.equality:
+                continue
+            unknowns = [cell for cell in relation.cells() if cell not in values]
+            if len(unknowns) != 1:
+                continue
+            cell = unknowns[0]
+            coefficient = next(weight for name, weight in relation.terms if name == cell)
+            rest = sum(weight * values[name] for name, weight in relation.terms if name != cell)
+            remainder = relation.constant - rest
+            if remainder % coefficient == 0:
+                values[cell] = remainder // coefficient
+                progressed = True
+        if not progressed and allow_bounding:
+            progressed = _bound_one_relation(relations, values)
+        if not progressed:
+            break
+
+    unresolved = tuple(cell for cell in cells if cell not in values)
+    return Derivation(values=values, unresolved=unresolved)
+
+
+def _bound_one_relation(relations: tuple[Relation, ...], values: dict[str, int]) -> bool:
+    """Read each relation on its own against non-negativity. Nothing is carried between them."""
+    for relation in relations:
+        unknowns = [cell for cell in relation.cells() if cell not in values]
+        if not unknowns:
+            continue
+        for cell in unknowns:
+            coefficient = next(weight for name, weight in relation.terms if name == cell)
+            known_part = sum(weight * values[name] for name, weight in relation.terms if name in values)
+            others = [weight for name, weight in relation.terms if name not in values and name != cell]
+            # Everything unknown is somewhere in [0, CELL_CAP], and that is all this step may assume.
+            rest_low = sum(min(weight * 0, weight * CELL_CAP) for weight in others)
+            rest_high = sum(max(weight * 0, weight * CELL_CAP) for weight in others)
+            window_high = relation.constant - known_part - rest_low
+            window_low = relation.constant - known_part - rest_high
+            if coefficient > 0:
+                low, high = -(-window_low // coefficient), window_high // coefficient
+            else:
+                low, high = -(-window_high // coefficient), window_low // coefficient
+            low = max(low, 0)
+            if not relation.equality:
+                low = 0
+            if low == high:
+                values[cell] = low
+                return True
+    return False
+
+
 def solutions(
     relations: Iterable[Relation],
     cells: Iterable[str],
