@@ -12,16 +12,19 @@
  ],
  "metadata": {
   "batters": 9,
-  "chain_length": 12,
-  "chain_target": 11,
+  "blanks": 36,
+  "chain_length": 29,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
-   "global_identity",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 1
+  "pitchers": 1,
+  "seed": 6,
+  "stalls": 9,
+  "target_stalls": 9
  },
  "pitcher_labels": [
   "SP"
@@ -42,7 +45,7 @@
     0,
     null,
     1,
-    null
+    0
    ],
    [
     null,
@@ -73,7 +76,7 @@
     null,
     2,
     1,
-    null,
+    0,
     1
    ],
    [
@@ -94,7 +97,7 @@
    ],
    [
     4,
-    null,
+    4,
     null,
     1,
     0,
@@ -102,11 +105,11 @@
    ]
   ],
   "batting_totals": [
-   null,
+   43,
    36,
+   8,
    null,
-   null,
-   null,
+   6,
    null
   ],
   "footnote_totals": [
@@ -119,30 +122,30 @@
    [
     0,
     0,
-    0,
-    0
+    null,
+    null
    ],
    [
     0,
+    null,
     0,
-    0,
-    0
+    null
    ],
    [
     0,
-    0,
-    0,
+    null,
+    null,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
+    null,
     0
    ],
    [
-    0,
-    0,
+    null,
+    null,
     0,
     0
    ],
@@ -150,24 +153,24 @@
     0,
     0,
     1,
-    0
+    null
    ],
    [
     0,
+    null,
     0,
+    null
+   ],
+   [
+    null,
+    null,
     0,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
+    null,
     0
    ]
   ],
@@ -204,21 +207,21 @@
   },
   "pitching": [
    [
-    null,
+    27,
     11,
-    null,
+    8,
     4,
     null,
-    null
+    7
    ]
   ],
   "pitching_totals": [
-   null,
-   null,
+   27,
+   11,
    8,
-   null,
+   4,
    6,
-   7
+   null
   ]
  },
  "puzzle_id": "83b7eced32865aa5",
@@ -243,7 +246,7 @@
   "played_on": "1913-08-01"
  },
  "schema": 1,
- "signature": "0992847413ca777f6ce8ae85115e54cb45c30166e89a7e014536553baa9a1f61",
+ "signature": "99295c72a4c3ea11eebb0a830072b92e726dd6aebd207a71edd939629954ba21",
  "solution": {
   "batting": [
    [

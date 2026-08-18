@@ -101,6 +101,11 @@ class Loaded:
 
     defense_team: str = ""
     pitcher_names: tuple[tuple[str, str], ...] = ()
+    source_type: str = ""
+    """Carried so the publication gate can be given evidence rather than assuming it."""
+
+    official_hits: int = 0
+    official_runs: int = 0
 
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
@@ -248,7 +253,10 @@ def load(
            -- Same rule, found by the test written for the hits: the runs totals were summed from the
            -- inning array the verifier then checks them against, so that identity could not fail.
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeRunsScore ELSE l.VisRunsScored END AS offense_runs,
-           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.VisRunsScored ELSE l.HomeRunsScore END AS defense_runs
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.VisRunsScored ELSE l.HomeRunsScore END AS defense_runs,
+           -- Evidence for the publication gate. It has no database and must not grow one (§22), so
+           -- the producer carries what it knows and the gate refuses when it is missing.
+           (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS source_type
     FROM dbo.retroGamesReg g
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
@@ -336,6 +344,7 @@ def load(
             offense_hits,
             offense_runs,
             defense_runs,
+            source_type,
         ) in candidates:
             batting_rows = connection.cursor().execute(rows_query, game_id, offense).fetchall()
             pitching_rows = connection.cursor().execute(pitch_query, game_id, defense).fetchall()
@@ -402,6 +411,9 @@ def load(
                     offense,
                     defense,
                     tuple((p[7] or "", p[8] or "") for p in pitching_rows),
+                    source_type or "",
+                    offense_hits,
+                    offense_runs,
                 )
             )
     if rejected:

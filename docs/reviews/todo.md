@@ -283,12 +283,28 @@ rule drift.
 It caught one thing while being written: the discovery originally swept private helpers too, which
 would have made the gate depend on how plausibility is implemented rather than on what it offers.
 
-**Still open on this item:** the writers do not call it yet. `write_reference_puzzles.py` still gates
-on `verify()` plus a reveal check, which is the subset the finding is about.
+**Wired.** `write_reference_puzzles.py` now gates on `certify_for_publication()` and nothing else,
+both when generating and again on the package read back from disk — a package that certifies in the
+process that made it and fails when read from a file is the class of defect this project keeps
+finding. The loader carries the evidence the gate requires (source type, official hits, official runs)
+rather than the writer assuming it.
+
+### v02-P1-02 — the writers selected boards by the retired proxy
+
+`erase()` gained `target_stalls` and the callers kept passing `target_chain`, so the artefacts were
+still chosen by the measure the project had already shown was length rather than difficulty.
+
+**What I did.** The reference writer targets stalls, and its metadata records
+`difficulty_model: "stalls"`, the requested and actual stall counts, the seed, the blank count and the
+families — with `chain_length` kept as **descriptive telemetry**, labelled as such, because every
+earlier measurement used it and they have to stay comparable.
+
+**No band is implied.** The six sit at 5 through 10 stalls because six different boards are more
+useful to build a client against than six of the same, not because those are difficulty tiers. Five
+was an example the operator gave, and nothing is labelled easy, medium or hard until the pack returns.
 
 ## Open, in the agreed order
 
-5. **v02-P1-02** — migrate the writers to `target_stalls`; chain becomes descriptive telemetry.
 6. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
    exhausted.
 

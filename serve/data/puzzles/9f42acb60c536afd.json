@@ -12,15 +12,19 @@
  ],
  "metadata": {
   "batters": 9,
-  "chain_length": 12,
-  "chain_target": 11,
+  "blanks": 39,
+  "chain_length": 31,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 3
+  "pitchers": 3,
+  "seed": 6,
+  "stalls": 10,
+  "target_stalls": 10
  },
  "pitcher_labels": [
   "SP",
@@ -59,7 +63,7 @@
     3,
     2,
     null,
-    null
+    0
    ],
    [
     5,
@@ -95,7 +99,7 @@
    ],
    [
     5,
-    null,
+    5,
     null,
     0,
     0,
@@ -105,9 +109,9 @@
   "batting_totals": [
    48,
    40,
+   13,
    null,
-   null,
-   null,
+   7,
    null
   ],
   "footnote_totals": [
@@ -120,55 +124,55 @@
    [
     0,
     0,
-    0,
-    0
+    null,
+    null
    ],
    [
     0,
+    null,
     0,
-    0,
-    0
+    null
    ],
    [
     0,
-    0,
-    0,
+    null,
+    null,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
+    null,
     0
    ],
    [
-    0,
-    0,
+    null,
+    null,
     1,
     0
    ],
    [
     0,
     0,
+    null,
+    null
+   ],
+   [
+    0,
+    null,
+    0,
+    null
+   ],
+   [
+    null,
+    null,
     0,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
+    null,
     0
    ]
   ],
@@ -207,25 +211,25 @@
    [
     21,
     9,
+    null,
     10,
-    10,
-    7,
+    null,
+    3
+   ],
+   [
+    3,
+    3,
+    2,
+    0,
+    0,
     null
    ],
    [
-    null,
     3,
-    2,
-    null,
-    0,
-    0
-   ],
-   [
     3,
-    null,
-    null,
     1,
     null,
+    0,
     1
    ]
   ],
@@ -234,7 +238,7 @@
    15,
    13,
    11,
-   null,
+   7,
    4
   ]
  },
@@ -262,7 +266,7 @@
   "played_on": "1923-10-01"
  },
  "schema": 1,
- "signature": "1280265fb908aa9b4cd06bf9b5dbb76f96d695d583362a9be11eaa78161e123c",
+ "signature": "39ceeccbd02421b594f40f15a5dee1afa83b7d065fb09c78ce22a33c41092e7b",
  "solution": {
   "batting": [
    [

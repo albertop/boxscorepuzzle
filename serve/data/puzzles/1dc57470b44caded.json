@@ -13,15 +13,19 @@
  ],
  "metadata": {
   "batters": 10,
-  "chain_length": 6,
-  "chain_target": 5,
+  "blanks": 28,
+  "chain_length": 17,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 2
+  "pitchers": 2,
+  "seed": 6,
+  "stalls": 5,
+  "target_stalls": 5
  },
  "pitcher_labels": [
   "SP",
@@ -129,34 +133,22 @@
     0,
     0,
     0,
-    0
+    null
    ],
    [
     0,
-    0,
+    null,
     0,
     0
    ],
    [
     1,
     0,
-    0,
+    null,
     0
    ],
    [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
+    null,
     0,
     0,
     0
@@ -165,24 +157,36 @@
     0,
     0,
     0,
-    0
+    null
    ],
    [
     0,
     0,
     0,
+    null
+   ],
+   [
+    0,
+    null,
+    0,
     0
    ],
    [
     0,
     0,
-    0,
+    null,
     0
    ],
    [
     0,
     0,
+    null,
+    0
+   ],
+   [
     0,
+    0,
+    null,
     0
    ]
   ],
@@ -237,9 +241,9 @@
   "pitching_totals": [
    24,
    12,
-   6,
-   6,
    null,
+   6,
+   2,
    6
   ]
  },
@@ -267,7 +271,7 @@
   "played_on": "1923-10-07"
  },
  "schema": 1,
- "signature": "624a8cb60bfae8ffebee1d938cf90867cde21052d232fde92e1a149b04b0a693",
+ "signature": "3e31405720c3cc2808672d92a9c708f5b5ab0861291eaaa213a2a9f6fe1bce12",
  "solution": {
   "batting": [
    [

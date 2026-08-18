@@ -12,15 +12,19 @@
  ],
  "metadata": {
   "batters": 9,
-  "chain_length": 9,
-  "chain_target": 9,
+  "blanks": 34,
+  "chain_length": 25,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 2
+  "pitchers": 2,
+  "seed": 6,
+  "stalls": 7,
+  "target_stalls": 7
  },
  "pitcher_labels": [
   "SP",
@@ -58,7 +62,7 @@
     null,
     0,
     null,
-    null
+    0
    ],
    [
     5,
@@ -94,7 +98,7 @@
    ],
    [
     5,
-    null,
+    4,
     null,
     1,
     1,
@@ -104,7 +108,7 @@
   "batting_totals": [
    46,
    38,
-   null,
+   9,
    null,
    5,
    null
@@ -119,6 +123,30 @@
    [
     0,
     0,
+    null,
+    null
+   ],
+   [
+    0,
+    null,
+    0,
+    null
+   ],
+   [
+    0,
+    null,
+    null,
+    0
+   ],
+   [
+    null,
+    0,
+    null,
+    0
+   ],
+   [
+    null,
+    null,
     0,
     0
    ],
@@ -126,48 +154,24 @@
     0,
     0,
     0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
+    null
    ],
    [
     0,
     0,
     1,
-    0
+    null
    ],
    [
     1,
-    0,
+    null,
     1,
     0
    ],
    [
     0,
     0,
-    0,
+    null,
     0
    ]
   ],
@@ -209,23 +213,23 @@
     5,
     4,
     null,
-    null
+    0
    ],
    [
-    null,
+    25,
     10,
     4,
-    null,
     4,
-    3
+    4,
+    null
    ]
   ],
   "pitching_totals": [
    27,
+   15,
+   9,
    null,
-   null,
-   8,
-   null,
+   5,
    3
   ]
  },
@@ -252,7 +256,7 @@
   "played_on": "1913-08-24"
  },
  "schema": 1,
- "signature": "9cfaea9f156c971c2ad613645bf48e1fbd4ad0b3860cd0958e0697dca5adb621",
+ "signature": "e5ef744a363b328851d6ef3a2380add778e424ee595f1eb247943b23def3d61f",
  "solution": {
   "batting": [
    [

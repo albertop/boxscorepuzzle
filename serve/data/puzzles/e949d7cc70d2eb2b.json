@@ -12,16 +12,19 @@
  ],
  "metadata": {
   "batters": 9,
-  "chain_length": 10,
-  "chain_target": 9,
+  "blanks": 34,
+  "chain_length": 27,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
-   "global_identity",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 1
+  "pitchers": 1,
+  "seed": 6,
+  "stalls": 8,
+  "target_stalls": 8
  },
  "pitcher_labels": [
   "SP"
@@ -42,11 +45,11 @@
     1,
     null,
     0,
-    null
+    0
    ],
    [
     null,
-    null,
+    2,
     1,
     0,
     1,
@@ -74,12 +77,12 @@
     1,
     2,
     0,
-    null
+    0
    ],
    [
     4,
     null,
-    null,
+    0,
     1,
     null,
     1
@@ -94,7 +97,7 @@
    ],
    [
     4,
-    null,
+    4,
     null,
     0,
     0,
@@ -104,9 +107,9 @@
   "batting_totals": [
    36,
    30,
+   7,
    null,
-   null,
-   null,
+   4,
    null
   ],
   "footnote_totals": [
@@ -119,55 +122,55 @@
    [
     0,
     0,
+    null,
+    null
+   ],
+   [
+    0,
+    null,
+    0,
+    null
+   ],
+   [
+    0,
+    null,
+    null,
+    0
+   ],
+   [
+    null,
+    0,
+    null,
+    0
+   ],
+   [
+    null,
+    null,
     0,
     0
    ],
    [
     0,
     0,
-    0,
-    0
+    null,
+    null
    ],
    [
     0,
+    null,
+    0,
+    null
+   ],
+   [
+    null,
+    null,
     1,
-    0,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    1,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
+    null,
     0
    ]
   ],
@@ -204,21 +207,21 @@
   },
   "pitching": [
    [
-    null,
+    27,
     8,
     7,
     7,
     null,
-    null
+    5
    ]
   ],
   "pitching_totals": [
-   null,
-   null,
+   27,
+   8,
    7,
-   null,
+   7,
    4,
-   5
+   null
   ]
  },
  "puzzle_id": "e949d7cc70d2eb2b",
@@ -243,7 +246,7 @@
   "played_on": "1913-08-06"
  },
  "schema": 1,
- "signature": "0d1d748427d413c592c8a5b320323ce76ab63c1e0c5430ef015fc5457ad38774",
+ "signature": "5b0d7a6916faef7886e42ac15100ccb8ae0751ac303608c6a31f4974f5b4641f",
  "solution": {
   "batting": [
    [

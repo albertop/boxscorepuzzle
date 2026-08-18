@@ -12,15 +12,19 @@
  ],
  "metadata": {
   "batters": 9,
-  "chain_length": 8,
-  "chain_target": 7,
+  "blanks": 33,
+  "chain_length": 23,
+  "difficulty_model": "stalls",
   "families": [
    "column_sum",
    "cross_team",
    "row_identity"
   ],
   "note": "reference data for serve, not inventory",
-  "pitchers": 2
+  "pitchers": 2,
+  "seed": 6,
+  "stalls": 6,
+  "target_stalls": 6
  },
  "pitcher_labels": [
   "SP",
@@ -31,7 +35,7 @@
    [
     4,
     null,
-    null,
+    0,
     2,
     1,
     null
@@ -119,42 +123,30 @@
    [
     0,
     0,
-    0,
-    0
+    null,
+    null
    ],
    [
     0,
-    0,
+    null,
     1,
-    0
+    null
    ],
    [
     0,
-    0,
-    0,
+    null,
+    null,
     0
    ],
    [
+    null,
     0,
-    0,
-    0,
+    null,
     0
    ],
    [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
+    null,
+    null,
     0,
     0
    ],
@@ -162,12 +154,24 @@
     0,
     0,
     0,
-    0
+    null
    ],
    [
     0,
     0,
     0,
+    null
+   ],
+   [
+    0,
+    null,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    null,
     0
    ]
   ],
@@ -207,24 +211,24 @@
     6,
     2,
     1,
-    4,
-    null
+    null,
+    8
    ],
    [
     3,
     2,
     1,
-    null,
     1,
-    1
+    1,
+    null
    ]
   ],
   "pitching_totals": [
    24,
    8,
+   3,
    null,
-   2,
-   null,
+   5,
    9
   ]
  },
@@ -251,7 +255,7 @@
   "played_on": "1913-08-17"
  },
  "schema": 1,
- "signature": "e3ef456119a0e8745f6d721f5892c9bb282da9946d474b3a8f6fe4717489150a",
+ "signature": "0cbe5d87124874d27aec9093a077635203f66282bde747276f5d2ea1b63766cd",
  "solution": {
   "batting": [
    [

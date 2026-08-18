@@ -30,10 +30,16 @@ from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign  # noqa: E402
-from boxscore_verify.plausibility import reveal_faults  # noqa: E402
-from boxscore_verify.verify import verify  # noqa: E402
+from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 
-TARGETS = (5, 7, 9, 9, 11, 11)
+TARGETS = (5, 6, 7, 8, 9, 10)
+"""Stall counts, not chain lengths.
+
+Chain measures how long a solve is: a chain-10 board is ten subtractions in single file and one was
+solved by hand in under a minute. A stall is the moment propagation runs dry and something beyond
+direct substitution is needed. **No band is implied here** — these are six different boards for the
+client to be built against, not a difficulty scale.
+"""
 GATE = 0.25
 SEED = 6
 OUT = _ROOT / "serve" / "data" / "puzzles"
@@ -65,7 +71,8 @@ def reveal_for(loaded: Loaded) -> Reveal:
 
 
 def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
-    produced = erase(loaded.direction, target_chain=target, seed=SEED)
+    """Generate one puzzle and put it through the publication gate, not a subset of the checks."""
+    produced = erase(loaded.direction, target_stalls=target, seed=SEED)
     if produced is None:
         return None
     package = sign(
@@ -78,20 +85,40 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
             reveal=reveal_for(loaded),
             metadata={
                 "note": "reference data for serve, not inventory",
-                "chain_target": target,
+                "difficulty_model": "stalls",
+                "target_stalls": target,
+                "stalls": produced.solution.stalls,
+                # Descriptive telemetry. Chain is recorded because every earlier measurement used it
+                # and they have to stay comparable — it is not what the board was selected on.
                 "chain_length": produced.solution.chain_length,
+                "blanks": len(produced.erased),
                 "families": sorted(family.value for family in produced.solution.families_used),
                 "batters": len(loaded.direction.batting),
                 "pitchers": len(loaded.direction.pitching),
-                # Deliberately present so publishing has something to strip, and so the six files
-                # demonstrate that it does.
+                "seed": SEED,
                 "game_id": loaded.game_id,
                 "season": loaded.season,
             },
         ),
         secret,
     )
-    return package if verify(package, secret=secret).accepted else None
+    # ⚠️ The gate, not `verify()`. Assembling a subset of the checks at each call site is the defect
+    # this boundary exists to remove, and this writer was one of the sites doing it.
+    certified = certify_for_publication(package, evidence=evidence_for(loaded), secret=secret)
+    if not certified.publishable:
+        print(f"  refused {loaded.game_id} at {target} stalls: {'; '.join(certified.refusals)}")
+        return None
+    return package
+
+
+def evidence_for(loaded: Loaded) -> Evidence:
+    """What the producer knows and the package cannot say for itself."""
+    return Evidence(
+        source_type=loaded.source_type,
+        is_deduced=loaded.source_type.startswith("ED"),
+        official_hits=loaded.official_hits,
+        official_runs=loaded.official_runs,
+    )
 
 
 def main() -> None:
@@ -137,13 +164,11 @@ def main() -> None:
         restored = read(path)
         # The reveal is the payoff and no verifier layer can see it — a wrong team breaks no
         # equation. Checked here, on the file, for the same reason the round trip is.
-        spoiled = reveal_faults(restored)
-        if spoiled:
-            message = f"{path.name} has a broken reveal: " + "; ".join(f.what for f in spoiled)
-            raise SystemExit(message)
-        verdict = verify(restored, secret=secret)
-        if not verdict.accepted:
-            message = f"{path.name} passed in memory and failed from disk: {verdict.rejection}"
+        # The same gate on the way back in. A package that certifies in the process that made it and
+        # fails when read from disk is the class of defect this project keeps finding.
+        again = certify_for_publication(restored, evidence=evidence_for(loaded), secret=secret)
+        if not again.publishable:
+            message = f"{path.name} certified in memory and failed from disk: {'; '.join(again.refusals)}"
             raise SystemExit(message)
         if "game_id" in restored.metadata:
             message = f"{path.name} still carries game_id after publishing"
@@ -151,7 +176,7 @@ def main() -> None:
 
         written += 1
         print(
-            f"  {path.name}  chain {restored.metadata['chain_length']:>2} "
+            f"  {path.name}  {restored.metadata['stalls']:>2} stalls "
             f"({restored.metadata['batters']}b/{restored.metadata['pitchers']}p)  "
             f"{len(restored.labels)} labels  verified from disk"
         )
