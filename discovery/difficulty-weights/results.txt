@@ -1,0 +1,69 @@
+96 gated directions, gate 25%, ordering 'row_first'
+decades: {1910: 8, 1920: 8, 1930: 8, 1940: 8, 1950: 8, 1960: 8, 1970: 8, 1980: 8, 1990: 8, 2000: 8, 2010: 8, 2020: 8}
+757 scored boards across chain targets (5, 7, 9, 11)
+
+6 boards from the easy end written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\difficulty-weights\the-easy-end.html
+Look before trusting anything above: where does a gentle Monday stop being a puzzle?
+
+=== TWO DERIVATIONS OF THE FAMILY WEIGHTS ===
+            family  tutorial   co-occurrence   boards requiring it
+        column_sum         1            1.00                   757
+      row_identity         2            1.00                   746
+        cross_team         3            1.07                   553
+   global_identity         4            1.14                   335
+
+  agreement between the two orderings: r = +0.944
+  A disagreement says the tutorial order may not reflect real difficulty.
+
+  bounding: on 714 of 757 boards, 12.3% of steps when used
+  chain 8.7 with bounding against 6.3 without
+  Proposal: a multiplier on the board's score rather than a fifth family weight —
+  bounding can apply to any family, so scoring it as one of them double-counts.
+
+=== DOES THE SCORE ADD ANYTHING ===
+             against  hardest (tutorial)  weighted (tutorial)  weighted (derived)
+        chain length               0.486                0.699               0.681
+     search cost p90               0.544                0.508               0.432
+      resolution p90              -0.261               -0.450              -0.445
+        zero density              -0.098               -0.149              -0.146
+       trivial share               0.293                0.661               0.672
+  A tight correlation with chain or zero density means it renames something already had.
+
+=== DOES IT SEPARATE BOARDS THAT CHAIN LENGTH CALLS EQUIVALENT ===
+  chain  boards  distinct hardest    weighted p10-p90
+      5      87                 4                6-18
+      6      99                 4               13-36
+      7     100                 3               14-38
+      8      87                 3               19-42
+      9     115                 3               19-41
+     10      76                 3               29-44
+     11      95                 3               29-47
+     12      84                 2               32-46
+
+=== THE EASY END: 384 BOARDS AT CHAIN TARGETS (5, 7) ===
+  trivial share  p10 0.00  p50 0.13  p90 0.28  max 0.50
+  search cost    p10 0.31  p50 0.50  p90 0.67
+
+  FLOOR A, by symptom — high trivial and low search together:
+  trivial >=  search <=   boards    share
+        0.25       0.40       21     5.5%
+        0.25       0.50       49    12.8%
+        0.25       0.60       54    14.1%
+        0.35       0.40        4     1.0%
+        0.35       0.50        9     2.3%
+        0.35       0.60       10     2.6%
+        0.45       0.40        2     0.5%
+        0.45       0.50        4     1.0%
+        0.45       0.60        4     1.0%
+
+  FLOOR B, by content — what the board actually required:
+    nothing beyond column sums        :     3  (0.8%)
+    does not require the row identity :    11  (2.9%)
+
+=== DO THE TWO FLOORS CATCH THE SAME BOARDS ===
+  floor A (trivial >= 0.35 and search <= 0.50): 9
+  floor B (does not require the row identity) : 11
+  both                                        : 0
+  only A                                      : 9
+  only B                                      : 11
+  Largely coinciding means one thing with two names, and B is the clearer statement.
