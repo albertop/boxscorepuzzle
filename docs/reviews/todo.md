@@ -735,6 +735,32 @@ not only the aggregates. A null that survives that is a null; the earlier one wa
 
 ## Noticed in passing
 
+### The starter's label is still picked by priority, so a man who moved positions is misnamed
+
+Spotted by eye: `ACY192107310 IN4` shows **two `3B` and no starting `CF`**, which cannot be a starting
+nine.
+
+The raw flags say why. The man in slot 6 carries **both `3B` and `CF`** — he started in centre and moved
+to third when the slot-2 third baseman was replaced, which is why a fresh `CF` enters at slot 2. The
+`CASE` resolves his two flags by a fixed priority that puts `3B` ahead of `CF`, so he is named for the
+position he *moved to*.
+
+**The `_position` fix did not reach this.** It reads `SUB_FLD_CD` for men who *entered*, and a starter
+who merely moved has no entry of his own to read — so the half of the defect that involved substitutes
+was corrected and the half that involves starters was not. Same shape as the fixes this backlog keeps
+recording: the remaining case is the one carried along by a change that looked complete.
+
+**The rule that follows, and it uses the table already joined.** A starter with more than one fielding
+flag moved during the game. If he appears in `retroSubstitutionsReg` with a fielding code, that code is
+the position he moved *to*, so his starting position is the other flag. The check that would have caught
+this is a plausibility assertion, not an arithmetic one: **a starting nine has exactly one man per
+fielding position**, and any board showing two of one and none of another is wrong however well it
+balances.
+
+**Not fixed here.** It needs the moved-to lookup, and the assertion above wants measuring across the
+pool before it becomes a gate — it may reject real boards in eras with sparse fielding records.
+
+
 ### I rebuilt the driver that ignores a non-zero exit
 
 `compressibility.py` died two thirds of the way through its report with a `UnicodeEncodeError`: a `⚠️`
