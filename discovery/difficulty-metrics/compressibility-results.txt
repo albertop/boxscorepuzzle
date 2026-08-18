@@ -46,3 +46,9 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 43/120] BRO195408030 1954: 96/128 cells, chain 84, search 0.96, res 10, trivial 17%, col+cross+global+row, 35.4s
   [ 44/120] BOS195408200 1954: 75/108 cells, chain 61, search 0.95, res 8, trivial 20%, col+cross+global+row, 17.0s
   [ 45/120] BAL195409100 1954: 71/108 cells, chain 58, search 0.95, res 8, trivial 21%, col+cross+global+row, 14.0s
+  [ 46/120] BAL195409210 1954: 114/148 cells, chain 102, search 0.96, res 11, trivial 13%, col+cross+global+row, 65.5s
+  [ 47/120] BAL195409200 1954: 91/130 cells, chain 81, search 0.96, res 9, trivial 12%, col+cross+global+row, 32.7s
+  [ 48/120] BAL195409220 1954: 86/120 cells, chain 75, search 0.96, res 8, trivial 14%, col+cross+global+row, 30.6s
+  [ 49/120] BAL195409240 1954: 104/128 cells, chain 92, search 0.96, res 10, trivial 15%, col+cross+global+row, 36.5s
+  [ 50/120] BAL195409250 1954: 71/126 cells, chain 58, search 0.95, res 8, trivial 11%, col+cross+global+row, 22.0s
+  [ 51/120] BOS196408222 1964: 109/138 cells, chain 97, search 0.96, res 11, trivial 16%, col+cross+global+row, 50.0s

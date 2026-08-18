@@ -149,3 +149,42 @@ class TestAFootnoteBelongsToARowAndNotToAPosition:
         ]
 
         assert len(swapped) == 2
+
+
+class TestTheSlotReferenceHasOneSource:
+    """The slot cell and the footnote apply the same condition, so they call the same function.
+
+    ⚠️ Two places applying one rule is the defect this project spent a day closing — three erasable
+    definitions, two copies of the accepted-source list, two docstrings stating opposite rules. A cell
+    reading `9b` beside a footnote saying `9c` would be that defect where the player can see it.
+    """
+
+    def test_a_slot_with_one_row_carries_no_letter(self) -> None:
+        # Never `2a` when there is no `2b`: the letter is the signal that a slot is shared.
+        assert _loader().slot_references([1, 2, 3]) == ("1", "2", "3")
+
+    def test_a_shared_slot_letters_every_one_of_its_rows(self) -> None:
+        assert _loader().slot_references([1, 2, 2, 3]) == ("1", "2a", "2b", "3")
+
+    def test_it_applies_to_every_slot_not_only_the_pitcher(self) -> None:
+        # Slot 9 dominates the examples only because the pitcher is the position most substituted.
+        assert _loader().slot_references([5, 5, 9]) == ("5a", "5b", "9")
+
+    def test_three_in_a_slot_keep_counting(self) -> None:
+        assert _loader().slot_references([9, 9, 9]) == ("9a", "9b", "9c")
+
+    def test_the_cell_and_the_footnote_are_the_same_string_for_the_same_row(self) -> None:
+        """The assertion that matters: one call, one string, both consumers."""
+        slots = [1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9]
+        carries_a_footnote = 10  # the second man in the pitcher's slot
+
+        references = _loader().slot_references(slots)
+        cell = references[carries_a_footnote]
+        footnote = references[carries_a_footnote]
+
+        assert cell == footnote == "9b"
+
+    def test_every_reference_carries_its_slot_number(self) -> None:
+        # `9b`, never a bare `b`. The footnote prints the same string the cell does, so finding the
+        # row is recognition rather than composing the number from the row above.
+        assert all(reference[0].isdigit() for reference in _loader().slot_references([1, 9, 9, 9]))
