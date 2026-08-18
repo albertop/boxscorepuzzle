@@ -186,6 +186,21 @@ trusting review, and keep discovery inside the lint scope, because that is where
 that exists but is never called needs a test asserting the publication boundary invokes every
 implemented check, so adding one without wiring it in fails.
 
+**A justification is scoped, and it does not travel.** The contradiction is easy to see when two
+places state opposite rules. The finer defect is a justification that is *true where it was written*
+and silently false where it was reused. `narrow` declined to withhold the global identity, reasoning
+that which puzzles needed it is recorded on the family axis. True of propagation, where every
+deduction names its identity. False of bounding, which names none — so the global relation could
+decide a cell on a board that reported never having touched it. Nothing disagreed with anything; the
+reason simply stopped applying. **When a rule is reused, re-derive its reason in the new place rather
+than carrying the conclusion across.**
+
+**A null result needs the per-item count, not only the aggregate.** "Nothing moved" read off medians
+is not a null: two items moving in opposite directions leave every summary statistic untouched. A
+before-and-after must say how many individual items changed, and a comparison that cannot name the
+items it compared is not a comparison. This is the same defect as a check that never fires — an
+instrument that cannot distinguish, reporting as though it had.
+
 **Verify against the real artifact, not against what you believe you wrote.** Parse the file before
 running three hours of compute against it.
 

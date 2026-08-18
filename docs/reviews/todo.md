@@ -492,6 +492,18 @@ gate simply does not look there. Both numbers are needed, each named.
 width arithmetic, and whether the home-run cross ever resolves a cell. What needs the paired re-run is
 any claim that one configuration reaches a target in fewer blanks than another.
 
+### v02-P2-01's closure is reopened by its own method
+
+It reported that stalls, chain, families and stall position did not move, on 96 boards, and closed on
+that. **Every one of those was a median.** Two boards moving in opposite directions leave a median
+where it was, so the evidence never distinguished "nothing changed" from "the changes cancelled" —
+and the repair it was closing was only half applied, which is v03-P2-01.
+
+The five verdicts that hang off it — the ceiling at 10, the pitcher cap at 4, the gate at 25%, and the
+two composition decisions — are therefore restated rather than assumed. `discovery/global-identity-phase`
+runs the same boards before and after and reports **how many individual boards changed on each field**,
+not only the aggregates. A null that survives that is a null; the earlier one was not tested for it.
+
 ## Noticed in passing
 
 ### `extend-include` claims discovery is linted and nothing lints it
