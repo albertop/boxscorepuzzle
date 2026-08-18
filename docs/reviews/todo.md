@@ -735,7 +735,32 @@ not only the aggregates. A null that survives that is a null; the earlier one wa
 
 ## Noticed in passing
 
-### The starter's label is still picked by priority, so a man who moved positions is misnamed
+### One rule, two sources: the label is the position of *entry*
+
+⚠️ **"Where he played, not how he arrived" was underspecified**, and this board is what showed it: a man
+who played two positions has no single "where he played", so the `CASE` fell back on a fixed priority,
+which is arbitrary. `ACY192107310 IN4` came out with **two `3B` and no starting `CF`** — impossible for
+a starting nine, and no identity on the board can see it.
+
+**The rule is the position of entry, and it is one rule rather than two.** A substitute enters at the
+position `SUB_FLD_CD` records. A starter enters at the position the starting lineup records. Same rule,
+different source, and the second source was never used: `retroGamesReg` carries
+`{AWAY,HOME}_LINEUP{1..9}_{BAT_ID,FLD_CD}`, and for this game the away slot-6 code is **8 — centre
+field**, exactly the man the `CASE` was calling a third baseman.
+
+With it the board resolves itself: the slot-6 starter is `CF` because he began there, and the man
+entering at slot 2 is `CF` because he entered there. Two centre fielders in different slots, which is
+what the game did and what a printed boxscore prints.
+
+**Recorded as knowingly lost:** a printed boxscore shows *both* positions — `lf,1b` — and one label
+cannot. The entry position is the right one to keep, and the movement is information the board is
+discarding on purpose rather than by oversight.
+
+**The check that would have caught it** is a plausibility assertion rather than an arithmetic one: a
+starting nine has exactly one man per fielding position. Worth measuring across the pool before it
+becomes a gate, since sparse early-era fielding records may fail it honestly.
+
+
 
 Spotted by eye: `ACY192107310 IN4` shows **two `3B` and no starting `CF`**, which cannot be a starting
 nine.
@@ -749,13 +774,6 @@ position he *moved to*.
 who merely moved has no entry of his own to read — so the half of the defect that involved substitutes
 was corrected and the half that involves starters was not. Same shape as the fixes this backlog keeps
 recording: the remaining case is the one carried along by a change that looked complete.
-
-**The rule that follows, and it uses the table already joined.** A starter with more than one fielding
-flag moved during the game. If he appears in `retroSubstitutionsReg` with a fielding code, that code is
-the position he moved *to*, so his starting position is the other flag. The check that would have caught
-this is a plausibility assertion, not an arithmetic one: **a starting nine has exactly one man per
-fielding position**, and any board showing two of one and none of another is wrong however well it
-balances.
 
 **Not fixed here.** It needs the moved-to lookup, and the assertion above wants measuring across the
 pool before it becomes a gate — it may reject real boards in eras with sparse fielding records.
