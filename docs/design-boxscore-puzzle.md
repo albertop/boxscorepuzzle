@@ -980,7 +980,35 @@ no `rowspan`, and no scroll problem — the merged cell that vanished with its s
 now does not exist. The four-variant sample is cancelled: two of its variants were moot once the slot
 could not identify a row, and the other two are unnecessary once the width passes without a column.
 
-**Grouping is carried by order and indentation instead** — `CF`, `CF-2`, `CF-3` consecutive, the
+**Grouping is carried by order, indentation and a rule between slots — form B, chosen by eye.** The
+difference between indentation alone and indentation with a rule shows on a board where a substitute is
+*buried mid-lineup* rather than trailing at the end: with four pinch hitters grouped at the bottom the
+indent is enough, and with a substitute sitting between two unrelated rows it is easy to miss. The rule
+helps exactly where the indent alone fails, and it costs vertical pixels rather than horizontal ones.
+
+⚠️ **And it exposed a clash that has no cheap fix: the suffix partitions by position and the indent
+partitions by slot, and they are different partitions shown at once with nothing telling them apart.**
+A reader meets `3B-2` unindented — correct, a different man in a different slot who replaced nobody —
+beside an indented `CF` with no suffix. The suffix has to be global or footnotes stop being unique, so
+numbering within a slot is not available: two `3B` in different slots would collide again. A printed
+boxscore never meets this because names disambiguate; the suffix inherits that job here and then
+collides with the indent.
+
+**Three exits, none decided.**
+
+1. **Footnotes reference a row ordinal** — `HBP: row 7`. This does more than decouple: it removes the
+   suffix's reason to exist, so the label goes back to being purely descriptive, `P2`-reads-as-a-position
+   disappears, and the label drops to about 32px, returning **51.8px per data cell**. It costs the player
+   counting rows, on a board of up to thirteen, exactly where the load is already highest.
+2. **The ordinal inside the label** — `1 CF`, `2 3B`, `2 CF`. Identifies without counting and groups at
+   the same time, at the price of a label carrying two things.
+3. **Keep the suffix and accept the clash**, which is today's board plus a rule.
+
+⚠️ Whichever is chosen, **it interacts with the starter-who-moved defect**: the `3B-2` that prompted this
+is a man who started in centre, so correcting his label turns him into a second `CF` and moves the clash
+rather than removing it. That is evidence the collision is structural.
+
+Grouping is otherwise carried by order and indentation — `CF`, `CF-2`, `CF-3` consecutive, the
 substitutes indented — which is the printed convention and what the row-order fix has to do anyway.
 
 ⚠️ **What is still open is not the label.** Whether a footnote left unassigned across a group resolves
