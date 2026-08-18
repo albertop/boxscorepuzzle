@@ -956,7 +956,20 @@ three constraint families, including the cross-team constraint that §3 identifi
 ---
 
 
-### 🔬 Proposal, not decided: a lineup-slot column
+### ⛔ Proposal on hold: a lineup-slot column
+
+⚠️ **The width arithmetic below assumes the label can shrink to 50px because the suffix is gone, and
+the suffix cannot go.** A slot disambiguates positions repeated across *different* slots — 42.1% of
+repeated labels — and does nothing for rows sharing one: three `P` rows in slot 9 leave `HBP: 9`
+pointing at three candidates. With the suffix still on the label there is no 16px to spend and the
+column does not fit.
+
+**What is actually being decided is not a label.** The two-row case was measured weeks ago and modelled
+as domain bounding rather than notation: the term is 1 in one row and 0 in the others, and one row's
+own identity stops admitting it, so it falls to the other by elimination. 99.96% of ambiguous groups
+are exactly two rows. **The question is whether a person can do at three what the solver does at two**
+— and if they can, that is deduction rather than ambiguity, possibly one of the better moments on the
+board. Measurement pending; nothing below is decided until it lands.
 
 **This is a change to §6 rather than a rendering improvement**, which is why it is written here as a
 proposal with its arithmetic rather than applied as a side effect of correcting row labels.

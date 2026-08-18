@@ -194,6 +194,15 @@ trusting review, and keep discovery inside the lint scope, because that is where
 that exists but is never called needs a test asserting the publication boundary invokes every
 implemented check, so adding one without wiring it in fails.
 
+**A fix that solves most of a problem reads like one that solves all of it.** The slot column was
+proposed to kill three things at once: positions repeated across different slots, the lost
+slot-grouping relationship, and footnote ambiguity. It kills the first two. It does nothing for rows
+*sharing* a slot — three `P` rows in slot 9 leave `HBP: 9` pointing at three candidates — and the
+whole width argument depended on the label being free to shrink once the suffix was gone. The
+remaining case is the one nobody checks, because the proposal is already carrying a win. **Enumerate
+what a fix claims and test each claim separately**; a claim bundled with two that hold is the one that
+gets waved through.
+
 **A justification is scoped, and it does not travel.** The contradiction is easy to see when two
 places state opposite rules. The finer defect is a justification that is *true where it was written*
 and silently false where it was reused. `narrow` declined to withhold the global identity, reasoning
