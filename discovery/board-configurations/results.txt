@@ -1,0 +1,22 @@
+48 gated directions, gate 25%
+decades: {1910: 4, 1920: 4, 1930: 4, 1940: 4, 1950: 4, 1960: 4, 1970: 4, 1980: 4, 1990: 4, 2000: 4, 2010: 4, 2020: 4}
+432 measured ceilings
+
+=== WHAT EACH CONFIGURATION BUYS, AGAINST THE BASELINE ===
+Ceiling is not chain length. Chain measures how long the board is, not how hard.
+   configuration  boards  blanks  chain   stalls  search p90  resolution  cycles
+        baseline     144      36     19        5        0.88           7      54
+       footnotes     144      71     60       15        0.94           6      54
+   footnotes+lob     144      71     58       15        0.94           6      54
+
+  stalls is the target variable and the count is what matters, not the share.
+
+=== HOW MANY TIMES THE BOARD MAKES THE PLAYER STOP ===
+  The single most important number here. If the maximum is one or two, no erasure rule
+  reaches five and the answer is a wider board rather than a different rule.
+         baseline: stalls p50 5  p90 10  max 12  |  none 2%  five or more 56%
+                   bounding steps p50 8  max 18   <- counting these instead would inflate the standard
+        footnotes: stalls p50 15  p90 18  max 20  |  none 0%  five or more 100%
+                   bounding steps p50 39  max 61   <- counting these instead would inflate the standard
+    footnotes+lob: stalls p50 15  p90 18  max 20  |  none 0%  five or more 100%
+                   bounding steps p50 39  max 61   <- counting these instead would inflate the standard
