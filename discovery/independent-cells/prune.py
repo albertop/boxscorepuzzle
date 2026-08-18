@@ -63,6 +63,10 @@ class Result:
     pruned_erased: int
     pruned_independent: int
     reached: bool
+    families: frozenset[str]
+    pruned_families: frozenset[str]
+    pitching_blanks: int
+    pruned_pitching_blanks: int
 
     @property
     def share(self) -> float:
@@ -97,12 +101,21 @@ def dead_end_cells(solution: Solution) -> set[str]:
 
 
 def prune(shape: object, values: dict[str, int], erased: set[str], target: int) -> set[str]:
-    """Hand blanks back as given, keeping only what the chain needs.
+    """Hand blanks back as given, keeping what the chain **and the families** need.
 
-    Ordered by independence first, because those are the cells that cost the player a subtraction and
-    buy nothing. Each candidate is restored only if the board still reaches the target without it.
+    ⚠️ **Unconstrained pruning degenerates the board.** Pitching cells and totals cells resolve against
+    given numbers, so they look independent and are handed back first — and the minimum it converges
+    on is a batting-only puzzle with a complete boxscore decorating it. With both totals rows given
+    the equation linking them has no unknowns: it is true and useless, and the player never has a
+    reason to look at the pitching section at all. §3 calls that cross "the part without which the
+    puzzle degenerates into row arithmetic", and this is exactly that degeneration, systematically.
+
+    So a blank that is the last remaining reason to use a family is not filler, however independent
+    it looks. Coverage is preserved the same way chain length already was.
     """
     kept = set(erased)
+    start = solve(shape, {name: value for name, value in values.items() if name not in kept})  # type: ignore[arg-type]
+    required = frozenset(family.value for family in start.families_used)
     while True:
         given = {name: value for name, value in values.items() if name not in kept}
         solution = solve(shape, given)  # type: ignore[arg-type]
@@ -113,7 +126,8 @@ def prune(shape: object, values: dict[str, int], erased: set[str], target: int) 
             if not trial:
                 continue
             attempt = solve(shape, {name: value for name, value in values.items() if name not in trial})  # type: ignore[arg-type]
-            if attempt.is_complete and attempt.chain_length >= target:
+            covers = frozenset(family.value for family in attempt.families_used) >= required
+            if attempt.is_complete and attempt.chain_length >= target and covers:
                 kept = trial
                 removed = True
                 break
@@ -153,6 +167,10 @@ def run(loaded: Loaded, ordering: str, seed: int) -> list[Result]:
                     pruned_erased=len(kept),
                     pruned_independent=len(independent_cells(after)),
                     reached=after.chain_length >= target,
+                    families=frozenset(f.value for f in solution.families_used),
+                    pruned_families=frozenset(f.value for f in after.families_used),
+                    pitching_blanks=sum(1 for c in erased if c.startswith(("pitching[", "pitching_totals"))),
+                    pruned_pitching_blanks=sum(1 for c in kept if c.startswith(("pitching[", "pitching_totals"))),
                 )
             )
         if not wanted:
@@ -196,6 +214,25 @@ def report_pruning(results: list[Result]) -> None:
             f"{statistics.fmean([1.0 if r.reached else 0.0 for r in group]):>15.0%}"
         )
     print("  Pruning cannot cost pool: the board reached the target before pruning began.")
+    print("")
+    print("=== FAMILY COVERAGE, AND WHETHER PITCHING STAYS IN THE PUZZLE ===")
+    heads = f"{'target':>8}{'families before':>18}{'after':>8}{'lost any':>10}{'pitch blanks':>15}{'after':>8}{'none left':>11}"
+    print(heads)
+    for target in TARGETS:
+        group = [r for r in results if r.target == target]
+        if not group:
+            continue
+        lost = sum(1 for r in group if not r.pruned_families >= r.families)
+        empty = sum(1 for r in group if r.pruned_pitching_blanks == 0)
+        print(
+            f"{target:>8}{statistics.fmean([len(r.families) for r in group]):>18.2f}"
+            f"{statistics.fmean([len(r.pruned_families) for r in group]):>8.2f}"
+            f"{lost:>10}"
+            f"{statistics.median([r.pitching_blanks for r in group]):>15.0f}"
+            f"{statistics.median([r.pruned_pitching_blanks for r in group]):>8.0f}"
+            f"{empty:>11}"
+        )
+    print("  none left counts boards whose pitching section became decoration.")
 
 
 def render_comparison(sample: list[Loaded]) -> None:
@@ -220,7 +257,7 @@ def render_comparison(sample: list[Loaded]) -> None:
             continue
         kept = prune(shape, values, set(loose), 5)
         boards.append(render(loaded, SimpleNamespace(erased=frozenset(loose)), f"as erased today — {len(loose)} blanks"))
-        boards.append(render(loaded, SimpleNamespace(erased=frozenset(kept)), f"PRUNED — {len(kept)} blanks, same chain"))
+        boards.append(render(loaded, SimpleNamespace(erased=frozenset(kept)), f"PRUNED - {len(kept)} blanks, same chain and families"))
 
     out = _ROOT / "discovery" / "independent-cells" / "pruned-against-loose.html"
     out.write_text(

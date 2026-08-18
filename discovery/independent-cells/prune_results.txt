@@ -24,8 +24,16 @@ row_first was chosen on fewest trivial steps, before this existed.
 
 === WHAT PRUNING REMOVES ===
   target   before   after   removed   share before   share after  still reaches
-       5       16       5        11            60%           20%           100%
-       7       21       7        14            56%           14%           100%
-       9       24       9        15            52%           11%           100%
-      11       27      11        16            48%            9%           100%
+       5       16       7         9            60%           25%           100%
+       7       21       9        12            56%           20%           100%
+       9       24      11        13            52%           16%           100%
+      11       27      13        14            48%           13%           100%
   Pruning cannot cost pool: the board reached the target before pruning began.
+
+=== FAMILY COVERAGE, AND WHETHER PITCHING STAYS IN THE PUZZLE ===
+  target   families before   after  lost any   pitch blanks   after  none left
+       5              2.88    2.88         0              5       2        101
+       7              3.20    3.20         0              7       2         45
+       9              3.43    3.43         0              8       4         29
+      11              3.71    3.71         0              8       4         21
+  none left counts boards whose pitching section became decoration.
