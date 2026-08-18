@@ -70,3 +70,6 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 67/120] ATL197408130 1974: 108/144 cells, chain 100, search 0.96, res 11, trivial 10%, col+cross+global+row, 44.6s
   [ 68/120] ATL197408190 1974: 97/156 cells, chain 88, search 0.96, res 11, trivial 8%, col+cross+global+row, 47.7s
   [ 69/120] ATL197408180 1974: 115/148 cells, chain 103, search 0.96, res 12, trivial 13%, col+cross+global+row, 47.7s
+  [ 70/120] ATL197408160 1974: 110/156 cells, chain 100, search 0.96, res 11, trivial 9%, col+cross+global+row, 67.7s
+  [ 71/120] ATL198408090 1984: 107/140 cells, chain 100, search 0.97, res 10, trivial 13%, col+cross+global+row, 40.7s
+  [ 72/120] ATL198408080 1984: 123/166 cells, chain 115, search 0.97, res 12, trivial 8%, col+cross+global+row, 86.1s

@@ -372,47 +372,69 @@ def substitutes(slots: "Sequence[int]") -> list[bool]:
 
 
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
-    rows: list[list[str]] = [["", *BATTING_HEADS]]
+    # ⚠️ Eight columns, not seven. The first carries the lineup slot, and it is the cell a footnote
+    # reference points at: `SH: 9b` is useless if nothing on the board says `9b`. Its header is left
+    # blank on purpose — no boxscore has a slot column, so any symbol there is our invention asking to
+    # be interpreted, while `1, 2, 3...` in order explains itself.
+    rows: list[list[str]] = [["", "", *BATTING_HEADS]]
     spans: list[tuple[str, tuple[int, int], tuple[int, int], object]] = []
     batting_team = "HOME" if loaded.offense_is_home else "AWAY"
     pitching_team = "AWAY" if loaded.offense_is_home else "HOME"
 
-    rows.append([f"{batting_team} BATTING", "", "", "", "", "", ""])
+    rows.append([f"{batting_team} BATTING", *([""] * 7)])
     section_rows = [len(rows) - 1]
     sub = substitutes(loaded.slots)
+    references = slot_references(loaded.slots)
+    first_batting_row = len(rows)
     for index, line in enumerate(board.batting):
-        rows.append([indented(loaded.labels[index], substitute=sub[index]), *("" if value is None else str(value) for value in line)])
-    rows.append(["TOTALS", *("" if value is None else str(value) for value in board.batting_totals)])
+        rows.append(
+            [
+                references[index],
+                indented(loaded.labels[index], substitute=sub[index]),
+                *("" if value is None else str(value) for value in line),
+            ]
+        )
+    # The rule between slots goes above the first row of each new slot, which is where a block starts.
+    slot_rules = [first_batting_row + index for index, shared in enumerate(sub) if not shared and index]
+    rows.append(["", "TOTALS", *("" if value is None else str(value) for value in board.batting_totals)])
     totals_rows = [len(rows) - 1]
 
-    rows.append([f"{pitching_team} PITCHING", "", "", "", "", "", ""])
+    rows.append([f"{pitching_team} PITCHING", *([""] * 7)])
     section_rows.append(len(rows) - 1)
-    rows.append(["", *PITCHING_HEADS])
+    rows.append(["", "", *PITCHING_HEADS])
     head_rows = [0, len(rows) - 1]
     for index, line in enumerate(board.pitching):
         label = loaded.pitcher_labels[index] if index < len(loaded.pitcher_labels) else f"P{index + 1}"
         cells = ["" if value is None else str(value) for value in line]
         if line[0] is not None:
             cells[0] = to_display(line[0])
-        rows.append([label, *cells])
+        # The slot column is empty in the pitching section: those are the *opposing* team's pitchers
+        # and they have no place in this batting order. Left blank deliberately rather than by
+        # omission, since a stray number here would name a row that does not exist.
+        rows.append(["", label, *cells])
     totals = ["" if value is None else str(value) for value in board.pitching_totals]
     if board.pitching_totals[0] is not None:
         totals[0] = to_display(board.pitching_totals[0])
-    rows.append(["TOTALS", *totals])
+    rows.append(["", "TOTALS", *totals])
     totals_rows.append(len(rows) - 1)
 
     del solved
     # Shorter rows on a tall board. Eight millimetres is still far more than a digit needs, and
     # the page has to carry the formula strip and the survey box as well as the grid.
     height = 7.4 * mm if len(rows) > 20 else 8.6 * mm
-    table = Table(rows, colWidths=[26 * mm, *([21 * mm] * 6)], rowHeights=height)
+    # The slot column is taken out of the label column rather than added to the board: the label no
+    # longer carries a suffix, so it needs less than it did, and the six data columns keep their width.
+    table = Table(rows, colWidths=[8 * mm, 18 * mm, *([21 * mm] * 6)], rowHeights=height)
     style: list[tuple[object, ...]] = [
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#999999")),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
-        ("LEFTPADDING", (0, 0), (0, -1), 3),
+        ("LEFTPADDING", (0, 0), (1, -1), 3),
+        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+        ("BACKGROUND", (0, first_batting_row), (0, first_batting_row + len(board.batting) - 1),
+         colors.HexColor("#eeeeee")),
     ]
     for row in head_rows:
         style += [
@@ -433,6 +455,7 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
             ("BACKGROUND", (0, row), (-1, row), colors.HexColor("#eeeeee")),
             ("FONTNAME", (0, row), (-1, row), "Helvetica-Bold"),
         ]
+    style += [("LINEABOVE", (0, row), (-1, row), 1.1, colors.HexColor("#666666")) for row in slot_rules]
     table.setStyle(TableStyle(style + [tuple(span) for span in spans]))  # type: ignore[arg-type]
     return table
 
