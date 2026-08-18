@@ -87,16 +87,28 @@ def _parse_line_score(text: str) -> tuple[int, ...]:
     return tuple(innings)
 
 
-def load(limit: int, *, gated: bool = False) -> list[Loaded]:
+def load(
+    limit: int,
+    *,
+    gated: bool = False,
+    gate: float = 0.30,
+    max_batters: int = 13,
+    min_pitchers: int = 0,
+    max_pitchers: int = 2,
+) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
 
     `gated` applies §5's zero-density gate in SQL, which matters more than it sounds: the gate keeps
-    only 11% of the pool, so an ungated sample is 89% boards that will never ship. Off by default so
-    that measurements taken before the gate existed stay comparable to themselves.
+    only 11% of the pool at 30%, so an ungated sample is nine parts boards that will never ship. Off
+    by default so that measurements taken before the gate existed stay comparable to themselves.
+
+    `min_pitchers` exists to sample an *exact* pitcher count rather than a cap, which is what
+    comparing a two-pitcher board against a five-pitcher one requires — under a cap the five-pitcher
+    boards would be a handful of outliers inside a sample of two-pitcher ones.
     """
     import pyodbc  # noqa: PLC0415
 
-    gate = """
+    gate_clause = f"""
       AND CAST(o.batting_zeros + d.pitching_zeros
         + CASE WHEN o.t_pa=0 THEN 1 ELSE 0 END + CASE WHEN o.t_ab=0 THEN 1 ELSE 0 END
         + CASE WHEN o.t_r=0 THEN 1 ELSE 0 END + CASE WHEN o.t_h=0 THEN 1 ELSE 0 END
@@ -104,7 +116,7 @@ def load(limit: int, *, gated: bool = False) -> list[Loaded]:
         + CASE WHEN d.t_out=0 THEN 1 ELSE 0 END + CASE WHEN d.t_ph=0 THEN 1 ELSE 0 END
         + CASE WHEN d.t_pr=0 THEN 1 ELSE 0 END + CASE WHEN d.t_per=0 THEN 1 ELSE 0 END
         + CASE WHEN d.t_pbb=0 THEN 1 ELSE 0 END + CASE WHEN d.t_pso=0 THEN 1 ELSE 0 END AS float)
-        / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < 0.30
+        / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < {gate}
     """
     query = f"""
     WITH shape AS (
@@ -145,18 +157,18 @@ def load(limit: int, *, gated: bool = False) -> list[Loaded]:
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
-    -- The caps the browser prototype settled on (§6): 13 batting rows and 2 pitching rows fit at
-    -- 320px. They replace the provisional 10/3 every measurement before the prototype used, and
-    -- they are not interchangeable — the pitcher count changes the constraint graph, so anything
-    -- measured under the old pair describes a board that is not being built.
-    WHERE o.batters <= 13 AND d.pitchers <= 2 AND l.VisLineScore IS NOT NULL
+    -- Caps are arguments, not constants. The pitcher cap in particular is under review: its
+    -- justification was screen cost, and the working-set measurement retired that argument without
+    -- the cap being revisited (§6).
+    WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
+      AND l.VisLineScore IS NOT NULL
       AND g.SEASON BETWEEN ? AND ?
       -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
       -- identity, which is why the exclusion has to be a join rather than a check: nothing
       -- downstream can catch a board that is consistent and still wrong.
       AND NOT EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
                       WHERE p.GAME_ID = g.GAME_ID AND (p.is_deduced = 1 OR p.source_type = 'EVR'))
-      {gate if gated else ""}
+      {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     rows_query = """

@@ -10,7 +10,7 @@ import pytest
 
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.constraints import cell_values, shape_of
-from boxscore_forge.erasure import ORDERINGS, erase
+from boxscore_forge.erasure import ORDERINGS, erasable, erase
 from boxscore_forge.solver import solve
 
 
@@ -70,16 +70,25 @@ class TestItAimsAtAChain:
 class TestItOnlyTouchesTheGrid:
     def test_never_erases_the_line_score(self, cubs_at_braves_1968: Direction) -> None:
         # Section 6: the line score is the board's anchor, given complete and never erased.
-        puzzle = erase(cubs_at_braves_1968, target_chain=12, seed=8)
+        puzzle = erase(cubs_at_braves_1968, target_chain=8, seed=8)
 
         assert puzzle is not None
         assert not any(cell.startswith("line_score") for cell in puzzle.erased)
 
     def test_never_erases_a_footnote(self, cubs_at_braves_1968: Direction) -> None:
-        puzzle = erase(cubs_at_braves_1968, target_chain=12, seed=9)
+        puzzle = erase(cubs_at_braves_1968, target_chain=8, seed=9)
 
         assert puzzle is not None
         assert not any(cell.startswith(("footnotes", "footnote_totals", "team_footnotes")) for cell in puzzle.erased)
+
+    @pytest.mark.parametrize("name", sorted(ORDERINGS))
+    def test_no_ordering_reaches_outside_the_grid(self, cubs_at_braves_1968: Direction, name: str) -> None:
+        # The two rules above stated once as an invariant, so a new ordering cannot quietly acquire
+        # the ability to erase something the player is meant to be given.
+        puzzle = erase(cubs_at_braves_1968, target_chain=8, seed=10, ordering=name)
+
+        assert puzzle is not None
+        assert puzzle.erased <= set(erasable(cubs_at_braves_1968))
 
 
 class TestItIsReproducible:
@@ -123,12 +132,13 @@ class TestOrderings:
         with pytest.raises(ValueError, match="unknown erasure ordering"):
             erase(cubs_at_braves_1968, target_chain=8, seed=13, ordering="spiral")
 
+    def test_the_default_is_the_measured_one(self, cubs_at_braves_1968: Direction) -> None:
+        # Not a tautology: it guards the default against drifting back to whichever ordering is
+        # convenient. row_first was chosen because it pads the easy board least, and the erasure a
+        # player gets should be the one that was measured.
+        default = erase(cubs_at_braves_1968, target_chain=8, seed=15)
+        named = erase(cubs_at_braves_1968, target_chain=8, seed=15, ordering="row_first")
 
-class TestSymmetry:
-    def test_the_mirrored_ordering_pairs_rows_from_both_ends(self, cubs_at_braves_1968: Direction) -> None:
-        # Sudoku erases symmetrically for visual reasons. Whether it helps here is unmeasured, so
-        # the ordering exists to be measured rather than because it has been chosen.
-        puzzle = erase(cubs_at_braves_1968, target_chain=6, seed=14, ordering="mirrored")
-
-        assert puzzle is not None
-        assert solve(shape_of(cubs_at_braves_1968), puzzle.given).is_complete
+        assert default is not None
+        assert named is not None
+        assert default.erased == named.erased

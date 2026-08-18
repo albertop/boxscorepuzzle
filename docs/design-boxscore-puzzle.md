@@ -341,12 +341,52 @@ carries more bench rows and spreads the same counting stats over more of them.
 filters compound: the ≤2 pitcher cap already selects complete games, which modern baseball barely
 produces, and the gate then removes the low-scoring remainder.
 
-Whether that matters is a product question, not a pool question — 12,218 directions is 18.1 years of
-calendar regardless of which decade they come from, and the deduction does not care what year it is.
-It matters if the progressive reveal (§7) is expected to land on names a player recognises. **Not
-decided.** The levers, in order of cost: loosen the pitcher cap back towards 3 and accept fewer
-visible batting rows; raise the gate to 35% (43.8 years, but three-run boards return); or stratify
-the calendar by era deliberately so a thin decade is rationed rather than crowded out.
+### ✅ Decided: a 5% pre-1950 calendar quota
+
+**Pre-1950 boards must not exceed 5% of what the player sees** — roughly eighteen puzzles a year, one
+every three weeks. Enough that Ruth turns up occasionally and is an *event*, rather than being the
+scenery.
+
+**It is a quota on the calendar, not a filter on the pool.** Nothing is discarded and no direction
+becomes ineligible; the pool may stay 78% old. The calendar builder rations which directions get
+used.
+
+**What it does is move the binding constraint.** The question stops being "how many directions
+survive" and becomes "how many survive *from 1950 onwards*", because with the old half capped at one
+puzzle in twenty, everything else has to come from the modern half:
+
+> years of calendar = post-1950 directions ÷ 0.95 ÷ 674 a year
+
+### ⚠️ And that is where the pitcher cap fails
+
+At ≤2 pitchers the modern half is **3,405 directions — 5.3 years of calendar.** The cap is not
+expensive at the margin; it is the whole constraint.
+
+| Pitcher cap | Directions | From 1950 on | **Years under the quota** |
+|---|---:|---:|---:|
+| **≤2 — current** | 12,218 | 3,405 | **5.3** |
+| ≤3 | 20,507 | 8,200 | 12.8 |
+| ≤4 | 25,270 | 11,884 | 18.6 |
+| ≤5 | 26,877 | 13,262 | 20.7 |
+
+*Batters ≤13, gate 30%. Raising the batter cap to 14 or 15 moves these by about 1% — the batter cap
+is no longer a lever at all.*
+
+**The screen-cost justification for ≤2 was wrong, and it is retired.** The argument was that a third
+pitcher takes visible batting rows from 9 to 8 at 375px. The working-set measurement in §6 had
+already established that rows on screen are not the binding constraint — that is exactly what let the
+batter cap go from 10 to 13 — and the finding was never applied to pitchers. **Four pitchers is a
+fifteen-row board and scrolls exactly as thirteen batters does.**
+
+*One thing the cap was suspected of is not true either: adding pitchers does not make a board
+zero-dense. Mean zero density by exact pitcher count runs 0.421 at one, 0.385 at two, 0.380 at three,
+0.382 at four, 0.386 at five. The zero-dense board is the complete-game shutout, not the bullpen
+game.*
+
+**What remains open is whether it costs puzzle**, and it is a real hypothesis rather than an
+objection: a pitching line crosses the offense only through totals, so four pitching rows may give
+nearly the same constraints as two and lengthen the board without improving it. Measured in
+`discovery/pitcher-cap/`.
 
 *One side effect, small and in the wrong direction: filtering makes hard boards slightly more
 uniform in the families they demand — 79% → 96% requiring all four at a chain target of 20. That is
@@ -620,6 +660,12 @@ identity, and §31 rests on measurements taken against this board rather than th
 
 ### ✅ The roster caps, decided (browser prototype, August 2026)
 
+> **⚠️ The pitcher half of this was wrong and is reopened.** The screen-cost argument below does not
+> hold: the working-set measurement in this very section retired it, and the cap was left at ≤2 out
+> of inertia. Four pitchers is a fifteen-row board and fits with scrolling exactly as thirteen
+> batters does. What follows is kept as the reasoning that was actually used; the correction is in
+> **§5, "the pitcher cap"**, and the batter cap of ≤13 is unaffected.
+
 **≤13 batters in the offensive team, ≤2 pitchers in the defensive team.** Nothing in §6 is
 provisional any more.
 
@@ -631,6 +677,11 @@ two non-zero numbers** — scanning ten rows to find two is a scan, not somethin
 
 **The pitcher cap is the one that costs screen, and the batter cap is the one that costs pool** —
 the opposite of the provisional pair, which had them the other way round.
+
+*⚠️ Superseded. The first half of that sentence is the error: it prices a pitcher in screen rows,
+and the working-set finding two paragraphs above had already established that rows on screen are not
+the binding constraint. It also turned out to be false about pool — under the era quota the pitcher
+cap is by far the more expensive of the two (§5).*
 
 | Caps | Directions | Against the old pair |
 |---|---:|---:|
