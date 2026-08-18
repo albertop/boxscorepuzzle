@@ -101,6 +101,53 @@ Retrosheet's original files.
 
 ---
 
+## The failure mode this project actually has
+
+Every serious defect found so far has been the same shape: **two places that should say the same thing,
+saying different things — with nothing checking that they agree.** Not a logic error, not a bad
+algorithm. An implicit contract nobody validated.
+
+The record:
+
+| What happened | The two places |
+|---|---|
+| Deduced event files loaded unmarked | The download wildcard `<season>*.E??` and the intent to load only `.EV?` |
+| Phantom batting rows on the board | `B_G = 1` meaning "appeared" and the code assuming "batted" |
+| Pinch runner's run deleted | The shape query's "contributed anything" and the row query's `PA > 0` |
+| Board totals still balanced while wrong | The loader summing its own totals instead of an independent source |
+| CI abbreviation wrong for weeks | A term adopted in conversation and never checked against baseball notation |
+| Watchdog slept eight hours | A grep for `"hardest day"` against a file saying `HARDEST DAY` |
+| Three hours of compute lost | A patched script never parsed, and a driver that ignored a non-zero exit |
+
+**None of these break an identity.** That is why four validation layers caught none of them.
+
+### The rules that follow
+
+**Validate correspondence, not only consistency.** A fabricated board and a real one both balance. Every
+check that only asks "do the numbers agree with each other" is blind to the entire class of error above.
+Cross-check against an **independent source** — the game log, not `retroDailyReg` again.
+
+**One predicate, one place.** If two queries, two modules, or two documents encode the same rule, they
+will drift. Share the definition or assert they agree; do not maintain two copies and hope.
+
+**A check that never fires is indistinguishable from a check that is broken.** Test the failing case. A
+threshold set by eye that rejects real data gets loosened until it says nothing, which is worse than not
+having it — it gives false confidence.
+
+**Look at the output.** Every serious defect in this project was found by rendering something and
+reading it, never by computing a statistic. **Any measurement producing a distribution must also produce
+a handful of rendered examples, checked by eye before the numbers are trusted.** Make it a step, not a
+habit.
+
+**Fail closed at boundaries.** Verification that passes when its secret is missing, parsing that accepts
+malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
+the absence of a check reading as the presence of a passing one.
+
+**Verify against the real artifact, not against what you believe you wrote.** Parse the file before
+running three hours of compute against it.
+
+---
+
 ## Non-negotiable constraints
 
 Violating any of these is a defect, not a tradeoff.
@@ -156,6 +203,20 @@ Four layers, each able to reject on its own:
 **The verifier must not import or reuse generator code.** If it shares functions it inherits bugs and the validation is theater. Implement independently, even at the cost of duplication.
 
 A puzzle that fails any layer is **discarded silently, never repaired.** With thousands of candidates, throwing away 30% costs nothing.
+
+**⚠️ What the four layers do not cover.** They check that the numbers agree with each other. They cannot
+tell a real boxscore from a fabricated one, and every serious data defect in this project passed all four
+without a sound. Plausibility checks — assertions about how baseball works, not about arithmetic — are a
+separate and equally necessary class. So is solving by hand.
+
+**⚠️ Layer 3 does not verify human derivability.** It propagates intervals to fixed point across forty-odd
+simultaneous relations, which is stronger than any person. A board can pass it and be underivable by a
+human. **Solving fifty by hand is therefore a launch gate, not a review step** — it is the only real
+verification of human derivability that exists, and the only check the common-author risk does not touch.
+
+**⚠️ Independence has a limit worth stating.** The verifier shares no code with the generator and was
+written without reading it, but the same author wrote both. A misreading of §3 would be made twice and
+would agree with itself. Recorded as residual risk, not resolved.
 
 ### 3. Double idempotence (§21)
 
@@ -304,11 +365,34 @@ Do **not** store: real name, photo, date of birth, IP address, geolocation, in-s
 ## Security notes
 
 - **Verify webhook signatures on payment callbacks.** Unverified webhooks are the highest-value attack in this system — a forged notification grants a free subscription.
+- **Signature verification fails closed.** A missing or unconfigured secret is an error, never a pass. Explicit unsigned verification exists only for test and discovery call sites; any publish or import path errors out when the secret is absent. A check that silently disables itself on misconfiguration is worse than no check.
+- **Validate at the boundary, not downstream.** Package JSON is checked for exact row widths, integer-or-null cells, complete line score fields, and object-shaped metadata *before* any arithmetic. A malformed package must produce a controlled rejection, not an uncontrolled `TypeError` three layers later.
 - Access tokens: signed, short expiry (24h), signature verified server-side. Renewal is where devices are counted.
 - Validate OAuth `state`. Magic links: single use, short lifetime.
 - Sanity-check client-reported durations before storing, so absurd values don't corrupt percentiles.
 - Rate limit per IP in nginx; do not persist IPs.
 - No secrets in Docker images. Containers unprivileged.
+- **Escape or DOM-render any interpolated value in generated HTML**, including discovery instruments. Database labels and notes reach `innerHTML`; a measurement page that executes markup can mislead a decision or run code in the operator's browser.
+
+---
+
+## Discovery scripts are decision tools
+
+They are throwaway code that decides non-throwaway things. Two rules follow.
+
+**Reproducible from the script alone.** No reliance on the caller's working directory or an ambient
+`PYTHONPATH`. Every runnable script computes its root and sets its own paths the same way. A discovery
+result that cannot be re-run identically is not evidence.
+
+**Fail with an explanation, not an `IndexError`.** Scripts that index fixed sample positions after
+filtering must assert the sample size first, and say which filters were applied and what the minimum
+was. When a gate, an era window, or a data change empties a sample, the script should say so.
+
+**Anything acting as a launch gate is asserted, not printed.** The fifty-board hand-solve pack must
+assert its quotas after selection — chain rungs, era allowance, uncertified share, one board per game —
+not report them and be believed. A pack that claims to satisfy quotas and does not invalidates the
+experiment silently, which has already happened once when weighted sampling produced zero boards at the
+easiest rung.
 
 ---
 

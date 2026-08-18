@@ -52,6 +52,22 @@ from boxscore_forge.identities import (  # noqa: E402
 )
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 
+CONTRIBUTED = (
+    "B_G = 1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0"
+    " OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0)"
+)
+"""Which rows belong on the board, in one place because two copies of it drifted apart in a day.
+
+`B_G = 1` means a player appeared, not that he batted: 18.8% of those rows have no plate appearance
+and 83% of them also pitched. But a plate appearance is not the test either — a pinch runner scores
+without ever batting, and dropping him takes his run with him. **The invariant is that the row
+contributed something.**
+
+⚠️ It has to be the *same* predicate in the shape query and the row query. When the shape counted
+contributors and the rows loaded only batters, a game could pass the roster cap on a row count that
+the loaded board did not have.
+"""
+
 CONNECTION = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
 ERASURE_COUNTS = (2, 4, 6, 8, 10, 12)
 TRIALS_PER_COUNT = 15
@@ -174,9 +190,9 @@ def load(
     WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
              -- Only rows that actually batted. See the note on the batting query below.
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN 1 ELSE 0 END) AS batters,
+             SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
              SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN
+             SUM(CASE WHEN {CONTRIBUTED} THEN
                CASE WHEN B_PA=0 THEN 1 ELSE 0 END + CASE WHEN B_AB=0 THEN 1 ELSE 0 END +
                CASE WHEN B_R=0 THEN 1 ELSE 0 END + CASE WHEN B_H=0 THEN 1 ELSE 0 END +
                CASE WHEN B_BB=0 THEN 1 ELSE 0 END + CASE WHEN B_SO=0 THEN 1 ELSE 0 END
@@ -186,12 +202,12 @@ def load(
                CASE WHEN P_R=0 THEN 1 ELSE 0 END + CASE WHEN P_ER=0 THEN 1 ELSE 0 END +
                CASE WHEN P_BB=0 THEN 1 ELSE 0 END + CASE WHEN P_SO=0 THEN 1 ELSE 0 END
                ELSE 0 END) AS pitching_zeros,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_PA ELSE 0 END) AS t_pa,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_AB ELSE 0 END) AS t_ab,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_R ELSE 0 END) AS t_r,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_H ELSE 0 END) AS t_h,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_BB ELSE 0 END) AS t_bb,
-             SUM(CASE WHEN B_G=1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0 OR B_SO > 0 OR B_HP > 0 OR B_SF > 0 OR B_SH > 0 OR B_XI > 0) THEN B_SO ELSE 0 END) AS t_so,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_PA ELSE 0 END) AS t_pa,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_AB ELSE 0 END) AS t_ab,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_R ELSE 0 END) AS t_r,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_H ELSE 0 END) AS t_h,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_BB ELSE 0 END) AS t_bb,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_SO ELSE 0 END) AS t_so,
              SUM(CASE WHEN P_G=1 THEN P_OUT ELSE 0 END) AS t_out,
              SUM(CASE WHEN P_G=1 THEN P_H ELSE 0 END) AS t_ph,
              SUM(CASE WHEN P_G=1 THEN P_R ELSE 0 END) AS t_pr,
@@ -225,7 +241,7 @@ def load(
       {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
-    rows_query = """
+    rows_query = f"""
     SELECT d.PLAYER_ID, d.B_PA, d.B_AB, d.B_R, d.B_H, d.B_BB, d.B_SO, d.B_HP, d.B_SF, d.B_SH, d.B_XI,
       CASE WHEN d.F_P_G=1 THEN 'P' WHEN d.F_C_G=1 THEN 'C' WHEN d.F_1B_G=1 THEN '1B'
            WHEN d.F_2B_G=1 THEN '2B' WHEN d.F_3B_G=1 THEN '3B' WHEN d.F_SS_G=1 THEN 'SS'
@@ -243,7 +259,7 @@ def load(
     -- It also fixes the lineup order. Those rows carry SLOT_CT = 0, and **not one row in slot zero
     -- has ever batted**, so the slot is the marker for "did not bat" — ordering by it put the
     -- pitchers at the top of the card and pushed the leadoff hitter to third.
-    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.B_G = 1 AND d.B_PA > 0
+    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND {CONTRIBUTED.replace("B_", "d.B_")}
     ORDER BY d.SLOT_CT, d.SEQ_CT
     """
     # Pitchers in order of appearance, which is what SP / RP-1 / RP-2 labels claim to mean.
@@ -293,7 +309,7 @@ def load(
                 for r in batting_rows
             )
             footnotes = tuple(
-                BatterFootnotes(hit_by_pitch=r[7], sacrifice_flies=r[8], sacrifice_hits=r[9], reached_on_interference=r[10])
+                BatterFootnotes(hit_by_pitch=r[7], sacrifice_flies=r[8], sacrifice_hits=r[9], catcher_interference=r[10])
                 for r in batting_rows
             )
             pitching = tuple(
@@ -309,7 +325,7 @@ def load(
                 footnote_totals=_sum(
                     BatterFootnotes,
                     footnotes,
-                    ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference"),
+                    ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference"),
                 ),
                 team_footnotes=TeamFootnotes(left_on_base=lob),
                 pitching=pitching,
@@ -368,7 +384,7 @@ def leaned_on_a_footnote(direction: Direction, solution: Solution) -> bool:
         if footnotes.hit_by_pitch
         or footnotes.sacrifice_flies
         or footnotes.sacrifice_hits
-        or footnotes.reached_on_interference
+        or footnotes.catcher_interference
     }
     return any(
         deduction.from_identity == "row_plate_appearances"
@@ -556,7 +572,7 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
             ambiguous = [
                 footnote_cell(i, column)
                 for i in indexes
-                for column in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference")
+                for column in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
                 if any(values[footnote_cell(j, column)] for j in indexes)
             ]
             if not ambiguous:

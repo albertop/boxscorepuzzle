@@ -25,12 +25,29 @@ design document. The one thing both sides genuinely need — the file format —
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Final
 
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import SignatureError
 from boxscore_package.signing import verify as verify_signature
 from boxscore_verify.reason import ContradictionError, UndecidedError, derive, derive_in_view, narrow, solutions
 from boxscore_verify.rules import all_cells, line_score_faults, relations, values_of
+
+
+class Unsigned:
+    """Deliberate opt-out from the signature check, for tests and discovery only.
+
+    ⚠️ It exists so that *skipping* the check is a thing a caller says out loud. The previous version
+    took `secret=None` and returned success, which meant a publish path with a misconfigured secret
+    verified nothing and reported a pass — the absence of a check reading as the presence of a
+    passing one. `None` is now an error and this sentinel is the only way past.
+    """
+
+    def __repr__(self) -> str:  # pragma: no cover - debugging aid
+        return "UNSIGNED"
+
+
+UNSIGNED: Final = Unsigned()
 
 
 class Layer(StrEnum):
@@ -78,13 +95,23 @@ class Verdict:
         return self.rejection is None
 
 
-def verify(package: Package, *, secret: bytes | None = None) -> Verdict:
+def verify(package: Package, *, secret: bytes | Unsigned | None) -> Verdict:
     """Run every layer in order and stop at the first that rejects.
 
     Stopping early is right for a discard — the puzzle is gone either way — and the layer that caught
     it is the interesting fact. Running the rest would only say what else is wrong with something
     nobody will publish.
+
+    `None` is in the signature only so that it can be **rejected**: a misconfigured secret arrives
+    as `None` at runtime whatever the annotations say, and this is the one place that can catch it.
+
+    `secret` has no default on purpose. A publish or import path cannot forget it, and passing `None`
+    — which is what a misconfigured secret looks like — raises rather than quietly skipping the
+    integrity layer. Tests and discovery pass `UNSIGNED` to say so deliberately.
     """
+    if secret is None:
+        message = "no signing secret: pass UNSIGNED to verify without one, deliberately"
+        raise ValueError(message)
     for check in LAYERS.values():
         rejection = check(package, secret)
         if rejection is not None:
@@ -92,9 +119,12 @@ def verify(package: Package, *, secret: bytes | None = None) -> Verdict:
     return Verdict(puzzle_id=package.puzzle_id)
 
 
-def check_signature(package: Package, secret: bytes | None) -> Rejection | None:
+def check_signature(package: Package, secret: bytes | Unsigned | None) -> Rejection | None:
     """Checked first: nothing else is worth computing about a file that arrived damaged."""
     if secret is None:
+        message = "no signing secret: pass UNSIGNED to skip this layer, deliberately"
+        raise ValueError(message)
+    if isinstance(secret, Unsigned):
         return None
     try:
         verify_signature(package, secret)
@@ -103,7 +133,7 @@ def check_signature(package: Package, secret: bytes | None) -> Rejection | None:
     return None
 
 
-def check_identities(package: Package, _: bytes | None) -> Rejection | None:
+def check_identities(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
     """Layer 1: the boxscore balances, and the puzzle is a board of the same game.
 
     The structural half is not decoration. §6 gives the line score and the footnote line complete and
@@ -144,7 +174,7 @@ def check_identities(package: Package, _: bytes | None) -> Rejection | None:
     return None
 
 
-def check_uniqueness(package: Package, _: bytes | None) -> Rejection | None:
+def check_uniqueness(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
     """Layer 2: exactly one board completes the puzzle.
 
     None means the erasure produced a contradiction; two means cells came out that were not forced,
@@ -169,7 +199,7 @@ def check_uniqueness(package: Package, _: bytes | None) -> Rejection | None:
     return None
 
 
-def check_derivability(package: Package, _: bytes | None) -> Rejection | None:
+def check_derivability(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
     """Layer 3: reachable without a guess.
 
     §22 calls unique-but-underivable the worst failure because it looks correct: the puzzle passes
@@ -190,7 +220,7 @@ def check_derivability(package: Package, _: bytes | None) -> Rejection | None:
     return None
 
 
-def check_end_to_end(package: Package, _: bytes | None) -> Rejection | None:
+def check_end_to_end(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
     """Layer 4: solve the published board from scratch and compare against the original.
 
     Deliberately redundant with layers 2 and 3, and deliberately not reusing their results. It is the
@@ -279,7 +309,7 @@ def derivable_in_view(package: Package) -> bool:
         return False
 
 
-LAYERS: dict[Layer, Callable[[Package, bytes | None], Rejection | None]] = {
+LAYERS: dict[Layer, Callable[[Package, bytes | Unsigned | None], Rejection | None]] = {
     Layer.SIGNATURE: check_signature,
     Layer.IDENTITIES: check_identities,
     Layer.UNIQUENESS: check_uniqueness,
@@ -296,9 +326,11 @@ rather than which caught first, needs to call them individually.
 
 __all__ = [
     "LAYERS",
+    "UNSIGNED",
     "Fault",
     "Layer",
     "Rejection",
+    "Unsigned",
     "Verdict",
     "check_derivability",
     "check_end_to_end",

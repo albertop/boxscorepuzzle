@@ -177,6 +177,25 @@ SELECT (SEASON/10)*10 AS decade,
             / NULLIF((SELECT COUNT(*) FROM #kept WHERE zero_density < 0.30), 0) AS decimal(5,2)) AS share_after_pct
 FROM #kept GROUP BY (SEASON/10)*10 ORDER BY 1
 "@ "DOES THE GATE CHANGE WHAT THE POOL IS MADE OF"
+
+    # Where the threshold should sit, now that the distribution has moved. The gate exists to remove
+    # boards a player fills with noughts, so what matters is not how much it keeps but what it keeps
+    # out: if the boards just above the line still have three runs in them, the line is doing its job.
+    Invoke-Report @"
+SELECT g.gate,
+       SUM(CASE WHEN k.zero_density < g.gate THEN 1 ELSE 0 END) AS kept,
+       CAST(100.0 * SUM(CASE WHEN k.zero_density < g.gate THEN 1 ELSE 0 END) / COUNT(*) AS decimal(5,1)) AS kept_pct,
+       CAST(SUM(CASE WHEN k.zero_density < g.gate AND k.SEASON >= 1950 THEN 1 ELSE 0 END) / 0.95 / 674.0
+            AS decimal(7,1)) AS years_under_quota,
+       CAST(AVG(CASE WHEN k.zero_density < g.gate THEN CAST(k.offense_runs AS float) END) AS decimal(4,2)) AS mean_runs_kept,
+       CAST(AVG(CASE WHEN k.zero_density >= g.gate THEN CAST(k.offense_runs AS float) END) AS decimal(4,2)) AS mean_runs_cut,
+       SUM(CASE WHEN k.zero_density < g.gate AND k.offense_runs = 0 THEN 1 ELSE 0 END) AS shutouts_kept,
+       SUM(CASE WHEN k.zero_density < g.gate AND k.offense_runs <= 3 THEN 1 ELSE 0 END) AS three_runs_or_fewer_kept
+FROM (VALUES (0.22),(0.25),(0.28),(0.30),(0.32),(0.35)) g(gate)
+CROSS JOIN #kept k
+WHERE k.has_discrepancy = 0
+GROUP BY g.gate ORDER BY g.gate
+"@ "WHERE THE GATE SHOULD SIT ON THE CORRECTED POOL"
 }
 finally {
     $connection.Close()

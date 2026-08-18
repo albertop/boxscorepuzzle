@@ -14,7 +14,7 @@ Boards are erased by the real algorithm at the real settings, so what is rendere
 would meet. Read-only against DGL. Run from `forge/`.
 """
 
-import json
+import html
 import statistics
 import sys
 from pathlib import Path
@@ -32,6 +32,18 @@ from boxscore_forge.identities import BATTING_COLUMNS, PITCHING_COLUMNS, find_vi
 
 TARGET_CHAIN = 11
 SEED = 7
+
+
+
+def esc(value: object) -> str:
+    """Everything interpolated into generated HTML goes through here.
+
+    These pages are measurement instruments, and the values in them come from the database — labels,
+    surnames, game ids, notes. A value carrying markup would execute in the operator's browser and,
+    long before that, would quietly corrupt the board being judged. CLAUDE.md makes escaping a rule
+    for generated HTML including discovery output, and it costs one function.
+    """
+    return html.escape(str(value), quote=True)
 
 
 def blanks(puzzle: Puzzle, loaded: Loaded) -> dict[str, object]:
@@ -97,7 +109,7 @@ table.grid tr.totals td { background: #ddd; font-weight: 700; height: 34px; }
 
 def _cells(values: list[object], blank: list[int]) -> str:
     return "".join(
-        f"<td class='cell{' blank' if index in blank else ''}'>{'' if index in blank else value}</td>"
+        f"<td class='cell{' blank' if index in blank else ''}'>{'' if index in blank else esc(value)}</td>"
         for index, value in enumerate(values)
     )
 
@@ -121,14 +133,14 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
         ("HOME", score["offense"] if ours else score["defense"], score["offenseRHE"] if ours else score["defenseRHE"]),  # type: ignore[index]
     ):
         cells = "".join(
-            f"<td>{by_inning[index] if index < len(by_inning) else 'x'}</td>"  # type: ignore[index]
+            f"<td>{esc(by_inning[index]) if index < len(by_inning) else 'x'}</td>"  # type: ignore[index]
             for index in range(innings)
         )
         summary = "".join(
-            f"<td class='{'summary' if position == 0 else ''}'><b>{value}</b></td>"
+            f"<td class='{'summary' if position == 0 else ''}'><b>{esc(value)}</b></td>"
             for position, value in enumerate(rhe)  # type: ignore[arg-type]
         )
-        rows += f"<tr><td class='side'>{side}</td>{cells}{summary}</tr>"
+        rows += f"<tr><td class='side'>{esc(side)}</td>{cells}{summary}</tr>"
 
     # The section headers name the team, not only the role. The batting-pitching cross is one of the
     # four families and the part §3 says the puzzle degenerates without, but a player can only use it
@@ -140,34 +152,34 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
 
     blanks = board["blanks"]  # type: ignore[index]
     grid = "<thead><tr><th class='label'></th>" + "".join(
-        f"<th class='col'>{name}</th>" for name in ("PA", "AB", "R", "H", "BB", "K")
-    ) + f"</tr></thead><tbody><tr class='section'><td colspan='7'>{batting_team} BATTING</td></tr>"
+        f"<th class='col'>{esc(name)}</th>" for name in ("PA", "AB", "R", "H", "BB", "K")
+    ) + f"</tr></thead><tbody><tr class='section'><td colspan='7'>{esc(batting_team)} BATTING</td></tr>"
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
         label = board["labels"][index]  # type: ignore[index]
-        grid += f"<tr><th class='label'>{label}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
+        grid += f"<tr><th class='label'>{esc(label)}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
         + _cells(board["battingTotals"], blanks["battingTotals"])  # type: ignore[arg-type,index]
-        + f"</tr><tr class='section'><td colspan='7'>{pitching_team} PITCHING</td></tr>"
+        + f"</tr><tr class='section'><td colspan='7'>{esc(pitching_team)} PITCHING</td></tr>"
         + "<tr><th class='label'></th>"
-        + "".join(f"<th class='col'>{name}</th>" for name in ("IP", "H", "R", "ER", "BB", "K"))
+        + "".join(f"<th class='col'>{esc(name)}</th>" for name in ("IP", "H", "R", "ER", "BB", "K"))
         + "</tr>"
     )
     for index, row in enumerate(board["pitching"]):  # type: ignore[arg-type]
         # SP and RP-n, never a bare P — the pitcher who batted is already a `P` row in the batting
         # section above, and the same label meaning two things in two sections is worse than none.
         label = board["pitcherLabels"][index] if board.get("pitcherLabels") else f"P{index + 1}"  # type: ignore[index,union-attr]
-        grid += f"<tr><th class='label'>{label}</th>{_cells(row, blanks['pitching'][index])}</tr>"  # type: ignore[index]
+        grid += f"<tr><th class='label'>{esc(label)}</th>{_cells(row, blanks['pitching'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
         + _cells(board["pitchingTotals"], blanks["pitchingTotals"])  # type: ignore[arg-type,index]
         + "</tr></tbody>"
     )
 
-    footnotes = "; ".join(board["footnotes"])  # type: ignore[arg-type]
+    footnotes = "; ".join(esc(part) for part in board["footnotes"])  # type: ignore[arg-type]
     title = heading or str(board["season"])
     return (
-        f"<section><h2>{title}</h2><p class='note'>{board['note']}</p>"
+        f"<section><h2>{esc(title)}</h2><p class='note'>{esc(board['note'])}</p>"
         f"<table class='line'>{head}{rows}</table><div class='foot'>{footnotes}</div>"
         f"<table class='grid'>{grid}</table></section>"
     )

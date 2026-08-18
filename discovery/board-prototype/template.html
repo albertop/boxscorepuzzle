@@ -99,15 +99,22 @@ function lineScore(b) {
   // AWAY and HOME, because both teams batted and both fielded — offence and defence do not name
   // the rows of a line score. Neither row is tinted; the section headers name the teams instead.
   const row = (side, innings, rhe) =>
-    "<tr><td class='side'>" + side + "</td>" +
-    Array.from({length: n}, (_, i) => "<td>" + (innings[i] ?? "x") + "</td>").join("") +
-    rhe.map((v, i) => "<td class='" + (i === 0 ? "summary" : "") + "'><b>" + v + "</b></td>").join("") + "</tr>";
+    "<tr><td class='side'>" + esc(side) + "</td>" +
+    Array.from({length: n}, (_, i) => "<td>" + esc(innings[i] ?? "x") + "</td>").join("") +
+    rhe.map((v, i) => "<td class='" + (i === 0 ? "summary" : "") + "'><b>" + esc(v) + "</b></td>").join("") + "</tr>";
   const weAreHome = b.offenseIsHome;
   return head +
     row("AWAY", weAreHome ? b.lineScore.defense : b.lineScore.offense,
         weAreHome ? b.lineScore.defenseRHE : b.lineScore.offenseRHE) +
     row("HOME", weAreHome ? b.lineScore.offense : b.lineScore.defense,
         weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE);
+}
+
+// Every value from the database goes through here before it reaches innerHTML. These pages are
+// measurement instruments and a label or a note carrying markup would run in the operator's browser
+// — and, long before that, would silently corrupt the board being judged.
+function esc(value) {
+  return String(value).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 
 const ABBREVIATION = 7;
@@ -136,10 +143,10 @@ function label(b, r) {
 }
 
 function grid(b) {
-  const head = h => "<tr><th class='label'></th>" + h.map(x => "<th class='col'>" + x + "</th>").join("") + "</tr>";
+  const head = h => "<tr><th class='label'></th>" + h.map(x => "<th class='col'>" + esc(x) + "</th>").join("") + "</tr>";
   const cells = (vals, blanks) => vals.map((v, i) =>
     "<td class='cell" + (blanks.includes(i) ? " blank" : "") + "' tabindex='0'>" +
-    (blanks.includes(i) ? "" : v) + "</td>").join("");
+    (blanks.includes(i) ? "" : esc(v)) + "</td>").join("");
 
   // A board carrying `blanks` was erased by the real algorithm and is shown exactly as the player
   // would meet it. Without it the pattern below is decorative — enough to measure widths and
@@ -151,19 +158,19 @@ function grid(b) {
   // Team first, then role. The batting-pitching cross is unusable until the player sees that the
   // hits allowed below belong to the other team, and the two sections are always opposites.
   const battingTeam = b.offenseIsHome ? "HOME" : "AWAY", pitchingTeam = b.offenseIsHome ? "AWAY" : "HOME";
-  html += "<tr class='section'><td colspan='7'>" + battingTeam + " BATTING</td></tr>";
+  html += "<tr class='section'><td colspan='7'>" + esc(battingTeam) + " BATTING</td></tr>";
   b.batting.forEach((row, r) => {
-    html += "<tr><th class='label'>" + label(b, r) + "</th>" + cells(row, bat(r)) + "</tr>";
+    html += "<tr><th class='label'>" + esc(label(b, r)) + "</th>" + cells(row, bat(r)) + "</tr>";
   });
   html += "<tr class='totals' id='batTotals'><td class='label'>TOTALS</td>" +
     cells(b.battingTotals, b.blanks ? b.blanks.battingTotals : []) + "</tr>";
-  html += "<tr class='section'><td colspan='7'>" + pitchingTeam + " PITCHING</td></tr>";
+  html += "<tr class='section'><td colspan='7'>" + esc(pitchingTeam) + " PITCHING</td></tr>";
   html += "<tr><th class='label'></th>" + PIT.map(x => "<th class='col' style='font-size:11px'>" + x + "</th>").join("") + "</tr>";
   b.pitching.forEach((row, r) => {
     // SP and RP-n rather than P1..P4. The label carries deduction: a starter is where the long
     // innings are, so a fan can bound the IP column before touching an equation.
     const name = b.pitcherLabels ? b.pitcherLabels[r] : "P" + (r + 1);
-    html += "<tr><th class='label'>" + name + "</th>" + cells(row, pit(r)) + "</tr>";
+    html += "<tr><th class='label'>" + esc(name) + "</th>" + cells(row, pit(r)) + "</tr>";
   });
   html += "<tr class='totals' id='pitTotals'><td class='label'>TOTALS</td>" +
     cells(b.pitchingTotals, b.blanks ? b.blanks.pitchingTotals : []) + "</tr></tbody>";

@@ -87,13 +87,13 @@ def to_board(loaded: Loaded, erased: frozenset[str] | None) -> Board:
         footnotes=tuple(
             tuple(
                 getattr(note, field)
-                for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference")
+                for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
             )
             for note in direction.batter_footnotes
         ),
         footnote_totals=tuple(
             getattr(direction.footnote_totals, field)
-            for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference")
+            for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
         ),
         left_on_base=direction.team_footnotes.left_on_base,
         pitching=tuple(pitching_row(index, line) for index, line in enumerate(direction.pitching)),
@@ -202,10 +202,23 @@ def report(outcomes: list[Outcome]) -> None:
         print(f"\n  overall: {100.0 * sum(everything) / len(everything):.0f}% of published boards survive both")
 
 
+
+def _render(sample: list, folder: str) -> None:
+    """Six boards to look at, written before the numbers are printed (see `discovery/render_step`)."""
+    sys.path.insert(0, str(_ROOT / "discovery"))
+    from render_step import write_examples  # noqa: PLC0415
+
+    out = _ROOT / "discovery" / folder / "look-at-these.html"
+    count = write_examples(sample, out)
+    print()
+    print(f"{count} boards written to {out} — look at them before trusting anything below")
+
+
 def main() -> None:
     sample = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
     print(f"{len(sample)} gated directions at the decided caps")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
+    _render(sample, "verifier")
     report(run(sample))
 
 

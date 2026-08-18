@@ -31,7 +31,7 @@ from boxscore_forge.boxscore import (
 settings.register_profile("forge", deadline=timedelta(seconds=5))
 settings.load_profile("forge")
 
-_NO_FOOTNOTES = BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=0, reached_on_interference=0)
+_NO_FOOTNOTES = BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=0, catcher_interference=0)
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ def cubs_at_braves_1968() -> Direction:
         BattingLine(plate_appearances=4, at_bats=4, runs=2, hits=1, walks=0, strikeouts=2),
     )
     footnotes = (
-        BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1, reached_on_interference=0),
+        BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1, catcher_interference=0),
         *([_NO_FOOTNOTES] * 8),
     )
     pitching = (
@@ -60,7 +60,7 @@ def cubs_at_braves_1968() -> Direction:
         batting=batting,
         batting_totals=BattingLine(plate_appearances=39, at_bats=36, runs=4, hits=11, walks=2, strikeouts=5),
         batter_footnotes=footnotes,
-        footnote_totals=BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1, reached_on_interference=0),
+        footnote_totals=BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=1, catcher_interference=0),
         team_footnotes=TeamFootnotes(left_on_base=8),
         pitching=pitching,
         pitching_totals=PitchingLine(outs=27, hits=11, runs=4, earned_runs=4, walks=2, strikeouts=5),

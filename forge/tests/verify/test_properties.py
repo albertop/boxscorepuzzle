@@ -18,7 +18,7 @@ from boxscore_package.signing import SignatureError, sign
 from boxscore_package.signing import verify as verify_signature
 from boxscore_verify.reason import derive, solutions
 from boxscore_verify.rules import all_cells, relations, values_of
-from boxscore_verify.verify import Fault, Layer, verify
+from boxscore_verify.verify import UNSIGNED, Fault, Layer, verify
 
 SECRET = b"a test secret"
 
@@ -98,7 +98,7 @@ def _package(puzzle: Board, source: Board) -> Package:
 class TestABoardBuiltFromTheIdentitiesSatisfiesThem:
     @given(board=boards())
     def test_it_passes_every_layer(self, board: Board) -> None:
-        verdict = verify(_package(board, board))
+        verdict = verify(_package(board, board), secret=UNSIGNED)
 
         assert verdict.accepted, verdict.rejection
 

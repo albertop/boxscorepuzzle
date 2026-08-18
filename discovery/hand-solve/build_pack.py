@@ -42,7 +42,7 @@ from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_package.format import Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
-from boxscore_verify.verify import derivable_in_view, verify  # noqa: E402
+from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
 
 TARGETS = (5, 7, 9, 11, 13)
 QUOTAS = {5: 5, 7: 7, 9: 9, 11: 13, 13: 16}
@@ -63,7 +63,7 @@ SAMPLE_PER_DECADE = 8
 
 BATTING_HEADS = ("PA", "AB", "R", "H", "BB", "K")
 PITCHING_HEADS = ("IP", "H", "R", "ER", "BB", "K")
-FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "CI"))
+FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
 
 
 @dataclass(frozen=True)
@@ -99,7 +99,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                 continue
             board = to_board(loaded, produced.erased)
             package = PuzzlePackage(puzzle_id="pack", puzzle=board, source=source)
-            if not verify(package).accepted:
+            if not verify(package, secret=UNSIGNED).accepted:
                 continue
             found.append(
                 Candidate(
@@ -110,7 +110,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                     certified=derivable_in_view(package),
                     has_substitution=any("-" in label for label in loaded.labels),
                     has_live_footnote=any(
-                        note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.reached_on_interference
+                        note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
                         for note in loaded.direction.batter_footnotes
                     ),
                 )
@@ -126,16 +126,15 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
     wanted_uncertified = round(WANTED * UNCERTIFIED_SHARE)
     chosen: list[Candidate] = []
     used_games: set[str] = set()
-    pre_1950 = 0
+    pre_1950 = [0]
 
     def take(candidate: Candidate) -> bool:
-        nonlocal pre_1950
         if candidate.loaded.game_id in used_games:
             return False
-        if candidate.loaded.season < 1950 and pre_1950 >= PRE_1950_ALLOWANCE:
+        if candidate.loaded.season < 1950 and pre_1950[0] >= PRE_1950_ALLOWANCE:
             return False
         used_games.add(candidate.loaded.game_id)
-        pre_1950 += candidate.loaded.season < 1950
+        pre_1950[0] += candidate.loaded.season < 1950
         chosen.append(candidate)
         return True
 
@@ -160,20 +159,74 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
                 if take(candidate):
                     at_target += 1
 
-    # The two cases the tutorial has to teach must appear somewhere in the pack.
-    for present, trait in (
-        (any(item.has_substitution for item in chosen), lambda c: c.has_substitution),
-        (any(item.has_live_footnote for item in chosen), lambda c: c.has_live_footnote),
+    # The two cases the tutorial has to teach must appear somewhere in the pack. If one is missing a
+    # board is *swapped* rather than appended: the replacement takes the place of one at the same
+    # chain target, the same certification and the same side of 1950, so every quota survives the
+    # substitution. An earlier version appended and then dropped `chosen[-2]`, which removed an
+    # arbitrary board and could silently empty a rung.
+    for trait_name, trait in (
+        ("substitution", lambda c: c.has_substitution),
+        ("live footnote", lambda c: c.has_live_footnote),
     ):
-        if present:
+        if any(trait(item) for item in chosen):
             continue
         for candidate in shuffled([item for item in pool if trait(item)]):  # pragma: no cover - rare
-            if take(candidate):
-                chosen.pop(-2)
-                break
+            if candidate.loaded.game_id in used_games:
+                continue
+            victims = [
+                item
+                for item in chosen
+                if item.target == candidate.target
+                and item.certified == candidate.certified
+                and not trait(item)
+                and (item.loaded.season < 1950) == (candidate.loaded.season < 1950)
+            ]
+            if not victims:
+                continue
+            chosen.remove(victims[0])
+            used_games.discard(victims[0].loaded.game_id)
+            pre_1950[0] -= victims[0].loaded.season < 1950
+            take(candidate)
+            break
+        else:  # pragma: no cover - only if the pool cannot supply the trait at all
+            message = f"no board in the pool carries a {trait_name} at a target the pack can spare"
+            raise SystemExit(message)
 
     rng.shuffle(chosen)
-    return chosen[:WANTED]
+    audit(chosen)
+    return chosen
+
+
+def audit(chosen: list[Candidate]) -> None:
+    """Assert the pack is what it claims. A launch gate is checked by code, never believed from print.
+
+    The pack decides whether layer 3b becomes a gate, so a pack that reports quotas it does not meet
+    invalidates that experiment silently. It has happened once already: weighted sampling produced
+    zero boards at the easiest rung and only the printed summary showed it.
+    """
+    wanted_uncertified = round(WANTED * UNCERTIFIED_SHARE)
+    problems: list[str] = []
+    if len(chosen) != WANTED:
+        problems.append(f"{len(chosen)} boards, wanted {WANTED}")
+    for target, quota in QUOTAS.items():
+        at_target = sum(1 for item in chosen if item.target == target)
+        if at_target != quota:
+            problems.append(f"chain {target} has {at_target} boards against a quota of {quota}")
+    uncertified = sum(1 for item in chosen if not item.certified)
+    if abs(uncertified - wanted_uncertified) > 2:
+        problems.append(f"{uncertified} uncertified boards, wanted about {wanted_uncertified}")
+    pre_1950 = sum(1 for item in chosen if item.loaded.season < 1950)
+    if pre_1950 > PRE_1950_ALLOWANCE:
+        problems.append(f"{pre_1950} pre-1950 boards against an allowance of {PRE_1950_ALLOWANCE}")
+    games = [item.loaded.game_id for item in chosen]
+    if len(set(games)) != len(games):
+        problems.append("the same game appears twice")
+    if not any(item.has_substitution for item in chosen):
+        problems.append("no board carries a suffixed label, and the tutorial has to teach one")
+    if not any(item.has_live_footnote for item in chosen):
+        problems.append("no board carries a live footnote, and the tutorial has to teach one")
+    if problems:
+        raise SystemExit("the pack does not satisfy its own constraints: " + "; ".join(problems))
 
 
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:

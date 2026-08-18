@@ -37,7 +37,7 @@ class TestColumnSums:
 
     @pytest.mark.parametrize(
         "column",
-        ["hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "reached_on_interference"],
+        ["hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference"],
         ids=lambda column: f"footnote-{column}",
     )
     def test_detects_footnote_total_that_disagrees_with_its_column(

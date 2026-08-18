@@ -24,6 +24,14 @@ that clears the bar on a lower bound clears it.
 Read-only against DGL. Run from `forge/`.
 """
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from bootstrap import bootstrap  # noqa: E402
+
+bootstrap()
+
 import random
 import statistics
 import time
@@ -292,7 +300,7 @@ def main() -> None:
                 sum(
                     1
                     for f in row[0].direction.batter_footnotes
-                    if f.hit_by_pitch or f.sacrifice_flies or f.sacrifice_hits or f.reached_on_interference
+                    if f.hit_by_pitch or f.sacrifice_flies or f.sacrifice_hits or f.catcher_interference
                 )
             )
             for row in rows

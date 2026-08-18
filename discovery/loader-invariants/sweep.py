@@ -48,8 +48,22 @@ def loader_invariants(sample: list[Loaded]) -> Counter[str]:
     broken: Counter[str] = Counter()
     for item in sample:
         batting = item.direction.batting
-        if any(line.plate_appearances < 1 for line in batting):
-            broken["a batting row with no plate appearance"] += 1
+        # NOT "every row batted". A pinch runner scores without a plate appearance, and the rule
+        # that dropped him is the defect this sweep exists to catch. The invariant is that the row
+        # contributed something — the same predicate the loader selects on.
+        if any(
+            line.plate_appearances == 0
+            and line.runs == 0
+            and line.hits == 0
+            and line.walks == 0
+            and line.strikeouts == 0
+            and not any(
+                getattr(note, field)
+                for field in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
+            )
+            for line, note in zip(batting, item.direction.batter_footnotes, strict=True)
+        ):
+            broken["a batting row that contributed nothing"] += 1
         if len(batting) < 9:
             broken["fewer than nine batters"] += 1
         if batting and batting[0].plate_appearances < max(line.plate_appearances for line in batting):

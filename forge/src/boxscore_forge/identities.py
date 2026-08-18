@@ -161,7 +161,7 @@ def _check_row_identities(direction: Direction) -> Iterator[Violation]:
             + footnotes.hit_by_pitch
             + footnotes.sacrifice_flies
             + footnotes.sacrifice_hits
-            + footnotes.reached_on_interference
+            + footnotes.catcher_interference
         )
         if accounted != line.plate_appearances:
             yield Violation(

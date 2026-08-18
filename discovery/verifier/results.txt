@@ -1,31 +1,21 @@
 60 gated directions at the decided caps
 decades: {1910: 5, 1920: 5, 1930: 5, 1940: 5, 1950: 5, 1960: 5, 1970: 5, 1980: 5, 1990: 5, 2000: 5, 2010: 5, 2020: 5}
 
-=== 298 PUZZLES FROM THE REAL GENERATOR ===
-  accepted by all four layers : 298 (100.0%)
-
-=== WHAT REJECTED, BY LAYER AND FAULT ===
-  nothing was rejected
-
-=== DOES EVERY LAYER EVER FIRE ===
-  A layer that never rejects is either perfect or untested, and those are not the same.
-  signature         0 never fired on this sample
-  identities        0 never fired on this sample
-  uniqueness        0 never fired on this sample
-  derivability      0 never fired on this sample
-  end_to_end        0 never fired on this sample
-
-=== DID LAYER 4 CATCH ANYTHING THE FIRST THREE PASSED ===
-  No. Layer 4 confirmed the first three on every board and caught nothing they missed.
-
-=== HOW MANY ACCEPTED BOARDS SURVIVE A ONE-RELATION-AT-A-TIME SOLVER ===
-  Layer 3 propagates across every relation at once, which no person does. This is the
-  lower bound on humanness against layer 3's upper one.
- chain target  accepted   also weakly derivable
-            5        60                    100%
-            7        60                     98%
-            9        60                     93%
-           11        60                     80%
-           13        58                     71%
-
-  overall: 89% of published boards survive both
+6 boards written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\verifier\look-at-these.html — look at them before trusting anything below
+Traceback (most recent call last):
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\verifier\rejection_rates.py", line 226, in <module>
+    main()
+    ~~~~^^
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\verifier\rejection_rates.py", line 222, in main
+    report(run(sample))
+           ~~~^^^^^^^^
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\verifier\rejection_rates.py", line 122, in run
+    produced = erase(loaded.direction, target_chain=target, seed=SEED)
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\forge/src\boxscore_forge\erasure.py", line 158, in erase
+    solution = solve(shape, given)
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\forge/src\boxscore_forge\solver.py", line 283, in solve
+    _reject_contradictions(system, values)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\forge/src\boxscore_forge\solver.py", line 408, in _reject_contradictions
+    raise ContradictionError(message)
+boxscore_forge.errors.ContradictionError: cross_team_total is off by -1 with every cell in it known

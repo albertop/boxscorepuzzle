@@ -288,6 +288,18 @@ def _pearson(xs: list[float], ys: list[float]) -> float:
     return covariance / (statistics.pstdev(xs) * statistics.pstdev(ys))
 
 
+
+def _render(sample: list, folder: str) -> None:
+    """Six boards to look at, written before the numbers are printed (see `discovery/render_step`)."""
+    sys.path.insert(0, str(_ROOT / "discovery"))
+    from render_step import write_examples  # noqa: PLC0415
+
+    out = _ROOT / "discovery" / folder / "look-at-these.html"
+    count = write_examples(sample, out)
+    print()
+    print(f"{count} boards written to {out} — look at them before trusting anything below")
+
+
 def main() -> None:
     loaded = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
     sample = [item for item in loaded if not find_violations(item.direction)]
@@ -299,6 +311,7 @@ def main() -> None:
     per_direction = {index: [trajectory(item, seed) for seed in SEEDS] for index, item in enumerate(sample)}
     runs = [run for runs_for_one in per_direction.values() for run in runs_for_one]
 
+    _render(sample, "pool-at-4-pitchers")
     ceiling(runs)
     bands(runs)
     independence(runs)

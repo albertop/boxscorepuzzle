@@ -13,6 +13,14 @@ say scores well and may well be boring. That last one is the interesting one.
 Read-only against DGL. Run from `forge/`.
 """
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from bootstrap import bootstrap, require  # noqa: E402
+
+bootstrap()
+
 import random
 import sys
 from pathlib import Path
@@ -26,7 +34,7 @@ from boxscore_forge.solver import Solution, Technique, solve
 
 BATTING_HEADERS = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "K"))
 PITCHING_HEADERS = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
-FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "CI"))
+FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
 BLANK = "  ·"
 SEED = 20260819
 
@@ -203,6 +211,9 @@ def main() -> None:
     (out / "sample-boards.txt").write_text("\n".join(solved_text), encoding="utf-8")
 
     # One to solve by hand, with nothing after it to spoil the answer.
+    # Seventh board of the pool, so the sample has to have one. Saying which filters emptied it
+    # is the difference between a decision tool and an IndexError.
+    require(pool, 7, "the operator's unanswered board", "gated pool, identities balanced")
     puzzle_only, _ = erase_to_chain(pool[6], 12, random.Random(SEED + 7))
     (out / "solve-this-one.txt").write_text(
         "\n".join(

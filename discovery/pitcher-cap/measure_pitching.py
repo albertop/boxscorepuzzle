@@ -201,6 +201,18 @@ def _median[T: (int, float)](values: list[T]) -> float:
     return float(statistics.median(values)) if values else float("nan")
 
 
+
+def _render(sample: list, folder: str) -> None:
+    """Six boards to look at, written before the numbers are printed (see `discovery/render_step`)."""
+    sys.path.insert(0, str(_ROOT / "discovery"))
+    from render_step import write_examples  # noqa: PLC0415
+
+    out = _ROOT / "discovery" / folder / "look-at-these.html"
+    count = write_examples(sample, out)
+    print()
+    print(f"{count} boards written to {out} — look at them before trusting anything below")
+
+
 def main() -> None:
     sample: dict[int, list[Loaded]] = {}
     for count in PITCHER_COUNTS:
@@ -209,6 +221,7 @@ def main() -> None:
         decades = Counter((item.season // 10) * 10 for item in sample[count])
         print(f"{count} pitchers: {len(sample[count])} directions, decades {dict(sorted(decades.items()))}")
 
+    _render([item for group in sample.values() for item in group], "pitcher-cap")
     structure(sample)
 
     runs = {

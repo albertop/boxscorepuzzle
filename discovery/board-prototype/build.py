@@ -12,6 +12,14 @@ case (double digits in several columns), a live footnote, and a ten-batter roste
 Read-only against DGL. Run from `forge/`.
 """
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from bootstrap import bootstrap, require  # noqa: E402
+
+bootstrap()
+
 import json
 import sys
 from pathlib import Path
@@ -22,7 +30,7 @@ from boxscore_forge.identities import find_violations
 
 BATTING = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "K"))
 PITCHING = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
-FOOTNOTES = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("reached_on_interference", "CI"))
+FOOTNOTES = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
 
 # Real surnames from the register, chosen to span the measured length distribution: 98.7% of
 # batter appearances have a surname of ten characters or fewer, and these include the tail.
@@ -98,10 +106,11 @@ def main() -> None:
         item
         for item in pool
         if any(
-            f.hit_by_pitch or f.sacrifice_flies or f.sacrifice_hits or f.reached_on_interference
+            f.hit_by_pitch or f.sacrifice_flies or f.sacrifice_hits or f.catcher_interference
             for f in item.direction.batter_footnotes
         )
     ]
+    require(pool, 1, "the board prototype", "roster caps, identities balanced")
     widest = sorted(pool, key=double_digit_columns, reverse=True)
     ten = [item for item in pool if len(item.direction.batting) == 10]
     three_pitchers = [item for item in pool if len(item.direction.pitching) == 3]

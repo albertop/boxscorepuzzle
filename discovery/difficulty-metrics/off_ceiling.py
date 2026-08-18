@@ -11,6 +11,14 @@ inside a target group *is* separation, with no need to bucket afterwards.
 Read-only against DGL. Run from `forge/`.
 """
 
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from bootstrap import bootstrap  # noqa: E402
+
+bootstrap()
+
 import random
 import statistics
 from collections import Counter

@@ -78,7 +78,7 @@ def _draw_batting(draw: DrawFn) -> tuple[tuple[BattingLine, ...], tuple[BatterFo
             hit_by_pitch=draw(st.integers(min_value=0, max_value=1)),
             sacrifice_flies=draw(st.integers(min_value=0, max_value=1)),
             sacrifice_hits=draw(st.integers(min_value=0, max_value=1)),
-            reached_on_interference=draw(st.integers(min_value=0, max_value=1)),
+            catcher_interference=draw(st.integers(min_value=0, max_value=1)),
         )
         lines.append(
             BattingLine(
@@ -87,7 +87,7 @@ def _draw_batting(draw: DrawFn) -> tuple[tuple[BattingLine, ...], tuple[BatterFo
                 + row_footnotes.hit_by_pitch
                 + row_footnotes.sacrifice_flies
                 + row_footnotes.sacrifice_hits
-                + row_footnotes.reached_on_interference,
+                + row_footnotes.catcher_interference,
                 at_bats=at_bats,
                 runs=runs,
                 hits=hits,
@@ -169,5 +169,5 @@ def _sum_footnotes(footnotes: tuple[BatterFootnotes, ...]) -> BatterFootnotes:
         hit_by_pitch=sum(row.hit_by_pitch for row in footnotes),
         sacrifice_flies=sum(row.sacrifice_flies for row in footnotes),
         sacrifice_hits=sum(row.sacrifice_hits for row in footnotes),
-        reached_on_interference=sum(row.reached_on_interference for row in footnotes),
+        catcher_interference=sum(row.catcher_interference for row in footnotes),
     )

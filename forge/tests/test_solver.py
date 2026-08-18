@@ -265,7 +265,7 @@ class TestWeightedChain:
                 cubs_at_braves_1968,
                 "footnotes[0].sacrifice_flies",
                 "footnotes[1].hit_by_pitch",
-                "footnotes[2].reached_on_interference",
+                "footnotes[2].catcher_interference",
             ),
         )
         one_real = solve(shape_of(cubs_at_braves_1968), _erase(cubs_at_braves_1968, "batting[3].hits"))

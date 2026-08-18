@@ -46,7 +46,7 @@ class BatterFootnotes:
     hit_by_pitch: int
     sacrifice_flies: int
     sacrifice_hits: int
-    reached_on_interference: int
+    catcher_interference: int
 
 
 @dataclass(frozen=True, slots=True)

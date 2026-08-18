@@ -41,6 +41,52 @@ class PackageError(Exception):
     """The file is not a puzzle package, or is a version this code does not know."""
 
 
+def _cells(raw: object, width: int, where: str, *, complete: bool = False) -> tuple[int | None, ...]:
+    """One row of the grid, checked at the boundary rather than three layers later.
+
+    A package that is valid JSON and malformed as a board must produce a controlled `PackageError`
+    here, not a `TypeError` inside the arithmetic. The distinction matters because the second one
+    reads as a crash and the first one reads as a rejection.
+    """
+    if not isinstance(raw, list):
+        message = f"{where} is {type(raw).__name__}, expected a list of {width} values"
+        raise PackageError(message)
+    if len(raw) != width:
+        message = f"{where} holds {len(raw)} values, expected {width}"
+        raise PackageError(message)
+    for index, value in enumerate(raw):
+        # bool is an int in Python and never a cell value, so it is excluded explicitly.
+        if value is None:
+            if complete:
+                message = f"{where}[{index}] is empty, and this part of the board is never erased"
+                raise PackageError(message)
+        elif not isinstance(value, int) or isinstance(value, bool):
+            message = f"{where}[{index}] is {value!r}, expected a whole number or null"
+            raise PackageError(message)
+    return tuple(raw)
+
+
+def _rows(raw: object, width: int, where: str) -> tuple[tuple[int | None, ...], ...]:
+    if not isinstance(raw, list):
+        message = f"{where} is {type(raw).__name__}, expected a list of rows"
+        raise PackageError(message)
+    return tuple(_cells(row, width, f"{where}[{index}]") for index, row in enumerate(raw))
+
+
+def _whole_number(raw: object, where: str) -> int:
+    if not isinstance(raw, int) or isinstance(raw, bool):
+        message = f"{where} is {raw!r}, expected a whole number"
+        raise PackageError(message)
+    return raw
+
+
+def _innings(raw: object, where: str) -> tuple[int, ...]:
+    if not isinstance(raw, list):
+        message = f"{where} is {type(raw).__name__}, expected a list of innings"
+        raise PackageError(message)
+    return tuple(_whole_number(value, f"{where}[{index}]") for index, value in enumerate(raw))
+
+
 @dataclass(frozen=True, slots=True)
 class LineScore:
     """The board's anchor: always shown complete, never erased (§6)."""
@@ -67,16 +113,37 @@ class LineScore:
         }
 
     @classmethod
-    def from_json(cls, raw: dict[str, Any]) -> Self:
+    def from_json(cls, raw: object) -> Self:
+        """The line score is the board's anchor and is always complete (§6), so every field is required."""
+        if not isinstance(raw, dict):
+            message = f"the line score is {type(raw).__name__}, expected an object"
+            raise PackageError(message)
+        missing = [
+            field
+            for field in (
+                "offense_by_inning",
+                "defense_by_inning",
+                "offense_runs",
+                "offense_hits",
+                "offense_errors",
+                "defense_runs",
+                "defense_hits",
+                "defense_errors",
+            )
+            if field not in raw
+        ]
+        if missing:
+            message = f"the line score is missing {', '.join(missing)}"
+            raise PackageError(message)
         return cls(
-            offense_by_inning=tuple(raw["offense_by_inning"]),
-            defense_by_inning=tuple(raw["defense_by_inning"]),
-            offense_runs=raw["offense_runs"],
-            offense_hits=raw["offense_hits"],
-            offense_errors=raw["offense_errors"],
-            defense_runs=raw["defense_runs"],
-            defense_hits=raw["defense_hits"],
-            defense_errors=raw["defense_errors"],
+            offense_by_inning=_innings(raw["offense_by_inning"], "line_score.offense_by_inning"),
+            defense_by_inning=_innings(raw["defense_by_inning"], "line_score.defense_by_inning"),
+            offense_runs=_whole_number(raw["offense_runs"], "line_score.offense_runs"),
+            offense_hits=_whole_number(raw["offense_hits"], "line_score.offense_hits"),
+            offense_errors=_whole_number(raw["offense_errors"], "line_score.offense_errors"),
+            defense_runs=_whole_number(raw["defense_runs"], "line_score.defense_runs"),
+            defense_hits=_whole_number(raw["defense_hits"], "line_score.defense_hits"),
+            defense_errors=_whole_number(raw["defense_errors"], "line_score.defense_errors"),
         )
 
 
@@ -112,16 +179,27 @@ class Board:
         }
 
     @classmethod
-    def from_json(cls, raw: dict[str, Any]) -> Self:
+    def from_json(cls, raw: object) -> Self:
+        if not isinstance(raw, dict):
+            message = f"a board is {type(raw).__name__}, expected an object"
+            raise PackageError(message)
+        batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting")
+        footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes")
+        if len(footnotes) != len(batting):
+            message = f"{len(footnotes)} footnote rows against {len(batting)} batting rows"
+            raise PackageError(message)
+        left_on_base = raw.get("left_on_base")
         return cls(
-            batting=tuple(tuple(row) for row in raw["batting"]),
-            batting_totals=tuple(raw["batting_totals"]),
-            footnotes=tuple(tuple(row) for row in raw["footnotes"]),
-            footnote_totals=tuple(raw["footnote_totals"]),
-            left_on_base=raw["left_on_base"],
-            pitching=tuple(tuple(row) for row in raw["pitching"]),
-            pitching_totals=tuple(raw["pitching_totals"]),
-            line_score=LineScore.from_json(raw["line_score"]),
+            batting=batting,
+            batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals"),
+            footnotes=footnotes,
+            # The footnote line is given complete and never erased (§6), so a null in it is
+            # malformed rather than difficult.
+            footnote_totals=_cells(raw.get("footnote_totals"), len(FOOTNOTE_COLUMNS), "footnote_totals", complete=True),
+            left_on_base=None if left_on_base is None else _whole_number(left_on_base, "left_on_base"),
+            pitching=_rows(raw.get("pitching"), len(PITCHING_COLUMNS), "pitching"),
+            pitching_totals=_cells(raw.get("pitching_totals"), len(PITCHING_COLUMNS), "pitching_totals"),
+            line_score=LineScore.from_json(raw.get("line_score", {})),
         )
 
 
@@ -176,13 +254,21 @@ class Package:
                 puzzle_id=raw["puzzle_id"],
                 puzzle=Board.from_json(raw["puzzle"]),
                 source=Board.from_json(raw["source"]) if raw.get("source") is not None else None,
-                metadata=raw.get("metadata", {}),
+                metadata=_metadata(raw.get("metadata", {})),
                 schema=schema,
                 signature=raw.get("signature"),
             )
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _metadata(raw: object) -> dict[str, Any]:
+    """Loose by design (seam C3), but it has to be an object — a list here breaks every reader."""
+    if not isinstance(raw, dict):
+        message = f"metadata is {type(raw).__name__}, expected an object"
+        raise PackageError(message)
+    return raw
 
 
 def read(path: Path) -> Package:

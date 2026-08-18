@@ -19,7 +19,7 @@ from boxscore_package.signing import verify as verify_signature
 from boxscore_verify import reason
 from boxscore_verify.reason import UndecidedError, solutions
 from boxscore_verify.rules import all_cells, relations, values_of
-from boxscore_verify.verify import Fault, Layer, Verdict, tally, verify
+from boxscore_verify.verify import UNSIGNED, Fault, Layer, Verdict, tally, verify
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 SECRET = b"a test secret"
@@ -105,7 +105,7 @@ class TestItSaysWhenItCannotAnswer:
         monkeypatch.setattr(reason, "NODE_BUDGET", 3)
         puzzle = blank(board, {"batting": [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=puzzle, source=board))
+        verdict = verify(Package(puzzle_id="p", puzzle=puzzle, source=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.UNDECIDED
@@ -123,7 +123,7 @@ class TestItSaysWhenItCannotAnswer:
 
 class TestMalformedPackages:
     def test_a_package_with_no_source_cannot_be_verified(self, board: Board) -> None:
-        verdict = verify(Package(puzzle_id="p", puzzle=board))
+        verdict = verify(Package(puzzle_id="p", puzzle=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -134,7 +134,7 @@ class TestMalformedPackages:
         # rather than that the puzzle is hard.
         holed = blank(board, {"batting": [(0, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=board, source=holed))
+        verdict = verify(Package(puzzle_id="p", puzzle=board, source=holed), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -151,7 +151,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=shorter, source=board))
+        verdict = verify(Package(puzzle_id="p", puzzle=shorter, source=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -171,7 +171,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=without, source=board))
+        verdict = verify(Package(puzzle_id="p", puzzle=without, source=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -199,7 +199,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=elsewhere, source=board))
+        verdict = verify(Package(puzzle_id="p", puzzle=elsewhere, source=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -227,7 +227,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=broken, source=broken))
+        verdict = verify(Package(puzzle_id="p", puzzle=broken, source=broken), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.BAD_DATA
@@ -239,9 +239,12 @@ class TestTheTally:
         # The distribution is what says whether the generator is behaving, so it has to distinguish
         # layers rather than only count failures.
         verdicts = [
-            verify(Package(puzzle_id="a", puzzle=board, source=board)),
-            verify(Package(puzzle_id="b", puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}), source=board)),
-            verify(Package(puzzle_id="c", puzzle=board)),
+            verify(Package(puzzle_id="a", puzzle=board, source=board), secret=UNSIGNED),
+            verify(
+                Package(puzzle_id="b", puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}), source=board),
+                secret=UNSIGNED,
+            ),
+            verify(Package(puzzle_id="c", puzzle=board), secret=UNSIGNED),
         ]
 
         counts = tally(verdicts)

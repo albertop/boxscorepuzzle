@@ -12,7 +12,7 @@ import pytest
 
 from boxscore_package.format import Board, LineScore, Package
 from boxscore_package.signing import sign
-from boxscore_verify.verify import Fault, Layer, check_derivability, verify
+from boxscore_verify.verify import UNSIGNED, Fault, Layer, check_derivability, verify
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 
@@ -53,14 +53,14 @@ class TestItAcceptsACorrectPuzzle:
             },
         )
 
-        verdict = verify(package(puzzle, board))
+        verdict = verify(package(puzzle, board), secret=UNSIGNED)
 
         assert verdict.accepted, verdict.rejection
 
     def test_a_board_with_nothing_erased_is_still_a_valid_package(self, board: Board) -> None:
         # Degenerate but it must pass: every layer's question has a trivial answer, and a verifier
         # that trips over the easy case cannot be trusted on the hard one.
-        assert verify(package(board, board)).accepted
+        assert verify(package(board, board), secret=UNSIGNED).accepted
 
 
 class TestLayerOneCatchesBadData:
@@ -71,7 +71,7 @@ class TestLayerOneCatchesBadData:
         rows[3] = (4, 4, 0, 2, 0, 1)
         source = replacing(board, batting=tuple(rows))
 
-        verdict = verify(package(source, source))
+        verdict = verify(package(source, source), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -93,7 +93,7 @@ class TestLayerOneCatchesBadData:
             ),
         )
 
-        verdict = verify(package(source, source))
+        verdict = verify(package(source, source), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -106,7 +106,7 @@ class TestLayerOneCatchesBadData:
         notes[0][0] = None
         puzzle = replacing(board, footnotes=tuple(tuple(row) for row in notes))
 
-        verdict = verify(package(puzzle, board))
+        verdict = verify(package(puzzle, board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -119,7 +119,7 @@ class TestLayerTwoCatchesAmbiguity:
         # board has several completions and no right answer for the player to find.
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        verdict = verify(package(puzzle, board))
+        verdict = verify(package(puzzle, board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.UNIQUENESS
@@ -133,7 +133,7 @@ class TestLayerTwoCatchesAmbiguity:
             batting_totals=(36, 36, 3, 40, 0, 5),
         )
 
-        verdict = verify(package(puzzle, board))
+        verdict = verify(package(puzzle, board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.UNIQUENESS
@@ -147,7 +147,7 @@ class TestLayerThreeCatchesAnUnreachableBoard:
         # directly is what shows layer 3 answering its own question.
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        rejection = check_derivability(package(puzzle, board), None)
+        rejection = check_derivability(package(puzzle, board), UNSIGNED)
 
         assert rejection is not None
         assert rejection.layer is Layer.DERIVABILITY
@@ -176,7 +176,7 @@ class TestLayerFourCatchesACorruptedArtefact:
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
         puzzle = replacing(board, batting=tuple(tuple(row) for row in rows))
 
-        verdict = verify(package(puzzle, board))
+        verdict = verify(package(puzzle, board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.END_TO_END
