@@ -74,7 +74,7 @@ class Candidate:
     loaded: Loaded
     target: int
     puzzle: Board
-    source: Board
+    solution: Board
     certified: bool
     has_substitution: bool
     has_live_footnote: bool
@@ -228,7 +228,20 @@ fifty boards the reference sheet is about right, and if it does not, that is wor
 
 
 def survey_box() -> Table:
-    """The three categories stay separate, because they answer different questions.
+    """The three categories stay separate, and the 1-6 scale is what validates the chain.
+
+    ⚠️ **The scale is the only thing that can test whether chain length measures difficulty at all.**
+    Chain length is a solver measurement; that it corresponds to what a person experiences is an
+    assumption nobody has checked. If the marked 1-6 tracks chain, the scale is validated. If it does
+    not, chain is measuring something else and the generator's control variable is wrong — which is
+    worth knowing before a calendar is built on it.
+
+    It is deliberately not tied to the day of the week. A 5 marked on a board the system calls Monday
+    says that board is misclassified, and that is exactly the signal wanted.
+
+    Two conditions or it measures nothing, both enforced elsewhere: **the chain target never appears
+    on the page**, since seeing "chain 8" anchors the rating to the number, and **the pages are not
+    ordered by chain**, since the early boards become the reference for everything after them.
 
     Only **had to guess** bears on layer 3b. **Tedious** and **boring** bear on the difficulty curve
     and the quality filter, and merging them loses both answers.
@@ -238,13 +251,14 @@ def survey_box() -> Table:
     """
     lines = [
         ["Time taken: ________ min", "Finished?    Y  /  N"],
+        ["How hard was it?     1     2     3     4     5     6", "(1 = very easy, 6 = very hard)"],
         ["If not finished, where did you get stuck?  _________________________________________", ""],
         ["How did it feel?   (tick any)", ""],
         ["   [   ] Had to guess — no next step by reasoning", "   [   ] Tedious — too much adding, or hunting"],
         ["   [   ] Boring — easy, nothing to think about", "   [   ] Good"],
         ["Anything odd?  ____________________________________________________________________", ""],
     ]
-    table = Table(lines, colWidths=[80 * mm, 72 * mm], rowHeights=5.4 * mm)
+    table = Table(lines, colWidths=[80 * mm, 72 * mm], rowHeights=5.2 * mm)
     table.setStyle(
         TableStyle(
             [
@@ -257,11 +271,12 @@ def survey_box() -> Table:
                 ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#666666")),
                 # The four feelings sit two by two rather than one per line: it is a shorter box and
                 # a tick grid reads faster than a list when the same four choices repeat fifty times.
-                ("SPAN", (0, 1), (1, 1)),
                 ("SPAN", (0, 2), (1, 2)),
-                ("SPAN", (0, 5), (1, 5)),
+                ("SPAN", (0, 3), (1, 3)),
+                ("SPAN", (0, 6), (1, 6)),
                 ("LINEBELOW", (0, 0), (-1, 0), 0.3, colors.HexColor("#bbbbbb")),
-                ("LINEBELOW", (0, 4), (-1, 4), 0.3, colors.HexColor("#bbbbbb")),
+                ("LINEBELOW", (0, 1), (-1, 1), 0.3, colors.HexColor("#bbbbbb")),
+                ("LINEBELOW", (0, 5), (-1, 5), 0.3, colors.HexColor("#bbbbbb")),
             ]
         )
     )
@@ -350,6 +365,17 @@ def audit(chosen: list[Candidate]) -> None:
         failures.append("no rung carries an uncertified board")
     if uncertified and max(by_rung.values()) == uncertified and len(carrying) == 1:
         failures.append(f"every uncertified board sits at one rung: {by_rung}")
+
+    # ⚠️ The 1-6 rating is only worth collecting if the pack cannot anchor it. A run of boards sorted
+    # by chain makes the first few the reference for all the rest, so a rising order would produce a
+    # rising rating whatever the boards were like.
+    order = [candidate.target for candidate in chosen]
+    rising = sum(1 for a, b in zip(order, order[1:], strict=False) if b > a)
+    falling = sum(1 for a, b in zip(order, order[1:], strict=False) if b < a)
+    if rising == 0 or falling == 0:
+        failures.append("the pages are ordered by chain, which anchors every rating after the first")
+    if min(rising, falling) < len(order) // 5:
+        failures.append(f"the page order is nearly monotonic in chain: {rising} rises, {falling} falls")
 
     if failures:
         raise SystemExit("the pack does not satisfy its own quotas: " + "; ".join(failures))
@@ -476,7 +502,7 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
         story.append(Paragraph(footnote_line(candidate.loaded), footnotes))
         story.append(Spacer(1, 2 * mm))
         story.append(
-            board_table(candidate.source if answers else candidate.puzzle, candidate.loaded, solved=answers)
+            board_table(candidate.solution if answers else candidate.puzzle, candidate.loaded, solved=answers)
         )
         if not answers:
             story.append(Spacer(1, 3 * mm))
