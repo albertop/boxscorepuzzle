@@ -797,6 +797,44 @@ identity, and §31 rests on measurements taken against this board rather than th
 
 **What is NOT decided:**
 
+### ✅ The column sets and their order — decided on boxscore convention
+
+**Batting: `PA, AB, R, H, HR, RBI, BB, SO`**
+**Pitching: `IP, H, R, ER, BB, SO, HR`**
+
+**The reason is convention, not preference.** §2 commits to preserving the canonical format and column
+order is part of that format — a fan reads a boxscore by shape before reading it by value.
+
+- **`PA` first, not last.** It is the total of which `AB` is a part, and Baseball Reference places it
+  at the start when it shows it at all. A printed boxscore usually omits `PA` entirely; it is here
+  because the row identity needs it, so its *position* follows the convention even though its
+  presence does not.
+- **`HR` after `H`**, grouped with the hit-related columns rather than among the secondaries.
+- **`AB, R, H, RBI, BB, SO`** is the canonical core in that exact order.
+- **Pitching puts `HR` last**, which is where Baseball Reference puts it.
+
+### ✅ `SO`, not `K`
+
+A printed boxscore labels the column **`SO`**. `K` is scorer's notation — what goes in a scorebook,
+not what a newspaper prints. If convention is the argument for the column order, it is the argument
+here too, and taking one and not the other would be picking whichever felt better.
+
+**⚠️ The rename is the dangerous part of this change.** A global `K` → `SO` replacement hits unrelated
+identifiers; a `sed` in this project has already silently rewritten a dataclass field it was not aimed
+at. It must be verified by compiling and running the suite, never by reading the diff.
+
+**What the strip gains.** The formula sheet carries `AB ≥ H` and the row identity today. With `HR`
+present it gains **`H ≥ HR`** and **`RBI ≥ HR`**, and both belong on it — the strip is what a solver
+actually works from.
+
+**And the width budget has to be re-measured rather than assumed.** `SO` is two characters like `PA`
+so nothing should move, but the budget was measured with the old set and two fewer columns, and §6's
+own history is a list of provisional numbers that turned out wrong when measured.
+
+*Applied together with the `RBI` and `HR` columns, and **after** the v02 P1 repairs: no pack, no
+reference packages and no measurement of what those columns buy until the certification boundary and
+the fail-closed gates exist.*
+
 ### ✅ The roster caps, decided (browser prototype, August 2026)
 
 > **⚠️ The pitcher half of this was wrong and has been corrected: the cap is ≤4, not ≤2.** The
