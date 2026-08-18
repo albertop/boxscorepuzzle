@@ -1,0 +1,39 @@
+72 gated directions, gate 25%, ordering 'row_first'
+decades: {1910: 6, 1920: 6, 1930: 6, 1940: 6, 1950: 6, 1960: 6, 1970: 6, 1980: 6, 1990: 6, 2000: 6, 2010: 6, 2020: 6}
+
+6 boards written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\independent-cells\dense-against-loose.html
+
+=== AS ERASED TODAY ===
+ target  boards  chain  erased  independent   share  per step
+      5     144      6      14            9     59%      2.63
+      7     144      7      21           11     56%      2.56
+      9     140      9      24           13     53%      2.45
+     11     138     12      27           13     49%      2.32
+  chain  5 independent share: p10 0.43  p50 0.61  p90 0.69  max 0.71
+  chain  7 independent share: p10 0.50  p50 0.56  p90 0.62  max 0.68
+  chain  9 independent share: p10 0.44  p50 0.52  p90 0.59  max 0.64
+  chain 11 independent share: p10 0.42  p50 0.48  p90 0.55  max 0.58
+
+=== KEEPING ONLY CELLS THAT LENGTHEN THE CHAIN ===
+ target  boards  chain  erased  independent   share  per step
+      5       7      5       5            1     20%      1.00
+      7       3      7       7            1     14%      1.00
+      9       1      9       9            1     11%      1.00
+  chain  5 independent share: p10 0.20  p50 0.20  p90 0.20  max 0.20
+  chain  7 independent share: p10 0.14  p50 0.14  p90 0.14  max 0.14
+  chain  9 independent share: p10 0.11  p50 0.11  p90 0.11  max 0.11
+
+=== IS IT A THIRD DEFECT, OR THE OTHER TWO AGAIN ===
+  mostly free filling (>= 70% independent): 7 of 288
+  floor A (trivial and low search)        : 7
+  floor B (no row identity)               : 9
+  diluted and A                           : 0
+  diluted and B                           : 0
+  No overlap means three separate defects, and all three floors apply.
+
+=== WHAT DENSE ERASURE COSTS AND BUYS ===
+ target  reached, loose  reached, dense  blanks loose  blanks dense
+      5           100%              5%            14             5
+      7           100%              2%            21             7
+      9            97%              1%            24             9
+  A reach that holds means the same thinking is available with a fraction of the filling.
