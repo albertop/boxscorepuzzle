@@ -2,10 +2,8 @@
 
 Run date: 2026-08-17. Source: `DGL` on `LocalServer`. Script: `era_after_gate.ps1`.
 
-> **These counts still include 1,872 Negro Leagues games**, found and excluded after this run (§32).
-> They sit entirely in 1913–1961, so they inflate the pre-1950 share the run is about. The script now
-> excludes them through `dbo.retroGameProvenance`; the numbers below are pending a re-run and will
-> move by under a percent.
+Deduced and Negro Leagues games are excluded through `dbo.retroGameProvenance`, which covers all
+203,908 games with none missing.
 
 §5 left this open: the earlier era measurement was taken *before* the quality filter, and the note
 that stood in the design document predicted the distribution would drift forward on its own, because
@@ -25,49 +23,49 @@ Every threshold now keeps less than the sampled run said it would.
 | | Sampled, old caps | Whole pool, decided caps |
 |---|---:|---:|
 | median zero density | 34.5% | **40.0%** |
-| kept below 30% | 26.7% | **10.9%** |
-| kept below 35% | 56.7% | 26.5% |
+| kept below 30% | 26.7% | **11.0%** |
+| kept below 35% | 56.7% | 26.6% |
 
 ## The funnel from the roster caps onwards
 
 | Step | Directions |
 |---|---:|
-| Roster fits the board (≤13 batters, ≤2 pitchers) | 128,766 |
-| Minus discrepancies against official data in board columns | 113,974 |
-| **Minus the zero-density gate at 30%** | **12,456** |
-| *(at 35%)* | *30,226* |
-| *(at 40%)* | *53,088* |
+| Roster fits the board (≤13 batters, ≤2 pitchers) | 125,625 |
+| Minus discrepancies against official data in board columns | 110,833 |
+| **Minus the zero-density gate at 30%** | **12,218** |
+| *(at 35%)* | *29,532* |
+| *(at 40%)* | *51,723* |
 
-12,456 directions is **18.5 years of calendar** at the 674 a year the week consumes. The pool is not
+12,218 directions is **18.1 years of calendar** at the 674 a year the week consumes. The pool is not
 the problem.
 
 ## The era distribution
 
 | Decade | After caps | Below 30% | Survives | Share before | Share after |
 |---|---:|---:|---:|---:|---:|
-| 1910s | 20,717 | 4,367 | 21.1% | 16.1% | **26.8%** |
-| 1920s | 15,897 | 3,177 | 20.0% | 12.4% | 19.5% |
-| 1930s | 15,974 | 3,088 | 19.3% | 12.4% | 19.0% |
-| 1940s | 13,774 | 2,133 | 15.5% | 10.7% | 13.1% |
-| 1950s | 9,676 | 1,169 | 12.1% | 7.5% | 7.2% |
-| 1960s | 10,625 | 795 | 7.5% | 8.3% | 4.9% |
-| 1970s | 14,684 | 819 | 5.6% | 11.4% | 5.0% |
-| 1980s | 11,934 | 398 | 3.3% | 9.3% | 2.4% |
-| 1990s | 7,042 | 192 | 2.7% | 5.5% | 1.2% |
-| 2000s | 4,632 | 96 | 2.1% | 3.6% | 0.6% |
+| 1910s | 20,698 | 4,365 | 21.1% | 16.5% | **27.2%** |
+| 1920s | 15,732 | 3,130 | 19.9% | 12.5% | 19.5% |
+| 1930s | 14,547 | 2,981 | 20.5% | 11.6% | 18.6% |
+| 1940s | 12,244 | 2,051 | 16.8% | 9.8% | 12.8% |
+| 1950s | 9,676 | 1,169 | 12.1% | 7.7% | 7.3% |
+| 1960s | 10,625 | 795 | 7.5% | 8.5% | 5.0% |
+| 1970s | 14,684 | 819 | 5.6% | 11.7% | 5.1% |
+| 1980s | 11,934 | 398 | 3.3% | 9.5% | 2.5% |
+| 1990s | 7,042 | 192 | 2.7% | 5.6% | 1.2% |
+| 2000s | 4,632 | 96 | 2.1% | 3.7% | 0.6% |
 | 2010s | 3,057 | 50 | 1.6% | 2.4% | 0.3% |
 | 2020s | 754 | 12 | 1.6% | 0.6% | 0.1% |
 
-Mean zero density rises monotonically with the decades, from **0.367 in the 1910s to 0.475 in the
-2020s**. Survival through the gate falls from 21.1% to 1.6%.
+Mean zero density rises with the decades, from **0.367 in the 1910s to 0.475 in the 2020s**, and
+survival through the gate falls from 21.1% to 1.6%.
 
-**Pre-1950 is 78% of what ships. Post-1980 is 4.6%.** The two filters compound rather than cancel:
+**Pre-1950 is 78% of what ships. Post-1980 is 4.7%.** The two filters compound rather than cancel:
 the ≤2 pitcher cap already selects complete games, which modern baseball hardly produces, and the
 gate then takes the low-scoring remainder of what is left.
 
 ## What this does and does not decide
 
-It does not threaten the pool — 18.5 years of calendar is far more than the five-month forward
+It does not threaten the pool — 18.1 years of calendar is far more than the five-month forward
 inventory §33 requires.
 
 It bears on the progressive reveal (§7). A puzzle whose final screen names a 1913 lineup is a
@@ -76,7 +74,7 @@ from the former unless something changes. **Not decided.** Levers, in ascending 
 
 1. **Stratify the calendar by era deliberately** — ration the thin decades instead of letting the
    pool's shape decide. Costs nothing but calendar-builder complexity.
-2. **Raise the gate to 35%** — 30,226 directions, 44.8 years, but three-run boards come back and the
+2. **Raise the gate to 35%** — 29,532 directions, 43.8 years, but three-run boards come back and the
    gate exists to remove them.
 3. **Loosen the pitcher cap towards 3** — buys the modern era directly, at the price of a batting row
    on a 320px screen (§6).

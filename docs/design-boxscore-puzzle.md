@@ -289,20 +289,20 @@ five points and every threshold now keeps less than it used to. Zero density run
 
 | Threshold | Directions kept | Pool kept | Years of calendar |
 |---|---:|---:|---:|
-| **below 30% — decided** | **12,456** | **10.9%** | **18.5** |
-| below 35% | 30,226 | 26.5% | 44.8 |
-| below 40% | 53,088 | 46.6% | 78.8 |
+| **below 30% — decided** | **12,218** | **11.0%** | **18.1** |
+| below 35% | 29,532 | 26.6% | 43.8 |
+| below 40% | 51,723 | 46.7% | 76.7 |
 
-*Computed in SQL over all 113,974 surviving directions rather than sampled, and checked cell for
+*Computed in SQL over all 110,833 surviving directions rather than sampled, and checked cell for
 cell against the board's own definition on twelve directions spanning every decade — the two agree
 to the sixth place.*
 
 **Why 30% and not the median.** A median has no properties; it is where the pool happens to sit.
 Between 30% and 35% the boards passing through have a median of **three runs**, which is the shape
-being excluded in the first place. And with 18.5 years of calendar against a five-month forward
+being excluded in the first place. And with 18.1 years of calendar against a five-month forward
 inventory requirement (§33), a generous threshold buys nothing while a strict one costs almost
 nothing. That reasoning survives the re-measurement: the threshold now sits near the pool's tenth
-percentile rather than a third of the way up it, and 18.5 years is still far more calendar than the
+percentile rather than a third of the way up it, and 18.1 years is still far more calendar than the
 product needs.
 
 **It removes the right boards, not merely the correlated ones** (300-direction sample, old caps):
@@ -324,28 +324,28 @@ carries more bench rows and spreads the same counting stats over more of them.
 
 | Decade | After caps | Below 30% | Survives | Share of the gated pool |
 |---|---:|---:|---:|---:|
-| 1910s | 20,717 | 4,367 | 21.1% | 26.8% |
-| 1920s | 15,897 | 3,177 | 20.0% | 19.5% |
-| 1930s | 15,974 | 3,088 | 19.3% | 19.0% |
-| 1940s | 13,774 | 2,133 | 15.5% | 13.1% |
-| 1950s | 9,676 | 1,169 | 12.1% | 7.2% |
-| 1960s | 10,625 | 795 | 7.5% | 4.9% |
-| 1970s | 14,684 | 819 | 5.6% | 5.0% |
-| 1980s | 11,934 | 398 | 3.3% | 2.4% |
+| 1910s | 20,698 | 4,365 | 21.1% | 27.2% |
+| 1920s | 15,732 | 3,130 | 19.9% | 19.5% |
+| 1930s | 14,547 | 2,981 | 20.5% | 18.6% |
+| 1940s | 12,244 | 2,051 | 16.8% | 12.8% |
+| 1950s | 9,676 | 1,169 | 12.1% | 7.3% |
+| 1960s | 10,625 | 795 | 7.5% | 5.0% |
+| 1970s | 14,684 | 819 | 5.6% | 5.1% |
+| 1980s | 11,934 | 398 | 3.3% | 2.5% |
 | 1990s | 7,042 | 192 | 2.7% | 1.2% |
 | 2000s | 4,632 | 96 | 2.1% | 0.6% |
 | 2010s | 3,057 | 50 | 1.6% | 0.3% |
 | 2020s | 754 | 12 | 1.6% | 0.1% |
 
-**Four decades before 1950 make up 78% of what ships.** Everything from 1980 on is 4.6%. The two
+**Four decades before 1950 make up 78% of what ships.** Everything from 1980 on is 4.7%. The two
 filters compound: the ≤2 pitcher cap already selects complete games, which modern baseball barely
 produces, and the gate then removes the low-scoring remainder.
 
-Whether that matters is a product question, not a pool question — 12,456 directions is 18.5 years of
+Whether that matters is a product question, not a pool question — 12,218 directions is 18.1 years of
 calendar regardless of which decade they come from, and the deduction does not care what year it is.
 It matters if the progressive reveal (§7) is expected to land on names a player recognises. **Not
 decided.** The levers, in order of cost: loosen the pitcher cap back towards 3 and accept fewer
-visible batting rows; raise the gate to 35% (44.8 years, but three-run boards return); or stratify
+visible batting rows; raise the gate to 35% (43.8 years, but three-run boards return); or stratify
 the calendar by era deliberately so a thin decade is rationed rather than crowded out.
 
 *One side effect, small and in the wrong direction: filtering makes hard boards slightly more
@@ -358,11 +358,11 @@ consistent with a collapse already recorded in §31 rather than a new problem.*
 |---|---|---|
 | Games with event files (203,908) | 407,816 | — |
 | Minus deduced (3,465 games) | 400,886 | 98.3% |
-| Roster fits the board (≤13 batters, ≤2 pitchers) | 128,766 | 32.1% |
-| Minus discrepancies against official data in board columns | 113,974 | 88.5% |
-| Minus the zero-density gate at 30% | **12,456** | 10.9% |
+| Roster fits the board (≤13 batters, ≤2 pitchers) | 125,625 | 31.3% |
+| Minus discrepancies against official data in board columns | 110,833 | 88.2% |
+| Minus the zero-density gate at 30% | **12,218** | 11.0% |
 
-**The pool holds with room to spare.** 12,456 directions is **18.5 years of calendar** against the
+**The pool holds with room to spare.** 12,218 directions is **18.1 years of calendar** against the
 674 directions a year the week consumes (§31). The five-month forward inventory §33 requires is not
 remotely in question.
 
@@ -419,7 +419,7 @@ measured, and the resolutions are recorded at the top of this section and in §3
    → **Dropped instead.** A screen that predicts the wrong target is not saved by reading it
    backwards; the gate attacks the cause directly and the three numbers do the ranking.
 
-**Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 113,974 that is **145 hours** —
+**Search cost: 4.6 seconds per direction**, worst case 8.6. Across all 110,833 that is **141 hours** —
 a long batch rather than an impossibility, so the expensive measurement can run pool-wide if it is
 worth doing. The search is randomised greedy with five restarts, which finds a *maximal* erasure
 rather than a *maximum* one, so every figure above is a lower bound.
@@ -440,7 +440,7 @@ directions are consumed to produce one publishable board.
 
 **The calendar is not close to constrained.** Illustratively — the mapping from weekday to erasure
 count is not decided — a week using each level once with two easy days consumes about 13 directions,
-so roughly 674 a year. Against the 12,456 directions that survive the gate that is **18.5 years of
+so roughly 674 a year. Against the 12,218 directions that survive the gate that is **18.1 years of
 calendar**. Reusing a direction at a different difficulty years apart is available and not needed.
 
 ### The footnote ambiguity is a constraint on erasure, not on the pool
@@ -465,7 +465,7 @@ mythologized era of American baseball.
 predicted the distribution would shift forward on its own, on the reasoning that zero density selects
 against low-scoring games and those cluster in the dead-ball era. It does select against them — and
 it removes *more* modern boards than old ones anyway, because a modern board carries more bench rows
-and each of them is mostly noughts. After the gate the pool is **78% pre-1950 and 4.6% post-1980**.
+and each of them is mostly noughts. After the gate the pool is **78% pre-1950 and 4.7% post-1980**.
 The table and the open question are in §5.
 
 ---
@@ -636,7 +636,7 @@ the opposite of the provisional pair, which had them the other way round.
 |---|---:|---:|
 | ≤10 batters, ≤3 pitchers *(the old provisional pair)* | 65,522 | — |
 | ≤12, ≤2 | 103,304 | +58% |
-| **≤13, ≤2 — decided** | **128,766** | **+97%** |
+| **≤13, ≤2 — decided** | **125,625** | **+92%** |
 | ≤14, ≤2 | 148,815 | +127% |
 
 So the old caps were **dominated**: loosening batters and tightening pitchers buys more pool *and*
@@ -1554,6 +1554,49 @@ ten, 35% at twelve. It grades effort, badly, and adds no dimension. Closed.
 that grades cleanly, so the erasure algorithm takes a target chain length and lets the cell count
 fall out of reaching it (§21, §36), and the bands are set on chain length.
 
+### What the erasure algorithm produces (measured, August 2026)
+
+Four orderings, 72 gated directions across every decade, three seeds each — 864 runs. The full
+write-up is `discovery/erasure/README.md`.
+
+**⚠️ Measure on the gated pool or the ceiling is fiction.** The first run sampled the whole pool, and
+the gate keeps 11% of it. Zeros are exactly what makes a board compressible, so the boards that will
+never ship are also the ones that erase furthest:
+
+| | Ungated pool | **Gated pool** |
+|---|---:|---:|
+| ceiling, max chain p50 | 39 | **23** |
+| cells erased at the ceiling | 54 | **40** |
+| runs reaching chain 20 | 90% | **64–73%** |
+
+The consequence for the weekly curve is direct: **a chain of 20 is near the top of the range, not
+comfortably inside it**, and about a third of gated candidates cannot reach it. This is the
+ceiling-measurement error from earlier in this section reappearing as a sampling error.
+
+**Ordering barely matters, and `column_first` loses.** All four reach the same ceiling. `row_first`
+gives the least padded easy board — 12% trivial steps at a chain target of 5 against 19–20% for the
+others — and `column_first` is last or joint-last on every axis while overshooting its target. The
+reach differences at chain 20 (64% to 73%) are about 1.5 standard errors apart and **do not decide
+anything**.
+
+*Do not rank orderings by search cost at a fixed chain.* Search cost rises with how empty the board
+is, so an ordering that needed more erasures scores harder for free — the same bias that killed
+`live/solvable`.
+
+**Symmetric erasure is real and free.** `mirrored` pairs 72.9% of erased batting cells with their
+mirror against a 42.9% coincidence baseline, at the same ceiling and cell count. Available as an
+aesthetic choice, decided by nothing but taste.
+
+**Targeting: resolution p90 is a separate lever, search cost is half of one.** With the chain fixed,
+resolution is independent (|r| ≤ 0.11 at every target) while search cost is weakly tied (r ≈ +0.2)
+and its band closes as the chain grows — 0.33–0.67 at chain 5, 0.83–0.92 at chain 20. On a hard board
+the search cost fixes itself and there is nothing left to aim at.
+
+A joint target — chain ≥ 11 with both other metrics above their medians — costs **2.39×** the pool
+against 1.04× for chain alone, or 7.6 years of calendar instead of 18.1. Affordable. **The data
+suggests targeting chain and resolution p90 and reporting search cost rather than pursuing it; the
+thresholds themselves are a product decision and are not set here.**
+
 ### The three numbers (measured off the ceiling, August 2026)
 
 | Number | Measures | Form |
@@ -2115,8 +2158,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 **Data**
 
-- [x] ~~Retrosheet coverage~~ — **measured (August 2026), re-measured under the decided caps:** funnel in §5. 113,974 surviving directions, **12,456** after the zero-density gate — 18.5 years of calendar
-- [ ] **The era the gate leaves behind.** 78% of the shippable pool is pre-1950 and 4.6% is post-1980, and both filters push the same way. A product question about the reveal (§7), not a pool question — the levers are in §5
+- [x] ~~Retrosheet coverage~~ — **measured (August 2026), re-measured under the decided caps:** funnel in §5. 110,833 surviving directions, **12,218** after the zero-density gate — 18.1 years of calendar
+- [ ] **The era the gate leaves behind.** 78% of the shippable pool is pre-1950 and 4.7% is post-1980, and both filters push the same way. A product question about the reveal (§7), not a pool question — the levers are in §5
 - [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
 - [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
 - [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the calendar model is in §31
@@ -2124,7 +2167,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~The quality criterion~~ — **resolved: the 30% zero-density gate**, then chain length, search cost and resolution p90. The gate removes every shutout and the three-run games while keeping seven-run ones, and family variety survives it (§5)
 - [x] ~~Bottleneck frequency as a difficulty dimension~~ — **measured and rejected (August 2026).** No board pinches to a single move more than twice, and the frequency rises monotonically with erasure count rather than varying within a level, so there is nothing in it to grade. Closed; do not propose it again (§31)
 - [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
-- [ ] **Erasure ordering.** The real algorithm is not decided. **Its input is a target chain length, not a number of cells to erase** — chain length grades more cleanly than cell count, so erasure is the means and the chain is the objective (§21). Still open: the order cells come out in, and whether the pattern is symmetric. **The difficulty bands, when they are set, are set on chain length**, against real solving times from the January beta rather than anyone's estimate
+- [x] ~~**Erasure ordering.**~~ — **measured (August 2026), and it is not a lever.** Its input is a target chain length, not a number of cells (§21). All four orderings reach the same ceiling; `column_first` loses on every axis and is the one worth removing; symmetric erasure is real and free, so it is taste. §31 carries the numbers and the ceiling correction
+- [ ] **Whether the generator targets one metric or three.** Resolution p90 is independent of chain and worth aiming at; search cost fixes itself once the chain is long. A joint target costs 2.39× the pool, which is affordable. **The thresholds are a product decision and are not set** — bands go on chain length, against real solving times from the January beta rather than anyone's estimate
 - [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
 - [x] ~~**Loader fix:** add a provenance column so deduced event files are distinguishable (§32)~~ — **done (August 2026):** `dbo.retroGameProvenance`, 202,036 games. It immediately found 1,872 Negro Leagues games that had been in the pool all along; they are excluded too (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22

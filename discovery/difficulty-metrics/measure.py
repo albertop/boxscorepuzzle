@@ -87,14 +87,52 @@ def _parse_line_score(text: str) -> tuple[int, ...]:
     return tuple(innings)
 
 
-def load(limit: int) -> list[Loaded]:
+def load(limit: int, *, gated: bool = False) -> list[Loaded]:
+    """Sample directions from the pool, stratified by decade.
+
+    `gated` applies §5's zero-density gate in SQL, which matters more than it sounds: the gate keeps
+    only 11% of the pool, so an ungated sample is 89% boards that will never ship. Off by default so
+    that measurements taken before the gate existed stay comparable to themselves.
+    """
     import pyodbc  # noqa: PLC0415
 
-    query = """
+    gate = """
+      AND CAST(o.batting_zeros + d.pitching_zeros
+        + CASE WHEN o.t_pa=0 THEN 1 ELSE 0 END + CASE WHEN o.t_ab=0 THEN 1 ELSE 0 END
+        + CASE WHEN o.t_r=0 THEN 1 ELSE 0 END + CASE WHEN o.t_h=0 THEN 1 ELSE 0 END
+        + CASE WHEN o.t_bb=0 THEN 1 ELSE 0 END + CASE WHEN o.t_so=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_out=0 THEN 1 ELSE 0 END + CASE WHEN d.t_ph=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_pr=0 THEN 1 ELSE 0 END + CASE WHEN d.t_per=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_pbb=0 THEN 1 ELSE 0 END + CASE WHEN d.t_pso=0 THEN 1 ELSE 0 END AS float)
+        / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < 0.30
+    """
+    query = f"""
     WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
              SUM(CASE WHEN B_G=1 THEN 1 ELSE 0 END) AS batters,
-             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers
+             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers,
+             SUM(CASE WHEN B_G=1 THEN
+               CASE WHEN B_PA=0 THEN 1 ELSE 0 END + CASE WHEN B_AB=0 THEN 1 ELSE 0 END +
+               CASE WHEN B_R=0 THEN 1 ELSE 0 END + CASE WHEN B_H=0 THEN 1 ELSE 0 END +
+               CASE WHEN B_BB=0 THEN 1 ELSE 0 END + CASE WHEN B_SO=0 THEN 1 ELSE 0 END
+               ELSE 0 END) AS batting_zeros,
+             SUM(CASE WHEN P_G=1 THEN
+               CASE WHEN P_OUT=0 THEN 1 ELSE 0 END + CASE WHEN P_H=0 THEN 1 ELSE 0 END +
+               CASE WHEN P_R=0 THEN 1 ELSE 0 END + CASE WHEN P_ER=0 THEN 1 ELSE 0 END +
+               CASE WHEN P_BB=0 THEN 1 ELSE 0 END + CASE WHEN P_SO=0 THEN 1 ELSE 0 END
+               ELSE 0 END) AS pitching_zeros,
+             SUM(CASE WHEN B_G=1 THEN B_PA ELSE 0 END) AS t_pa,
+             SUM(CASE WHEN B_G=1 THEN B_AB ELSE 0 END) AS t_ab,
+             SUM(CASE WHEN B_G=1 THEN B_R ELSE 0 END) AS t_r,
+             SUM(CASE WHEN B_G=1 THEN B_H ELSE 0 END) AS t_h,
+             SUM(CASE WHEN B_G=1 THEN B_BB ELSE 0 END) AS t_bb,
+             SUM(CASE WHEN B_G=1 THEN B_SO ELSE 0 END) AS t_so,
+             SUM(CASE WHEN P_G=1 THEN P_OUT ELSE 0 END) AS t_out,
+             SUM(CASE WHEN P_G=1 THEN P_H ELSE 0 END) AS t_ph,
+             SUM(CASE WHEN P_G=1 THEN P_R ELSE 0 END) AS t_pr,
+             SUM(CASE WHEN P_G=1 THEN P_ER ELSE 0 END) AS t_per,
+             SUM(CASE WHEN P_G=1 THEN P_BB ELSE 0 END) AS t_pbb,
+             SUM(CASE WHEN P_G=1 THEN P_SO ELSE 0 END) AS t_pso
       FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID)
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END AS offense_is_home,
@@ -118,6 +156,7 @@ def load(limit: int) -> list[Loaded]:
       -- downstream can catch a board that is consistent and still wrong.
       AND NOT EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
                       WHERE p.GAME_ID = g.GAME_ID AND (p.is_deduced = 1 OR p.source_type = 'EVR'))
+      {gate if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     rows_query = """

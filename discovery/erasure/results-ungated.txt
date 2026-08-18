@@ -1,0 +1,64 @@
+loaded 72 directions, 71 balance every identity
+decades: {1910: 6, 1920: 6, 1930: 6, 1940: 6, 1950: 6, 1960: 6, 1970: 6, 1980: 6, 1990: 6, 2000: 6, 2010: 6, 2020: 5}
+trajectory vs erase(): 0 mismatches across 5 directions x 4 orderings x 6 targets
+
+=== EACH ORDERING AGAINST EACH TARGET ===
+A run that never reaches the target is a discard, not a failure (§22).
+ordering      target  reached  erased p50  chain p50  search p50  resolution p50  trivial p50
+column_first       5     100%          13          6        0.50               9         0.30
+column_first       8      99%          18          8        0.67               8         0.33
+column_first      11      99%          23         11        0.75               8         0.35
+column_first      14      98%          28         14        0.82               6         0.35
+column_first      17      96%          32         17        0.89               5         0.33
+column_first      20      92%          36         20        0.90               5         0.32
+
+mirrored           5     100%          10          5        0.50               9         0.27
+mirrored           8     100%          16          8        0.60               9         0.28
+mirrored          11      99%          22         11        0.71               8         0.29
+mirrored          14      97%          26         14        0.80               8         0.28
+mirrored          17      95%          30         17        0.86               8         0.28
+mirrored          20      90%          33         20        0.88               6         0.26
+
+random             5     100%          12          6        0.50               9         0.28
+random             8     100%          17          8        0.50               8         0.33
+random            11     100%          24         11        0.67               8         0.33
+random            14      98%          28         14        0.78               6         0.32
+random            17      95%          31         17        0.86               6         0.30
+random            20      90%          35         20        0.89               5         0.29
+
+row_first          5     100%           9          5        0.50               9         0.12
+row_first          8     100%          16          8        0.50               8         0.23
+row_first         11     100%          22         11        0.67               8         0.29
+row_first         14      99%          28         14        0.75               6         0.29
+row_first         17      95%          32         17        0.85               5         0.29
+row_first         20      92%          35         20        0.89               5         0.28
+
+=== HOW FAR EACH ORDERING CAN GO ON THE SAME BOARDS ===
+ordering       max chain p50  max chain p90  cells erased p50
+column_first              38             52                54
+mirrored                  39             53                53
+random                    39             54                54
+row_first                 39             53                54
+
+=== IS THE MIRRORED ORDERING ACTUALLY SYMMETRIC ===
+ordering       mirror-pair share at target 11
+column_first                           22.7%
+mirrored                               82.7%
+random                                 36.5%
+row_first                              35.7%
+
+=== WITH CHAIN FIXED, HOW MUCH ROOM IS LEFT IN THE OTHER TWO ===
+ target      n    search p10-p90    resolution p10-p90   r(chain,search)   r(chain,res)
+      5    851      0.33-0.67                8-10                  0.316         -0.079
+      8    850      0.45-0.75                6-10                  0.213         -0.043
+     11    846      0.50-0.86                5-10                  0.221         -0.080
+     14    834      0.60-0.89                4-9                   0.235         -0.068
+     17    811      0.67-0.90                4-9                   0.232          0.012
+     20    775      0.75-0.91                4-8                   0.160         -0.021
+  (a wide band with r near zero means the second and third metrics are separate levers)
+
+=== WHAT A JOINT TARGET WOULD COST ===
+  chain >= 11 alone, versus chain >= 11 with search and resolution above their medians
+  runs reaching chain 11                     : 846/852
+  runs also reaching search >= 0.67 and res >= 8: 489/852
+  pool cost multiplier of the joint target   : 1.73x
