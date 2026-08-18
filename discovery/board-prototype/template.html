@@ -30,7 +30,10 @@
   /* The nine innings are one thing and R/H/E are another. Without a rule the line score reads as
      twelve equivalent columns. */
   #linescore .summary { border-left: 2px solid #999; }
-  #linescore tr.ours { background: #eef4ff; }
+  /* No tint on the batting team's row. It is not that section's property: its runs and hits are what
+     the batting section reconciles *and* what the pitching section conceded, which is the object the
+     cross-team family passes through. Marking it as belonging to one section works against the
+     family the team-named section headers exist to support. */
 
   #footnotes { flex: 0 0 auto; font-size: 11px; padding: 3px 6px; border-bottom: 1px solid #ccc; }
 
@@ -90,17 +93,17 @@ function lineScore(b) {
     Array.from({length: n}, (_, i) => "<th>" + (i + 1) + "</th>").join("") +
     "<th class='summary'>R</th><th>H</th><th>E</th></tr>";
   // AWAY and HOME, because both teams batted and both fielded — offence and defence do not name
-  // the rows of a line score. The batting section's team is tinted so the player can connect them.
-  const row = (side, innings, rhe, ours) =>
-    "<tr class='" + (ours ? "ours" : "") + "'><td class='side'>" + side + "</td>" +
+  // the rows of a line score. Neither row is tinted; the section headers name the teams instead.
+  const row = (side, innings, rhe) =>
+    "<tr><td class='side'>" + side + "</td>" +
     Array.from({length: n}, (_, i) => "<td>" + (innings[i] ?? "x") + "</td>").join("") +
     rhe.map((v, i) => "<td class='" + (i === 0 ? "summary" : "") + "'><b>" + v + "</b></td>").join("") + "</tr>";
   const weAreHome = b.offenseIsHome;
   return head +
     row("AWAY", weAreHome ? b.lineScore.defense : b.lineScore.offense,
-        weAreHome ? b.lineScore.defenseRHE : b.lineScore.offenseRHE, !weAreHome) +
+        weAreHome ? b.lineScore.defenseRHE : b.lineScore.offenseRHE) +
     row("HOME", weAreHome ? b.lineScore.offense : b.lineScore.defense,
-        weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE, weAreHome);
+        weAreHome ? b.lineScore.offenseRHE : b.lineScore.defenseRHE);
 }
 
 const ABBREVIATION = 7;

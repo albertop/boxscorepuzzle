@@ -900,6 +900,20 @@ innings are and a third reliever is where they are not. **Never a bare `P` there
 batting section has `P` rows of its own, and never `SP` in the batting section either — the pitching
 rows belong to the **opposing** team, so the same symbol would name two different men.*
 
+### ✅ Section headers name the team, and the line score is left neutral
+
+Headers read **`AWAY BATTING`** and **`HOME PITCHING`** — team first, then role, the way a boxscore
+reads. They are always opposites by the board's construction, and stating it is what makes the two
+sections read as **two teams** rather than two halves of one. That matters because the cross-team
+family is unusable until the player sees that the hits allowed below are the hits in the *other*
+team's line score row (§3).
+
+**Neither line score row is tinted.** An earlier version shaded the batting team's row as a reading
+aid. It is wrong on the merits: that row is not the batting section's property — its runs and hits
+are what the batting section must reconcile *and* what the pitching section conceded, which makes it
+precisely the shared object the cross-team family passes through. **Marking it as belonging to one
+section works against the family the headers exist to support.**
+
 **⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero,
 so a player will learn to stop looking — and the row where one finally appears is precisely the row
 whose arithmetic fails if they miss it.
@@ -1786,6 +1800,12 @@ all of this works.
 resolution p90 falls from 8 to 5 as difficulty rises while search cost climbs from 0.50 to 0.92.
 **Nobody designed that**; it emerged from the format, and it is worth recording as a property of the
 board: difficulty here is scanning, not calculating.
+
+*And the mechanism is now known rather than only observed.* **A single blank in a full column *is*
+the long-arithmetic step** — the player adds every other number and subtracts from the total. Erasing
+more puts several blanks in each column, so each step combines fewer known terms. Arithmetic weight
+is therefore highest where the board is fullest, which is the easy end. See the resolution-ceiling
+finding below.
 
 ### ✅ The week runs from chain 5 to chain 13 — decided
 

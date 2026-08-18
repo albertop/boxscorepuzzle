@@ -80,7 +80,6 @@ table.line td, table.line th { border: 1px solid #ddd; height: 16px; font-size: 
                                text-align: center; padding: 0 1px; }
 table.line th.side, table.line td.side { width: 38px; text-align: left; font-weight: 700; padding-left: 4px; }
 table.line .summary { border-left: 2px solid #999; }
-table.line tr.ours { background: #eef4ff; }
 div.foot { font-size: 11px; padding: 3px 6px; border-bottom: 1px solid #ccc; }
 table.grid th, table.grid td { text-align: center; vertical-align: middle; border: 1px solid #ccc;
                                font-variant-numeric: tabular-nums; padding: 0; }
@@ -103,7 +102,7 @@ def _cells(values: list[object], blank: list[int]) -> str:
     )
 
 
-def _board_html(board: dict[str, object], *, tint: bool = True, heading: str | None = None) -> str:
+def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     score = board["lineScore"]  # type: ignore[index]
     innings = max(len(score["offense"]), len(score["defense"]))  # type: ignore[index,call-overload]
     head = (
@@ -113,9 +112,13 @@ def _board_html(board: dict[str, object], *, tint: bool = True, heading: str | N
     )
     ours = board["offenseIsHome"]
     rows = ""
-    for side, by_inning, rhe, is_ours in (
-        ("AWAY", score["defense"] if ours else score["offense"], score["defenseRHE"] if ours else score["offenseRHE"], not ours),  # type: ignore[index]
-        ("HOME", score["offense"] if ours else score["defense"], score["offenseRHE"] if ours else score["defenseRHE"], ours),  # type: ignore[index]
+    # No tint on either row. The batting team's line score row is not the batting section's property:
+    # its runs and hits are what the batting section must reconcile *and* what the pitching section
+    # conceded, which is exactly the object the cross-team family passes through. Marking it as
+    # belonging to one section works against the family the team-named headers exist to support.
+    for side, by_inning, rhe in (
+        ("AWAY", score["defense"] if ours else score["offense"], score["defenseRHE"] if ours else score["offenseRHE"]),  # type: ignore[index]
+        ("HOME", score["offense"] if ours else score["defense"], score["offenseRHE"] if ours else score["defenseRHE"]),  # type: ignore[index]
     ):
         cells = "".join(
             f"<td>{by_inning[index] if index < len(by_inning) else 'x'}</td>"  # type: ignore[index]
@@ -125,8 +128,7 @@ def _board_html(board: dict[str, object], *, tint: bool = True, heading: str | N
             f"<td class='{'summary' if position == 0 else ''}'><b>{value}</b></td>"
             for position, value in enumerate(rhe)  # type: ignore[arg-type]
         )
-        mark = "ours" if (is_ours and tint) else ""
-        rows += f"<tr class='{mark}'><td class='side'>{side}</td>{cells}{summary}</tr>"
+        rows += f"<tr><td class='side'>{side}</td>{cells}{summary}</tr>"
 
     # The section headers name the team, not only the role. The batting-pitching cross is one of the
     # four families and the part §3 says the puzzle degenerates without, but a player can only use it
@@ -183,26 +185,7 @@ def page(boards: list[dict[str, object]]) -> str:
         "are the blanks the player fills. Two questions: whether four pitching rows read as noise "
         "beside two, and whether a high resolution p90 is depth or arithmetic.</p>"
         + "".join(_board_html(board) for board in boards)
-        + _tint_comparison(boards)
         + "</body></html>"
-    )
-
-
-def _tint_comparison(boards: list[dict[str, object]]) -> str:
-    """The same board twice, with and without the tinted line score row.
-
-    The tint was there to connect the batting section to its own runs. Now that the section headers
-    name the team, the question is whether it still helps or says the same thing twice.
-    """
-    if not boards:
-        return ""
-    board = boards[0]
-    return (
-        "<h1 style='margin-top:28px'>Is the line score tint still earning its place?</h1>"
-        "<p class='intro'>The same board twice. The headers now name the team for each section, so "
-        "the tinted row may be saying it a second time.</p>"
-        + _board_html(board, tint=True, heading="WITH the tint")
-        + _board_html(board, tint=False, heading="WITHOUT the tint")
     )
 
 
