@@ -6,7 +6,7 @@ anyway — the labels are outside the arithmetic, so all four §22 layers pass a
 named wrong.
 
 The label is not decoration. §7 makes it the row's only identity during play, and a footnote is
-attributed to a *row*: `SF: CF-2` means one specific line, with its own plate appearances and its own
+attributed to a *row*: `SF: 9b` means one specific line, with its own plate appearances and its own
 row identity. Send the term to the wrong row and that row stops balancing while the other one does
 not — arithmetic broken in a way the column totals cannot reveal, because the term is present, just
 in the wrong place.
@@ -68,16 +68,14 @@ class TestThePositionRule:
     ) -> None:
         assert _loader()._position(appeared_at, entered_fielding, entered_as) == expected
 
-    def test_the_starter_has_no_suffix_and_his_replacement_is_two(self) -> None:
-        # `CF-1` on the starter says somebody came before him. He is implicitly the first man in the
-        # slot, so the one who replaces him is the second.
-        assert _loader()._batting_labels(["CF", "SS", "CF"]) == ("CF", "SS", "CF-2")
+    def test_the_label_is_the_position_and_nothing_else(self) -> None:
+        # ⚠️ The suffix is gone. It existed so a footnote could name a unique row, and the reference
+        # moved to the slot, which identifies a row without help. Two CF rows in different slots are
+        # two rows reading CF — what a boxscore shows and what actually happened.
+        assert _loader()._batting_labels(["CF", "SS", "CF"]) == ("CF", "SS", "CF")
 
-    def test_further_substitutes_keep_counting(self) -> None:
-        assert _loader()._batting_labels(["P", "P", "P"]) == ("P", "P-2", "P-3")
-
-    def test_a_position_held_by_one_man_is_not_suffixed(self) -> None:
-        assert _loader()._batting_labels(["CF", "SS"]) == ("CF", "SS")
+    def test_repeats_are_not_numbered_however_many(self) -> None:
+        assert _loader()._batting_labels(["P", "P", "P"]) == ("P", "P", "P")
 
 
 class TestAFootnoteBelongsToARowAndNotToAPosition:
@@ -91,14 +89,15 @@ class TestAFootnoteBelongsToARowAndNotToAPosition:
         sacrifice = BatterFootnotes(hit_by_pitch=0, sacrifice_flies=1, sacrifice_hits=0, catcher_interference=0)
         return (starter, substitute), (nothing, sacrifice)
 
-    def test_the_rendered_footnote_names_the_suffixed_label(self) -> None:
-        # `SF: CF` on a board where the rows are CF and CF-2 is ambiguous: the player cannot tell
-        # which line the term belongs to, and the row identity is what needs it.
-        labels = _loader()._batting_labels(["CF", "CF"])
+    def test_the_rendered_footnote_names_the_slot_reference(self) -> None:
+        # `SF: CF` on a board with two CF rows is unresolvable, and so is `SF: CF-2` once the suffix
+        # numbers by position while the indentation groups by slot. The slot reference is neither: it
+        # names a row, and it is the same string the slot cell prints.
+        references = _loader().slot_references([9, 9])
         _, footnotes = self._lineup()
-        carriers = [labels[index] for index, note in enumerate(footnotes) if note.sacrifice_flies]
+        carriers = [references[index] for index, note in enumerate(footnotes) if note.sacrifice_flies]
 
-        assert carriers == ["CF-2"]
+        assert carriers == ["9b"]
 
     def _board(
         self, footnotes: tuple[BatterFootnotes, ...], rows: tuple[BattingLine, ...]

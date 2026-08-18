@@ -30,7 +30,7 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
-from measure import Loaded, load  # noqa: E402
+from measure import Loaded, load, slot_references  # noqa: E402
 from reportlab.lib import colors  # noqa: E402
 from reportlab.lib.pagesizes import A4  # noqa: E402
 from reportlab.lib.styles import ParagraphStyle  # noqa: E402
@@ -86,11 +86,17 @@ class Candidate:
 
 
 def footnote_line(loaded: Loaded) -> str:
-    """`SF: 3B, C; SH: SS, P-1; LOB: 9` — attributed by label, never by name (§7)."""
+    """`SF: 3   SH: 2, 9b   LOB: 9` — attributed by lineup slot, never by name (§7).
+
+    ⚠️ **The reference comes from `slot_references`, the same call the slot cell prints.** Two places
+    applying one condition — *is this slot shared* — is the defect this project spent a day closing,
+    and here it would be one the player can see: a cell reading `9b` beside a footnote saying `9c`.
+    """
     direction = loaded.direction
+    references = slot_references(loaded.slots)
     parts = []
     for field, short in FOOTNOTE_LABELS:
-        carriers = [loaded.labels[index] for index, note in enumerate(direction.batter_footnotes) if getattr(note, field)]
+        carriers = [references[index] for index, note in enumerate(direction.batter_footnotes) if getattr(note, field)]
         if carriers:
             parts.append(f"{short}: {', '.join(carriers)}")
     parts.append(f"LOB: {direction.team_footnotes.left_on_base}")

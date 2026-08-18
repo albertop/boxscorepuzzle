@@ -38,12 +38,8 @@ from boxscore_forge.boxscore import (  # noqa: E402
     TeamFootnotes,
 )
 from boxscore_forge.constraints import (  # noqa: E402
-    batting_cell,
-    batting_total_cell,
     cell_values,
     footnote_cell,
-    pitching_cell,
-    pitching_total_cell,
     shape_of,
 )
 from boxscore_forge.erasure import erasable  # noqa: E402
@@ -51,7 +47,6 @@ from boxscore_forge.errors import ContradictionError  # noqa: E402
 from boxscore_forge.identities import (  # noqa: E402
     BATTING_COLUMNS,
     PITCHING_COLUMNS,
-    Family,
     find_violations,
 )
 from boxscore_forge.solver import Solution, solve  # noqa: E402
@@ -223,36 +218,22 @@ def slot_references(slots: Sequence[int]) -> tuple[str, ...]:
 
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
-    """Position labels. The starter keeps the bare label; the man who replaces him is `LF-2`.
+    """The label is the position, and nothing else.
 
-    43% of gated boards have two rows sharing a label and 10% have one where a row also carries a
-    footnote — which is when `SF: LF` stops naming a row and the identity for both becomes unusable.
-    Suffixing removes that at the source, so the erasure no longer has to avoid patterns that leave
-    the attribution unresolved.
+    ⚠️ **The suffix is gone.** It existed for one reason — a footnote had to name a unique row — and the
+    reference moved to the slot, which identifies a row without help. Two `CF` rows in different slots
+    are now two rows reading `CF`, which is what a boxscore shows and what actually happened.
 
-    It is also a better label rather than a patch: `LF-2` says a substitution happened at that
-    position, which is real information the boxscore already contains and the bare label threw away.
+    Keeping it would have cost more than width. The suffix numbered by order of appearance of a
+    *position* while the indentation groups by *slot*, and those are different partitions: a reader met
+    a suffixed row that replaced nobody beside an unsuffixed row that did. Every attempt to fix that
+    asked which row deserved the number, when the question was whether the number belonged on a row.
 
-    Labels used once stay bare — the common row should not carry a suffix that distinguishes nothing.
-    Four characters, inside the seven §7 fixed.
-
-    Note the batting section's pitchers become `P-1`, `P-2` and **not** `SP`/`RP-n`. Those belong to
-    the pitching section, which shows the *opposing* team's pitchers: the same symbol in both
-    sections would name two different men on two different teams.
+    Kept as a function rather than inlined: the batting section's pitchers are `P` here and `SP`/`RP-n`
+    in the pitching section, which shows the *opposing* team, and one symbol naming two men on two
+    teams is a mistake this is the natural place to prevent.
     """
-    repeated = {label for label in positions if positions.count(label) > 1}
-    seen: Counter[str] = Counter()
-    labels: list[str] = []
-    for label in positions:
-        seen[label] += 1
-        # ⚠️ **The starter never carries a suffix, and the number counts men in the slot.** `LF-1` on
-        # the leadoff row says somebody came before him. The starter is `LF` — implicitly the first
-        # man there — so the one who replaces him is the second and reads `LF-2`, the next `LF-3`.
-        #
-        # Footnote attribution stays unambiguous: `SF: LF` is the starter and `SF: LF-2` the man who
-        # followed him, which is the property the suffix exists for.
-        labels.append(f"{label}-{seen[label]}" if label in repeated and seen[label] > 1 else label)
-    return tuple(labels)
+    return tuple(positions)
 
 
 def _pitcher_labels(started: list[int]) -> tuple[str, ...]:
