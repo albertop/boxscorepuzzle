@@ -113,6 +113,11 @@ def load(limit: int) -> list[Loaded]:
     -- measured under the old pair describes a board that is not being built.
     WHERE o.batters <= 13 AND d.pitchers <= 2 AND l.VisLineScore IS NOT NULL
       AND g.SEASON BETWEEN ? AND ?
+      -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
+      -- identity, which is why the exclusion has to be a join rather than a check: nothing
+      -- downstream can catch a board that is consistent and still wrong.
+      AND NOT EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
+                      WHERE p.GAME_ID = g.GAME_ID AND (p.is_deduced = 1 OR p.source_type = 'EVR'))
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     rows_query = """

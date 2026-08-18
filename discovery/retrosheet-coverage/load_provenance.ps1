@@ -15,8 +15,27 @@
 # running the script again, which is the requirement in CLAUDE.md for anything the backup does not
 # cover.
 #
-#   .EVA / .EVN / .EVF   scored from a real scoresheet
+#   .EVA / .EVN / .EVF   scored from a real scoresheet, American / National / Federal
+#   .EVR                 Negro Leagues — recorded, and excluded from the pool (see below)
 #   .EDA / .EDN / .EDF   deduced: reconstructed from partial information, excluded from the pool
+#
+# Two source types are excluded from the puzzle pool, and the table exists so that the exclusion is a
+# join rather than a thing every query has to remember:
+#
+#     WHERE p.is_deduced = 0 AND p.source_type <> 'EVR'
+#
+# The Negro Leagues exclusion is a data-trust decision, not an identity one. Those 1,872 games
+# balance every identity the board uses — 3,744 directions, zero mismatches on the row identity and
+# on all four cross-team sums, cleaner than the contemporary control. They are still box scores
+# transcribed from newspapers rather than scored games, and a column such as strikeouts is blank in
+# the source and nought in the data: 93.7% of their batter rows carry K = 0 against 74.2% in
+# 1935-1949 regular play. A board that balances and is wrong is the failure mode §22 calls the worst,
+# because nothing downstream can catch it.
+#
+# Every E?? entry is read rather than a list of known extensions, and the extension is stored
+# verbatim. The first version of this script matched `.E[VD][ANF]` and silently lost all 1,872 Negro
+# Leagues games — which is precisely the failure the table exists to prevent, so it does not get to
+# happen twice through a second hardcoded list.
 #
 # Writes one table. Run with -DryRun first to see the counts without touching the database.
 
@@ -37,7 +56,7 @@ foreach ($zip in Get-ChildItem $ZipDirectory -Filter *.zip) {
     try {
         foreach ($entry in $archive.Entries) {
             $extension = [IO.Path]::GetExtension($entry.Name)
-            if ($extension -notmatch '^(?i)\.E[VD][ANF]$') { continue }
+            if ($extension -notmatch '^(?i)\.E[A-Z]{2}$') { continue }
             $fileCount++
             $reader = New-Object IO.StreamReader($entry.Open())
             try {
@@ -55,6 +74,9 @@ $deduced = @($origin.Keys | Where-Object { $origin[$_].StartsWith('ED') })
 Write-Output "event files read : $fileCount"
 Write-Output "games found      : $($origin.Count)"
 Write-Output "of them deduced  : $($deduced.Count)"
+Write-Output ""
+Write-Output "by source type:"
+$origin.Values | Group-Object | Sort-Object Name | ForEach-Object { "  $($_.Name.PadRight(4)) $($_.Count)" }
 
 if ($DryRun) {
     Write-Output "dry run - nothing written"

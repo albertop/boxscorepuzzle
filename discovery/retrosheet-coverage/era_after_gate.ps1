@@ -13,10 +13,12 @@
 # The caps are the ones the browser prototype settled on: at most 13 batters for the offensive team
 # and at most 2 pitchers for the defensive team (§6).
 #
+# Requires dbo.retroGameProvenance — run load_provenance.ps1 first. Deduced games and Negro Leagues
+# games are excluded through it.
+#
 # Read-only against DGL. Creates session temp tables only; nothing is written to the database.
 
 param(
-    [string]$DeducedGameIdsFile = "deduced_game_ids.txt",
     [int]$MaxBatters = 13,
     [int]$MaxPitchers = 2,
     [string]$ConnectionString = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
@@ -51,18 +53,21 @@ function Invoke-Report([string]$sql, [string]$label) {
 }
 
 try {
-    Invoke-NonQuery "CREATE TABLE #deduced (GAME_ID varchar(20) PRIMARY KEY)"
-    $ids = Get-Content $DeducedGameIdsFile
-    for ($offset = 0; $offset -lt $ids.Count; $offset += 200) {
-        $chunk = $ids[$offset..([Math]::Min($offset + 199, $ids.Count - 1))]
-        $command.Parameters.Clear()
-        $command.CommandText = "INSERT INTO #deduced (GAME_ID) VALUES " + (($chunk | ForEach-Object { "(?)" }) -join ",")
-        foreach ($id in $chunk) {
-            [void]$command.Parameters.Add((New-Object System.Data.Odbc.OdbcParameter("", $id)))
-        }
-        [void]$command.ExecuteNonQuery()
-    }
-    $command.Parameters.Clear()
+    # Provenance comes from the table now, not from a text file loaded into a temp table. Deduced
+    # games are reconstructions from partial information; Negro Leagues games are newspaper box
+    # scores that balance every identity and are still not trustworthy — load_provenance.ps1 carries
+    # the measurement behind both exclusions.
+    Invoke-Report @"
+SELECT (SELECT COUNT(*) FROM dbo.retroGameProvenance) AS provenance_rows,
+       (SELECT COUNT(*) FROM dbo.retroGamesReg g LEFT JOIN dbo.retroGameProvenance p ON p.GAME_ID = g.GAME_ID
+          WHERE p.GAME_ID IS NULL) AS games_with_no_provenance
+"@ "PROVENANCE CHECK - a game with no row would leave the funnel silently"
+
+    Invoke-NonQuery @"
+SELECT GAME_ID INTO #excluded FROM dbo.retroGameProvenance
+WHERE is_deduced = 1 OR source_type = 'EVR'
+"@
+    Invoke-NonQuery "CREATE UNIQUE CLUSTERED INDEX ix_excluded ON #excluded (GAME_ID)"
 
     # --- per (game, team): roster shape, zeros in the six board columns, and the column sums ---
     # The sums are here so a totals row can be counted as a zero cell too. A totals cell is nought
@@ -127,7 +132,7 @@ INTO #kept
 FROM dbo.retroGamesReg g
 JOIN #side o ON o.GAME_ID = g.GAME_ID
 JOIN #side d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
-LEFT JOIN #deduced x ON x.GAME_ID = g.GAME_ID
+LEFT JOIN #excluded x ON x.GAME_ID = g.GAME_ID
 LEFT JOIN #discrepancy disc_off ON disc_off.GAME_ID = g.GAME_ID AND disc_off.TEAM_ID = o.TEAM_ID AND disc_off.side = 'O'
 LEFT JOIN #discrepancy disc_def ON disc_def.GAME_ID = g.GAME_ID AND disc_def.TEAM_ID = d.TEAM_ID AND disc_def.side = 'P'
 WHERE x.GAME_ID IS NULL AND o.batters <= $MaxBatters AND d.pitchers <= $MaxPitchers

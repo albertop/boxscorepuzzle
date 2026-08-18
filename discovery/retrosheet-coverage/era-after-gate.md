@@ -2,6 +2,11 @@
 
 Run date: 2026-08-17. Source: `DGL` on `LocalServer`. Script: `era_after_gate.ps1`.
 
+> **These counts still include 1,872 Negro Leagues games**, found and excluded after this run (§32).
+> They sit entirely in 1913–1961, so they inflate the pre-1950 share the run is about. The script now
+> excludes them through `dbo.retroGameProvenance`; the numbers below are pending a re-run and will
+> move by under a percent.
+
 §5 left this open: the earlier era measurement was taken *before* the quality filter, and the note
 that stood in the design document predicted the distribution would drift forward on its own, because
 zero density selects against low-scoring games and those cluster in the dead-ball era.

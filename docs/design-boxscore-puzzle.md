@@ -1754,6 +1754,30 @@ loaded with nothing distinguishing them. The zips are the only place the distinc
 maintaining a separate exclusion list. A regenerated exclusion list is a second source of truth that
 can drift; a provenance column is permanent, queryable data — and §22's layer 1 needs it anyway.
 
+**Done (August 2026):** `dbo.retroGameProvenance`, one row per game, carrying the extension it was
+found under and rebuildable from the zips. 202,036 games, 3,465 of them deduced. Pool queries join
+it: `WHERE is_deduced = 0 AND source_type <> 'EVR'`.
+
+### The exclusion list turned out to have a second entry
+
+The provenance load left **1,872 games with no row**, all of them Negro Leagues: Retrosheet ships one
+`<season>NGL.EVR` per season inside the same regular-season zip, and the extension pattern everything
+had been written against — `.E[VD][ANF]` — does not match an R. They were in the pool from the first
+day and had never passed through the deduced filter, because that filter was a list of ids from a
+different set of files.
+
+**Excluded, and not because they fail anything.** They pass: 3,744 directions, **zero** row-identity
+failures and zero mismatches on all four cross-team sums — cleaner than the 1935–1949 control, which
+has one of each. They are newspaper box scores transcribed rather than games scored from a
+scoresheet, so a column that was never printed arrives as nought rather than as unknown: **93.7% of
+their batter rows carry K = 0 against 74.2% in contemporary regular play.** A board that balances
+perfectly and is quietly wrong is the failure mode §22 calls the worst, because no later layer can
+catch it. The pool loses 0.9% and has years of calendar to spare.
+
+*The general lesson is the one the provenance table was built for: an exclusion written as a pattern
+over filenames is a guess about a naming scheme, and this one was wrong for thirty-six seasons
+without anything going red.*
+
 ### Good news about the chosen columns
 
 Retrosheet proofs **offensive and pitching** statistics closely. **Defensive** ones — putouts and assists — are proofed less, because they were known to be kept far less reliably.
@@ -2102,7 +2126,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
 - [ ] **Erasure ordering.** The real algorithm is not decided. **Its input is a target chain length, not a number of cells to erase** — chain length grades more cleanly than cell count, so erasure is the means and the chain is the objective (§21). Still open: the order cells come out in, and whether the pattern is symmetric. **The difficulty bands, when they are set, are set on chain length**, against real solving times from the January beta rather than anyone's estimate
 - [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
-- [ ] **Loader fix:** add a provenance column so deduced event files are distinguishable (§32)
+- [x] ~~**Loader fix:** add a provenance column so deduced event files are distinguishable (§32)~~ — **done (August 2026):** `dbo.retroGameProvenance`, 202,036 games. It immediately found 1,872 Negro Leagues games that had been in the pool all along; they are excluded too (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
 - [x] ~~No-repetition policy~~ — **resolved:** at batch generation (§21)
 
