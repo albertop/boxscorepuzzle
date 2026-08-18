@@ -194,6 +194,14 @@ trusting review, and keep discovery inside the lint scope, because that is where
 that exists but is never called needs a test asserting the publication boundary invokes every
 implemented check, so adding one without wiring it in fails.
 
+**A mechanism kept past the problem it solved becomes a constraint on everything added after it.** The
+row-label suffix was introduced for one reason: footnote references had to name a unique row. A second
+grouping — indentation by lineup slot — arrived later, and the two partition the rows differently, so
+which row carries the number is arbitrary and the number reads as a claim it is not making. Every fix
+attempted was about *which row deserves the number*, and the question was whether the number needed to
+be on a row at all: move the footnote reference off the label and the suffix has no reason to exist.
+**When a mechanism collides with something new, ask what it was for before asking how to reconcile it.**
+
 **A fix that solves most of a problem reads like one that solves all of it.** The slot column was
 proposed to kill three things at once: positions repeated across different slots, the lost
 slot-grouping relationship, and footnote ambiguity. It kills the first two. It does nothing for rows

@@ -154,7 +154,8 @@ FIELDING_CODE: Final = {1: "P", 2: "C", 3: "1B", 4: "2B", 5: "3B", 6: "SS", 7: "
 _NOT_A_FIELDING_POSITION: Final = frozenset({"", "?", "DH", "PH", "PR"})
 
 
-def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | None) -> str:
+def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | None,
+              started_at: int | None = None) -> str:
     """Where the man played, not how he arrived.
 
     **The label has a deductive function rather than a biographical one.** It is what tells the player
@@ -172,6 +173,14 @@ def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | 
     row puts an `SF` inside the wrong row identity while the column totals still balance — arithmetic
     broken in a way no §22 layer can see.
     """
+    # ⚠️ **The position of entry, and a starter enters in the starting lineup.** "Where he played"
+    # was underspecified: a man who played two positions has no single answer, so the `CASE` over the
+    # `F_*_G` flags fell back on a fixed priority and produced a board with two third basemen and no
+    # starting centre fielder. This is one rule with two sources rather than two rules.
+    if started_at in FIELDING_CODE:
+        return FIELDING_CODE[started_at]
+    if started_at == 10:
+        return "DH"
     if entered_fielding is not None:
         return FIELDING_CODE[entered_fielding]
     if appeared_at not in _NOT_A_FIELDING_POSITION:
@@ -371,6 +380,19 @@ def load(
       {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
+    # The starting lineup, which is where a *starter* entered. `retroGamesReg` carries nine
+    # BAT_ID/FLD_CD pairs per side; the code counts only when the row's player is the man the lineup
+    # names in that slot, so a substitute cannot inherit his predecessor's position.
+    lineup_bat = " ".join(
+        f"WHEN {n} THEN CASE WHEN g.HOME_TEAM_ID = d.TEAM_ID THEN g.HOME_LINEUP{n}_BAT_ID"
+        f" ELSE g.AWAY_LINEUP{n}_BAT_ID END"
+        for n in range(1, 10)
+    )
+    lineup_fld = " ".join(
+        f"WHEN {n} THEN CASE WHEN g.HOME_TEAM_ID = d.TEAM_ID THEN g.HOME_LINEUP{n}_FLD_CD"
+        f" ELSE g.AWAY_LINEUP{n}_FLD_CD END"
+        for n in range(1, 10)
+    )
     rows_query = f"""
     SELECT d.PLAYER_ID, d.B_PA, d.B_AB, d.B_R, d.B_H, d.B_BB, d.B_SO, d.B_HP, d.B_SF, d.B_SH, d.B_XI,
       CASE WHEN d.F_P_G=1 THEN 'P' WHEN d.F_C_G=1 THEN 'C' WHEN d.F_1B_G=1 THEN '1B'
@@ -392,8 +414,11 @@ def load(
       -- The batting-order slot. Always 1 to 9, and every direction has exactly nine distinct ones —
       -- 407,815 of 407,816, the exception being a source error. It was already used to order the
       -- rows; carrying it makes the grouping part of the board rather than a detail of the ORDER BY.
-      d.SLOT_CT
+      d.SLOT_CT,
+      CASE WHEN (CASE d.SLOT_CT {lineup_bat} END) = d.PLAYER_ID
+           THEN (CASE d.SLOT_CT {lineup_fld} END) END AS started_at
     FROM dbo.retroDailyReg d
+    LEFT JOIN dbo.retroGamesReg g ON g.GAME_ID = d.GAME_ID
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
     -- plate appearance at all, and 83% of those also pitched — the designated-hitter era's pitchers,
@@ -511,7 +536,7 @@ def load(
                     game_id,
                     season,
                     direction,
-                    _batting_labels([_position(r[11], r[16], r[17]) for r in batting_rows]),
+                    _batting_labels([_position(r[11], r[16], r[17], r[19]) for r in batting_rows]),
                     bool(is_home),
                     tuple((r[12] or "", r[13] or "") for r in batting_rows),
                     _pitcher_labels([p[6] for p in pitching_rows]),
