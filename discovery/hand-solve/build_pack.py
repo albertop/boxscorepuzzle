@@ -341,6 +341,17 @@ def audit(chosen: list[Candidate]) -> None:
 
 
 
+def indented(label: str) -> str:
+    """A substitute's row is indented, the way a printed boxscore sets it.
+
+    The suffix already says a man replaced someone; the indent is what makes it visible at a glance,
+    and together they say which rows share a lineup slot. The label itself stays clean in the data —
+    this is presentation, and a leading space inside `loaded.labels` would travel into footnote
+    attribution and into the key file.
+    """
+    return f"  {label}" if "-" in label else label
+
+
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     rows: list[list[str]] = [["", *BATTING_HEADS]]
     spans: list[tuple[str, tuple[int, int], tuple[int, int], object]] = []
@@ -350,7 +361,7 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     rows.append([f"{batting_team} BATTING", "", "", "", "", "", ""])
     section_rows = [len(rows) - 1]
     for index, line in enumerate(board.batting):
-        rows.append([loaded.labels[index], *("" if value is None else str(value) for value in line)])
+        rows.append([indented(loaded.labels[index]), *("" if value is None else str(value) for value in line)])
     rows.append(["TOTALS", *("" if value is None else str(value) for value in board.batting_totals)])
     totals_rows = [len(rows) - 1]
 

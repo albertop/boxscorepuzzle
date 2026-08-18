@@ -143,6 +143,17 @@ def _headers(columns: tuple[str, ...]) -> str:
     return "".join(f"<th class='col'>{esc(PRINTED_AS.get(name, name))}</th>" for name in columns)
 
 
+def indented(label: str) -> str:
+    """A substitute's row is indented, the way a printed boxscore sets it.
+
+    The suffix already says a man replaced someone; the indent is what makes it visible at a glance,
+    and together they say which rows share a lineup slot. The label itself stays clean in the data —
+    this is presentation, and a leading space inside `loaded.labels` would travel into footnote
+    attribution and into the key file.
+    """
+    return f"  {label}" if "-" in label else label
+
+
 def _cells(values: list[object], blank: list[int]) -> str:
     return "".join(
         f"<td class='cell{' blank' if index in blank else ''}'>{'' if index in blank else esc(value)}</td>"
@@ -194,7 +205,7 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     columns = max(len(batting_columns), len(pitching_columns))
     grid = f"<colgroup style='--columns:{columns}'></colgroup>" + "<thead><tr><th class='label'></th>" + _headers(batting_columns) + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
-        label = board["labels"][index]  # type: ignore[index]
+        label = indented(board["labels"][index])  # type: ignore[index]
         grid += f"<tr><th class='label'>{esc(label)}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
