@@ -30,6 +30,8 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
+from collections.abc import Sequence  # noqa: E402
+
 from measure import Loaded, load, slot_references  # noqa: E402
 from reportlab.lib import colors  # noqa: E402
 from reportlab.lib.pagesizes import A4  # noqa: E402
@@ -347,15 +349,26 @@ def audit(chosen: list[Candidate]) -> None:
 
 
 
-def indented(label: str) -> str:
-    """A substitute's row is indented, the way a printed boxscore sets it.
+def indented(label: str, *, substitute: bool) -> str:
+    """A row that shares its slot with an earlier one is indented, the way a printed boxscore sets it.
 
-    The suffix already says a man replaced someone; the indent is what makes it visible at a glance,
-    and together they say which rows share a lineup slot. The label itself stays clean in the data —
-    this is presentation, and a leading space inside `loaded.labels` would travel into footnote
-    attribution and into the key file.
+    ⚠️ **This used to decide by `"-" in label`, and that was the same defect this project spent a day
+    closing, asleep.** Indentation is a property of the *lineup slot* — this man came into somebody
+    else's place — and it was being derived from a formatting detail of the label. The two agreed by
+    coincidence, and the moment the suffix was removed the cue vanished and every substitute drew as a
+    starter. Deriving it from the slot removes the coincidence.
     """
-    return f"  {label}" if "-" in label else label
+    return f"  {label}" if substitute else label
+
+
+def substitutes(slots: "Sequence[int]") -> list[bool]:
+    """Which rows share a slot with a row above them. One source for the indent and the rule."""
+    seen: set[int] = set()
+    flags: list[bool] = []
+    for slot in slots:
+        flags.append(slot in seen)
+        seen.add(slot)
+    return flags
 
 
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
@@ -366,8 +379,9 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
 
     rows.append([f"{batting_team} BATTING", "", "", "", "", "", ""])
     section_rows = [len(rows) - 1]
+    sub = substitutes(loaded.slots)
     for index, line in enumerate(board.batting):
-        rows.append([indented(loaded.labels[index]), *("" if value is None else str(value) for value in line)])
+        rows.append([indented(loaded.labels[index], substitute=sub[index]), *("" if value is None else str(value) for value in line)])
     rows.append(["TOTALS", *("" if value is None else str(value) for value in board.batting_totals)])
     totals_rows = [len(rows) - 1]
 

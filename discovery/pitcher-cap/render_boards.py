@@ -80,6 +80,7 @@ def render(loaded: Loaded, puzzle: Puzzle, note: str) -> dict[str, object]:
     board["blanks"] = blanks(puzzle, loaded)
     board["battingColumns"] = BATTING_COLUMNS
     board["pitchingColumns"] = PITCHING_COLUMNS
+    board["slots"] = getattr(loaded, "slots", ())
     return board
 
 
@@ -146,15 +147,24 @@ def _headers(columns: tuple[str, ...]) -> str:
     return "".join(f"<th class='col'>{esc(PRINTED_AS.get(name, name))}</th>" for name in columns)
 
 
-def indented(label: str) -> str:
-    """A substitute's row is indented, the way a printed boxscore sets it.
+def indented(label: str, *, substitute: bool) -> str:
+    """Indent a row that shares its slot with one above it, as a printed boxscore sets it.
 
-    The suffix already says a man replaced someone; the indent is what makes it visible at a glance,
-    and together they say which rows share a lineup slot. The label itself stays clean in the data —
-    this is presentation, and a leading space inside `loaded.labels` would travel into footnote
-    attribution and into the key file.
+    ⚠️ **This decided by `"-" in label` until the suffix was removed, and then every substitute drew
+    as a starter.** Indentation is a property of the lineup slot; deriving it from a formatting detail
+    of the label worked only while the two coincided.
     """
-    return f"  {label}" if "-" in label else label
+    return f"  {label}" if substitute else label
+
+
+def substitutes(slots: object) -> list[bool]:
+    """Which rows share a slot with a row above them. One source for the indent and the slot rule."""
+    seen: set[int] = set()
+    flags: list[bool] = []
+    for slot in slots or ():  # type: ignore[union-attr]
+        flags.append(slot in seen)
+        seen.add(slot)
+    return flags
 
 
 def _cells(values: list[object], blank: list[int]) -> str:
@@ -208,7 +218,11 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     columns = max(len(batting_columns), len(pitching_columns))
     grid = f"<colgroup style='--columns:{columns}'></colgroup>" + "<thead><tr><th class='label'></th>" + _headers(batting_columns) + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
-        label = indented(board["labels"][index])  # type: ignore[index]
+        sub = substitutes(board.get("slots"))
+        label = indented(
+            board["labels"][index],  # type: ignore[index]
+            substitute=index < len(sub) and sub[index],
+        )
         grid += f"<tr><th class='label'>{esc(label)}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
