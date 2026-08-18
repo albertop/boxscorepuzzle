@@ -10,9 +10,12 @@ A stall is a **transition**, not a bounding step. If propagation halts once and 
 bounding steps follow before it flows again, the player stopped once and had to think. Counting the
 steps would inflate the standard between 1.6 and 2.6 times, measured.
 
-Footnotes are unknowns here. They cost no column and no pixel, they put unknowns *inside* the row
-identity, and they take the stall ceiling from 5 to 15. Left-on-base is left out: it added nothing on
-top of them.
+Footnotes are unknowns here, and `erasable()` is where that is decided. ⚠️ **This script used to add
+them itself on top of a list that already carried them**, so every footnote cell appeared twice: the
+duplicates erased nothing, but `_row_first` buckets by row, so those buckets spent half their turns on
+no-ops and the footnote cells entered at roughly half the rate production gives them. Every number
+this file produced before that was fixed describes a board no generator makes. The orderings now
+refuse a repeated cell.
 
 **The question this answers:** how many blanks does five stalls actually require, and how much of the
 pool reaches each target. If five stalls come out at twenty blanks rather than thirty-six, the board
@@ -34,9 +37,9 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 
 from measure import Loaded, load  # noqa: E402
 
-from boxscore_forge.constraints import cell_values, footnote_cell, shape_of  # noqa: E402
+from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
-from boxscore_forge.identities import FOOTNOTE_COLUMNS, FAMILY_OF, find_violations  # noqa: E402
+from boxscore_forge.identities import FAMILY_OF, find_violations  # noqa: E402
 from boxscore_forge.solver import Solution, Technique, solve  # noqa: E402
 
 TARGETS = tuple(range(5, 13))
@@ -109,23 +112,12 @@ def _restarted_by(solution: Solution, stall_at: int) -> str:
     return "bounded to the end"
 
 
-def erasable_with_footnotes(loaded: Loaded) -> list[str]:
-    """The grid, plus the footnote line. No column, no pixel, and unknowns inside the row identity."""
-    cells = list(erasable(loaded.direction))
-    cells += [
-        footnote_cell(index, field)
-        for index in range(len(loaded.direction.batter_footnotes))
-        for field in FOOTNOTE_COLUMNS
-    ]
-    return sorted(cells)
-
-
 def erase_to_stalls(loaded: Loaded, seed: int) -> list[Reached]:
     """Stop when the stall target is reached, not when a chain length is."""
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
     rng = random.Random(seed)  # noqa: S311
-    candidates = ORDERINGS["row_first"](erasable_with_footnotes(loaded), loaded.direction, rng)
+    candidates = ORDERINGS["row_first"](erasable(loaded.direction), loaded.direction, rng)
 
     found: list[Reached] = []
     wanted = list(TARGETS)

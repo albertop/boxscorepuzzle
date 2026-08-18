@@ -6,6 +6,8 @@ And the same inputs must always produce the same puzzle, because section 21 requ
 batch to create no duplicates.
 """
 
+import random
+
 import pytest
 
 from boxscore_forge.boxscore import Direction
@@ -146,3 +148,38 @@ class TestOrderings:
         assert default is not None
         assert named is not None
         assert default.erased == named.erased
+
+class TestItRefusesADuplicatedCandidateList:
+    """The failure that ran for a whole round of measurements, made to fail on its own.
+
+    `erasable()` gained the footnote cells and an instrument that had been adding them itself kept
+    doing so. Nothing raised: erasing an already-erased cell is a no-op and the boards stayed valid.
+    Only the trajectory moved, because the orderings bucket the cells and a bucket holding each of
+    its own entries twice spends half its round-robin turns erasing nothing.
+
+    Tested on every ordering rather than the default, because the two that bucket are the two that
+    distort and the third would otherwise look like coverage.
+    """
+
+    @pytest.mark.parametrize("ordering", sorted(ORDERINGS))
+    def test_every_ordering_rejects_a_repeated_cell(
+        self, ordering: str, cubs_at_braves_1968: Direction
+    ) -> None:
+        cells = erasable(cubs_at_braves_1968)
+        doubled = [*cells, *(cell for cell in cells if cell.startswith("footnotes["))]
+
+        with pytest.raises(ValueError, match="more than once"):
+            ORDERINGS[ordering](doubled, cubs_at_braves_1968, random.Random(1))  # noqa: S311
+
+    @pytest.mark.parametrize("ordering", sorted(ORDERINGS))
+    def test_the_canonical_list_is_accepted(self, ordering: str, cubs_at_braves_1968: Direction) -> None:
+        # The other half of the check. A guard that rejects everything is not a guard, and this is
+        # the case that proves the canonical list has no duplicates of its own.
+        order = ORDERINGS[ordering](erasable(cubs_at_braves_1968), cubs_at_braves_1968, random.Random(1))  # noqa: S311
+
+        assert sorted(order) == erasable(cubs_at_braves_1968)
+
+    def test_the_canonical_list_carries_the_footnote_cells(self, cubs_at_braves_1968: Direction) -> None:
+        # The fact the duplication came from not knowing. Stated once, here, so an instrument does
+        # not have to re-derive it and get it wrong again.
+        assert any(cell.startswith("footnotes[") for cell in erasable(cubs_at_braves_1968))

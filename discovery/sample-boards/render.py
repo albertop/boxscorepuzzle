@@ -25,9 +25,10 @@ import random
 import sys
 from pathlib import Path
 
-from measure import Loaded, erasable_cells, load
+from measure import Loaded, load
 
 from boxscore_forge.constraints import cell_values, shape_of
+from boxscore_forge.erasure import erasable
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
 from boxscore_forge.solver import Solution, Technique, solve
@@ -143,7 +144,7 @@ def erase_to_chain(loaded: Loaded, target: int, rng: random.Random) -> tuple[dic
     """
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
-    order = erasable_cells(loaded.direction)
+    order = erasable(loaded.direction)
     rng.shuffle(order)
 
     erased: set[str] = set()
@@ -165,7 +166,7 @@ def erase_to_chain(loaded: Loaded, target: int, rng: random.Random) -> tuple[dic
 
 def zero_density(loaded: Loaded) -> float:
     values = cell_values(loaded.direction)
-    grid = [values[cell] for cell in erasable_cells(loaded.direction)]
+    grid = [values[cell] for cell in erasable(loaded.direction)]
     return sum(1 for value in grid if value == 0) / len(grid)
 
 
@@ -190,8 +191,8 @@ def main() -> None:
     solved_text: list[str] = []
     for title, loaded, target in picks:
         given, solution = erase_to_chain(loaded, target, rng)
-        blanks = len(erasable_cells(loaded.direction)) - sum(
-            1 for cell in erasable_cells(loaded.direction) if cell in given
+        blanks = len(erasable(loaded.direction)) - sum(
+            1 for cell in erasable(loaded.direction) if cell in given
         )
         block = [
             "=" * 78,

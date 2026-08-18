@@ -37,9 +37,10 @@ import statistics
 import time
 from collections import Counter
 
-from measure import Loaded, erasable_cells, load  # noqa: F401
+from measure import Loaded, load  # noqa: F401
 
 from boxscore_forge.constraints import cell_values, shape_of
+from boxscore_forge.erasure import erasable
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
 from boxscore_forge.solver import Solution, solve
@@ -54,7 +55,7 @@ def ceiling(loaded: Loaded, rng: random.Random) -> tuple[int, Solution | None, f
     started = time.perf_counter()
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
-    candidates = erasable_cells(loaded.direction)
+    candidates = erasable(loaded.direction)
     best_cells, best_solution = 0, None
 
     for _ in range(RESTARTS):
@@ -86,7 +87,7 @@ def chain_targeted(loaded: Loaded, target: int, rng: random.Random) -> Solution 
     """
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
-    order = erasable_cells(loaded.direction)
+    order = erasable(loaded.direction)
     rng.shuffle(order)
 
     erased: set[str] = set()
@@ -122,7 +123,7 @@ def at_fixed_erasure(loaded: Loaded, counts: tuple[int, ...], rng: random.Random
     """
     shape = shape_of(loaded.direction)
     values = cell_values(loaded.direction)
-    candidates = erasable_cells(loaded.direction)
+    candidates = erasable(loaded.direction)
     result: dict[int, float | None] = {}
     for count in counts:
         scores = []
@@ -141,7 +142,7 @@ def at_fixed_erasure(loaded: Loaded, counts: tuple[int, ...], rng: random.Random
 def proxies(loaded: Loaded) -> dict[str, float]:
     """The cheap screens section 5 assumes can stand in for compressibility, never yet validated."""
     values = cell_values(loaded.direction)
-    grid = [values[cell] for cell in erasable_cells(loaded.direction)]
+    grid = [values[cell] for cell in erasable(loaded.direction)]
     innings = loaded.direction.line_score.offense_by_inning
     return {
         "zero_density": sum(1 for value in grid if value == 0) / len(grid),
@@ -185,15 +186,15 @@ def main() -> None:
         rows.append((loaded, cells, solution, seconds, proxies(loaded)))
         print(
             f"  [{index:>3}/{len(sample)}] {loaded.game_id} {loaded.season}: "
-            f"{cells}/{len(erasable_cells(loaded.direction))} cells, chain {solution.chain_length}, "
+            f"{cells}/{len(erasable(loaded.direction))} cells, chain {solution.chain_length}, "
             f"search {solution.hardest_search or 0:.2f}, res {solution.hardest_resolution or 0}, "
             f"trivial {solution.trivial_share or 0:.0%}, "
             f"{families_of(solution)}, {seconds:.1f}s",
             flush=True,
         )
 
-    erasable = [len(erasable_cells(loaded.direction)) for loaded, *_ in rows]
-    shares = [100.0 * cells / total for (_, cells, *_), total in zip(rows, erasable, strict=True)]
+    erasable_counts = [len(erasable(loaded.direction)) for loaded, *_ in rows]
+    shares = [100.0 * cells / total for (_, cells, *_), total in zip(rows, erasable_counts, strict=True)]
     chains = [row[2].chain_length for row in rows]
     seconds = [row[3] for row in rows]
 
@@ -207,11 +208,11 @@ def main() -> None:
         ("max", ordered[-1]),
     ):
         print(f"  {label:>4}: {value:5.1f}%")
-    print(f"  mean cells erased: {statistics.fmean([row[1] for row in rows]):.1f} of {statistics.fmean(erasable):.0f}")
+    print(f"  mean cells erased: {statistics.fmean([row[1] for row in rows]):.1f} of {statistics.fmean(erasable_counts):.0f}")
 
     print("\n=== BY DECADE ===")
     by_decade: dict[int, list[float]] = {}
-    for (loaded, cells, *_), total in zip(rows, erasable, strict=True):
+    for (loaded, cells, *_), total in zip(rows, erasable_counts, strict=True):
         by_decade.setdefault((loaded.season // 10) * 10, []).append(100.0 * cells / total)
     for decade, values in sorted(by_decade.items()):
         print(f"  {decade}: median {statistics.median(values):5.1f}%   n={len(values)}")

@@ -44,6 +44,7 @@ from boxscore_forge.constraints import (  # noqa: E402
     pitching_total_cell,
     shape_of,
 )
+from boxscore_forge.erasure import erasable  # noqa: E402
 from boxscore_forge.errors import ContradictionError  # noqa: E402
 from boxscore_forge.identities import (  # noqa: E402
     BATTING_COLUMNS,
@@ -443,16 +444,6 @@ def _sum(model: type, rows: tuple[object, ...], columns: tuple[str, ...]) -> obj
     return model(**{column: sum(getattr(row, column) for row in rows) for column in columns})
 
 
-def erasable_cells(direction: Direction) -> list[str]:
-    """The grid, and only the grid. The line score is the anchor and the footnotes are given."""
-    shape = shape_of(direction)
-    cells = [batting_cell(i, c) for i in range(shape.batter_count) for c in BATTING_COLUMNS]
-    cells += [batting_total_cell(c) for c in BATTING_COLUMNS]
-    cells += [pitching_cell(i, c) for i in range(shape.pitcher_count) for c in PITCHING_COLUMNS]
-    cells += [pitching_total_cell(c) for c in PITCHING_COLUMNS]
-    return sorted(cells)
-
-
 def leaned_on_a_footnote(direction: Direction, solution: Solution) -> bool:
     """Whether the solution used a row identity on a row that actually carries a footnote.
 
@@ -495,7 +486,7 @@ def survey(sample: list[Loaded]) -> None:
         family_sets: Counter[tuple[str, ...]] = Counter()
         solved = trials = footnote_needed = 0
         for loaded in sample:
-            cells = erasable_cells(loaded.direction)
+            cells = erasable(loaded.direction)
             values = cell_values(loaded.direction)
             for _ in range(TRIALS_PER_COUNT):
                 trials += 1
@@ -610,7 +601,7 @@ def _frontier_tail(sample: list[Loaded], rng: random.Random) -> None:
     for trim in (1, 2, 3):
         widths: Counter[int] = Counter()
         for loaded in sample[:60]:
-            cells = erasable_cells(loaded.direction)
+            cells = erasable(loaded.direction)
             values = cell_values(loaded.direction)
             for _ in range(TRIALS_PER_COUNT):
                 erased = rng.sample(cells, 8)
@@ -666,7 +657,7 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
             # are blank, so a single pattern cannot tell a bad direction from a bad erasure.
             outcomes: Counter[str] = Counter()
             for _ in range(AMBIGUITY_TRIALS):
-                grid = rng.sample(erasable_cells(loaded.direction), 6)
+                grid = rng.sample(erasable(loaded.direction), 6)
                 puzzle = {k: v for k, v in values.items() if k not in ambiguous and k not in grid}
                 try:
                     solution = solve(shape_of(loaded.direction), puzzle)

@@ -77,8 +77,32 @@ def erasable(direction: Direction) -> list[str]:
 Ordering = Callable[[Sequence[str], Direction, random.Random], list[str]]
 
 
+def _reject_duplicates(cells: Sequence[str]) -> None:
+    """A candidate list naming the same cell twice is malformed, and it fails quietly.
+
+    ⚠️ **This is a real defect that ran for a whole round of measurements.** `erasable()` gained the
+    per-batter footnote cells, and an instrument that had been adding them itself kept doing so, so
+    every footnote cell appeared twice. Nothing broke: erasing a cell that is already erased is a
+    no-op, the boards stayed correct, and the numbers looked fine.
+
+    What changed was the *trajectory*. Both orderings bucket the cells — `_row_first` by row and
+    `_column_first` by column — and a bucket holding each of its cells twice keeps taking round-robin
+    turns that erase nothing, so its cells enter at roughly half the rate production gives them and
+    every seeded order downstream shifts with it. The result was a difficulty model measured on a
+    board no generator produces.
+
+    Checked here rather than in `erase()` because the discovery instruments call the orderings
+    directly, which is exactly where it happened.
+    """
+    if len(set(cells)) != len(cells):
+        repeated = sorted({cell for cell in cells if list(cells).count(cell) > 1})
+        message = f"the candidate list names {len(repeated)} cells more than once: {repeated[:5]}"
+        raise ValueError(message)
+
+
 def _random_order(cells: Sequence[str], _: Direction, rng: random.Random) -> list[str]:
     """The baseline. Every measurement so far used it, which is why it is here to be beaten."""
+    _reject_duplicates(cells)
     order = list(cells)
     rng.shuffle(order)
     return order
@@ -90,6 +114,7 @@ def _column_first(cells: Sequence[str], _: Direction, rng: random.Random) -> lis
     A column that loses many cells at once tends to go ambiguous rather than hard, since its sum is
     the only equation most of its cells appear in.
     """
+    _reject_duplicates(cells)
     buckets: dict[str, list[str]] = {}
     for cell in cells:
         buckets.setdefault(cell.rsplit(".", 1)[1], []).append(cell)
@@ -105,6 +130,7 @@ def _column_first(cells: Sequence[str], _: Direction, rng: random.Random) -> lis
 
 def _row_first(cells: Sequence[str], _: Direction, rng: random.Random) -> list[str]:
     """Round-robin across rows instead, spreading the blanks down the board rather than across it."""
+    _reject_duplicates(cells)
     buckets: dict[str, list[str]] = {}
     for cell in cells:
         buckets.setdefault(cell.rsplit(".", 1)[0], []).append(cell)
