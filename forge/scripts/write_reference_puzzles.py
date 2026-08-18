@@ -257,7 +257,7 @@ def main() -> None:
     secret = os.environ.get(SECRET_VARIABLE, "").encode() or FALLBACK_SECRET
     sample = load(4, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
 
-    with_substitution = [item for item in sample if any("-" in label for label in item.labels)]
+    with_substitution = [item for item in sample if len(set(item.slots)) < len(item.slots)]
     with_footnote = [
         item
         for item in sample

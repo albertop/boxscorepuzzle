@@ -73,3 +73,37 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 70/120] ATL197408160 1974: 110/156 cells, chain 100, search 0.96, res 11, trivial 9%, col+cross+global+row, 67.7s
   [ 71/120] ATL198408090 1984: 107/140 cells, chain 100, search 0.97, res 10, trivial 13%, col+cross+global+row, 40.7s
   [ 72/120] ATL198408080 1984: 123/166 cells, chain 115, search 0.97, res 12, trivial 8%, col+cross+global+row, 86.1s
+  [ 73/120] ATL198408050 1984: 97/140 cells, chain 89, search 0.96, res 10, trivial 9%, col+cross+global+row, 47.1s
+  [ 74/120] ATL198408150 1984: 85/124 cells, chain 74, search 0.96, res 9, trivial 13%, col+cross+global+row, 28.2s
+  [ 75/120] ATL198408040 1984: 112/144 cells, chain 102, search 0.96, res 11, trivial 10%, col+cross+global+row, 57.7s
+  [ 76/120] ATL198408140 1984: 102/124 cells, chain 94, search 0.96, res 9, trivial 14%, col+cross+global+row, 34.3s
+  [ 77/120] ATL198408070 1984: 115/166 cells, chain 105, search 0.96, res 12, trivial 9%, col+cross+global+row, 70.0s
+  [ 78/120] ATL198408060 1984: 94/130 cells, chain 84, search 0.96, res 9, trivial 12%, col+cross+global+row, 33.5s
+  [ 79/120] ATL198408160 1984: 83/130 cells, chain 72, search 0.95, res 9, trivial 12%, col+cross+global+row, 27.4s
+  [ 80/120] ATL198408280 1984: 98/150 cells, chain 86, search 0.96, res 10, trivial 11%, col+cross+global+row, 50.0s
+  [ 81/120] BOS199408040 1994: 77/130 cells, chain 66, search 0.96, res 9, trivial 10%, col+cross+global+row, 26.2s
+  [ 82/120] BOS199408011 1994: 81/130 cells, chain 70, search 0.96, res 9, trivial 10%, col+cross+global+row, 23.0s
+  [ 83/120] BOS199408012 1994: 89/124 cells, chain 79, search 0.96, res 9, trivial 10%, col+cross+global+row, 26.7s
+  [ 84/120] BOS199408020 1994: 78/126 cells, chain 68, search 0.96, res 8, trivial 13%, col+cross+global+row, 25.2s
+  [ 85/120] BOS199408030 1994: 82/114 cells, chain 71, search 0.96, res 8, trivial 15%, col+cross+global+row, 19.0s
+  [ 86/120] BOS199408020 1994: 97/140 cells, chain 87, search 0.96, res 10, trivial 11%, col+cross+global+row, 35.6s
+  [ 87/120] BOS199408030 1994: 71/126 cells, chain 59, search 0.95, res 8, trivial 11%, col+cross+global+row, 22.5s
+  [ 88/120] BOS199408012 1994: 77/120 cells, chain 65, search 0.96, res 8, trivial 13%, col+cross+global+row, 19.2s
+  [ 89/120] BOS199408011 1994: 92/128 cells, chain 79, search 0.96, res 10, trivial 16%, col+cross+global+row, 28.0s
+  [ 90/120] BOS199408062 1994: 86/108 cells, chain 75, search 0.95, res 8, trivial 20%, col+cross+global+row, 17.6s
+  [ 91/120] SDN200308230 2003: 97/130 cells, chain 88, search 0.96, res 9, trivial 13%, col+cross+global+row, 29.4s
+  [ 92/120] SDN200308210 2003: 84/130 cells, chain 74, search 0.96, res 9, trivial 13%, col+cross+global+row, 26.8s
+  [ 93/120] SDN200308190 2003: 89/130 cells, chain 79, search 0.96, res 9, trivial 10%, col+cross+global+row, 31.1s
+  [ 94/120] SDN200308220 2003: 92/136 cells, chain 82, search 0.96, res 9, trivial 11%, col+cross+global+row, 36.2s
+  [ 95/120] SDN200308200 2003: 101/140 cells, chain 92, search 0.96, res 10, trivial 11%, col+cross+global+row, 38.9s
+  [ 96/120] TEX200309120 2003: 80/120 cells, chain 68, search 0.95, res 8, trivial 14%, col+cross+global+row, 24.2s
+  [ 97/120] TEX200309130 2003: 80/120 cells, chain 71, search 0.96, res 8, trivial 11%, col+cross+global+row, 30.1s
+  [ 98/120] SFN200308050 2003: 113/150 cells, chain 104, search 0.96, res 11, trivial 12%, col+cross+global+row, 73.2s
+  [ 99/120] TEX200309170 2003: 83/114 cells, chain 74, search 0.96, res 8, trivial 13%, col+cross+global+row, 28.9s
+  [100/120] SDN200308100 2003: 107/140 cells, chain 99, search 0.96, res 10, trivial 10%, col+cross+global+row, 67.9s
+  [101/120] WAS201307240 2013: 98/140 cells, chain 88, search 0.96, res 10, trivial 9%, col+cross+global+row, 67.6s
+  [102/120] WAS201307262 2013: 99/140 cells, chain 90, search 0.96, res 10, trivial 10%, col+cross+global+row, 56.5s
+  [103/120] WAS201307261 2013: 92/146 cells, chain 86, search 0.96, res 10, trivial 11%, col+cross+global+row, 64.9s
+  [104/120] WAS201307270 2013: 96/130 cells, chain 88, search 0.96, res 9, trivial 11%, col+cross+global+row, 48.7s
+  [105/120] WAS201307210 2013: 105/160 cells, chain 93, search 0.96, res 12, trivial 10%, col+cross+global+row, 91.5s
+  [106/120] WAS201307230 2013: 103/140 cells, chain 94, search 0.96, res 10, trivial 11%, col+cross+global+row, 58.0s

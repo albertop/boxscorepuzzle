@@ -124,7 +124,11 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                     puzzle=board,
                     solution=source,
                     certified=derivable_in_view(package),
-                    has_substitution=any("-" in label for label in loaded.labels),
+                    # ⚠️ A substitution is two rows sharing a lineup slot, not a hyphen in a label. This
+            # read `"-" in label` and broke silently the moment the suffix was removed — the pool
+            # reported that no board carries a substitution, which is false of 12% of them. Third
+            # instance today of something derived from the label's formatting instead of the slot.
+            has_substitution=len(set(loaded.slots)) < len(loaded.slots),
                     has_live_footnote=any(
                         note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
                         for note in loaded.direction.batter_footnotes

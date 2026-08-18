@@ -169,7 +169,7 @@ def to_candidate(found: Reached) -> Candidate | None:
         puzzle=board,
         solution=source,
         certified=derivable_in_view(package),
-        has_substitution=any("-" in label for label in found.loaded.labels),
+        has_substitution=len(set(found.loaded.slots)) < len(found.loaded.slots),
         has_live_footnote=any(
             note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
             for note in notes
