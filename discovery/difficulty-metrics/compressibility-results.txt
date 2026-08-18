@@ -111,3 +111,122 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [108/120] WAS201307010 2013: 95/146 cells, chain 85, search 0.96, res 9, trivial 12%, col+cross+global+row, 72.1s
   [109/120] WAS201307070 2013: 87/146 cells, chain 78, search 0.96, res 10, trivial 10%, col+cross+global+row, 48.3s
   [110/120] WAS201307060 2013: 91/136 cells, chain 83, search 0.96, res 9, trivial 10%, col+cross+global+row, 48.7s
+  [111/120] SFN202310010 2023: 90/146 cells, chain 79, search 0.96, res 10, trivial 10%, col+cross+global+row, 60.1s
+  [112/120] SFN202310010 2023: 90/126 cells, chain 82, search 0.96, res 8, trivial 10%, col+cross+global+row, 43.5s
+  [113/120] SEA202310010 2023: 97/126 cells, chain 89, search 0.96, res 8, trivial 15%, col+cross+global+row, 37.0s
+  [114/120] SEA202310010 2023: 111/150 cells, chain 102, search 0.96, res 11, trivial 9%, col+cross+global+row, 71.9s
+  [115/120] SLN202310010 2023: 87/130 cells, chain 77, search 0.96, res 9, trivial 9%, col+cross+global+row, 36.2s
+  [116/120] SLN202310010 2023: 92/130 cells, chain 82, search 0.96, res 9, trivial 14%, col+cross+global+row, 42.2s
+  [117/120] TOR202310010 2023: 73/126 cells, chain 62, search 0.95, res 8, trivial 12%, col+cross+global+row, 25.2s
+  [118/120] WAS202307260 2023: 84/126 cells, chain 75, search 0.96, res 8, trivial 12%, col+cross+global+row, 33.4s
+  [119/120] WAS202307240 2023: 69/120 cells, chain 55, search 0.95, res 8, trivial 13%, col+cross+global+row, 20.6s
+  [120/120] WAS202307250 2023: 82/126 cells, chain 71, search 0.95, res 8, trivial 16%, col+cross+global+row, 35.7s
+=== HOW FAR A BOXSCORE COMPRESSES (share of the grid removable) ===
+   min:  56.3%
+   p10:  62.3%
+   p50:  70.9%
+   p90:  79.0%
+   max:  84.7%
+  mean cells erased: 92.7 of 131
+
+=== BY DECADE ===
+  1910: median  72.3%   n=10
+  1920: median  70.2%   n=10
+  1930: median  73.7%   n=10
+  1940: median  75.0%   n=10
+  1950: median  70.8%   n=10
+  1960: median  69.8%   n=10
+  1970: median  70.8%   n=10
+  1980: median  70.8%   n=10
+  1990: median  66.7%   n=10
+  2000: median  70.3%   n=10
+  2010: median  68.5%   n=10
+  2020: median  66.8%   n=10
+
+=== CHAIN LENGTH ACHIEVED AT THE CEILING ===
+  min 55  p50 82  p90 102  max 115
+  compressibility vs chain at the ceiling: r = +0.593
+
+=== ⚠️ IS THERE A CHARACTER AXIS AT ALL ===
+  Which equation families a solution actually needed. If nearly every board needs the
+  same combination, the calendar cannot vary character and section 31 loses a dimension.
+  at the ceiling   (n=120): col+cross+global+row 100%
+  chain target 5   (n=120): col+row 52%, col+cross+row 41%, col+cross+global+row 2%, col 2%, col+cross 2%
+  chain target 10  (n=120): col+cross+row 49%, col+row 41%, col+cross+global+row 8%, col+global+row 2%
+  chain target 20  (n=120): col+cross+row 64%, col+cross+global+row 18%, col+row 12%, col+global+row 6%
+
+=== THE TWO COMPONENTS AT THE CEILING ===
+  search max      min  0.95  p10  0.95  p50  0.96  p90  0.96  max  0.97
+  search p90      min  0.94  p10  0.95  p50  0.96  p90  0.96  max  0.96
+  resolution max  min  8.00  p10  8.00  p50  9.00  p90 11.00  max 12.00
+  resolution p90  min  2.00  p10  3.00  p50  5.00  p90  6.00  max  8.00
+  share of steps that were trivial: median 12%
+
+  ARE THE TWO COMPONENTS INDEPENDENT OF EACH OTHER?  r = +0.742
+  (near zero means three numbers rather than two, which is the better outcome)
+
+=== THE FALSIFICATION TEST: DOES EITHER STILL REWARD BOREDOM ===
+  flat or negative against zero density means the component works
+  zero_density        compressibility +0.890   search +0.458   resolution +0.403
+  digit_range         compressibility -0.721   search -0.574   resolution -0.516
+  line_score_variety  compressibility -0.522   search -0.101   resolution -0.063
+  scoring_innings     compressibility -0.657   search -0.258   resolution -0.124
+
+=== ARE THEY INDEPENDENT OF EFFORT ===
+  search     vs raw chain length   r = +0.853
+  resolution vs raw chain length   r = +0.849
+  search     vs compressibility    r = +0.298
+  resolution vs compressibility    r = +0.279
+
+=== DOES EITHER SEPARATE BOARDS RAW CHAIN CALLS EQUAL ===
+  chain 68 ( 3 boards): search 0.95-0.96 (spread 0.00)   resolution 8-8 (spread 0)
+  chain 69 ( 3 boards): search 0.95-0.96 (spread 0.00)   resolution 8-9 (spread 1)
+  chain 70 ( 5 boards): search 0.95-0.96 (spread 0.00)   resolution 8-9 (spread 1)
+  chain 71 ( 3 boards): search 0.95-0.96 (spread 0.00)   resolution 8-8 (spread 0)
+  chain 72 ( 3 boards): search 0.95-0.96 (spread 0.00)   resolution 8-9 (spread 1)
+  chain 73 ( 3 boards): search 0.95-0.96 (spread 0.01)   resolution 8-9 (spread 1)
+  chain 74 ( 5 boards): search 0.96-0.96 (spread 0.00)   resolution 8-9 (spread 1)
+  chain 75 ( 3 boards): search 0.95-0.96 (spread 0.01)   resolution 8-8 (spread 0)
+  chain 79 ( 7 boards): search 0.96-0.96 (spread 0.01)   resolution 8-10 (spread 2)
+  chain 80 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 9-9 (spread 0)
+  chain 82 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 8-9 (spread 1)
+  chain 84 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 9-10 (spread 1)
+  chain 85 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 9-9 (spread 0)
+  chain 86 ( 4 boards): search 0.96-0.96 (spread 0.00)   resolution 10-11 (spread 1)
+  chain 87 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 10-11 (spread 1)
+  chain 88 ( 4 boards): search 0.96-0.96 (spread 0.00)   resolution 9-11 (spread 2)
+  chain 89 ( 4 boards): search 0.96-0.96 (spread 0.00)   resolution 8-11 (spread 3)
+  chain 92 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 10-10 (spread 0)
+  chain 93 ( 4 boards): search 0.96-0.96 (spread 0.00)   resolution 10-12 (spread 2)
+  chain 94 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 9-11 (spread 2)
+  chain 98 ( 3 boards): search 0.96-0.96 (spread 0.00)   resolution 11-11 (spread 0)
+  chain 100 ( 3 boards): search 0.96-0.97 (spread 0.00)   resolution 10-11 (spread 1)
+  chain 102 ( 4 boards): search 0.96-0.96 (spread 0.00)   resolution 11-12 (spread 1)
+
+=== SATURDAY'S LEVER: DOES BOARD CHARACTER SEPARATE THE SOLVE ===
+  if the family axis is dead at high difficulty, the variation must come from the
+  boxscore itself. These are properties of the direction, fixed before any erasure.
+  pitching_rows    search +0.229   resolution -0.081   chain -0.011
+  batting_rows     search +0.741   resolution +0.989   chain +0.852
+  live_footnotes   search -0.144   resolution -0.019   chain -0.227
+  total_runs       search -0.223   resolution -0.102   chain -0.398
+  zero_density     search +0.458   resolution +0.403   chain +0.705
+
+  by pitching rows, holding nothing else:
+    1 pitcher(s), n= 31: search 0.96   resolution 10   chain 84
+    2 pitcher(s), n= 31: search 0.96   resolution 9   chain 79
+    3 pitcher(s), n= 35: search 0.96   resolution 9   chain 82
+    4 pitcher(s), n= 23: search 0.96   resolution 9   chain 82
+
+=== IS THE TRIVIAL DISCOUNT THROWING AWAY SEARCH EFFORT ===
+  a step can be trivial to resolve and still expensive to find
+  trivial steps  n= 1407  mean   0.8  p50   0.9  p90   1.0  max   1.0
+  real steps     n= 2609  mean   0.9  p50   0.9  p90   1.0  max   1.0
+  trivial steps with scan cost >=  5: 0.0%
+  trivial steps with scan cost >= 10: 0.0%
+  trivial steps with scan cost >= 20: 0.0%
+
+=== SEARCH COST ===
+  per direction: mean 40.66s, max 91.46s
+  extrapolated over 55,024 directions: 621.5 hours
+  weighted chain is computed from the same walk, so it adds no search cost of its own

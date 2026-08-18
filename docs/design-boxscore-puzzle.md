@@ -649,6 +649,27 @@ The table and the open question are in §5.
 
 ---
 
+### Regenerated on the corrected board: the correlation is **+0.890**
+
+Compressibility was demoted from a ranking metric to a viability constraint because it correlates with
+zero density — ranking on it selects boredom. That was measured at **+0.79** on a definition that
+counted only the grid, while production also erases the per-batter footnote cells.
+
+Re-measured over the board the generator actually erases: **+0.890**, on 120 directions.
+
+**The measurement was wrong and the conclusion was right, and it is now stronger than when it was
+made.** A regeneration that confirms a decision is worth as much as one that overturns it; this project
+has had both, and knowing which is which is the only reason either is worth running.
+
+The other three components behave as they were asked to — digit range −0.721, line-score variety
+−0.522, scoring innings −0.657 against zero density. **Correlating negatively is the evidence that they
+measure something other than boredom**, which is what they were kept for.
+
+⚠️ **And a warning that is not about compressibility.** At the compression ceiling, **100% of boards
+require all four equation families** — every board identical, no character axis at all. At a chain
+target of 5 the same measure opens into five combinations. Nothing distinguishes at the extreme of its
+range, and this is the second metric to teach that lesson.
+
 ## 6. The board — mobile decides the UX
 
 **Decision: the phone screen defines the design.**
