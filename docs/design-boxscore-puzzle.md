@@ -249,6 +249,64 @@ In sudoku all 81 cells mean the same thing. Here each column has its own semanti
 
 ## 5. Daily game selection
 
+> # ⚠️ CORRECTION (August 2026): a loader defect invalidated most of the pool measurements below
+>
+> **Retrosheet's `B_G = 1` marks a player as having *appeared*, not as having *batted*.** 18.8% of
+> those rows — **1,000,892 of 5,325,173** — have no plate appearance at all, and 83% of those also
+> pitched: the designated-hitter era's pitchers, on the card and never coming up. The loader put them
+> on the board.
+>
+> Two consequences, and the second is what wrecked the numbers:
+>
+> 1. **The lineup order was wrong.** Those rows carry `SLOT_CT = 0`, and **not one row in slot zero
+>    has ever batted** — the slot *is* the marker for "did not bat". Ordering by it put pitchers at
+>    the top of the card and pushed the leadoff hitter to third. *Found by the operator reading the
+>    hand-solve PDF, not by any test.*
+> 2. **Every phantom row was six cells of nought**, so it inflated zero density, and it counted
+>    against the ≤13 batter cap, so it threw out directions that fit the board perfectly well. Modern
+>    teams carry more never-batting pitchers than old ones, **so the defect fell hardest on the modern
+>    era** — which is exactly the era every conclusion below is about.
+>
+> ### What the corrected pool looks like
+>
+> | | With phantom rows | **Corrected** |
+> |---|---:|---:|
+> | Directions after caps ≤13/≤4 | 25,270 | **77,968** |
+> | Median zero density | 40.0% | **34.4%** |
+> | Pre-1950 share of the gated pool | 78% | **29%** |
+> | Post-1980 share | 4.7% | **47%** |
+> | Years of calendar at ≤2 pitchers | 5.3 | **25.5** |
+> | Years of calendar at ≤4 pitchers | 18.6 | **94.7** |
+>
+> **The era skew was almost entirely the defect.** Survival through the 30% gate now runs 21–31% in
+> every decade from the 1910s to the 2020s, and each decade contributes 5–11% of the pool. The century
+> is flat.
+>
+> ### What this overturns
+>
+> - **The 5% pre-1950 quota is now solving a problem that does not exist.** Pre-1950 is 29% of the
+>   pool naturally rather than 78%. The quota remains available as a *preference* about what the
+>   player meets; it is no longer a fix for a broken distribution.
+> - **The pitcher cap's pool argument collapses.** ≤2 gives 25.5 years of calendar, not 5.3. The move
+>   to ≤4 still buys a great deal (94.7 years) but it is no longer forced. **Its quality argument —
+>   cross-team falling from 100% to 78%, global rising from 50% to 70% — was measured on boards that
+>   carried phantom rows and has to be re-measured before it can be leaned on.**
+> - **Every metric measured on loaded boards is suspect**: chain ceiling, the bands, where the metrics
+>   stop discriminating, the week topping at 13, the erasure ordering comparison, the 71% layer-3b
+>   figure, and the fifty-board hand-solve pack. All were computed with all-zero rows on the board.
+>
+> ### What is unaffected
+>
+> The board's column set and the identities; the verifier and its four layers; the label suffix rule
+> (re-measured: 44.2% of directions still carry a collision, 9.0% one a footnote lands on); innings as
+> outs; the team-named section headers; the removal of the line score tint. None of those depend on
+> which rows were loaded.
+>
+> **Everything below this box that quotes a pool figure or a difficulty metric is pre-correction
+> unless it says otherwise.** It is left in place rather than rewritten, because the shape of the
+> reasoning still holds and silently restating the numbers would hide that a measurement error drove
+> two decisions.
+
 **Criterion: random among games with good puzzle shape.** Not anniversaries, not historical significance.
 
 ### The quality criterion (rewritten August 2026 — the original was wrong at the root)
@@ -2528,6 +2586,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 - [x] ~~**Erasure algorithm.**~~ — **resolved (August 2026).** Its input is a target chain length and the cell count is whatever reaching it costs (§31). Ordering is `row_first`, chosen because it pads the easy board least; symmetry was measured, found real and free, and **dropped** because mirroring a boxscore pairs the leadoff hitter with the ninth and means nothing in baseball. The zero-density companion constraint is unnecessary: the 30% gate handles it at admission (§5)
 - [x] ~~Which cells are never erased~~ — **resolved:** the line score, by width constraint (§6)
+- [ ] ⚠️ **Re-measure everything computed on loaded boards.** A loader defect put non-batting pitchers on the board as all-zero rows — 18.8% of Retrosheet's batting rows have no plate appearance — which inflated zero density, wrongly failed directions against the batter cap, and put the lineup in the wrong order. Fixed, and the pool measurements are re-run. **Still to redo:** the difficulty metrics, the erasure ordering comparison, the week's ceiling at 13, the pitcher cap's quality argument, layer 3b's 71%, and the fifty-board pack (§5)
+- [ ] **Whether the 5% pre-1950 quota is still wanted.** It was adopted to fix a 78% pre-1950 pool that turned out to be 29% once the defect was removed. It survives as a preference about what the player meets rather than as a correction, and that is a different decision (§5)
 - [ ] ⚠️ **Layer 3 does not verify human derivability.** It runs interval propagation to a fixed point over forty-odd simultaneous relations, which is stronger than any person. Measured: at a chain target of 13, only **71%** of published boards also certify under one-relation-at-a-time solving. The true figure for a human is somewhere between 71% and 100% and is currently unknown (§22)
 - [ ] **Whether layer 3b becomes a gate.** Decided by the fifty-board hand-solve rather than by further measurement — two solvers already bracket the answer and neither of them is a player. For: 29% is inside the 30% discard §22 calls free. Against: the weak solver is a caricature in the other direction (§22)
 - [ ] **The fifty-board hand-solve is a launch gate, not a review step.** It is the only real verification of human derivability that exists, and the only check the common-author risk does not touch. Boards, solutions, key and recording sheet are built in `discovery/hand-solve/` (§22)

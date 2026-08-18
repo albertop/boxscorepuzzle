@@ -173,9 +173,10 @@ def load(
     query = f"""
     WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
-             SUM(CASE WHEN B_G=1 THEN 1 ELSE 0 END) AS batters,
+             -- Only rows that actually batted. See the note on the batting query below.
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN 1 ELSE 0 END) AS batters,
              SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers,
-             SUM(CASE WHEN B_G=1 THEN
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN
                CASE WHEN B_PA=0 THEN 1 ELSE 0 END + CASE WHEN B_AB=0 THEN 1 ELSE 0 END +
                CASE WHEN B_R=0 THEN 1 ELSE 0 END + CASE WHEN B_H=0 THEN 1 ELSE 0 END +
                CASE WHEN B_BB=0 THEN 1 ELSE 0 END + CASE WHEN B_SO=0 THEN 1 ELSE 0 END
@@ -185,12 +186,12 @@ def load(
                CASE WHEN P_R=0 THEN 1 ELSE 0 END + CASE WHEN P_ER=0 THEN 1 ELSE 0 END +
                CASE WHEN P_BB=0 THEN 1 ELSE 0 END + CASE WHEN P_SO=0 THEN 1 ELSE 0 END
                ELSE 0 END) AS pitching_zeros,
-             SUM(CASE WHEN B_G=1 THEN B_PA ELSE 0 END) AS t_pa,
-             SUM(CASE WHEN B_G=1 THEN B_AB ELSE 0 END) AS t_ab,
-             SUM(CASE WHEN B_G=1 THEN B_R ELSE 0 END) AS t_r,
-             SUM(CASE WHEN B_G=1 THEN B_H ELSE 0 END) AS t_h,
-             SUM(CASE WHEN B_G=1 THEN B_BB ELSE 0 END) AS t_bb,
-             SUM(CASE WHEN B_G=1 THEN B_SO ELSE 0 END) AS t_so,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_PA ELSE 0 END) AS t_pa,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_AB ELSE 0 END) AS t_ab,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_R ELSE 0 END) AS t_r,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_H ELSE 0 END) AS t_h,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_BB ELSE 0 END) AS t_bb,
+             SUM(CASE WHEN B_G=1 AND B_PA>0 THEN B_SO ELSE 0 END) AS t_so,
              SUM(CASE WHEN P_G=1 THEN P_OUT ELSE 0 END) AS t_out,
              SUM(CASE WHEN P_G=1 THEN P_H ELSE 0 END) AS t_ph,
              SUM(CASE WHEN P_G=1 THEN P_R ELSE 0 END) AS t_pr,
@@ -234,7 +235,16 @@ def load(
       p.name_first, p.name_last
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
-    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.B_G = 1 ORDER BY d.SLOT_CT, d.SEQ_CT
+    -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
+    -- plate appearance at all, and 83% of those also pitched — the designated-hitter era's pitchers,
+    -- who are on the card and never come up. They belong on no board. Each one is six cells of nought
+    -- that count against the roster cap and inflate zero density.
+    --
+    -- It also fixes the lineup order. Those rows carry SLOT_CT = 0, and **not one row in slot zero
+    -- has ever batted**, so the slot is the marker for "did not bat" — ordering by it put the
+    -- pitchers at the top of the card and pushed the leadoff hitter to third.
+    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.B_G = 1 AND d.B_PA > 0
+    ORDER BY d.SLOT_CT, d.SEQ_CT
     """
     # Pitchers in order of appearance, which is what SP / RP-1 / RP-2 labels claim to mean.
     # SEQ_CT alone is not that order: in a game without a designated hitter a reliever who enters at

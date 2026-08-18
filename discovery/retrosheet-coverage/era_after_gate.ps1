@@ -74,9 +74,9 @@ WHERE is_deduced = 1 OR source_type = 'EVR'
     # exactly when every row above it is, which is the shutout column the gate exists to catch.
     Invoke-NonQuery @"
 SELECT GAME_ID, TEAM_ID,
-       SUM(CASE WHEN B_G = 1 THEN 1 ELSE 0 END) AS batters,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN 1 ELSE 0 END) AS batters,
        SUM(CASE WHEN P_G = 1 THEN 1 ELSE 0 END) AS pitchers,
-       SUM(CASE WHEN B_G = 1 THEN
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN
             CASE WHEN B_PA = 0 THEN 1 ELSE 0 END + CASE WHEN B_AB = 0 THEN 1 ELSE 0 END +
             CASE WHEN B_R  = 0 THEN 1 ELSE 0 END + CASE WHEN B_H  = 0 THEN 1 ELSE 0 END +
             CASE WHEN B_BB = 0 THEN 1 ELSE 0 END + CASE WHEN B_SO = 0 THEN 1 ELSE 0 END
@@ -86,12 +86,12 @@ SELECT GAME_ID, TEAM_ID,
             CASE WHEN P_R   = 0 THEN 1 ELSE 0 END + CASE WHEN P_ER = 0 THEN 1 ELSE 0 END +
             CASE WHEN P_BB  = 0 THEN 1 ELSE 0 END + CASE WHEN P_SO = 0 THEN 1 ELSE 0 END
            ELSE 0 END) AS pitching_zeros,
-       SUM(CASE WHEN B_G = 1 THEN B_PA ELSE 0 END) AS t_pa,
-       SUM(CASE WHEN B_G = 1 THEN B_AB ELSE 0 END) AS t_ab,
-       SUM(CASE WHEN B_G = 1 THEN B_R  ELSE 0 END) AS t_r,
-       SUM(CASE WHEN B_G = 1 THEN B_H  ELSE 0 END) AS t_h,
-       SUM(CASE WHEN B_G = 1 THEN B_BB ELSE 0 END) AS t_bb,
-       SUM(CASE WHEN B_G = 1 THEN B_SO ELSE 0 END) AS t_so,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_PA ELSE 0 END) AS t_pa,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_AB ELSE 0 END) AS t_ab,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_R  ELSE 0 END) AS t_r,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_H  ELSE 0 END) AS t_h,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_BB ELSE 0 END) AS t_bb,
+       SUM(CASE WHEN B_G = 1 AND B_PA > 0 THEN B_SO ELSE 0 END) AS t_so,
        SUM(CASE WHEN P_G = 1 THEN P_OUT ELSE 0 END) AS t_out,
        SUM(CASE WHEN P_G = 1 THEN P_H   ELSE 0 END) AS t_ph,
        SUM(CASE WHEN P_G = 1 THEN P_R   ELSE 0 END) AS t_pr,
