@@ -156,7 +156,15 @@ threshold set by eye that rejects real data gets loosened until it says nothing,
 having it — it gives false confidence.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
-reading it, never by computing a statistic. **Any measurement producing a distribution must also produce
+reading it, never by computing a statistic. **Twice now this has been the only thing that
+could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*
+rather than *batted*. The second was a lineup with three centre fielders — the row labels came from
+"played here at some point" flags resolved by a fixed priority, so a pinch hitter who took the field
+became a fielder and three men who each spent an inning there became `CF-1`, `CF-2`, `CF-3`. Both
+balanced perfectly. Both passed all four layers. Both were found by a person reading a printed page.
+**A label sits outside the arithmetic, which is exactly why nothing arithmetic can check it** — and
+when a footnote is attributed to a mislabelled row, the arithmetic breaks somewhere the column totals
+still agree. **Any measurement producing a distribution must also produce
 a handful of rendered examples, checked by eye before the numbers are trusted.** Make it a step, not a
 habit.
 

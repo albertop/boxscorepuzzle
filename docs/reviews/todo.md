@@ -671,7 +671,18 @@ not only the aggregates. A null that survives that is a null; the earlier one wa
 
 ## Noticed in passing
 
-### The row label is not the position the row represents
+### A maximum compared against a median, repeated without either of us noticing
+
+The ceiling pack was reported as landing *higher* than the earlier run — 19 against 16 to 18. Those are
+not the same statistic: 19 is a **maximum over 48 boards** and 16 to 18 were **medians** of per-board
+ceilings across configurations. The comparison says nothing. What is true is that the ceiling pack found
+a maximum of 19 with the canonical list; what the duplicated list would have given was never measured.
+
+Recorded because it survived being stated, read and repeated. A number carried from one report to
+another loses the definition that made it meaningful, and nothing in the pipeline re-attaches it.
+
+
+### The row label is not the position the row represents — **fixed**
 
 Spotted by eye on a printed board: `DH-1, DH-2` and `CF-1, CF-2, CF-3` in one lineup. **Three centre
 fielders in a game is not a thing that happens**, and no arithmetic check can see it — the board
@@ -701,10 +712,23 @@ is the row's only identity during play, and it damages the hand-solve packs spec
 baseball-literate solver who reads `CF-3` stops trusting the board, and trust is what those packs are
 measuring. **Both packs should be rebuilt after the fix**, the five-board ceiling pack included.
 
-**One design question inside the fix, and it is not mechanical.** A man who enters as a pinch hitter and
-stays in at centre is one row with two true answers. Labelling him `PH` says how he arrived; `CF` says
-where he played. §7 wants the label to identify the row on screen, and the same question decides
-whether `DH` should ever lose to `PH`.
+**Decided: where he played, not how he arrived.** The label has a deductive function rather than a
+biographical one — it is what tells the player which row an `SF: SS` belongs to, and `PH` distinguishes
+nothing because every substitute hitter is one. A printed boxscore prints the fielding position too
+when a pinch hitter stays in. So: the position he entered the field at if there was one, then any
+position he is recorded at, and `PH` or `PR` only when he never occupied one — there they are the whole
+truth rather than a provenance tag. `DH` loses to `PH` for the man who batted for the designated hitter
+without taking the slot, which was the largest single group in the 7%.
+
+**Footnote attribution was verified rather than assumed, and it was already right.** The terms come per
+player from `retroDailyReg` and `footnote_line` indexes `loaded.labels[index]` by row, so `SF: CF-2`
+already names the row and carries the suffix. What was wrong was only which position the label named —
+but that is enough: a footnote in the wrong row puts the term inside the wrong row identity while every
+column total still balances, so the arithmetic breaks where §22 cannot look. `tests/test_row_labels.py`
+asserts both halves, including that swapping the term between two rows leaves the totals untouched and
+fails *both* row identities.
+
+**Still owed: both packs rebuilt** — the fifty and the ceiling five.
 
 
 ### `extend-include` claims discovery is linted and nothing lints it

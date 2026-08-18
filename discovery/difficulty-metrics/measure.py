@@ -138,6 +138,41 @@ class Loaded:
     is the cross-team link a home-run column would add."""
 
 
+FIELDING_CODE: Final = {1: "P", 2: "C", 3: "1B", 4: "2B", 5: "3B", 6: "SS", 7: "LF", 8: "CF", 9: "RF"}
+"""Retrosheet's `SUB_FLD_CD`, for the nine positions on the field. 10 is DH, 11 PH, 12 PR."""
+
+_NOT_A_FIELDING_POSITION: Final = frozenset({"", "?", "DH", "PH", "PR"})
+
+
+def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | None) -> str:
+    """Where the man played, not how he arrived.
+
+    **The label has a deductive function rather than a biographical one.** It is what tells the player
+    which row an `SF: SS` belongs to and what to expect from that line. `PH` distinguishes nothing —
+    every substitute hitter is one — while a fielding position places him in the order and on the
+    field. A printed boxscore does the same thing: when a pinch hitter stays in, it prints his
+    fielding position too.
+
+    So: **the position he entered the field at if there was one, then any position he is recorded at,
+    and `PH` or `PR` only when he never occupied one** — there they are the whole truth rather than a
+    provenance tag. `DH` loses to `PH` for the man who came in to bat for the designated hitter without
+    taking the slot, which was the largest single group in the 7% of rows this rule corrects.
+
+    ⚠️ **Getting this wrong is not cosmetic.** A footnote is attributed to a *row*, and a mislabelled
+    row puts an `SF` inside the wrong row identity while the column totals still balance — arithmetic
+    broken in a way no §22 layer can see.
+    """
+    if entered_fielding is not None:
+        return FIELDING_CODE[entered_fielding]
+    if appeared_at not in _NOT_A_FIELDING_POSITION:
+        return appeared_at
+    if entered_as in (11, 12):
+        return "PH" if entered_as == 11 else "PR"
+    if entered_as == 10:
+        return "DH"
+    return appeared_at or "?"
+
+
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
     """Position labels, with any repeat suffixed by order of appearance: `LF-1`, `LF-2`.
 
@@ -330,7 +365,17 @@ def load(
            WHEN d.F_LF_G=1 THEN 'LF' WHEN d.F_CF_G=1 THEN 'CF' WHEN d.F_RF_G=1 THEN 'RF'
            WHEN d.B_G_DH=1 THEN 'DH' WHEN d.B_G_PH=1 THEN 'PH' WHEN d.B_G_PR=1 THEN 'PR'
            ELSE '?' END AS label,
-      p.name_first, p.name_last, d.B_RBI, d.B_HR
+      p.name_first, p.name_last, d.B_RBI, d.B_HR,
+      -- ⚠️ The position a substitute *entered at*. The F_*_G flags above mean "appeared here at some
+      -- point", and the CASE picks by a fixed priority, so a pinch hitter who later took centre came
+      -- out as CF and three men who each spent an inning there became CF-1, CF-2, CF-3. A lineup with
+      -- three centre fielders is not a thing that happens, and no identity on the board can see it.
+      (SELECT TOP 1 s.SUB_FLD_CD FROM dbo.retroSubstitutionsReg s
+       WHERE s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID AND s.SUB_FLD_CD BETWEEN 1 AND 9
+       ORDER BY s.EVENT_ID) AS entered_fielding,
+      (SELECT TOP 1 s.SUB_FLD_CD FROM dbo.retroSubstitutionsReg s
+       WHERE s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID
+       ORDER BY s.EVENT_ID) AS entered_as
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
@@ -449,7 +494,7 @@ def load(
                     game_id,
                     season,
                     direction,
-                    _batting_labels([r[11] for r in batting_rows]),
+                    _batting_labels([_position(r[11], r[16], r[17]) for r in batting_rows]),
                     bool(is_home),
                     tuple((r[12] or "", r[13] or "") for r in batting_rows),
                     _pitcher_labels([p[6] for p in pitching_rows]),
