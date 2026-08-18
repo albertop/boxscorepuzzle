@@ -174,7 +174,7 @@ def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | 
 
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
-    """Position labels, with any repeat suffixed by order of appearance: `LF-1`, `LF-2`.
+    """Position labels. The starter keeps the bare label; a man who follows him is `LF-2`.
 
     43% of gated boards have two rows sharing a label and 10% have one where a row also carries a
     footnote — which is when `SF: LF` stops naming a row and the identity for both becomes unusable.
@@ -195,11 +195,13 @@ def _batting_labels(positions: list[str]) -> tuple[str, ...]:
     seen: Counter[str] = Counter()
     labels: list[str] = []
     for label in positions:
-        if label in repeated:
-            seen[label] += 1
-            labels.append(f"{label}-{seen[label]}")
-        else:
-            labels.append(label)
+        seen[label] += 1
+        # ⚠️ **The starter carries no suffix.** `LF-1` as the leadoff row says something came before
+        # him, and a printed boxscore distinguishes only the men who replaced someone. So the first
+        # row at a position keeps the bare label and numbering starts at the substitute: `LF`, then
+        # `LF-2`. Footnote attribution stays unambiguous either way — `SF: LF` names the starter and
+        # `SF: LF-2` the man who followed him — which is the property the suffix exists for.
+        labels.append(f"{label}-{seen[label]}" if label in repeated and seen[label] > 1 else label)
     return tuple(labels)
 
 
