@@ -175,6 +175,32 @@ Full suite after the round: **248 tests, 97.46% coverage, ruff and mypy clean.**
 All ten findings accepted. **No-go stands: no pack, no reference packages and no difficulty labels
 until the P1s are closed and the artifacts regenerated.**
 
+## Where v02 stands
+
+**All six P1 findings are closed.** The no-go was on the P1s and the artifacts, so what remains
+blocking publication is not a P1 but the hand-solve pack itself: nothing is labelled easy, medium or
+hard until it comes back.
+
+| Finding | State |
+|---|---|
+| P1-01 adapter | closed — production module, per-section test |
+| P1-02 chain targets | closed — writers select on stalls |
+| P1-03 duplicate `audit()` | closed — one audit, `F811` in scope |
+| P1-04 provenance fails open | closed — acceptance list, 0 games affected today |
+| P1-05 manufactured anchor | closed — three fields, 0.001% of the pool |
+| P1-06 no publication gate | closed — `certify_for_publication`, writers wired |
+| P2-01 global identity admission | **open, and the one with consequences** |
+| P2-02 stall attribution | open |
+| P2-03 documents disagree with code | open |
+| P2-04 non-atomic regeneration | open |
+
+**What the P1s cost the pool: nothing measurable.** Provenance rejects 0 games, the anchor check
+rejects 2 in 397,142. Every decision about caps, gate and composition stands on that side — which is a
+result rather than an absence of one, because it was not knowable before the checks existed.
+
+**What is still unknown is P2-01.** It is the only open item with decisions hanging off it, and it
+must close with five verdicts rather than one sentence.
+
 ## Closed
 
 ### v02-P1-03 — a duplicate `audit()` disabled the strict quota
@@ -305,7 +331,7 @@ was an example the operator gave, and nothing is labelled easy, medium or hard u
 
 ## Open, in the agreed order
 
-6. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
+1. **v02-P2-01** — two-phase fixed point so the global identity waits until non-global deductions are
    exhausted.
 
    ⚠️ **This one owes a before-and-after on the same boards**, not new figures: stall counts, family
@@ -318,11 +344,11 @@ was an example the operator gave, and nothing is labelled easy, medium or hard u
    *exactly* the distribution in question), the zero-density gate at 25%, the `row_first` ordering, and
    the chain-versus-stall comparison itself. If nothing moves, say so plainly: that is a useful result
    and it means the body of measurement stands.
-7. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
+2. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
    since the bounding step itself carries no identity.
-8. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
+3. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
    visible drift is the two-pitcher cap and the footnote line.
-9. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
+4. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
    the published set only on success. Never delete the last known-good set first.
 
 ## Void rather than confirming anything
