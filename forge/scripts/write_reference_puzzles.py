@@ -147,9 +147,17 @@ def main() -> None:
             seen.add(item.game_id)
             wanted.append(item)
 
+    # ⚠️ The last known-good set is not deleted first. A loader error, an exhausted candidate pool,
+    # an interrupted process or a full disk used to leave `serve/data/puzzles` empty or half-written,
+    # and the pattern would be unsafe to reuse for a real inventory pipeline. Everything is built and
+    # certified in a sibling directory and the published set is replaced only once the batch is whole.
     OUT.mkdir(parents=True, exist_ok=True)
-    for existing in OUT.glob("*.json"):
-        existing.unlink()
+    staging = OUT.parent / f"{OUT.name}.staging"
+    if staging.exists():
+        for leftover in staging.iterdir():
+            leftover.unlink()
+        staging.rmdir()
+    staging.mkdir()
 
     written = 0
     for loaded, target in zip(wanted, TARGETS, strict=False):
@@ -157,7 +165,7 @@ def main() -> None:
         if package is None:
             print(f"  discarded {loaded.game_id} at chain {target}")
             continue
-        path = OUT / f"{package.puzzle_id}.json"
+        path = staging / f"{package.puzzle_id}.json"
         write(path, package.published())
 
         # The round trip. Read back from the file, not from the object that wrote it.
@@ -182,8 +190,17 @@ def main() -> None:
         )
 
     if written != len(TARGETS):
-        message = f"wrote {written} puzzles, wanted {len(TARGETS)}"
+        # The staging directory is left behind deliberately: it is evidence of what the failed run
+        # produced, and the published set is untouched.
+        message = f"wrote {written} puzzles, wanted {len(TARGETS)} — published set left as it was"
         raise SystemExit(message)
+
+    # The batch is whole and every file certified from disk. Only now does the published set change.
+    for previous in OUT.glob("*.json"):
+        previous.unlink()
+    for finished in staging.glob("*.json"):
+        finished.replace(OUT / finished.name)
+    staging.rmdir()
     print(f"{written} puzzles in {OUT}, each read back and verified with the real secret")
 
 

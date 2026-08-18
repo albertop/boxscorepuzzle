@@ -284,7 +284,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Six data columns maximum.** 375px minus margins, 44px minimum touch target, ~70px label column. A seventh column does not fit and cannot be added.
 - Batting: **PA, AB, R, H, BB, K.** Pitching: IP, H, R, ER, BB, K. RBI was dropped for PA: it was the only batting column with neither a cross-team counterpart nor a place in the row identity, and PA is what breaks the forest (§6).
 - **The line score is always shown complete and never erased.** It is the puzzle's anchor, read-only, so it needs no touch target.
-- **A footnote line gives LOB, HBP, SF, SH and CI** — read-only and never erased, like the line score. Without LOB the board cannot express the global identity at all, and without the rest the row identity does not close. Footnotes cost no column width and need no touch target, and printed boxscores publish exactly these values this way. **Attributed per batter, labelled by position** (`HBP: SS`) — never by name, which would hand the player a name before they earned the row (§7).
+- **A footnote line gives LOB, HBP, SF, SH and CI.** ⚠️ **The per-batter cells are erasable; the totals row and LOB are not.** Those cells are unknowns *inside* the row identity with the totals row to close them, which is what takes a board from a median of 5 stalls to 15. Erasing a total instead leaves the identity with two unknowns and no way to separate them — malformed rather than hard (§5, §6). Without LOB the board cannot express the global identity at all, and without the rest the row identity does not close. Footnotes cost no column width and need no touch target, and printed boxscores publish exactly these values this way. **Attributed per batter, labelled by position** (`HBP: SS`) — never by name, which would hand the player a name before they earned the row (§7).
 - **⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero, so players learn to stop looking — and the row where one appears is exactly the row whose arithmetic fails if they miss it.
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
@@ -352,7 +352,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 **⚠️ Rewritten after measurement — the original criterion was wrong at the root (§5).**
 
 1. **Roster compactness** — hard filter, asymmetric and **decided**: the *offensive* team needs
-   **≤13 batters**, the *defensive* team **≤2 pitchers** (§6).
+   **≤13 batters**, the *defensive* team **≤4 pitchers** (§6).
 2. **Zero-density gate: below 30%, decided.** It removes every shutout and the three-run games while
    keeping seven-run ones. Direct and cheap — it attacks the cause instead of scoring it.
 3. **Compressibility is a viability constraint, not a ranking.** It measures how much can be removed,
@@ -363,7 +363,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 *Line score variety and digit range are dropped. They were proxies for compressibility, and
 correlating with the wrong target is not a reason to keep a filter.*
-- **Roster compactness, asymmetric — decided:** the *offensive* team needs **≤13 batters**, the *defensive* team **≤2 pitchers**. Only those appear on the board. The pitcher cap is what costs screen space and the batter cap is what costs pool, which is the opposite of the earlier provisional pair (§6).
+- **Roster compactness, asymmetric — decided:** the *offensive* team needs **≤13 batters**, the *defensive* team **≤4 pitchers**. Only those appear on the board. The pitcher cap is what costs screen space and the batter cap is what costs pool, which is the opposite of the earlier provisional pair (§6).
 - Line score variety
 - Digit range — numbers > 3 in several columns
 

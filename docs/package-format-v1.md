@@ -3,6 +3,10 @@
 The only contract between the forge and `serve`. They are separate systems with separate deployment
 cycles (§33), and this file is what `serve` is built against — **not** the forge's source.
 
+*⚠️ Amended before anything shipped: the per-batter footnote cells became nullable, and boards are
+selected on stalls rather than chain length. Both are recorded in the metadata guidance below. Nothing
+had been published, so this is version 1 being finished rather than version 1 changing meaning.*
+
 **Version 1 is append-only from here.** Fields may be added. Nothing existing changes meaning, type
 or nullability. If something must change, it becomes version 2 and both stay readable.
 
@@ -32,7 +36,7 @@ really does, so the two cannot drift.
 |---|---|---|---|
 | `batting` | list of rows, 6 wide | yes | `PA, AB, R, H, BB, K` — the column order is part of the format (§6). |
 | `batting_totals` | row, 6 wide | yes | The totals line, erasable like any row. |
-| `footnotes` | list of rows, 4 wide | no | `HBP, SF, SH, CI`, one row per batter. Given complete and never erased (§6). |
+| `footnotes` | list of rows, 4 wide | **yes** | `HBP, SF, SH, CI`, one row per batter. ⚠️ **Erasable** — each is an unknown inside the row identity, closed by the totals row below (§5, §6). |
 | `footnote_totals` | row, 4 wide | **no** | Never erased; a null here is malformed rather than difficult. |
 | `left_on_base` | integer | yes | The team footnote. Without it the global identity cannot be expressed at all. |
 | `pitching` | list of rows, 6 wide | yes | `IP, H, R, ER, BB, K`, **innings held as outs**. |
@@ -91,3 +95,18 @@ nothing — the deliberate looseness of C3 was the hole.
 Every value in the format is an integer, and innings pitched are **outs**. `7.2` on the board is `23`
 in the file. One of §3's cross-team identities is stated in outs, so storing the display form would
 put a division in the middle of an identity.
+
+
+## Difficulty metadata
+
+A package records how it was selected, and the field that matters is `difficulty_model`.
+
+| Key | Meaning |
+|---|---|
+| `difficulty_model` | `"stalls"`. A reader that finds anything else is looking at an artefact from before the model changed and must not compare it. |
+| `target_stalls` / `stalls` | Requested and achieved. A **stall** is a transition into bounding — propagation ran dry and something beyond direct substitution was needed — counted once however many bounding steps follow. |
+| `chain_length` | **Descriptive telemetry only.** It measures how long a solve is, not how hard: a chain-10 board is ten subtractions in single file. Kept so earlier measurements stay comparable; never a selection criterion. |
+| `blanks`, `seed`, `families`, `batters`, `pitchers` | What the board is and how to reproduce it. |
+
+**No difficulty label is defined.** Nothing is easy, medium or hard until the fifty-board hand-solve
+returns; a band expressed in stalls will be added here when it exists.
