@@ -202,7 +202,12 @@ column — and both times the judgement would have been made on a board that doe
 three-definitions defect and the two-copies-of-a-rule defect wearing different clothes, and the rule is
 stronger than "check the output before sending it" because it does not depend on remembering.
 
-**A mechanism kept past the problem it solved becomes a constraint on everything added after it.** The
+**A mechanism kept past the problem it solved becomes a constraint on everything added after it.** **And a
+hidden dependency of it.** Nobody declared the row-label suffix a contract; it became one by habit,
+read by three decisions that were really about the lineup slot — whether to indent a row, whether a
+board carries a substitution, which board to pick. All three broke in the commit that removed it, one
+of them silently until a pack refused to build. **When a mechanism is removed, look for who was
+reading it, not only who was writing it** — here one place wrote the suffix and three interpreted it. The
 row-label suffix was introduced for one reason: footnote references had to name a unique row. A second
 grouping — indentation by lineup slot — arrived later, and the two partition the rows differently, so
 which row carries the number is arbitrary and the number reads as a claim it is not making. Every fix

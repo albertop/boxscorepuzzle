@@ -107,3 +107,7 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [104/120] WAS201307270 2013: 96/130 cells, chain 88, search 0.96, res 9, trivial 11%, col+cross+global+row, 48.7s
   [105/120] WAS201307210 2013: 105/160 cells, chain 93, search 0.96, res 12, trivial 10%, col+cross+global+row, 91.5s
   [106/120] WAS201307230 2013: 103/140 cells, chain 94, search 0.96, res 10, trivial 11%, col+cross+global+row, 58.0s
+  [107/120] WAS201307030 2013: 89/124 cells, chain 79, search 0.96, res 9, trivial 12%, col+cross+global+row, 36.0s
+  [108/120] WAS201307010 2013: 95/146 cells, chain 85, search 0.96, res 9, trivial 12%, col+cross+global+row, 72.1s
+  [109/120] WAS201307070 2013: 87/146 cells, chain 78, search 0.96, res 10, trivial 10%, col+cross+global+row, 48.3s
+  [110/120] WAS201307060 2013: 91/136 cells, chain 83, search 0.96, res 9, trivial 10%, col+cross+global+row, 48.7s
