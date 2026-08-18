@@ -403,6 +403,35 @@ set the board merely *contains*.
 anything is built on the distribution: the two families that most distinguish boards are not the ones
 that break the hard moments.*
 
+### v02-P2-03 — the contracts described a board the code had left behind
+
+`CLAUDE.md` and `docs/package-format-v1.md` are presented as current contracts, so a contributor
+following them would have reintroduced the two-pitcher cap, restored the footnote line, or kept
+grading on chain length. Each drift already existed in the code.
+
+**Fixed:** the cap reads ≤4 pitchers everywhere it appeared; the footnote entry says the per-batter
+cells are erasable and the totals row and LOB are not, with the reason; and chain is named as telemetry
+with stalls as the difficulty variable. The format document gains a difficulty-metadata section so a
+reader of an older artefact knows not to compare it, and states that **no difficulty label exists yet**.
+
+**Sweeping rather than fixing only the two the review named found two more.** The rule against
+proposing to stop or defer had been stated as being in `CLAUDE.md` and was not. And **progressive
+reveal was still specified in two places after being dropped** — rows are labelled by position
+throughout and the real boxscore is drawn complete at the end, which also releases row-level
+validation, since it existed only to know when to reveal.
+
+### v02-P2-04 — regeneration deleted the published set before a replacement existed
+
+A loader error, an exhausted pool, an interrupt or a full disk left `serve/data/puzzles` empty or
+half-written. Everything is now built and certified in a sibling staging directory, and the published
+files are replaced only once the batch is whole. A failed run leaves staging behind as evidence and
+the published set untouched.
+
+**The staging directory was not sufficient on its own.** The first version deleted the published set
+and then moved files in, leaving a window with nothing published — the same defect one step smaller.
+It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
+a filesystem, so a reader sees the old file or the new one and never a truncated one.
+
 ## What is actually left
 
 Not review findings — these are the things the repairs unblocked.
