@@ -12,7 +12,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2] if "discovery" in str(Path(__file__).resolve()) else None
 
 
-def write_examples(sample, out_path, *, target_chain=9, seed=3, note=""):
+def write_examples(sample, out_path, *, target_chain=9, seed=3, note="", title="", intro=""):
     """Render up to six boards from `sample` to `out_path`. Failures here must not kill a run."""
     root = Path(out_path).resolve().parents[2]
     sys.path.insert(0, str(root / "discovery" / "pitcher-cap"))
@@ -28,5 +28,5 @@ def write_examples(sample, out_path, *, target_chain=9, seed=3, note=""):
             continue
         label = f"{len(item.direction.batting)} batters, {len(item.direction.pitching)} pitchers, chain {target_chain}"
         boards.append(render_board(item, puzzle, f"{label}{note}"))
-    Path(out_path).write_text(page(boards), encoding="utf-8")
+    Path(out_path).write_text(page(boards, title=title, intro=intro), encoding="utf-8")
     return len(boards)

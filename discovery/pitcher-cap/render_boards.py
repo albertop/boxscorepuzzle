@@ -185,17 +185,21 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     )
 
 
-def page(boards: list[dict[str, object]]) -> str:
+def page(boards: list[dict[str, object]], *, title: str = "", intro: str = "") -> str:
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        "<title>Four pitching rows, and high against low resolution</title>"
+        f"<title>{title or 'Boards to look at'}</title>"
         f"<style>{STYLE}</style></head><body>"
-        "<h1>Boards to look at</h1>"
-        "<p class='intro'>Erased by the real algorithm at a chain target of 11, ordering "
-        "<code>row_first</code>, drawn at the 375px width the board is designed for. Shaded cells "
-        "are the blanks the player fills. Two questions: whether four pitching rows read as noise "
-        "beside two, and whether a high resolution p90 is depth or arithmetic.</p>"
+        f"<h1>{title or 'Boards to look at'}</h1>"
+        # A measurement instrument whose title contradicts its content misleads whoever reads it in
+        # six months, so the caller states what the page is rather than inheriting an old answer.
+        + (
+            f"<p class='intro'>{intro}</p>"
+            if intro
+            else "<p class='intro'>Drawn at the 375px width the board is designed for. Shaded cells are"
+            " the blanks the player fills.</p>"
+        )
         + "".join(_board_html(board) for board in boards)
         + "</body></html>"
     )

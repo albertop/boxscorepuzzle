@@ -1,0 +1,31 @@
+72 gated directions, gate 25%
+decades: {1910: 6, 1920: 6, 1930: 6, 1940: 6, 1950: 6, 1960: 6, 1970: 6, 1980: 6, 1990: 6, 2000: 6, 2010: 6, 2020: 6}
+
+12 boards (6 pairs) written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\independent-cells\pruned-against-loose.html
+1638 measured boards
+
+=== THE FOUR ORDERINGS AGAINST THE METRIC THAT MATTERS ===
+row_first was chosen on fewest trivial steps, before this existed.
+     ordering  target  blanks  independent   share  dead-end  per step
+ column_first       5      17           10     59%         1      2.91
+ column_first       7      20           11     55%         1      2.60
+ column_first       9      23           12     51%         1      2.41
+ column_first      11      26           12     47%         1      2.26
+
+       random       5      16           11     60%         1      3.09
+       random       7      23           13     57%         1      2.89
+       random       9      25           13     53%         1      2.61
+       random      11      28           13     48%         1      2.43
+
+    row_first       5      14            9     59%         1      2.63
+    row_first       7      21           11     56%         1      2.56
+    row_first       9      24           13     53%         1      2.45
+    row_first      11      27           13     49%         1      2.32
+
+=== WHAT PRUNING REMOVES ===
+  target   before   after   removed   share before   share after  still reaches
+       5       16       5        11            60%           20%           100%
+       7       21       7        14            56%           14%           100%
+       9       24       9        15            52%           11%           100%
+      11       27      11        16            48%            9%           100%
+  Pruning cannot cost pool: the board reached the target before pruning began.
