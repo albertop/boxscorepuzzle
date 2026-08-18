@@ -1994,6 +1994,42 @@ more puts several blanks in each column, so each step combines fewer known terms
 is therefore highest where the board is fullest, which is the easy end. See the resolution-ceiling
 finding below.
 
+### ⚠️ What the fifty hand-solved boards can and cannot say
+
+**They cannot answer the absolute question.** The operator is a sample of one, with complete command
+of the identities, after months of thinking about this board. What he finds easy will be easy for
+very few people, and a threshold set from his times would be a threshold set for him.
+
+**What they do give is relative calibration**, which is what the curve actually needs: if rung 9
+consistently feels harder than rung 7, the ordering is right even though its absolute position is
+unknown. That is worth having and it is all they are.
+
+**The absolute question is answered by the January beta**, and the design already provides for it —
+seam C7 records time, hints and errors per game, so a few hundred players give a distribution of
+times per rung and the thresholds stop being opinion.
+
+**Before then, ten boards spread across the curve, solved by somebody who knows baseball and nothing
+about this project.** Not the full fifty. Ten is enough to see whether the operator's scale and a
+stranger's agree at all, and it is the one contrast he cannot give himself.
+
+**And there is no universal difficulty scale to appeal to.** Every puzzle publisher defines its own —
+a crossword's Saturday is that paper's Saturday. That is the justification for taking thresholds from
+this project's own data rather than an external reference, and it is worth stating so nobody later
+goes looking for a standard that does not exist.
+
+### What sudoku's playbook does *not* transfer: balanced clue distribution
+
+Sudoku generators spread their givens evenly across the grid, and it is meaningful there because
+every cell of a sudoku means the same thing. **This board is not uniform**: its columns have different
+semantics, its rows come in two kinds, and a blank in the LOB footnote is not a blank in a batter's
+strikeout column.
+
+It was measured rather than argued. `column_first` — the erasure ordering closest to the sudoku
+analogue, round-robin across columns so no column empties before another is touched — **was the worst
+of the four on every axis**: most cells erased for a given chain, most trivial steps, lowest ceiling,
+and it overshot its target (§31). Recorded here so the analogy does not get proposed again from the
+same intuition.
+
 ### ✅ The week runs from chain 5 to chain 11 — decided
 
 > *⚠️ Was 5 → 13, and before that 5 → 20. Both earlier figures are kept below rather than restated,
