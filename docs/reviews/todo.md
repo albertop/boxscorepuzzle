@@ -210,10 +210,29 @@ total, pitching cell, pitching total, footnote cell, footnote total, team footno
 erased set gives the whole board and that naming a line-score cell does *not* blank it, since the anchor
 is never erased.
 
+### v02-P1-04 — the source gate passed on absence
+
+The pool filtered provenance with `NOT EXISTS` over an exclusion list, and a game with **no**
+provenance row satisfies "not excluded". A partial import, a new season or an identifier mismatch
+turned *source unknown* into *source approved* silently, and those games pass every arithmetic
+identity while breaking §32's source policy.
+
+**What I did.** `EXISTS` over an **acceptance list** — `ACCEPTED_SOURCES = ("EVA", "EVN", "EVF")`.
+A source kind nobody has seen yet is now excluded by not being named, rather than admitted because
+nobody remembered to exclude it. That is the general form of the fix, not only this instance.
+
+**Tests.** Four on the loader and one per PowerShell script that queries the pool, because the
+predicate was copied across four files this project and two copies drifted. They assert the exclusion
+form does not come back, that a provenance row is required, and that `EVR` and the deduced kinds are
+absent from the acceptance list.
+
+They read the query text rather than execute it — the predicate is SQL against a database, and a test
+needing a DSN is a test that gets skipped in CI and then never runs. **Weaker than executing it, and
+said so in the file.** What it does catch is the shape of the mistake returning, which is how it
+arrived: the same words in a different file.
+
 ## Open, in the agreed order
 
-2. **v02-P1-04** — provenance fails open. Rewrite as `EXISTS` over an acceptance list, with a test that
-   a game with **no** provenance row is *rejected*.
 3. **v02-P1-05** — `offense_hits` is summed from the batting rows it is meant to anchor. Load it from
    an independent source, with a test **per line-score field** so a future one cannot be added silently.
 4. **v02-P1-06** — build `certify_for_publication()`: package verification, board plausibility, reveal

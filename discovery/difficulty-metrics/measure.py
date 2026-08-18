@@ -23,6 +23,7 @@ import statistics
 import sys
 from collections import Counter
 from dataclasses import dataclass
+from typing import Final
 
 sys.path.insert(0, str(__file__).rsplit("discovery", 1)[0] + "forge/src")
 
@@ -66,6 +67,14 @@ contributed something.**
 ⚠️ It has to be the *same* predicate in the shape query and the row query. When the shape counted
 contributors and the rows loaded only batters, a game could pass the roster cap on a row count that
 the loaded board did not have.
+"""
+
+ACCEPTED_SOURCES: Final = ("EVA", "EVN", "EVF")
+"""The event-file kinds a puzzle may come from: American, National, Federal.
+
+An **acceptance** list, not an exclusion list. `EVR` is Negro Leagues — transcribed newspaper box
+scores that balance every identity and are still not scored games (§32) — and `ED?` is deduced. Both
+are excluded by not appearing here rather than by being named somewhere a future kind could miss.
 """
 
 CONNECTION = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
@@ -193,6 +202,7 @@ def load(
         + CASE WHEN d.t_pbb=0 THEN 1 ELSE 0 END + CASE WHEN d.t_pso=0 THEN 1 ELSE 0 END AS float)
         / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < {gate}
     """
+    accepted = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
     query = f"""
     WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
@@ -243,8 +253,13 @@ def load(
       -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
       -- identity, which is why the exclusion has to be a join rather than a check: nothing
       -- downstream can catch a board that is consistent and still wrong.
-      AND NOT EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
-                      WHERE p.GAME_ID = g.GAME_ID AND (p.is_deduced = 1 OR p.source_type = 'EVR'))
+      -- ⚠️ EXISTS over an acceptance list, never NOT EXISTS over an exclusion list. The previous
+      -- form admitted a game with **no provenance row at all**: absence satisfied "not excluded", so
+      -- a partial import, a new season or an identifier mismatch silently turned "source unknown"
+      -- into "source approved". Completeness of the provenance table was an unstated precondition.
+      AND EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
+                  WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0
+                    AND p.source_type IN ({accepted}))
       {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """

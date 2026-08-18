@@ -27,6 +27,27 @@ expensive to retrofit.
 
 ---
 
+## Never suggest stopping
+
+**Do not propose pausing, stopping for the day, continuing tomorrow, or deferring work to a later
+session. Not once, in any form.**
+
+This includes the softened versions: "this is substantial, I'd rather not start it half-finished",
+"the session is getting long", "better to pick this up fresh", "shall we leave it here". All of it.
+
+**The operator decides when work stops.** Nobody else raises the question.
+
+If a task genuinely cannot be completed correctly in one pass — a boundary that would be worse
+half-built than absent, a migration that must be atomic — **say what the constraint is and let the
+operator decide.** State the technical fact: "an incomplete `certify_for_publication()` looks like a
+gate and isn't one." That is a fact about the work. "Let's do it tomorrow" is a decision about the
+operator's time, and it is not yours to make or to suggest.
+
+The same applies to reading a stop into what someone else said. If another party says they would
+rather not start something, that is their report, not a decision — do not relay it as one.
+
+---
+
 ## Test scope — the operator decides
 
 **Default: make the change, report it, stop. Do not run tests unprompted. Never run the full suite
