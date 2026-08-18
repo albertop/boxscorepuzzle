@@ -143,7 +143,10 @@ def _board_html(board: dict[str, object]) -> str:
         + "</tr>"
     )
     for index, row in enumerate(board["pitching"]):  # type: ignore[arg-type]
-        grid += f"<tr><th class='label'>P{index + 1}</th>{_cells(row, blanks['pitching'][index])}</tr>"  # type: ignore[index]
+        # SP and RP-n, never a bare P — the pitcher who batted is already a `P` row in the batting
+        # section above, and the same label meaning two things in two sections is worse than none.
+        label = board["pitcherLabels"][index] if board.get("pitcherLabels") else f"P{index + 1}"  # type: ignore[index,union-attr]
+        grid += f"<tr><th class='label'>{label}</th>{_cells(row, blanks['pitching'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
         + _cells(board["pitchingTotals"], blanks["pitchingTotals"])  # type: ignore[arg-type,index]

@@ -150,7 +150,10 @@ function grid(b) {
   html += "<tr class='section'><td colspan='7'>PITCHING</td></tr>";
   html += "<tr><th class='label'></th>" + PIT.map(x => "<th class='col' style='font-size:11px'>" + x + "</th>").join("") + "</tr>";
   b.pitching.forEach((row, r) => {
-    html += "<tr><th class='label'>P" + (r + 1) + "</th>" + cells(row, pit(r)) + "</tr>";
+    // SP and RP-n rather than P1..P4. The label carries deduction: a starter is where the long
+    // innings are, so a fan can bound the IP column before touching an equation.
+    const name = b.pitcherLabels ? b.pitcherLabels[r] : "P" + (r + 1);
+    html += "<tr><th class='label'>" + name + "</th>" + cells(row, pit(r)) + "</tr>";
   });
   html += "<tr class='totals' id='pitTotals'><td class='label'>TOTALS</td>" +
     cells(b.pitchingTotals, b.blanks ? b.blanks.pitchingTotals : []) + "</tr></tbody>";

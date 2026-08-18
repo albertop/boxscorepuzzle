@@ -114,10 +114,16 @@ batted, so modern extra-inning games break it and are correctly rejected.
 H ≥ 2B + 3B + HR and anything else over a column the width budget excluded — an identity over a
 quantity the player cannot see is not a deduction they can make.*
 
-### A footnote whose row is ambiguous is a constraint, not a defect
+### ✅ A footnote whose row is ambiguous — removed, not modelled
 
-A position label does not always name one row: with ten batters a substitute shares the starter's
-label, so `HBP: SS` can mean either of two rows (§7).
+> **The premise no longer holds.** Repeated position labels are suffixed by order of appearance, so
+> `HBP: SS-2` names one row and there is no ambiguity to express. **None of the model below is
+> built**, and it should not be: it is a correct treatment of a problem the labels created and the
+> labels removed. Kept because the reasoning is sound and would be needed again if the label
+> convention ever changed. See §5 and §7 for the measurement that made the trade obvious.
+
+A position label did not always name one row: with ten batters a substitute shares the starter's
+label, so `HBP: SS` could mean either of two rows (§7).
 
 **Stated as a domain, not as a choice.** Both candidate cells are left unknown, each with a domain of
 {0, 1}, and the footnote's own column sum already says the pair adds to one. Nothing extra is needed
@@ -535,6 +541,29 @@ count is not decided — a week using each level once with two easy days consume
 so roughly 674 a year. Against the 12,218 directions that survive the gate that is **18.1 years of
 calendar**. Reusing a direction at a different difficulty years apart is available and not needed.
 
+### ✅ The footnote ambiguity is gone — the labels were the bug
+
+> **Superseded, and not by a better model.** Everything below is correct about a board where two rows
+> can share a position label. **They no longer can.** Repeated labels are suffixed by order of
+> appearance — `LF-1`, `LF-2` — so `SF: LF-2` names one row and the attribution has nothing left to
+> resolve. **The erasure constraint this section derived is not needed**, and the domain-bounding
+> model it called for is not built.
+>
+> It was worth removing rather than modelling: measured over the gated ≤13/≤4 pool, **42.9% of
+> directions have at least one label collision and 10.0% have one where a colliding row also carries
+> a footnote**. `P` is the worst offender by far — 7,232 groups, one of them five rows deep — because
+> the pitcher bats and his replacement bats in the same slot. It also gets worse under the new caps:
+> the collision rate runs 20% at one pitcher, 35% at two, 49% at three and **67% at four**, and by
+> decade from 30% in the 1910s to 82% in the 2020s, which is exactly where the era quota points.
+>
+> **And the suffix is a better label, not a patch.** `LF-2` tells the player a substitution happened
+> at that position — real information the boxscore already contains and the bare label threw away.
+> Four characters, inside the seven §7 fixed.
+>
+> *The batting section's pitchers become `P-1` and `P-2`, **not** `SP`/`RP-n`. The pitching section
+> shows the **opposing** team's pitchers, so the same symbol in both sections would name two
+> different men on two different teams.*
+
 ### The footnote ambiguity is a constraint on erasure, not on the pool
 
 Whether an ambiguous footnote assignment resolves depends on **which cells are blank, not on the
@@ -849,12 +878,27 @@ before they had earned the row — the one thing progressive reveal exists to pr
 label is authentic baseball grammar, gives the player everything the row identity needs, and leaks
 nothing. Once a row is completed and its name appears, the footnote may be rewritten with the name.
 
-**A position label does not always name one row, and that is fine.** With ten batters a substitute
-shares the starter's label. Measured: labels are unique in **99.89%** of nine-batter team-games but
-only 24.28% of ten-batter ones — though the ambiguity only bites when a footnote actually lands on a
-shared label, which leaves **99.98%** and **86.95%** respectively fully attributable. The remainder
-is handled as a constraint rather than a defect (§3), and costs erasure patterns rather than
-directions (§5).
+**✅ Every label names exactly one row: repeats are suffixed by order of appearance.** `LF-1` and
+`LF-2`, `P-1` and `P-2` — a label used once stays bare, so the suffix appears only where a position
+was played by two men.
+
+*What that replaces.* A shared label was previously accepted as a constraint to be modelled: labels
+are unique in **99.89%** of nine-batter team-games but only **24.28%** of ten-batter ones, and on the
+gated ≤13/≤4 pool **42.9%** of directions carry a collision with **10.0%** carrying one that a
+footnote actually lands on. `P` is the worst — the pitcher bats and his replacement bats in the same
+slot, up to five rows deep. Suffixing removes the ambiguity at the source, so the domain-bounding
+model §3 called for and the erasure constraint §5 recorded are both unnecessary.
+
+**And it is a better label, not a workaround.** `LF-2` tells the player a substitution happened at
+that position — information the boxscore already contains and the bare label discarded. Four
+characters, inside the seven fixed below. §8's tutorial shows one board with a substitution so the
+convention is met once deliberately.
+
+*The pitching section uses `SP` and `RP-1`, `RP-2` — the starter and the relievers in order of
+appearance, which bounds the IP column before any equation is touched: a starter is where the long
+innings are and a third reliever is where they are not. **Never a bare `P` there**, because the
+batting section has `P` rows of its own, and never `SP` in the batting section either — the pitching
+rows belong to the **opposing** team, so the same symbol would name two different men.*
 
 **⚠️ Live footnotes must be visually prominent.** Nine rows in ten have every footnote term at zero,
 so a player will learn to stop looking — and the row where one finally appears is precisely the row
@@ -917,6 +961,12 @@ row; the cross works across the board between the two halves. Neither substitute
 - **Does not explain:** what AB means, what a sacrifice fly is, why there are nine innings
 
 **The tutorial teaches identities, not statistics.** A hardcore fan knows what LOB is and has never once thought that PA = Outs + R + LOB.
+
+**One tutorial board must carry a substitution**, so the player meets `LF-1` / `LF-2` once
+deliberately rather than being puzzled by it mid-solve. The convention is self-explaining in context
+— the suffix appears only where a position was played by two men — but 43% of boards carry one (§5),
+so it is not an edge case worth discovering by accident. Nothing needs explaining beyond the label
+itself; the identities are unchanged.
 
 ### Mandatory on first play
 
@@ -1737,17 +1787,44 @@ resolution p90 falls from 8 to 5 as difficulty rises while search cost climbs fr
 **Nobody designed that**; it emerged from the format, and it is worth recording as a property of the
 board: difficulty here is scanning, not calculating.
 
-### ⚠️ The character axis narrows as difficulty rises, and dies at the top
+### ✅ The week runs from chain 5 to chain 13 — decided
 
-> **⚠️ Pre-cap-change, and the cap change works in the axis's favour.** Everything below was measured
-> at ≤2 pitchers, where **cross-team is required by 100% of boards at a chain target of 11** — a
-> family every board demands distinguishes nothing, so a share of this collapse was the shape of the
-> board rather than the difficulty. At ≤4 pitchers that falls to 77–85% (§5). The axis is not
-> repaired by that alone, but it is measured on a board where cross-team is one route among several
-> instead of the only one. **Re-measure before treating the collapse as settled.**
+**Not to 20.** Two independent measurements on the ≤4 pool converge on the same ceiling, and the
+second one is the serious one.
 
-Measured under **chain-targeted erasure**, which is what the generator will actually do — the earlier
-figures came from random erasure at fixed cell counts and overstated the variety.
+**The metrics stop separating boards above 15.** A metric earns its place while its spread is wide;
+when p10 meets p90 every board scores alike and the number has stopped saying anything.
+
+| Chain target | Reached | Search band width | Resolution band width |
+|---:|---:|---:|---:|
+| 5 | 100% | 0.20 | 2.0 |
+| **9** | 99% | **0.42** | **3.0** |
+| **13** | 96% | 0.29 | **3.0** |
+| 15 | 91% | 0.23 | 2.0 |
+| 17 | 83% | 0.19 | 2.0 |
+| 21 | 63% | 0.14 | 2.0 |
+
+Both bands peak between 9 and 13 and are closing by 15. At 21 the search band is a third of its
+maximum.
+
+**⚠️ And the hardest day was quietly re-selecting the boards the gate exists to remove.** Boards that
+reach a chain of 17 have a mean zero density of **26.6%** against **18.4%** for those that fail —
+pressed against the gate's own 30% threshold — and zero density correlates **+0.575** with the chain
+ceiling. Compressibility comes from noughts, so aiming at the longest chains selects the emptiest
+boards that squeaked through admission. *The hardest day of the week would have been the dullest, and
+nothing in the difficulty numbers would have said so.*
+
+*The effect only appears from a target of 17 upward, because below that almost every board reaches
+the target and there is no failing group to compare against. That is the reading, not a gap in the
+measurement: the selection pressure exists exactly where a large fraction fails.*
+
+**Monday at the low end of 5, Saturday at 13.**
+
+### The character axis survives to 13 — as a minority route, not a restored lever
+
+> *⚠️ The table below is pre-cap-change, measured at ≤2 pitchers where cross-team was required by
+> 100% of boards and therefore distinguished nothing. Kept as the record of what was concluded from
+> it. The ≤4 measurement follows.*
 
 | Erasure aimed at | Reachable family combinations |
 |---|---|
@@ -1756,14 +1833,23 @@ figures came from random erasure at fixed cell counts and overstated the variety
 | chain 20 | all four 81%, col+cross+row 19% |
 | the compressibility ceiling | **all four, 100%** |
 
-**So the week has three dimensions early and two late.**
+On the ≤4 pool, at the targets the week actually uses:
 
-- **Easy and mid days:** effort, character (family combination), attention (live footnote).
-- **Hard days:** effort and attention only. Family combination is not a lever there, measured.
+| Chain target | All four | cross_team | global_identity | Second most common route |
+|---:|---:|---:|---:|---|
+| 11 | 46% | 82% | 54% | col+cross+row 36% |
+| **13** | **71%** | 93% | 75% | **col+cross+row 22%** |
+| 15 | 80% | 97% | 82% | col+cross+row 17% |
+| 21 | 93% | 100% | 100% | col+cross+row 7% |
 
-That is a smaller loss than it looks. Monday and Tuesday are the days played most and where the habit
-forms, so the variety sits where it is used. And **Saturday covers itself**: if every hard board needs
-all four families, Saturday has character by being the only day the global identity appears at all.
+**The "two dimensions on hard days" rule was an artefact of measuring at chain 20 under the old cap.**
+At 13 — the hardest day the week now has — **29% of boards do not require all four families**, and
+the alternative is not noise: **22% never need the global identity at all.** Saturday can therefore
+vary between a board that demands LOB and one that never touches it.
+
+**Stated at its real size: that is a usable minority route, not a symmetric lever.** A 71/22 split
+gives Saturday two flavours with one of them rare, which is worth having and is not the third
+dimension the easy days enjoy. The axis is not restored; it is alive.
 
 **Saturday's variation has to come from somewhere other than the families, and it is not the roster.**
 Board character was measured against the solve and mostly does not separate it:
@@ -1787,15 +1873,27 @@ which families a board can be solved through — the axis this section is about.
 boards at a chain target of 20 need all four families against 8% at a target of 5. That is a real
 distinction, and it is the one the format actually offers.
 
+*⚠️ Written when Saturday sat at chain 20. At 13 the statement is nearly inverted: the global
+identity is required by 75% of Saturday boards and skipped entirely by 22%, so Saturday's character
+is no longer "the day the global identity appears" but a choice between two routes. The paragraph
+above stands as what was concluded from the old curve.*
+
 ### Sunday is the character day, and the week is an arc rather than a ramp
 
 Sunday had been missing from every version of this curve. The crossword answer does not transfer: the
 NYT Sunday is Thursday-difficulty at much larger size, and **this board cannot grow** — six columns is
 a hard ceiling and the height is screen-limited.
 
-- **Monday → Saturday:** rising effort, Saturday the peak.
+- **Monday → Saturday:** rising effort from **chain 5 to chain 13**, Saturday the peak.
 - **Sunday:** mid difficulty, chosen for the **memorable game** rather than for effort. A shutout, a
   pitchers' duel, a twenty-run game.
+
+*The ceiling moved from 20 to 13 after the rescaling above, which changes the numbers on the ramp but
+not its shape. **Worth a fresh reading rather than a patched one:** Sunday became the character day
+because Saturday was pinned at the ceiling with no lever, and at 13 Saturday has a minority family
+route it did not have. That does not overturn the arc — Sunday's job is recovering the player who
+broke on Saturday, which is independent — but the reason "Sunday is the only day with room" is no
+longer the whole story.*
 
 Two reasons. **A gentle Sunday recovers the player who broke on Saturday** — with streaks as the
 retention mechanism (§27), someone who just lost one needs a reason to come back rather than another
@@ -2248,7 +2346,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Saving, pausing, resuming~~ — **resolved:** the puzzle stays open all day and saves itself (§27)
 - [ ] What time the puzzle rolls over: local midnight or UTC
 - [x] ~~What breaks the streak and whether there's grace~~ — **resolved:** midnight close for streak purposes, free monthly grace day, streak insurance in the paid tier (§27)
-- [x] ~~Weekly difficulty curve~~ — **resolved and since revised:** an arc rather than a ramp. Rising effort Monday to Saturday, then a mid-difficulty Sunday chosen for board character. Three dimensions on easy and mid days, two on hard ones (§31)
+- [x] ~~Weekly difficulty curve~~ — **resolved, revised, and now scaled:** an arc rather than a ramp, running **chain 5 to chain 13** rather than to 20. The metric bands close above 15, and boards reaching 17 are the emptiest ones the gate let through — the hardest day was re-selecting what admission removed. At 13 a minority family route survives, so Saturday has two flavours rather than one (§31)
 
 **Presentation**
 
@@ -2287,6 +2385,8 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
 - [x] ~~**Erasure ordering.**~~ — **measured (August 2026), and it is not a lever.** Its input is a target chain length, not a number of cells (§21). All four orderings reach the same ceiling; `column_first` loses on every axis and is the one worth removing; symmetric erasure is real and free, so it is taste. §31 carries the numbers and the ceiling correction
 - [ ] **Whether the generator targets one metric or three.** Resolution p90 is independent of chain and worth aiming at; search cost fixes itself once the chain is long. A joint target costs 2.39× the pool, which is affordable. **The thresholds are a product decision and are not set** — bands go on chain length, against real solving times from the January beta rather than anyone's estimate
+- [ ] **Whether a resolution ceiling is needed at all.** It was proposed against long arithmetic on hard boards, and those boards are no longer published now that the week tops at 13. Being re-asked inside the publishable range before any threshold is set: an absolute ceiling of 7 would discard 50–67% of post-1970 boards against 0–17% of the 1950s, and scaling it by row count inverts that skew instead of removing it — a nine-row 1910 board already sits at resolution 8
+- [x] ~~**Footnote row ambiguity.**~~ — **removed at the source (August 2026).** Repeated position labels are suffixed by order of appearance, so `SF: LF-2` names one row. The erasure constraint and the domain-bounding model it implied are not needed (§5)
 - [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
 - [x] ~~**Loader fix:** add a provenance column so deduced event files are distinguishable (§32)~~ — **done (August 2026):** `dbo.retroGameProvenance`, 202,036 games. It immediately found 1,872 Negro Leagues games that had been in the pool all along; they are excluded too (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22

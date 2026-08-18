@@ -68,6 +68,58 @@ class Loaded:
     labels: tuple[str, ...]
     offense_is_home: bool
     names: tuple[tuple[str, str], ...]
+    pitcher_labels: tuple[str, ...] = ()
+
+
+def _batting_labels(positions: list[str]) -> tuple[str, ...]:
+    """Position labels, with any repeat suffixed by order of appearance: `LF-1`, `LF-2`.
+
+    43% of gated boards have two rows sharing a label and 10% have one where a row also carries a
+    footnote — which is when `SF: LF` stops naming a row and the identity for both becomes unusable.
+    Suffixing removes that at the source, so the erasure no longer has to avoid patterns that leave
+    the attribution unresolved.
+
+    It is also a better label rather than a patch: `LF-2` says a substitution happened at that
+    position, which is real information the boxscore already contains and the bare label threw away.
+
+    Labels used once stay bare — the common row should not carry a suffix that distinguishes nothing.
+    Four characters, inside the seven §7 fixed.
+
+    Note the batting section's pitchers become `P-1`, `P-2` and **not** `SP`/`RP-n`. Those belong to
+    the pitching section, which shows the *opposing* team's pitchers: the same symbol in both
+    sections would name two different men on two different teams.
+    """
+    repeated = {label for label in positions if positions.count(label) > 1}
+    seen: Counter[str] = Counter()
+    labels: list[str] = []
+    for label in positions:
+        if label in repeated:
+            seen[label] += 1
+            labels.append(f"{label}-{seen[label]}")
+        else:
+            labels.append(label)
+    return tuple(labels)
+
+
+def _pitcher_labels(started: list[int]) -> tuple[str, ...]:
+    """SP for the starter, RP-1 onwards for relievers in the order they appeared.
+
+    Not only clarity — it is information the board can be reasoned with. A starter is where the long
+    innings are and a third reliever is where they are not, so a fan can bound the IP column before
+    touching an equation, which is exactly what a puzzle built for baseball fans should allow.
+
+    Never a bare `P` for the starter: the pitcher who batted also appears as `P` in the batting
+    section, and the same label meaning two things in two sections is worse than no label.
+    """
+    labels: list[str] = []
+    relievers = 0
+    for is_starter in started:
+        if is_starter:
+            labels.append("SP")
+        else:
+            relievers += 1
+            labels.append(f"RP-{relievers}")
+    return tuple(labels)
 
 
 def _parse_line_score(text: str) -> tuple[int, ...]:
@@ -184,9 +236,21 @@ def load(
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.B_G = 1 ORDER BY d.SLOT_CT, d.SEQ_CT
     """
+    # Pitchers in order of appearance, which is what SP / RP-1 / RP-2 labels claim to mean.
+    # SEQ_CT alone is not that order: in a game without a designated hitter a reliever who enters at
+    # another lineup slot carries that slot's sequence, so ordering by it puts a man who finished the
+    # game ahead of one who pitched the sixth. The substitution table has the event that put each
+    # pitcher in, which is the real order. The starter has no substitution row, and P_GS puts him
+    # first regardless.
     pitch_query = """
-    SELECT P_OUT, P_H, P_R, P_ER, P_BB, P_SO FROM dbo.retroDailyReg
-    WHERE GAME_ID = ? AND TEAM_ID = ? AND P_G = 1 ORDER BY P_GS DESC, PLAYER_ID
+    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS
+    FROM dbo.retroDailyReg d
+    LEFT JOIN (SELECT GAME_ID, SUB_ID, MIN(EVENT_ID) AS entered
+               FROM dbo.retroSubstitutionsReg WHERE SUB_FLD_CD = 1
+               GROUP BY GAME_ID, SUB_ID) s
+      ON s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID
+    WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.P_G = 1
+    ORDER BY d.P_GS DESC, s.entered, d.SEQ_CT, d.PLAYER_ID
     """
 
     loaded: list[Loaded] = []
@@ -256,9 +320,10 @@ def load(
                     game_id,
                     season,
                     direction,
-                    tuple(r[11] for r in batting_rows),
+                    _batting_labels([r[11] for r in batting_rows]),
                     bool(is_home),
                     tuple((r[12] or "", r[13] or "") for r in batting_rows),
+                    _pitcher_labels([p[6] for p in pitching_rows]),
                 )
             )
     return loaded
@@ -457,6 +522,12 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
     Measured on top of a real erasure rather than on an otherwise complete board. With everything
     else given there is no rest of the board to be held up, so "the ambiguity never mattered" would
     be unmeasurable by construction.
+
+    ⚠️ **Kept as a record; it now measures a case that no longer exists.** The ambiguity came from two
+    batting rows sharing a position label, and labels are disambiguated at the source since
+    `_batting_labels` — `LF-1` and `LF-2` rather than two `LF` rows. Run against a current sample this
+    finds no groups at all, which is the result rather than a bug. The erasure constraint it implied
+    is not needed (§5).
     """
     print("\n=== AMBIGUOUS FOOTNOTE ATTRIBUTION ===")
     never_mattered = had_to_be_resolved = non_unique = boards = 0
