@@ -14,6 +14,8 @@ has to teach: a suffixed label and a live footnote.
 Read-only against DGL. Run from `forge/`.
 """
 
+import hashlib
+import json
 import os
 import sys
 from pathlib import Path
@@ -43,6 +45,7 @@ client to be built against, not a difficulty scale.
 GATE = 0.25
 SEED = 6
 OUT = _ROOT / "serve" / "data" / "puzzles"
+MANIFEST = "manifest.json"
 
 SECRET_VARIABLE = "BOXSCORE_SIGNING_SECRET"
 FALLBACK_SECRET = b"reference-puzzles-only, replace before anything is published"
@@ -134,22 +137,120 @@ def evidence_for(loaded: Loaded) -> Evidence:
     )
 
 
-def _publish(staging: Path) -> None:
-    """Swap the staged batch in, one atomic rename at a time.
+def claim(wanted: list[Loaded], seen: set[str], item: Loaded) -> bool:
+    """Take a direction for the batch, or refuse it because its game is already in.
 
-    ⚠️ **Replace first, delete afterwards.** `Path.replace` is an atomic rename within a filesystem, so
-    a reader sees either the old file or the new one and never a truncated one. Deleting the published
-    set first and then moving files in would leave a window with nothing published at all — the same
-    defect one step smaller than the one the staging directory fixes.
+    ⚠️ **The two required traits used to be taken first and deduplicated afterwards.** A direction can
+    carry a substitution *and* a live footnote, and the two picks were appended before `seen` existed,
+    so one game could enter the batch twice. Both entries derive the same identifier — §21 makes the
+    identifier a function of the game and the batting team — so the second wrote over the first, and
+    the counter said six because it was counting attempts rather than files.
+
+    One entry point for every append, so a caller cannot forget the check by taking a different route.
     """
-    written = set()
-    for finished in staging.glob("*.json"):
-        finished.replace(OUT / finished.name)
-        written.add(finished.name)
-    for stale in OUT.glob("*.json"):
-        if stale.name not in written:
-            stale.unlink()
-    staging.rmdir()
+    if item.game_id in seen:
+        return False
+    seen.add(item.game_id)
+    wanted.append(item)
+    return True
+
+
+def _choose(sample: list[Loaded], with_substitution: list[Loaded], with_footnote: list[Loaded]) -> list[Loaded]:
+    """One direction per game, with both required traits present.
+
+    Every append goes through `claim`, the two required traits included — one direction can carry a
+    substitution *and* a live footnote, and taking them first and deduplicating afterwards is how the
+    same game entered the batch twice.
+    """
+    wanted: list[Loaded] = []
+    seen: set[str] = set()
+    claim(wanted, seen, with_substitution[0])
+    if not claim(wanted, seen, with_footnote[0]):
+        following = next((item for item in with_footnote[1:] if item.game_id not in seen), None)
+        if following is None:
+            message = "only one game in the sample carries a live footnote and it is already in the batch"
+            raise SystemExit(message)
+        claim(wanted, seen, following)
+    for item in sorted(sample, key=lambda entry: entry.season):
+        if len(wanted) == len(TARGETS):
+            break
+        claim(wanted, seen, item)
+    if len(wanted) != len(TARGETS):
+        message = f"only {len(wanted)} distinct games in the sample, wanted {len(TARGETS)}"
+        raise SystemExit(message)
+    return wanted
+
+
+def _generation(names: list[str], payloads: list[bytes]) -> str:
+    """A name for the batch, derived from its contents.
+
+    Deterministic on purpose: §21 wants regenerating to produce the same thing rather than a new
+    thing, so an unchanged batch resolves to the same generation and republishing is a no-op. No clock
+    is involved, which also keeps the run reproducible.
+    """
+    digest = hashlib.sha256()
+    for name, payload in sorted(zip(names, payloads, strict=True)):
+        digest.update(name.encode())
+        digest.update(payload)
+    return digest.hexdigest()[:12]
+
+
+def _publish(staging: Path, expected: int) -> str:
+    """Swap the whole batch in with one atomic rename, or leave the published set untouched.
+
+    ⚠️ **Per-file renames cannot make a *batch* atomic, and the previous version claimed they could.**
+    They fix truncation — a reader sees the old file or the new one, never half of one — and they fix
+    the window where nothing is published. They do not fix a crash between the third file and the
+    fourth, which leaves three puzzles from one generation beside three from another. Names cannot
+    save it either: a puzzle's name is a function of its game, so a regenerated puzzle lands on top of
+    its predecessor rather than beside it.
+
+    So a generation is written to a directory of its own, which is immutable once complete, and the
+    **manifest naming the current generation is replaced last**. That one rename is the commit. A
+    reader follows the manifest and therefore sees a whole batch or the previous whole batch, and
+    files no manifest names are ignored until they are swept.
+
+    This is the contract `serve` will read against, and it is being set now because `serve` does not
+    exist yet and nothing has to be migrated.
+    """
+    staged = sorted(staging.glob("*.json"))
+    if len(staged) != expected:
+        message = f"{len(staged)} staged files, wanted {expected} — published set left as it was"
+        raise SystemExit(message)
+    if len({path.name for path in staged}) != expected:
+        message = "two staged puzzles share an identifier — published set left as it was"
+        raise SystemExit(message)
+
+    payloads = [path.read_bytes() for path in staged]
+    generation = _generation([path.name for path in staged], payloads)
+    home = OUT / generation
+    if home.exists():
+        # Same contents as a generation already on disk. §21's idempotence, arriving as a no-op.
+        for path in staged:
+            path.unlink()
+        staging.rmdir()
+    else:
+        staging.replace(home)
+
+    manifest = OUT / MANIFEST
+    pending = OUT / f"{MANIFEST}.pending"
+    pending.write_text(
+        json.dumps(
+            {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)},
+            indent=1,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    # The commit. Everything above this line can fail without changing what is published.
+    pending.replace(manifest)
+
+    for stale in OUT.iterdir():
+        if stale.is_dir() and stale.name != generation:
+            for leftover in stale.iterdir():
+                leftover.unlink()
+            stale.rmdir()
+    return generation
 
 
 def main() -> None:
@@ -169,21 +270,14 @@ def main() -> None:
         message = "the sample carries no substitution or no live footnote; widen it"
         raise SystemExit(message)
 
-    wanted = [with_substitution[0], with_footnote[0]]
-    seen = {item.game_id for item in wanted}
-    for item in sorted(sample, key=lambda entry: entry.season):
-        if len(wanted) == len(TARGETS):
-            break
-        if item.game_id not in seen:
-            seen.add(item.game_id)
-            wanted.append(item)
+    wanted = _choose(sample, with_substitution, with_footnote)
 
     # ⚠️ The last known-good set is not deleted first. A loader error, an exhausted candidate pool,
     # an interrupted process or a full disk used to leave `serve/data/puzzles` empty or half-written,
     # and the pattern would be unsafe to reuse for a real inventory pipeline. Everything is built and
     # certified in a sibling directory and the published set is replaced only once the batch is whole.
     OUT.mkdir(parents=True, exist_ok=True)
-    staging = OUT.parent / f"{OUT.name}.staging"
+    staging = OUT / ".staging"
     if staging.exists():
         for leftover in staging.iterdir():
             leftover.unlink()
@@ -191,7 +285,7 @@ def main() -> None:
     staging.mkdir()
 
     written = 0
-    for loaded, target in zip(wanted, TARGETS, strict=False):
+    for loaded, target in zip(wanted, TARGETS, strict=True):
         package = build(loaded, target, secret)
         if package is None:
             print(f"  discarded {loaded.game_id} at chain {target}")
@@ -226,8 +320,11 @@ def main() -> None:
         message = f"wrote {written} puzzles, wanted {len(TARGETS)} — published set left as it was"
         raise SystemExit(message)
 
-    _publish(staging)
-    print(f"{written} puzzles in {OUT}, each read back and verified with the real secret")
+    # ⚠️ `written` counts successful builds and `_publish` counts files. They used to be the same
+    # number by assumption, and the assumption is exactly what a collision breaks: two builds, one
+    # file, and a counter that says six.
+    generation = _publish(staging, len(TARGETS))
+    print(f"{written} puzzles in {OUT / generation}, committed by replacing {MANIFEST}")
 
 
 if __name__ == "__main__":

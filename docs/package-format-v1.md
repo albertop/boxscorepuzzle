@@ -110,3 +110,26 @@ A package records how it was selected, and the field that matters is `difficulty
 
 **No difficulty label is defined.** Nothing is easy, medium or hard until the fifty-board hand-solve
 returns; a band expressed in stalls will be added here when it exists.
+
+## How a batch is published
+
+A generation is a directory of packages, immutable once written, named by a digest of its own
+contents. `manifest.json` at the root names the generation that is current:
+
+```
+serve/data/puzzles/
+  manifest.json          {"schema": 1, "generation": "<12 hex>", "puzzles": ["<id>", ...]}
+  <generation>/<puzzle_id>.json
+```
+
+**A reader follows the manifest and reads only the puzzles it names.** Files under a generation the
+manifest does not name are leftovers being swept, not inventory.
+
+⚠️ **Replacing the manifest is the commit, and it is the only atomic step there is.** Per-file atomic
+renames stop a reader seeing half a file; they cannot stop it seeing three puzzles from one generation
+beside three from another, and a puzzle's name cannot save it either — the name is a function of the
+game (§21), so a regenerated puzzle lands on top of its predecessor rather than beside it. Everything
+before the manifest rename can fail without changing what is published.
+
+Because the generation is derived from the contents, regenerating an unchanged batch resolves to the
+same generation and republishing is a no-op. That is §21's idempotence arriving at the file layer.

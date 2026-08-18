@@ -442,8 +442,8 @@ declared, and one is aimed at a measurement that was running while the review wa
 | P1-02 three erasable definitions | real | **closed** | one stale, one duplicating every footnote cell |
 | P2-01 global identity still partial | real | **closed** | two docstrings in one call chain state the opposite rule |
 | P1-01 evidence is not bound to a game | real | **closed** | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
-| P2-02 duplicate staged puzzle | real | *next* | `seen` is built after both entries are appended |
-| P2-03 envelope accepts malformed values | real | open | `schema: true` passes, because `True == 1` |
+| P2-02 duplicate staged puzzle | real | **closed** | `seen` is built after both entries are appended |
+| P2-03 envelope accepts malformed values | real | *next* | `schema: true` passes, because `True == 1` |
 | P2-04 HMAC lets the server forge | real | open | symmetric key, asymmetric architecture |
 | P2-05 the RBI/HR run is not paired | real | open | one seed, and zero density counts the grid only |
 
@@ -470,6 +470,26 @@ measurements to look at is the failure it exists to catch.
 global relation. That is why the tests assert the mechanism rather than the outcome: hiding
 `left_on_base` is a case non-global bounding cannot reach and global bounding can, and the other three
 cells of the relation are covered by column sums. The null is a null rather than a hole.
+
+### v03-P2-02 — closed
+
+**The duplicate.** Every append goes through `claim()`, which refuses a game already in the batch, and
+the two required traits go through it too — a direction can carry a substitution *and* a live footnote,
+and taking them first and deduplicating afterwards is exactly how one game entered twice. `_publish`
+counts staged *files* against the expected number rather than trusting the build counter, because two
+builds and one file is what a collision looks like.
+
+**The batch atomicity, which per-file renames could not give.** A generation is a directory named by a
+digest of its own contents, immutable once written, and `manifest.json` naming the current generation
+is replaced last. That one rename is the commit; everything before it can fail without changing what is
+published. A reader follows the manifest and sees a whole batch or the previous whole batch.
+
+Names could not have solved it: a puzzle's name is a function of its game (§21), so a regenerated
+puzzle lands on top of its predecessor rather than beside it.
+
+And the layout is now a written contract in `docs/package-format-v1.md`, set before `serve` exists so
+nothing has to be migrated. Verified end to end: six packages published, and a second run resolves to
+the same generation and republishes as a no-op.
 
 ### v03-P1-01 — closed
 
