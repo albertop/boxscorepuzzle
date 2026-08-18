@@ -69,10 +69,21 @@ def stalls_in(solution: Solution) -> int:
 
 
 def stall_detail(solution: Solution) -> tuple[tuple[str, ...], tuple[float, ...]]:
-    """What resolved each stall, and how far into the solve it happened.
+    """What broke each stall, and how far into the solve it happened.
 
-    The family that restarted propagation is the interesting half: if every stall is broken by the
-    same identity, the board has one hard move repeated rather than several different ones.
+    ⚠️ **Attributed to the first propagation step *after* the stall, not to the bounding step itself.**
+    The earlier version recorded the bounding deduction's identity, and a bounding deduction has none
+    — it narrows against a fixed point over the whole board rather than through one relation — so
+    every stall came back as "bounding only" on 100% of boards. A figure that reaches 100% is almost
+    never a figure; it is an instrument that does not distinguish.
+
+    What a player experiences is: subtraction runs out, they bound something, and then **a particular
+    identity opens up again**. That identity is the answer to "what did I have to see", and it is what
+    this records.
+
+    If every stall breaks the same way, that is a variety problem — by the tenth day the player knows
+    what to reach for. If they vary, there is a character dimension nobody knew existed, sitting
+    exactly where the thinking happens.
     """
     resolved: list[str] = []
     positions: list[float] = []
@@ -82,9 +93,20 @@ def stall_detail(solution: Solution) -> tuple[tuple[str, ...], tuple[float, ...]
         bounding = step.technique is Technique.BOUNDING
         if bounding and not previous:
             positions.append(index / steps)
-            resolved.append(FAMILY_OF[step.from_identity].value if step.from_identity else "bounding only")
+            resolved.append(_restarted_by(solution, index))
         previous = bounding
     return tuple(resolved), tuple(positions)
+
+
+def _restarted_by(solution: Solution, stall_at: int) -> str:
+    """The family of the first propagation deduction after the stall, or what happened instead."""
+    for step in solution.deductions[stall_at:]:
+        if step.technique is not Technique.BOUNDING and step.from_identity is not None:
+            return FAMILY_OF[step.from_identity].value
+    # A stall the board never recovers from by propagation: it bounded its way to the end. Named
+    # rather than folded into the families, because it is a different thing and hiding it inside a
+    # distribution is how the last version of this report said nothing.
+    return "bounded to the end"
 
 
 def erasable_with_footnotes(loaded: Loaded) -> list[str]:

@@ -190,7 +190,7 @@ hard until it comes back.
 | P1-05 manufactured anchor | closed — three fields, 0.001% of the pool |
 | P1-06 no publication gate | closed — `certify_for_publication`, writers wired |
 | P2-01 global identity admission | closed — fixed, and **nothing moved** |
-| P2-02 stall attribution | open |
+| P2-02 stall attribution | closed — and it found a character dimension |
 | P2-03 documents disagree with code | open |
 | P2-04 non-atomic regeneration | open |
 
@@ -372,13 +372,42 @@ fewer family — noise at this sample size and in the direction the fix predicts
 **The whole body of measurement survives**, and that is worth stating rather than leaving implicit:
 the defect was real and its effect was not.
 
+### v02-P2-02 — the stall report could not name what broke a stall
+
+It recorded the *bounding* deduction's identity, and a bounding deduction has none: it narrows against
+a fixed point over the whole board rather than through one relation. So every stall came back as
+"bounding only" on 100% of boards. **A figure that reaches 100% is almost never a figure** — it is an
+instrument that does not distinguish.
+
+**What I did.** Attribute the restart to the **first propagation step after** the stall. That matches
+what a player experiences: subtraction runs out, they bound something, and then a particular identity
+opens up again. A stall the board never recovers from by propagation is named `bounded to the end`
+rather than folded into the families, because hiding a different thing inside a distribution is how
+the previous version managed to say nothing.
+
+**And it answers the question the review said was unsupported:**
+
+| Stalls | What restarts them |
+|---|---|
+| 5 | column_sum 60%, row_identity 40% |
+| 8 | row_identity 54%, column_sum 46% |
+| 12 | row_identity 63%, column_sum 37% |
+
+**Stalls do not all break the same way**, which was the outcome worth having: had one family broken
+90% of them, the player would learn what to reach for by the tenth day. And the mix **shifts with
+difficulty** — column sums dominate the easy end, the row identity the hard end. That is a character
+dimension nobody knew existed, sitting exactly where the thinking happens rather than in the family
+set the board merely *contains*.
+
+*Neither cross-team nor the global identity ever restarts a stall in this sample. Worth knowing before
+anything is built on the distribution: the two families that most distinguish boards are not the ones
+that break the hard moments.*
+
 ## Open, in the agreed order
 
-1. **v02-P2-02** — attribute a stall's restart to the first *subsequent* propagation deduction's family,
-   since the bounding step itself carries no identity.
-2. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
+1. **v02-P2-03** — reconcile `CLAUDE.md` and `docs/package-format-v1.md` with the executable rules. The
    visible drift is the two-pitcher cap and the footnote line.
-3. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
+2. **v02-P2-04** — generate reference packages into a temporary directory, certify there, and replace
    the published set only on success. Never delete the last known-good set first.
 
 ## Void rather than confirming anything
