@@ -79,6 +79,27 @@ def board() -> Board:
     return whole_board()
 
 
+def swapped(board: Board, **changes: object) -> Board:
+    """A board with some parts replaced, so a test can state only what it breaks."""
+    fields: dict[str, object] = {
+        "batting": board.batting,
+        "batting_totals": board.batting_totals,
+        "footnotes": board.footnotes,
+        "footnote_totals": board.footnote_totals,
+        "left_on_base": board.left_on_base,
+        "pitching": board.pitching,
+        "pitching_totals": board.pitching_totals,
+        "line_score": board.line_score,
+    }
+    fields.update(changes)
+    return Board(**fields)  # type: ignore[arg-type]
+
+
+@pytest.fixture
+def replace() -> Callable[..., Board]:
+    return swapped
+
+
 @pytest.fixture
 def blank() -> Callable[[Board, dict[str, list[tuple[int, int]]]], Board]:
     """`erased` handed over as a fixture rather than imported.
