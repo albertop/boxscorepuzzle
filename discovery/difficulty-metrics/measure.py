@@ -85,6 +85,13 @@ class Loaded:
     offense_is_home: bool
     names: tuple[tuple[str, str], ...]
     pitcher_labels: tuple[str, ...] = ()
+    offense_team: str = ""
+    """The club that batted. ⚠️ **Not** `game_id[:3]`, which is the *home* club and coincides only
+    when the home side is the one batting. Taken from the same query as the roster, so the code and
+    the names cannot disagree."""
+
+    defense_team: str = ""
+    pitcher_names: tuple[tuple[str, str], ...] = ()
 
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
@@ -269,8 +276,9 @@ def load(
     # pitcher in, which is the real order. The starter has no substitution row, and P_GS puts him
     # first regardless.
     pitch_query = """
-    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS
+    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, p.name_first, p.name_last
     FROM dbo.retroDailyReg d
+    LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     LEFT JOIN (SELECT GAME_ID, SUB_ID, MIN(EVENT_ID) AS entered
                FROM dbo.retroSubstitutionsReg WHERE SUB_FLD_CD = 1
                GROUP BY GAME_ID, SUB_ID) s
@@ -350,6 +358,9 @@ def load(
                     bool(is_home),
                     tuple((r[12] or "", r[13] or "") for r in batting_rows),
                     _pitcher_labels([p[6] for p in pitching_rows]),
+                    offense,
+                    defense,
+                    tuple((p[7] or "", p[8] or "") for p in pitching_rows),
                 )
             )
     return loaded

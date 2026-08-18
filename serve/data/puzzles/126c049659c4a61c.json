@@ -242,16 +242,16 @@
    "George Baumgardner"
   ],
   "card": "",
-  "defense_team": "OPP",
+  "defense_team": "BOS",
   "offense_team": "SLA",
   "pitcher_names": [
-   "Pitcher 1",
-   "Pitcher 2"
+   "Fred Anderson",
+   "Charley Hall"
   ],
   "played_on": "1913-08-17"
  },
  "schema": 1,
- "signature": "d68e0482fa12b54f45cbfa9098b753d163d365ead76c393d49680b4b9df5f0a0",
+ "signature": "e3ef456119a0e8745f6d721f5892c9bb282da9946d474b3a8f6fe4717489150a",
  "solution": {
   "batting": [
    [

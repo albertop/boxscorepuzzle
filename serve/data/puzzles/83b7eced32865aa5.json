@@ -221,7 +221,7 @@
    7
   ]
  },
- "puzzle_id": "d90c2139fb350203",
+ "puzzle_id": "83b7eced32865aa5",
  "reveal": {
   "batter_names": [
    "Rabbit Maranville",
@@ -235,15 +235,15 @@
    "Otto Hess"
   ],
   "card": "",
-  "defense_team": "OPP",
-  "offense_team": "SLN",
+  "defense_team": "SLN",
+  "offense_team": "BSN",
   "pitcher_names": [
-   "Pitcher 1"
+   "Bill Doak"
   ],
   "played_on": "1913-08-01"
  },
  "schema": 1,
- "signature": "c2053618be51e207f755afbefe66c79761459b5345dcbe1b3cff89be8da160bb",
+ "signature": "0992847413ca777f6ce8ae85115e54cb45c30166e89a7e014536553baa9a1f61",
  "solution": {
   "batting": [
    [

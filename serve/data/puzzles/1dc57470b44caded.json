@@ -258,16 +258,16 @@
    "Johnny Stuart"
   ],
   "card": "",
-  "defense_team": "OPP",
+  "defense_team": "CHN",
   "offense_team": "SLN",
   "pitcher_names": [
-   "Pitcher 1",
-   "Pitcher 2"
+   "Tiny Osborne",
+   "Nick Dumovich"
   ],
   "played_on": "1923-10-07"
  },
  "schema": 1,
- "signature": "4c26b307f1397cc437d77d5f5fdb6cc37067662a0b8edba08b343606c6a93af7",
+ "signature": "624a8cb60bfae8ffebee1d938cf90867cde21052d232fde92e1a149b04b0a693",
  "solution": {
   "batting": [
    [

@@ -30,6 +30,7 @@ from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign  # noqa: E402
+from boxscore_verify.plausibility import reveal_faults  # noqa: E402
 from boxscore_verify.verify import verify  # noqa: E402
 
 TARGETS = (5, 7, 9, 9, 11, 11)
@@ -49,11 +50,15 @@ repository. These six files are reference data for the client, not inventory.
 
 def reveal_for(loaded: Loaded) -> Reveal:
     """The answer to the mystery, which section 23 requires to be in the file."""
+    # ⚠️ The teams come from the same query as the roster. `game_id[:3]` is the *home* club, and
+    # labelling it as the offence is right only when the home side batted — which is how four of the
+    # first six files claimed a lineup for a team it never played for. The names and the code have to
+    # come from one source or nothing checks that they agree.
     return Reveal(
         batter_names=tuple(f"{first} {last}".strip() or "Unknown" for first, last in loaded.names),
-        pitcher_names=tuple(f"Pitcher {index + 1}" for index in range(len(loaded.direction.pitching))),
-        offense_team=loaded.game_id[:3],
-        defense_team="OPP",
+        pitcher_names=tuple(f"{first} {last}".strip() or "Unknown" for first, last in loaded.pitcher_names),
+        offense_team=loaded.offense_team,
+        defense_team=loaded.defense_team,
         played_on=f"{loaded.game_id[3:7]}-{loaded.game_id[7:9]}-{loaded.game_id[9:11]}",
         card="",
     )
@@ -65,7 +70,7 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
         return None
     package = sign(
         Package(
-            puzzle_id=puzzle_id(loaded.game_id, loaded.game_id[:3]),
+            puzzle_id=puzzle_id(loaded.game_id, loaded.offense_team),
             puzzle=to_board(loaded, produced.erased),
             solution=to_board(loaded, None),
             labels=loaded.labels,
@@ -130,6 +135,12 @@ def main() -> None:
 
         # The round trip. Read back from the file, not from the object that wrote it.
         restored = read(path)
+        # The reveal is the payoff and no verifier layer can see it — a wrong team breaks no
+        # equation. Checked here, on the file, for the same reason the round trip is.
+        spoiled = reveal_faults(restored)
+        if spoiled:
+            message = f"{path.name} has a broken reveal: " + "; ".join(f.what for f in spoiled)
+            raise SystemExit(message)
         verdict = verify(restored, secret=secret)
         if not verdict.accepted:
             message = f"{path.name} passed in memory and failed from disk: {verdict.rejection}"

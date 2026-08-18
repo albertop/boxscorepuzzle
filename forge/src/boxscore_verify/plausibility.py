@@ -16,7 +16,7 @@ loosened until it says nothing.
 
 from dataclasses import dataclass
 
-from boxscore_package.format import BATTING_COLUMNS, PITCHING_COLUMNS, Board
+from boxscore_package.format import BATTING_COLUMNS, PITCHING_COLUMNS, Board, Package
 
 OUTS_PER_INNING = 3
 MIN_BATTERS = 9
@@ -114,4 +114,56 @@ def _volume_faults(board: Board) -> list[Implausible]:
                 f"{outs} outs across {innings} innings on the line score",
             )
         )
+    return found
+
+
+PLACEHOLDERS = frozenset({"OPP", "TBD", "???", ""})
+"""Values that mean "not filled in yet" and must never reach a player."""
+
+
+def reveal_faults(package: Package) -> list[Implausible]:
+    """The reveal is the payoff and nothing was validating it.
+
+    ⚠️ Found by reading six generated files and recognising a lineup: four of them named the wrong
+    club, because the team code was taken from the game identifier — which holds the *home* team —
+    while the names came from the roster. It coincides whenever the home side batted, and lies
+    otherwise. **No verifier layer could see it**: a wrong team name breaks no equation.
+
+    These are the cheap checks a package can make about itself. The expensive one — does this roster
+    actually belong to this club — needs the person register and lives in the loader sweep.
+    """
+    found: list[Implausible] = []
+    reveal = package.reveal
+    if reveal is None:
+        return [Implausible("no reveal", "§7 shows teams, date and context at the end; there is none")]
+
+    if len(reveal.batter_names) != len(package.puzzle.batting):
+        found.append(
+            Implausible(
+                "the reveal does not name every batter",
+                f"{len(reveal.batter_names)} names against {len(package.puzzle.batting)} rows",
+            )
+        )
+    if len(reveal.pitcher_names) != len(package.puzzle.pitching):
+        # §7's progressive reveal names a pitching row on completion exactly as it names a batting
+        # row. A short list means the pitching section reveals nothing.
+        found.append(
+            Implausible(
+                "the reveal does not name every pitcher",
+                f"{len(reveal.pitcher_names)} names against {len(package.puzzle.pitching)} rows",
+            )
+        )
+    for field, value in (
+        ("offense_team", reveal.offense_team),
+        ("defense_team", reveal.defense_team),
+    ):
+        if value.strip().upper() in PLACEHOLDERS:
+            found.append(Implausible(f"{field} is a placeholder", f"{value!r} would reach a player"))
+    if reveal.offense_team and reveal.offense_team == reveal.defense_team:
+        found.append(Implausible("both teams are the same club", reveal.offense_team))
+    placeholder_names = [name for name in (*reveal.batter_names, *reveal.pitcher_names) if not name.strip()]
+    if placeholder_names:
+        found.append(Implausible("a row would reveal an empty name", f"{len(placeholder_names)} of them"))
+    if not reveal.played_on.strip():
+        found.append(Implausible("no date on the reveal", "§7 shows the date at the end"))
     return found

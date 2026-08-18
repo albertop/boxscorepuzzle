@@ -42,10 +42,33 @@ really does, so the two cannot drift.
 `line_score` holds `offense_by_inning` and `defense_by_inning` (lists of integers) plus
 `offense_runs`, `offense_hits`, `offense_errors` and the three defence counterparts.
 
+**⚠️ The two inning arrays may be different lengths, and the shorter one means "did not bat".** The
+home side does not bat in the ninth when it is already ahead, so its array is one entry short. The
+client renders **`x`** in that cell, which is what a printed boxscore does.
+
+It can only happen on the **home** side, and only in the final inning. The array is never padded, and
+a reader must not assume the two lengths match — the number of innings is
+`max(len(offense_by_inning), len(defense_by_inning))`.
+
+*Written down because it was true of two of the first six files and nothing said so. An inferred
+contract is the failure this project has paid for repeatedly.*
+
 ### reveal
 
-`batter_names` and `pitcher_names` (lists of strings, one per row), `offense_team`, `defense_team`,
-`played_on`, and `card`.
+| Field | Type | Meaning |
+|---|---|---|
+| `batter_names` | list of strings | One per batting row, in row order. §7 reveals a name when its row is completed, so a short list means rows that reveal nothing. |
+| `pitcher_names` | list of strings | One per pitching row. **Not placeholders** — a pitching row reveals its pitcher exactly as a batting row reveals its batter. |
+| `offense_team` | string | The club that batted. **⚠️ Not derivable from the puzzle id, and not the home club.** |
+| `defense_team` | string | The opposing club. Both halves of "teams" or the reveal is incomplete. |
+| `played_on` | string | `YYYY-MM-DD`. |
+| `card` | string | §29's generated reveal card. **Outstanding** — empty in the reference files, template work over data already present. |
+
+**⚠️ `offense_team` was wrong in four of the first six files**, because it was taken from the game
+identifier, which holds the *home* club. It coincides whenever the home side batted and lies
+otherwise, and no verifier layer can see it: a wrong team name breaks no equation. It is now taken
+from the same query as the roster, and `boxscore_verify.plausibility.reveal_faults` checks the block
+before a file is written.
 
 ## Two decisions worth stating, because both reverse an earlier one
 

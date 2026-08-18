@@ -221,7 +221,7 @@
    5
   ]
  },
- "puzzle_id": "b1d20cc26bf851f1",
+ "puzzle_id": "e949d7cc70d2eb2b",
  "reveal": {
   "batter_names": [
    "Dode Paskert",
@@ -235,15 +235,15 @@
    "Eppa Rixey"
   ],
   "card": "",
-  "defense_team": "OPP",
-  "offense_team": "SLN",
+  "defense_team": "SLN",
+  "offense_team": "PHI",
   "pitcher_names": [
-   "Pitcher 1"
+   "Bob Harmon"
   ],
   "played_on": "1913-08-06"
  },
  "schema": 1,
- "signature": "8d9a6316fdb6777de72e3075571d52138e75c72bb938d08a8e21cacf30198636",
+ "signature": "0d1d748427d413c592c8a5b320323ce76ab63c1e0c5430ef015fc5457ad38774",
  "solution": {
   "batting": [
    [
