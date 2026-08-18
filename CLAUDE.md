@@ -194,6 +194,14 @@ trusting review, and keep discovery inside the lint scope, because that is where
 that exists but is never called needs a test asserting the publication boundary invokes every
 implemented check, so adding one without wiring it in fails.
 
+**A sample that evaluates the board is rendered with the board's renderer.** If a variant is needed to
+compare two forms, it is a **parameter of the real renderer**, never a copy of it. A comparison page
+written with its own `grid()` twice showed something other than what it was evaluating — once carrying
+suffixes while its own text said there were none, once missing the totals row that anchors every
+column — and both times the judgement would have been made on a board that does not exist. This is the
+three-definitions defect and the two-copies-of-a-rule defect wearing different clothes, and the rule is
+stronger than "check the output before sending it" because it does not depend on remembering.
+
 **A mechanism kept past the problem it solved becomes a constraint on everything added after it.** The
 row-label suffix was introduced for one reason: footnote references had to name a unique row. A second
 grouping — indentation by lineup slot — arrived later, and the two partition the rows differently, so
