@@ -238,7 +238,17 @@ def load(
            l.VisLineScore, l.HomeLineScore,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_ERR_CT ELSE g.AWAY_ERR_CT END AS offense_errors,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.AWAY_ERR_CT ELSE g.HOME_ERR_CT END AS defense_errors,
-           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.AWAY_HITS_CT ELSE g.HOME_HITS_CT END AS defense_hits
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.AWAY_HITS_CT ELSE g.HOME_HITS_CT END AS defense_hits,
+           -- ⚠️ Loaded rather than summed. The line score's offensive hit total used to be
+           -- `sum(line.hits for line in batting)` — an anchor manufactured from the very rows it is
+           -- meant to verify, so an omitted batter, a duplicate, or a join fan-out satisfied every
+           -- hit identity while the board no longer matched the historical boxscore. This comes from
+           -- the game table, which is a different file from the daily one the rows come from.
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_HITS_CT ELSE g.AWAY_HITS_CT END AS offense_hits,
+           -- Same rule, found by the test written for the hits: the runs totals were summed from the
+           -- inning array the verifier then checks them against, so that identity could not fail.
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeRunsScore ELSE l.VisRunsScored END AS offense_runs,
+           CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.VisRunsScored ELSE l.HomeRunsScore END AS defense_runs
     FROM dbo.retroGamesReg g
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
@@ -303,6 +313,7 @@ def load(
     """
 
     loaded: list[Loaded] = []
+    rejected: Counter[str] = Counter()
     with pyodbc.connect(CONNECTION) as connection:
         cursor = connection.cursor()
         # Stratified by decade on purpose. The pool is not spread evenly across eras, and a sample
@@ -322,6 +333,9 @@ def load(
             offense_errors,
             defense_errors,
             defense_hits,
+            offense_hits,
+            offense_runs,
+            defense_runs,
         ) in candidates:
             batting_rows = connection.cursor().execute(rows_query, game_id, offense).fetchall()
             pitching_rows = connection.cursor().execute(pitch_query, game_id, defense).fetchall()
@@ -356,14 +370,26 @@ def load(
                 line_score=LineScore(
                     offense_by_inning=offense_innings,
                     defense_by_inning=defense_innings,
-                    offense_runs=sum(offense_innings),
-                    offense_hits=sum(line.hits for line in batting),
+                    offense_runs=offense_runs,
+                    offense_hits=offense_hits,
                     offense_errors=offense_errors,
-                    defense_runs=sum(defense_innings),
+                    defense_runs=defense_runs,
                     defense_hits=defense_hits,
                     defense_errors=defense_errors,
                 ),
             )
+            # The anchor and the rows have to agree, and this is the one place that can tell.
+            # A direction where they do not is internally consistent and does not correspond to the
+            # game, which is precisely what an independent source exists to catch.
+            if offense_hits is None or offense_hits != sum(line.hits for line in batting):
+                rejected["offensive hits disagree with the game table"] += 1
+                continue
+            if offense_runs is None or offense_runs != sum(offense_innings):
+                rejected["offensive runs disagree with the line score"] += 1
+                continue
+            if defense_runs is None or defense_runs != sum(defense_innings):
+                rejected["defensive runs disagree with the line score"] += 1
+                continue
             loaded.append(
                 Loaded(
                     game_id,
@@ -378,6 +404,8 @@ def load(
                     tuple((p[7] or "", p[8] or "") for p in pitching_rows),
                 )
             )
+    if rejected:
+        print(f"loader rejected {sum(rejected.values())} directions: {dict(rejected)}")
     return loaded
 
 

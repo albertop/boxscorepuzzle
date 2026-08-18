@@ -237,10 +237,27 @@ the pool does not shrink — which is the useful answer rather than a disappoint
 was not admitting unknown-source games *yet*; it was one incomplete import away from doing so, and the
 completeness it depended on was never stated or checked. **P1-06 is unblocked from this side.**
 
+### v02-P1-05 — the anchor was manufactured from what it anchors, in three places
+
+`offense_hits` was `sum(line.hits for line in batting)`, and the verifier then checked that the batting
+hits equalled the line score's hits — both numbers from the same rows. An omitted batter, a duplicate
+or a join fan-out satisfied every hit identity while the board stopped corresponding to the historical
+boxscore.
+
+**The per-field test found two more.** `offense_runs` and `defense_runs` were summed from the inning
+array the verifier compares them against, so that identity could not fail either. Writing the test the
+way the review asked — per field rather than for hits — is what turned one known defect into three.
+
+**What I did.** All three come from the game tables now: hits from `retroGamesReg`, runs from
+`retroGameLogs`, both different files from the daily rows. And the loader **rejects** a direction where
+they disagree rather than only preferring the loaded value, because loading an anchor and not comparing
+it looks identical from the outside.
+
+**Cost: 2 directions in 397,142 — 0.001%**, both in the 2020s. Scattered rather than clustered, so it
+is data noise rather than a loader problem, and the pool does not move.
+
 ## Open, in the agreed order
 
-3. **v02-P1-05** — `offense_hits` is summed from the batting rows it is meant to anchor. Load it from
-   an independent source, with a test **per line-score field** so a future one cannot be added silently.
 4. **v02-P1-06** — build `certify_for_publication()`: package verification, board plausibility, reveal
    plausibility, provenance completeness, independent-source correspondence. Every writer calls it.
    With a test asserting it invokes every implemented check, so adding one without wiring it in fails.
