@@ -46,10 +46,10 @@ from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 
-TARGETS = (5, 7, 9, 11)
+TARGETS = (6, 8, 10, 11, 13, 15)
 GATE = 0.25
 SEEDS = (1, 2)
-SAMPLE_PER_DECADE = 6
+SAMPLE_PER_DECADE = 5
 
 
 @dataclass(frozen=True)
@@ -127,7 +127,12 @@ def prune(shape: object, values: dict[str, int], erased: set[str], target: int) 
                 continue
             attempt = solve(shape, {name: value for name, value in values.items() if name not in trial})  # type: ignore[arg-type]
             covers = frozenset(family.value for family in attempt.families_used) >= required
-            if attempt.is_complete and attempt.chain_length >= target and covers:
+            # At least one blank in the pitching section, so the section is part of the puzzle
+            # rather than decoration. Family coverage does not give this: cross-team can be
+            # exercised entirely through a batting-side cell while the pitching half is complete,
+            # and a quarter of easy boards ended that way.
+            keeps_pitching = any(c.startswith(("pitching[", "pitching_totals")) for c in trial)
+            if attempt.is_complete and attempt.chain_length >= target and covers and keeps_pitching:
                 kept = trial
                 removed = True
                 break
@@ -233,6 +238,34 @@ def report_pruning(results: list[Result]) -> None:
             f"{empty:>11}"
         )
     print("  none left counts boards whose pitching section became decoration.")
+    print("")
+    print("=== IS THE FORCED PITCHING BLANK ITSELF FILLER ===")
+    print("  A pitching cell resolved against given totals is independent, so the constraint could")
+    print("  reintroduce what pruning removes. Pruning only hands blanks back, and the retained one")
+    print("  comes from a set that already reached the target - confirmed rather than assumed:")
+    for target in TARGETS:
+        group = [r for r in results if r.target == target and r.pruned_pitching_blanks]
+        if not group:
+            continue
+        share = statistics.fmean([r.pruned_independent / max(r.pruned_erased, 1) for r in group])
+        print(f"    chain {target:>2}: {len(group)} boards keep a pitching blank, independent share {share:.0%}")
+    print("")
+    print("=== FAMILY DISTRIBUTION ON PRUNED BOARDS ===")
+    print("  The ceiling was lowered to 11 on pre-pruning saturation. A pruned board is a different")
+    print("  object, so the question is open again.")
+    heads = f"{'target':>8}{'boards':>8}{'all four':>10}{'three':>8}{'two':>7}{'blanks':>8}"
+    print(heads)
+    for target in TARGETS:
+        group = [r for r in results if r.target == target]
+        if not group:
+            continue
+        four = sum(1 for r in group if len(r.pruned_families) == 4) / len(group)
+        three = sum(1 for r in group if len(r.pruned_families) == 3) / len(group)
+        two = sum(1 for r in group if len(r.pruned_families) <= 2) / len(group)
+        print(
+            f"{target:>8}{len(group):>8}{four:>9.0%}{three:>8.0%}{two:>7.0%}"
+            f"{statistics.median([r.pruned_erased for r in group]):>8.0f}"
+        )
 
 
 def render_comparison(sample: list[Loaded]) -> None:
@@ -250,12 +283,12 @@ def render_comparison(sample: list[Loaded]) -> None:
             if not solution.is_complete:
                 continue
             erased = trial
-            if solution.chain_length >= 5:
+            if solution.chain_length >= 6:
                 loose = set(erased)
                 break
         if loose is None:
             continue
-        kept = prune(shape, values, set(loose), 5)
+        kept = prune(shape, values, set(loose), 6)
         boards.append(render(loaded, SimpleNamespace(erased=frozenset(loose)), f"as erased today — {len(loose)} blanks"))
         boards.append(render(loaded, SimpleNamespace(erased=frozenset(kept)), f"PRUNED - {len(kept)} blanks, same chain and families"))
 
@@ -263,7 +296,7 @@ def render_comparison(sample: list[Loaded]) -> None:
     out.write_text(
         page(
             boards,
-            title="Pruned against as-erased, chain 5",
+            title="Pruned against as-erased, chain 6",
             intro="Each pair is one board twice at the same chain length: as the erasure produces it "
             "today, then with every blank the chain did not need handed back as given. The question "
             "is whether the pruned half reads as dense or merely as sparse.",
