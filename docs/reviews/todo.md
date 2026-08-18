@@ -673,8 +673,16 @@ so the compressibility numbers and the +0.79 correlation with zero density are b
 rename left three uses of `erasable` as a list value in `compressibility.py` — it compiles cleanly and
 dies at runtime on `zip` over a function. Same shape as the `sed` that renamed a dataclass field.
 
-**Still owed:** regenerating everything measured on the old trajectory — the stall ceiling, the 100%
-coverage with footnotes open, and compressibility. Queued behind the runs in flight.
+**The regeneration is done, and it is the good kind of null.** The stall model barely moved: 100% pool
+coverage at every target from 5 to 12 before and after, blanks within 0 to 2 cells, chain one or two
+lower, and the restart mix keeping its shape — column sums early, row identity taking over as the count
+rises. **The duplicated list wasted compute and did not distort the conclusions**, which was not
+knowable before it was corrected.
+
+**Compressibility moved, and the conclusion it supported got stronger.** Against zero density it is
+**+0.890** on the board the generator actually erases, where the demotion from ranking metric to
+viability constraint was decided on +0.79 from the grid-only definition. The measurement was wrong and
+the conclusion was right. Recorded in §5.
 
 ### v03-P1-02 — what it was: `erasable()` already includes the footnotes, and one instrument adds them again
 
@@ -732,6 +740,46 @@ The five verdicts that hang off it — the ceiling at 10, the pitcher cap at 4, 
 two composition decisions — are therefore restated rather than assumed. `discovery/global-identity-phase`
 runs the same boards before and after and reports **how many individual boards changed on each field**,
 not only the aggregates. A null that survives that is a null; the earlier one was not tested for it.
+
+## What today's session found outside the reviews
+
+Four defects that no review named, all found by rendering a board and reading it, and one pattern that
+covers three of them.
+
+### The batting rows did not correspond to a boxscore — four corrections, now one change
+
+1. **The label named the wrong position.** A `CASE` over the `F_*_G` flags resolved by fixed priority,
+   so a man who started in centre and moved to third was named for where he ended: a board with **two
+   `3B` and no starting `CF`**, impossible for a starting nine and invisible to every §22 layer. The
+   rule is **the position of entry** — `SUB_FLD_CD` for substitutes, the starting lineup for starters —
+   one rule with two sources, and `retroGamesReg` carried the second all along. Verified end to end.
+2. **The suffix is gone.** It existed so footnotes could name a unique row, and the reference moved to
+   the lineup slot, which identifies a row without help. Two `CF` in different slots now read `CF`.
+3. **Footnotes reference the slot**, from `slot_references` — the same call the slot cell prints, so
+   `9b` in a cell cannot sit beside `9c` in a note.
+4. **Rows grouped by slot**, substitutes indented with a rule between slots, and a slot column carrying
+   the full reference. The PDF board is eight columns; the width came out of the label, not the board.
+
+### The pattern: three decisions were reading a formatting convention
+
+`indented()`, the pack's substitution filter and the reference writer all asked `"-" in label` when
+each was asking about the **lineup slot**. They agreed while the suffix existed and **failed together
+in the commit that removed it** — one silently, until the fifty-board pack aborted.
+
+**The `audit()` that asserts rather than prints is what turned that into a message** instead of fifty
+boards without a single substitution. That decision was made days earlier and paid for itself here.
+
+Guarded now: `tests/test_no_label_formatting_decisions.py` walks every source file and refuses a
+decision made on a label's formatting, with its own can-it-fire test using the exact broken expression.
+
+### And two runs that owed numbers
+
+- **The ceiling is not a ceiling.** Nine paths per board instead of one raised the maximum from 19 to
+  21, and **27% of boards found their best in the second half of the search** — so nine was not enough
+  either, and the figure remains a lower bound.
+- **Nothing distinguishes at the extreme of its range.** At maximum compression 100% of boards need all
+  four families; at a mid target the same measure opens into five combinations. Second metric to teach
+  it, which is what makes it general rather than a quirk of difficulty.
 
 ## Noticed in passing
 
