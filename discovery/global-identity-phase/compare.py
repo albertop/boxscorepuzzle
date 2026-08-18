@@ -136,11 +136,17 @@ def compare(before: Path, after: Path) -> None:
     # summary unchanged, and reporting "nothing moved" off that would be the same class of mistake
     # as a check that never fires.
     print("")
+    # ⚠️ Every field that was collected, derived from the rows rather than listed by hand. The first
+    # version of this named five fields and the rows carried seven: it printed "not one board changed
+    # on any field" while `hardest_search` had moved on four boards. A comparison that chooses which
+    # of its own measurements to look at is the failure it exists to catch.
+    fields = sorted(set(left[shared[0]]) - {"game_id", "seed"})
     changed = Counter()
     for key in shared:
-        for field in ("stalls", "chain", "blanks", "family_count", "used_global"):
+        for field in fields:
             if left[key][field] != right[key][field]:
                 changed[field] += 1
+    print(f"compared {len(fields)} fields: {', '.join(fields)}")
     if not changed:
         print("Board by board: not one board changed on any field. The null is a real null.")
     else:

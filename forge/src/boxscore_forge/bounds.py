@@ -41,20 +41,35 @@ class Bounds:
         return self.high is not None and self.low > self.high
 
 
-def narrow(shape: BoardShape, given: Mapping[str, int]) -> dict[str, Bounds]:
-    """Squeeze every cell as far as the equations and inequalities allow.
+def narrow(
+    shape: BoardShape,
+    given: Mapping[str, int],
+    *,
+    system: tuple[Equation, ...] | None = None,
+) -> dict[str, Bounds]:
+    """Squeeze every cell as far as the given relations and the inequalities allow.
 
-    The global identity is in here with everything else. It is not a technique held in reserve, just
-    one more equation; which puzzles actually needed it is recorded on the family axis instead of
-    being enforced by withholding it.
+    ⚠️ **`system` used to be implicit, and the docstring here contradicted the one in the caller.**
+    This said the global identity was in with everything else and justified it by saying that which
+    puzzles needed it is recorded on the family axis. `solver._bounding_moves` said the opposite three
+    lines above the call. The code followed this one.
+
+    The justification was the part that was wrong. It holds for propagation, where every deduction
+    names the identity it came from, and it does not hold here: a bounding deduction carries no
+    identity, so the global relation could corner a cell without ever appearing in `families_used`.
+    A phase that reports nothing cannot be audited by the report.
+
+    So the caller now says which relations the player is using, and `None` means every relation on the
+    board. That default is the mathematically complete answer rather than a permissive one — omitting
+    the argument narrows *harder*, never further than the board allows.
     """
     domains = {
         cell: Bounds(given[cell], given[cell]) if cell in given else Bounds(0, None) for cell in all_cells(shape)
     }
-    system = equations(shape)
+    relations = equations(shape) if system is None else system
     bounds_rules = inequalities(shape)
 
-    while _tighten_once(domains, system, bounds_rules):
+    while _tighten_once(domains, relations, bounds_rules):
         pass
     return domains
 

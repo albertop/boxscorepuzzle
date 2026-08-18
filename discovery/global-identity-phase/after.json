@@ -1,0 +1,3296 @@
+[
+ {
+  "blanks": 33,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA191308170",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA191308170",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA191308240",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA191308240",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 30,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN191308060",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.23333333333333334,
+  "stalls": 8,
+  "steps": 30,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN191308060",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.21212121212121213,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 22,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN191308010",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.22580645161290322,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN191308010",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.21875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306261",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 42,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306261",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.30952380952380953,
+  "stalls": 8,
+  "steps": 42,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306250",
+  "hardest_search": 0.9523809523809523,
+  "seed": 1,
+  "stall_position": 0.19444444444444445,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306250",
+  "hardest_search": 0.9473684210526316,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306190",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25806451612903225,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306190",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306140",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25806451612903225,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1191306140",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN192310072",
+  "hardest_search": 0.95,
+  "seed": 1,
+  "stall_position": 0.18181818181818182,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLN192310072",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA192310010",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "SLA192310010",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA192310030",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.1875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA192310030",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.17142857142857143,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305270",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305270",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305010",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305010",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2894736842105263,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305301",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305301",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2972972972972973,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192305302",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WS1192305302",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192304300",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1192304300",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.3055555555555556,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1193304250",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WS1193304250",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.3157894736842105,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1193304130",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WS1193304130",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1193304140",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1193304140",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WS1193307110",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WS1193307110",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308062",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.21875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308062",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.21621621621621623,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308160",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308160",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2972972972972973,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308242",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.21875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308242",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.21212121212121213,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308030",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.1935483870967742,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SLA193308030",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.2,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS194408041",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS194408041",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 35,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS194408131",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.2857142857142857,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS194408131",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.34210526315789475,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194408040",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BRO194408040",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.24324324324324326,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194408062",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BRO194408062",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS194408090",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS194408090",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194409241",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.1875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194409241",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.20588235294117646,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194409230",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BRO194409230",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.23684210526315788,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO194409290",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BRO194409290",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 22,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL195409250",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL195409250",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS195408291",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS195408291",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS195408121",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS195408121",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.21621621621621623,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO195408222",
+  "hardest_search": 0.95,
+  "seed": 1,
+  "stall_position": 0.17647058823529413,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO195408222",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.2631578947368421,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO195408160",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.3235294117647059,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BRO195408160",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL195409080",
+  "hardest_search": 0.95,
+  "seed": 1,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 30,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL195409080",
+  "hardest_search": 0.9473684210526316,
+  "seed": 2,
+  "stall_position": 0.21052631578947367,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS195408111",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS195408111",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.30303030303030304,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 22,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS195409260",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS195409260",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": true
+ },
+ {
+  "blanks": 31,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196408210",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25806451612903225,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196408210",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196409301",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196409301",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196408250",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS196408250",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.32432432432432434,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": true
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196409180",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196409180",
+  "hardest_search": 0.95,
+  "seed": 2,
+  "stall_position": 0.19444444444444445,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196408282",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BAL196408282",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.3157894736842105,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196408120",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL196408120",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196409160",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196409160",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2894736842105263,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196409150",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS196409150",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL197408180",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "ATL197408180",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.21621621621621623,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": true
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL197409090",
+  "hardest_search": 0.9523809523809523,
+  "seed": 1,
+  "stall_position": 0.2,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 41,
+  "chain": 32,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "ATL197409090",
+  "hardest_search": 0.9523809523809523,
+  "seed": 2,
+  "stall_position": 0.1951219512195122,
+  "stalls": 8,
+  "steps": 41,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL197409282",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL197409282",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408200",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 21,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408200",
+  "hardest_search": 0.9285714285714286,
+  "seed": 2,
+  "stall_position": 0.28125,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL197409280",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BAL197409280",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL197409290",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL197409290",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408010",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408010",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2972972972972973,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408180",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.21875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS197408180",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL198409200",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "ATL198409200",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.35135135135135137,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL198409250",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.28125,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BAL198409250",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408220",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408220",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL198409220",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL198409220",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL198409200",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.22580645161290322,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL198409200",
+  "hardest_search": 0.9473684210526316,
+  "seed": 2,
+  "stall_position": 0.2702702702702703,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408071",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS198408071",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.23684210526315788,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408061",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.1875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 22,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408061",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.3125,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS198408190",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS198408190",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS199406050",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS199406050",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407300",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407300",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS199406030",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS199406030",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2894736842105263,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": true
+ },
+ {
+  "blanks": 33,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407070",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407070",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407080",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407080",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2972972972972973,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407040",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BAL199407040",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL199404200",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "ATL199404200",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "BOS199407310",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "BOS199407310",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308010",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.21875,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308010",
+  "hardest_search": 0.9473684210526316,
+  "seed": 2,
+  "stall_position": 0.2702702702702703,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 31,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SDN200308240",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.22580645161290322,
+  "stalls": 8,
+  "steps": 31,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SDN200308240",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.30303030303030304,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308260",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.20588235294117646,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308260",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2894736842105263,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TEX200309020",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TEX200309020",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308150",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.24242424242424243,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "SEA200308150",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TEX200309200",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 39,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TEX200309200",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.28205128205128205,
+  "stalls": 8,
+  "steps": 39,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308030",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA200308030",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TOR200309010",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TOR200309010",
+  "hardest_search": 0.9333333333333333,
+  "seed": 2,
+  "stall_position": 0.22857142857142856,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201307261",
+  "hardest_search": 0.95,
+  "seed": 1,
+  "stall_position": 0.19444444444444445,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201307261",
+  "hardest_search": 0.95,
+  "seed": 2,
+  "stall_position": 0.19444444444444445,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 29,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201307070",
+  "hardest_search": 0.9473684210526316,
+  "seed": 1,
+  "stall_position": 0.21621621621621623,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 39,
+  "chain": 30,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201307070",
+  "hardest_search": 0.95,
+  "seed": 2,
+  "stall_position": 0.1794871794871795,
+  "stalls": 8,
+  "steps": 39,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201306220",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS201306220",
+  "hardest_search": 0.9375,
+  "seed": 2,
+  "stall_position": 0.2972972972972973,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308090",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308090",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308280",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308280",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2702702702702703,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308100",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.30303030303030304,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 37,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308100",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.24324324324324326,
+  "stalls": 8,
+  "steps": 37,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 28,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SDN201308020",
+  "hardest_search": 0.95,
+  "seed": 1,
+  "stall_position": 0.19444444444444445,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 40,
+  "chain": 31,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SDN201308020",
+  "hardest_search": 0.95,
+  "seed": 2,
+  "stall_position": 0.175,
+  "stalls": 8,
+  "steps": 40,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "SEA201308060",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "SEA201308060",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TOR202310010",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 35,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "TOR202310010",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2571428571428571,
+  "stalls": 8,
+  "steps": 35,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 23,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307240",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WAS202307240",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2222222222222222,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": true
+ },
+ {
+  "blanks": 32,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307070",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.25,
+  "stalls": 8,
+  "steps": 32,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307070",
+  "hardest_search": 0.9285714285714286,
+  "seed": 2,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307050",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 26,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307050",
+  "hardest_search": 0.9444444444444444,
+  "seed": 2,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 33,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202307220",
+  "hardest_search": 0.9375,
+  "seed": 1,
+  "stall_position": 0.2727272727272727,
+  "stalls": 8,
+  "steps": 33,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "family_count": 4,
+  "game_id": "WAS202307220",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": true
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306040",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306040",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2647058823529412,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 24,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306060",
+  "hardest_search": 0.9444444444444444,
+  "seed": 1,
+  "stall_position": 0.29411764705882354,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 36,
+  "chain": 22,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306060",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.3888888888888889,
+  "stalls": 8,
+  "steps": 36,
+  "used_global": false
+ },
+ {
+  "blanks": 34,
+  "chain": 25,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306200",
+  "hardest_search": 0.9411764705882353,
+  "seed": 1,
+  "stall_position": 0.23529411764705882,
+  "stalls": 8,
+  "steps": 34,
+  "used_global": false
+ },
+ {
+  "blanks": 38,
+  "chain": 27,
+  "families": [
+   "column_sum",
+   "cross_team",
+   "row_identity"
+  ],
+  "family_count": 3,
+  "game_id": "WAS202306200",
+  "hardest_search": 0.9411764705882353,
+  "seed": 2,
+  "stall_position": 0.2631578947368421,
+  "stalls": 8,
+  "steps": 38,
+  "used_global": false
+ }
+]

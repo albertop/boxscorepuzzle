@@ -17,12 +17,14 @@ from boxscore_forge.constraints import (
     cell_values,
     cells_in_family,
     constrained_cells,
+    equations,
     shape_of,
     team_footnote_cell,
 )
+from boxscore_forge.erasure import erase
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import FAMILY_OF, Family
-from boxscore_forge.solver import Technique, solve
+from boxscore_forge.solver import Deduction, Solution, Technique, _bounding_moves, solve
 from tests.strategies import valid_directions
 
 
@@ -433,3 +435,108 @@ class TestTheGlobalIdentityWaitsItsTurn:
 
         assert solution.is_complete
         assert Family.GLOBAL_IDENTITY in solution.families_used
+
+
+class TestTheGlobalIdentityStaysInItsPhase:
+    """`PA = Outs + R + LOB` is the relation section 8 teaches last, and the solver holds it back.
+
+    v02 fixed propagation's order. v03 found the boundary was only half there: search cost was
+    measured over the whole system before the phase was known, and bounding narrowed against
+    everything while its own docstring said otherwise.
+
+    The measured answer is a null - across 72 boards and 768 bounding steps, not one needed the
+    global relation. **That is exactly why these tests exist.** A flag that never fires on real data
+    is indistinguishable from a flag that is broken, so the mechanism is tested directly rather than
+    trusted because the boards are quiet.
+    """
+
+    def test_a_move_found_without_the_global_relation_is_not_charged_for_scanning_it(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        shape = shape_of(cubs_at_braves_1968)
+        non_global = [equation for equation in equations(shape) if not equation.is_global]
+        # A real erasure rather than a slice of the cell names: an arbitrary set of blanks is usually
+        # not derivable, and a solution with no deductions would pass every assertion below by being
+        # empty.
+        puzzle = erase(cubs_at_braves_1968, target_stalls=6, seed=4)
+
+        assert puzzle is not None
+        solution = puzzle.solution
+
+        local = [
+            step
+            for step in solution.deductions
+            if step.from_identity is not None and FAMILY_OF.get(step.from_identity) is not Family.GLOBAL_IDENTITY
+        ]
+        # Not vacuous: the board has to have produced such moves for the assertion to mean anything.
+        assert local
+        assert all(step.equations_live <= len(non_global) for step in local)
+
+    def test_bounding_without_the_global_relation_cannot_reach_left_on_base(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        # The one cell of the global relation that no other equation reaches. Both halves are
+        # asserted: a guard that refuses everything would pass the first line alone.
+        shape = shape_of(cubs_at_braves_1968)
+        values = cell_values(cubs_at_braves_1968)
+        hidden = "team_footnotes.left_on_base"
+        without_it = {name: value for name, value in values.items() if name != hidden}
+        non_global = tuple(equation for equation in equations(shape) if not equation.is_global)
+
+        assert hidden not in dict(_bounding_moves(shape, without_it, non_global))
+        assert hidden in dict(_bounding_moves(shape, without_it, equations(shape)))
+
+    def test_the_other_three_cells_are_reachable_without_it(self, cubs_at_braves_1968: Direction) -> None:
+        # Why the null is a null rather than a hole. Three of the four cells in the global relation
+        # are already covered by column sums, so only left-on-base ever depends on it - and when that
+        # is the single unknown, propagation takes it before bounding is ever reached.
+        shape = shape_of(cubs_at_braves_1968)
+        values = cell_values(cubs_at_braves_1968)
+        non_global = tuple(equation for equation in equations(shape) if not equation.is_global)
+
+        for cell in ("batting_totals.plate_appearances", "pitching_totals.outs", "batting_totals.runs"):
+            without_it = {name: value for name, value in values.items() if name != cell}
+            assert cell in dict(_bounding_moves(shape, without_it, non_global))
+
+    def test_a_global_assisted_bound_is_reported_on_the_family_axis(self) -> None:
+        """The reporting half, tested on its own because no real board reaches it.
+
+        A bounding deduction names no identity, so before this the global relation could decide a
+        cell on a board that reported never having touched it.
+        """
+        bounded = Deduction(
+            cell="team_footnotes.left_on_base",
+            value=7,
+            technique=Technique.BOUNDING,
+            from_identity=None,
+            depth=1,
+            frontier=1,
+            depends_on=frozenset(),
+            equations_live=1,
+            equations_solvable=0,
+            known_terms_combined=None,
+            needed_global_identity=True,
+        )
+        solution = Solution(values={}, deductions=(bounded,), unsolved=frozenset())
+
+        assert bounded.from_identity is None
+        assert Family.GLOBAL_IDENTITY in solution.families_used
+
+    def test_a_bound_that_did_not_need_it_does_not_claim_it(self) -> None:
+        # The failing case. Without this the test above passes on a property that always returns the
+        # global family, which would be worse than not reporting it at all.
+        bounded = Deduction(
+            cell="batting[0].hits",
+            value=2,
+            technique=Technique.BOUNDING,
+            from_identity=None,
+            depth=1,
+            frontier=1,
+            depends_on=frozenset(),
+            equations_live=1,
+            equations_solvable=0,
+            known_terms_combined=None,
+        )
+        solution = Solution(values={}, deductions=(bounded,), unsolved=frozenset())
+
+        assert solution.families_used == frozenset()

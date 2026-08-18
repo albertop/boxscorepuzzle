@@ -76,6 +76,16 @@ class Deduction:
     equations_live: int
     equations_solvable: int
     known_terms_combined: int | None
+    needed_global_identity: bool = False
+    """Whether this step could only be made once `PA = Outs + R + LOB` was admitted.
+
+    Only ever true of a bounding step. Propagation names the identity it used, so the family axis
+    already carries the answer there; bounding names none, and without this the global relation could
+    decide a cell and leave no trace in `families_used`.
+
+    Not folded into `from_identity`. A bound is not derived *from* one relation — it is what the whole
+    board leaves standing — and naming one would invent a provenance the reasoning never had.
+    """
 
     @property
     def search_cost(self) -> float | None:
@@ -153,12 +163,20 @@ class Solution:
 
     @property
     def families_used(self) -> frozenset[Family]:
-        """The second axis: which kinds of reasoning the path needed, not which were available."""
-        return frozenset(
+        """The second axis: which kinds of reasoning the path needed, not which were available.
+
+        A bounding step that only came out once the global identity was admitted counts as having
+        used it. It names no identity of its own, so before this the global family could decide cells
+        on a board that reported never having touched it.
+        """
+        named = frozenset(
             FAMILY_OF[deduction.from_identity]
             for deduction in self.deductions
             if deduction.from_identity is not None and deduction.from_identity in FAMILY_OF
         )
+        if any(deduction.needed_global_identity for deduction in self.deductions):
+            return named | {Family.GLOBAL_IDENTITY}
+        return named
 
     @property
     def times_used(self) -> dict[Technique, int]:
@@ -342,9 +360,15 @@ def _next_step(
     #
     # `PA = Outs + R + LOB` is the identity §8 teaches last because nobody knows it. Crediting it for
     # work a subtraction could have done overstates what the board demanded.
-    live, solvable = _scan_size(system + global_equations, values)
+    # ⚠️ Measured over the phase that supplied the move, not over the whole board. Search cost is
+    # how much of what the player scanned led nowhere, so counting relations they had not reached for
+    # yet inflates the cost of every move found without them.
+    available = _propagation_moves(system, values)
+    scanned = system if available else system + global_equations
+    if not available:
+        available = _propagation_moves(scanned, values)
+    live, solvable = _scan_size(scanned, values)
 
-    available = _propagation_moves(system, values) or _propagation_moves(system + global_equations, values)
     if available:
         cell, equation = available[0]
         leaned_on = frozenset(term.cell for term in equation.terms if term.cell != cell and term.cell in depths)
@@ -361,10 +385,14 @@ def _next_step(
             known_terms_combined=sum(1 for term in equation.terms if term.cell != cell and values[term.cell] != 0),
         )
 
-    # Bounding is admitted only after propagation has nothing left in *either* phase, and it narrows
-    # against the whole system: a range is not a family, so holding the global identity out of it
-    # would model a player who can bound with some relations and not others.
-    bounded = _bounding_moves(shape, values)
+    # Bounding is admitted only after propagation has nothing left in either phase, and it takes the
+    # same two phases for the same reason: a cell that the board corners without `PA = Outs + R + LOB`
+    # did not need it, and crediting it anyway overstates what the puzzle demanded.
+    bounded = _bounding_moves(shape, values, system)
+    needed_global = False
+    if not bounded:
+        bounded = _bounding_moves(shape, values, system + global_equations)
+        needed_global = True
     if bounded:
         cell, value = bounded[0]
         return Deduction(
@@ -372,6 +400,7 @@ def _next_step(
             value=value,
             technique=Technique.BOUNDING,
             from_identity=None,
+            needed_global_identity=needed_global,
             # Narrowing draws on the whole board, so the honest answer is that it leaned on
             # everything worked out so far rather than on one equation's terms.
             depth=1 + max(depths.values(), default=0),
@@ -409,10 +438,16 @@ def _propagation_moves(system: tuple[Equation, ...], values: Mapping[str, int]) 
     return sorted(moves.items())
 
 
-def _bounding_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[str, int]]:
-    """Every cell whose range has closed to one value. The global identity stays out of the
-    narrowing for the same reason it stays out of propagation's first pass."""
-    domains = narrow(shape, values)
+def _bounding_moves(
+    shape: BoardShape, values: Mapping[str, int], system: tuple[Equation, ...]
+) -> list[tuple[str, int]]:
+    """Every cell whose range has closed to one value, under the relations it is given.
+
+    The caller passes the phase's relations rather than this choosing them. It used to claim the
+    global identity stayed out while `narrow` put it in, and a docstring that contradicts the function
+    it calls three lines later is worse than none: it reads as a guarantee.
+    """
+    domains = narrow(shape, values, system=system)
     return sorted(
         (cell, bounds.fixed_value)
         for cell, bounds in domains.items()
