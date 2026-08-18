@@ -440,15 +440,55 @@ declared, and one is aimed at a measurement that was running while the review wa
 | Finding | Verdict | State | What was confirmed |
 |---|---|---|---|
 | P1-02 three erasable definitions | real | **closed** | one stale, one duplicating every footnote cell |
-| P2-01 global identity still partial | real | *in repair* | two docstrings in one call chain state the opposite rule |
-| P1-01 evidence is not bound to a game | real | open | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
-| P2-02 duplicate staged puzzle | real | open | `seen` is built after both entries are appended |
+| P2-01 global identity still partial | real | **closed** | two docstrings in one call chain state the opposite rule |
+| P1-01 evidence is not bound to a game | real | **closed** | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
+| P2-02 duplicate staged puzzle | real | *next* | `seen` is built after both entries are appended |
 | P2-03 envelope accepts malformed values | real | open | `schema: true` passes, because `True == 1` |
 | P2-04 HMAC lets the server forge | real | open | symmetric key, asymmetric architecture |
 | P2-05 the RBI/HR run is not paired | real | open | one seed, and zero density counts the grid only |
 
 **The order is the operator's:** P1-02 first because it invalidates evidence everything else is measured
 on top of, then P2-01 with the before-and-after redone, then P1-01, and P2-05 when the re-run comes.
+
+### v03-P2-01 — closed, and the null is a real null this time
+
+`narrow` takes its relations explicitly, bounding runs the same two phases as propagation, and a bound
+that only came out with the global relation carries `needed_global_identity` — a field of its own, not
+a value in `from_identity`, because a bound is not derived *from* one relation and naming one would
+invent the provenance that produced the "bounding only 100%" figure. Search cost is measured over the
+phase that supplied the move.
+
+**Measured before and after on the same 192 boards.** Stalls, chain, blanks, families, global share and
+stall position all unmoved — and board by board, only `hardest_search` changed, on 4 of 192.
+
+**The comparator caught itself first.** Its first version listed five fields to diff while the rows
+carried nine, and it printed "not one board changed on any field" while `hardest_search` had moved on
+four. It now derives the field list from the rows: a comparison that chooses which of its own
+measurements to look at is the failure it exists to catch.
+
+**And the flag never fires on real data** — not one of 768 bounding steps across 72 boards needed the
+global relation. That is why the tests assert the mechanism rather than the outcome: hiding
+`left_on_base` is a case non-global bounding cannot reach and global bounding can, and the other three
+cells of the relation are covered by column sums. The null is a null rather than a hole.
+
+### v03-P1-01 — closed
+
+Evidence carries the game and the batting team, and the gate **recomputes** the identifier from them —
+comparing against one the producer supplies would agree with itself. `expected_puzzle_id` is a second
+derivation in `boxscore_verify` rather than an import, per §22, with a property test that the two agree
+on arbitrary input rather than on one example.
+
+`is_deduced` is the provenance row's own value. It was being rebuilt as `source_type.startswith("ED")`.
+
+**Correspondence now says what each half establishes.** All six R/H/E fields are compared because they
+are signed and player-visible — but they come from the same query that fills the line score, so that
+half catches corruption in transport and cannot catch fabrication. At-bats and runners left on base
+come from `retroGameLogs`, a table the board is not built from, and are the only strict correspondence
+in the gate. Absence of a game-log row is a refusal.
+
+**What it costs and what it catches.** 1.52% of directions refused, almost all of them games with no
+game-log row, concentrated in the 1930s to 1960s. At-bats disagree on **1 direction in 407,816** and
+runners left on base on **20** — twenty-one real correspondence failures that no §22 layer can see.
 
 ### v03-P1-02 — closed
 
