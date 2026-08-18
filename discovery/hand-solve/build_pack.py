@@ -146,10 +146,17 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
         rng.shuffle(ordered)
         return ordered
 
-    # Hardest first: the uncertified boards live at the hard end, so filling those rungs first is
-    # what makes the third-uncertified share reachable at all.
+    # ⚠️ Uncertified boards are capped **per rung**, not only overall. Layer 3b certifies 100% of
+    # chain-5 boards and 91% of chain-11 ones, so the uncertified candidates all live at the hard
+    # end — and filling the hardest rung with them made every chain-11 board uncertified and every
+    # other board certified. That is a perfectly confounded experiment: uncertified and hard would
+    # be the same variable, and any difference the solver felt would be difficulty.
+    #
+    # Each rung therefore gets at most half its quota uncertified, which keeps the comparison inside
+    # a rung where the boards are the same difficulty by construction.
     for target in sorted(TARGETS, reverse=True):
         wanted = QUOTAS[target]
+        ceiling_here = wanted // 2
         at_target = len([item for item in chosen if item.target == target])
         for prefer_uncertified in (True, False):
             for candidate in shuffled([item for item in pool if item.target == target]):
@@ -157,8 +164,12 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
                     break
                 if candidate.certified == prefer_uncertified:
                     continue
-                if prefer_uncertified and len([c for c in chosen if not c.certified]) >= wanted_uncertified:
-                    break
+                if prefer_uncertified:
+                    if len([c for c in chosen if not c.certified]) >= wanted_uncertified:
+                        break
+                    here = len([c for c in chosen if c.target == target and not c.certified])
+                    if here >= ceiling_here:
+                        break
                 if take(candidate):
                     at_target += 1
 
@@ -198,6 +209,63 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
     rng.shuffle(chosen)
     audit(chosen)
     return chosen
+
+
+FORMULAS = (
+    "PA = AB + BB + HBP + SF + SH + CI &nbsp;&nbsp;|&nbsp;&nbsp; "
+    "Column totals = sum of the rows &nbsp;&nbsp;|&nbsp;&nbsp; "
+    "PA = Outs + Runs + LOB<br/>"
+    "Team H = hits allowed by the opposing pitchers (same for BB, K, R) &nbsp;&nbsp;|&nbsp;&nbsp; "
+    "Outs = 3 x innings pitched &nbsp;&nbsp;|&nbsp;&nbsp; "
+    "AB &ge; H &nbsp;&nbsp;|&nbsp;&nbsp; ER &le; R &nbsp;&nbsp;|&nbsp;&nbsp; nothing below zero"
+)
+"""On every page, not only on a cover sheet — somebody solving across several days should not have
+to go and find it.
+
+It doubles as the first real test of §8's permanent reference sheet. If this works on paper across
+fifty boards the reference sheet is about right, and if it does not, that is worth knowing now.
+"""
+
+
+def survey_box() -> Table:
+    """The three categories stay separate, because they answer different questions.
+
+    Only **had to guess** bears on layer 3b. **Tedious** and **boring** bear on the difficulty curve
+    and the quality filter, and merging them loses both answers.
+
+    The free-text line matters more than it looks: every serious defect in this project came from
+    somebody noticing that something looked wrong, never from a statistic.
+    """
+    lines = [
+        ["Time taken: ________ min", "Finished?    Y  /  N"],
+        ["If not finished, where did you get stuck?  _________________________________________", ""],
+        ["How did it feel?   (tick any)", ""],
+        ["   [   ] Had to guess — no next step by reasoning", "   [   ] Tedious — too much adding, or hunting"],
+        ["   [   ] Boring — easy, nothing to think about", "   [   ] Good"],
+        ["Anything odd?  ____________________________________________________________________", ""],
+    ]
+    table = Table(lines, colWidths=[80 * mm, 72 * mm], rowHeights=5.4 * mm)
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#666666")),
+                # The four feelings sit two by two rather than one per line: it is a shorter box and
+                # a tick grid reads faster than a list when the same four choices repeat fifty times.
+                ("SPAN", (0, 1), (1, 1)),
+                ("SPAN", (0, 2), (1, 2)),
+                ("SPAN", (0, 5), (1, 5)),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.3, colors.HexColor("#bbbbbb")),
+                ("LINEBELOW", (0, 4), (-1, 4), 0.3, colors.HexColor("#bbbbbb")),
+            ]
+        )
+    )
+    return table
 
 
 def audit(chosen: list[Candidate]) -> None:
@@ -269,8 +337,23 @@ def audit(chosen: list[Candidate]) -> None:
     if not any(candidate.has_live_footnote for candidate in chosen):
         failures.append("no board carries a live footnote, which the tutorial has to teach")
 
+    # ⚠️ Where the uncertified boards sit matters as much as how many there are. With 91% certifying
+    # at chain 11 they concentrate at the easy rungs, and a pack whose uncertified boards are all
+    # chain 5 compares easy-uncertified against hard-certified — any difference felt would be
+    # difficulty, not derivability, and the experiment would answer nothing.
+    by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
+    for target, count in by_rung.items():
+        if count and count == QUOTAS[target]:
+            failures.append(f"chain {target} is entirely uncertified, so nothing at that rung compares")
+    carrying = [target for target, count in by_rung.items() if count]
+    if uncertified and not carrying:
+        failures.append("no rung carries an uncertified board")
+    if uncertified and max(by_rung.values()) == uncertified and len(carrying) == 1:
+        failures.append(f"every uncertified board sits at one rung: {by_rung}")
+
     if failures:
         raise SystemExit("the pack does not satisfy its own quotas: " + "; ".join(failures))
+    print(f"uncertified by rung: {by_rung}")
 
 
 def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
@@ -303,7 +386,10 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     totals_rows.append(len(rows) - 1)
 
     del solved
-    table = Table(rows, colWidths=[26 * mm, *([21 * mm] * 6)], rowHeights=9 * mm)
+    # Shorter rows on a tall board. Eight millimetres is still far more than a digit needs, and
+    # the page has to carry the formula strip and the survey box as well as the grid.
+    height = 7.4 * mm if len(rows) > 20 else 8.6 * mm
+    table = Table(rows, colWidths=[26 * mm, *([21 * mm] * 6)], rowHeights=height)
     style: list[tuple[object, ...]] = [
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#999999")),
         ("ALIGN", (1, 0), (-1, -1), "CENTER"),
@@ -375,18 +461,26 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
     )
     reference = ParagraphStyle("reference", fontName="Helvetica-Bold", fontSize=11)
     footnotes = ParagraphStyle("footnotes", fontName="Helvetica", fontSize=8.5, spaceBefore=3)
+    formulas = ParagraphStyle(
+        "formulas", fontName="Helvetica", fontSize=7.0, leading=9, spaceBefore=2,
+        textColor=colors.HexColor("#333333"),
+    )
     story: list[object] = []
     for index, candidate in enumerate(chosen, start=1):
         # Nothing here names the game, the date, the teams, the target or the certification. All of
         # that is the key file, and a spoiler on the page would void the experiment.
         story.append(Paragraph(f"Board {index:02d}{' — solution' if answers else ''}", reference))
-        story.append(Spacer(1, 4 * mm))
+        story.append(Paragraph(FORMULAS, formulas))
+        story.append(Spacer(1, 2 * mm))
         story.append(line_score_table(candidate.loaded))
         story.append(Paragraph(footnote_line(candidate.loaded), footnotes))
-        story.append(Spacer(1, 3 * mm))
+        story.append(Spacer(1, 2 * mm))
         story.append(
             board_table(candidate.source if answers else candidate.puzzle, candidate.loaded, solved=answers)
         )
+        if not answers:
+            story.append(Spacer(1, 3 * mm))
+            story.append(survey_box())
         if index < len(chosen):
             story.append(PageBreak())
     document.build(story)

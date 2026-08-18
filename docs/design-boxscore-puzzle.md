@@ -1546,6 +1546,21 @@ boards produced no board that was unique and yet underivable. **That is not reas
 that *at this bounding strength* uniqueness appears to imply derivability, which is a claim about the
 solver rather than about the player.
 
+#### ⚠️ On the corrected pool, 3b stops being an expensive decision
+
+Re-measured after the loader was fixed: **78%** of chain-13 boards certify under the weak solver
+against 71% before, and **91% at chain 11** — which is where the week now tops out (§31). So inside
+the publishable range the uncertifiable share is **9%, not 29%**.
+
+**That changes what the choice costs.** Gating on 3b and discarding every uncertified board would
+leave 91% of thirty-plus years of calendar, which is far more than will ever be used. The expensive
+option became cheap, so the argument against gating is no longer pool.
+
+**The decision stays open until the fifty come back**, and it is deliberately not pre-empted here.
+But the value of that afternoon has shifted: it was going to decide 3b, and it is now mostly the
+answer to two other questions — **are these boards interesting, and is the difficulty curve right.**
+Those are answered by the *tedious* and *boring* ticks on the survey sheet, not by *had to guess*.
+
 #### Layer 3b: a lower bound on humanness, measured
 
 So the verifier also carries a deliberately weak solver — one relation in view at a time, never
