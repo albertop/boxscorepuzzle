@@ -25,3 +25,8 @@ decades: {1910: 10, 1920: 10, 1930: 10, 1940: 10, 1950: 10, 1960: 10, 1970: 10, 
   [ 22/120] SLN193310010 1933: 84/126 cells, chain 74, search 0.96, res 8, trivial 12%, col+cross+global+row, 31.6s
   [ 23/120] WS1193305280 1933: 113/150 cells, chain 103, search 0.96, res 11, trivial 10%, col+cross+global+row, 67.9s
   [ 24/120] WS1193305230 1933: 88/120 cells, chain 79, search 0.96, res 8, trivial 11%, col+cross+global+row, 29.7s
+  [ 25/120] WS1193305210 1933: 82/114 cells, chain 70, search 0.96, res 8, trivial 12%, col+cross+global+row, 21.1s
+  [ 26/120] WS1193305200 1933: 100/118 cells, chain 89, search 0.96, res 9, trivial 18%, col+cross+global+row, 33.7s
+  [ 27/120] WS1193305180 1933: 78/108 cells, chain 65, search 0.95, res 8, trivial 21%, col+cross+global+row, 18.0s
+  [ 28/120] WS1193305240 1933: 80/108 cells, chain 67, search 0.95, res 8, trivial 19%, col+cross+global+row, 21.1s
+  [ 29/120] WS1193305170 1933: 82/108 cells, chain 69, search 0.95, res 8, trivial 18%, col+cross+global+row, 22.8s

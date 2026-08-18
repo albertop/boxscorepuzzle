@@ -111,6 +111,9 @@ table.grid td.cell, table.grid th.col { width: calc((100% - 66px) / var(--column
 table.grid td.cell { height: 44px; font-size: 15px; }
 table.grid td.blank { background: #f4f4f4; }
 table.grid thead th { background: #ddd; height: 22px; font-size: 11px; }
+/* Including the empty cell above the labels: one white cell in a grey header row reads
+   as a missing column rather than as a spacer. */
+table.grid thead th.label { background: #ddd; }
 table.grid tr.section td { background: #333; color: #fff; font-size: 10px; text-align: left;
                            padding-left: 4px; height: 16px; letter-spacing: .05em; }
 table.grid tr.totals td { background: #ddd; font-weight: 700; height: 34px; }
