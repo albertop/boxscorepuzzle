@@ -26,7 +26,7 @@ from boxscore_verify.verify import UNSIGNED, verify
 
 
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
-    document = Package(puzzle_id="p", puzzle=board, solution=board).as_json()
+    document = Package(puzzle_id="000000000000000f", puzzle=board, solution=board).as_json()
     for key, value in changes.items():
         section, _, field = key.partition("__")
         if field:
@@ -102,7 +102,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
         # ⚠️ The finding. A publish path whose secret is unset would previously verify nothing and
         # report a pass — misconfiguration reading as success.
         with pytest.raises(ValueError, match="pass UNSIGNED"):
-            verify(Package(puzzle_id="p", puzzle=board, solution=board), secret=None)
+            verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), secret=None)
 
     def test_there_is_no_default_to_forget(self) -> None:
         parameter = inspect.signature(verify).parameters["secret"]
@@ -111,7 +111,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
         assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
     def test_skipping_it_deliberately_is_allowed(self, board: Board) -> None:
-        assert verify(Package(puzzle_id="p", puzzle=board, solution=board), secret=UNSIGNED).accepted
+        assert verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), secret=UNSIGNED).accepted
 
 
 class TestTheTwoSidesUseTheSameVocabulary:
@@ -159,3 +159,71 @@ class TestTheRemainingMalformedShapes:
     def test_left_on_base_that_is_not_a_number(self, tmp_path: Path, board: Board) -> None:
         with pytest.raises(PackageError, match="expected a whole number"):
             read(written(tmp_path, board, puzzle__left_on_base="six"))
+
+
+class TestTheEnvelopeIsCheckedToo:
+    """The board was validated at the boundary and the envelope around it was not.
+
+    ⚠️ **Tested against `Package.from_json` directly, not only through `read`.** `read` guarded the
+    root object and the method did not, so the method was safe only when entered through one
+    particular door — which is not a boundary, it is a habit.
+    """
+
+    def _document(self, board: Board) -> dict[str, object]:
+        return Package(puzzle_id="000000000000000f", puzzle=board, solution=board).as_json()
+
+    @pytest.mark.parametrize("root", [[], "a package", 7, None, True])
+    def test_a_root_that_is_not_an_object_is_refused(self, root: object) -> None:
+        # `raw.get` on a list raised AttributeError three frames later. A malformed file must produce
+        # a controlled rejection, not an uncontrolled crash.
+        with pytest.raises(PackageError, match="expected an object"):
+            Package.from_json(root)
+
+    def test_a_boolean_schema_is_refused(self, board: Board) -> None:
+        # ⚠️ `True == 1` in Python, so `schema != SCHEMA_VERSION` accepted `"schema": true` and read
+        # the file as a version 1 package.
+        document = self._document(board)
+        document["schema"] = True
+
+        with pytest.raises(PackageError, match="schema True"):
+            Package.from_json(document)
+
+    @pytest.mark.parametrize("bad", ["p", "", "0123456789ABCDEF", "0123456789abcde", "../../etc/passwd", 1, None])
+    def test_an_identifier_that_is_not_the_contract_shape_is_refused(self, board: Board, bad: object) -> None:
+        # Sixteen lower-case hex characters, as the format document states. The identifier reaches
+        # filenames and will reach URLs, so a path-like value is the case that matters most.
+        document = self._document(board)
+        document["puzzle_id"] = bad
+
+        with pytest.raises(PackageError, match="puzzle_id is"):
+            Package.from_json(document)
+
+    def test_the_contract_shape_is_accepted(self, board: Board) -> None:
+        # The other half. A pattern that refuses everything would pass every test above.
+        assert Package.from_json(self._document(board)).puzzle_id == "000000000000000f"
+
+    @pytest.mark.parametrize("bad", ["", "not-hex", "0" * 63, "0" * 65, 1, []])
+    def test_a_signature_that_is_not_an_hmac_is_refused(self, board: Board, bad: object) -> None:
+        # A signature of the wrong type used to reach `hmac.compare_digest`, which raises on bytes it
+        # cannot handle — the verifier crashing on a malformed file instead of rejecting it.
+        document = self._document(board)
+        document["signature"] = bad
+
+        with pytest.raises(PackageError, match="signature is"):
+            Package.from_json(document)
+
+    def test_an_absent_signature_is_still_allowed(self, board: Board) -> None:
+        # Absence is not malformation: a package may be unsigned, and the gate is what decides
+        # whether an unsigned one may be published.
+        document = self._document(board)
+        document.pop("signature", None)
+
+        assert Package.from_json(document).signature is None
+
+    def test_a_real_identifier_satisfies_the_pattern(self) -> None:
+        # The link between the two sides. The forge produces the identifier and the format states its
+        # shape; without this they are two claims about the same string with nothing joining them.
+        from boxscore_forge.identity import puzzle_id  # noqa: PLC0415
+        from boxscore_package.format import PUZZLE_ID  # noqa: PLC0415
+
+        assert PUZZLE_ID.fullmatch(puzzle_id("SLN19131005", "CHN"))

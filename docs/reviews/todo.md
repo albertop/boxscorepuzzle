@@ -443,8 +443,8 @@ declared, and one is aimed at a measurement that was running while the review wa
 | P2-01 global identity still partial | real | **closed** | two docstrings in one call chain state the opposite rule |
 | P1-01 evidence is not bound to a game | real | **closed** | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
 | P2-02 duplicate staged puzzle | real | **closed** | `seen` is built after both entries are appended |
-| P2-03 envelope accepts malformed values | real | *next* | `schema: true` passes, because `True == 1` |
-| P2-04 HMAC lets the server forge | real | open | symmetric key, asymmetric architecture |
+| P2-03 envelope accepts malformed values | real | **closed** | `schema: true` passes, because `True == 1` |
+| P2-04 HMAC lets the server forge | real | *next* | symmetric key, asymmetric architecture |
 | P2-05 the RBI/HR run is not paired | real | open | one seed, and zero density counts the grid only |
 
 **The order is the operator's:** P1-02 first because it invalidates evidence everything else is measured
@@ -470,6 +470,30 @@ measurements to look at is the failure it exists to catch.
 global relation. That is why the tests assert the mechanism rather than the outcome: hiding
 `left_on_base` is a case non-global bounding cannot reach and global bounding can, and the other three
 cells of the relation are covered by column sums. The null is a null rather than a hole.
+
+### v03-P2-03 — closed
+
+The board was validated at the boundary and the envelope around it was not.
+
+- **`schema: true` was read as version 1**, because Python makes `True == 1` and the check was `!=`.
+  Now the value must be an `int` that is not a `bool`.
+- **`from_json` took `dict` in its signature and trusted it.** A list root raised `AttributeError` from
+  `raw.get` three frames later. `read()` guarded the root and the method did not, so a public boundary
+  was safe only when entered through one particular door. The method checks now, and the tests go
+  through it directly rather than only through `read`.
+- **The identifier and the signature are checked against the shapes the format document states** —
+  sixteen lower-case hex, and sixty-four for the HMAC. A signature of the wrong type reached
+  `hmac.compare_digest`, which raises rather than refusing: the verifier crashing on a malformed file
+  instead of rejecting it. A path-like identifier is the case that matters most, since the id reaches
+  filenames and will reach URLs.
+
+**And the two claims about the identifier are joined.** The forge produces it and the format states its
+shape; a test asserts a real one satisfies the pattern, so they cannot drift into being two unrelated
+statements about the same string.
+
+Every fixture that used `puzzle_id="p"` now uses a contract-shaped id. A fixture that could not exist
+in the wild is not testing the boundary, and updating them is what surfaced that `read` and `from_json`
+disagreed about who checks the root.
 
 ### v03-P2-02 — closed
 

@@ -28,7 +28,7 @@ SECRET = b"a test secret"
 class TestTheFormatSurvivesDisk:
     def test_a_package_round_trips(self, tmp_path: Path, board: Board) -> None:
         original = sign(
-            Package(puzzle_id="round-trip", puzzle=board, solution=board, metadata={"season": 1968}), SECRET
+            Package(puzzle_id="000000000000002f", puzzle=board, solution=board, metadata={"season": 1968}), SECRET
         )
         path = tmp_path / "puzzle.json"
 
@@ -45,7 +45,7 @@ class TestTheFormatSurvivesDisk:
         # §9 accepts that devtools can read it. What travels loses instead the metadata that would
         # hand over the mystery — an opaque puzzle id beside a `game_id` protects nothing.
         full = Package(
-            puzzle_id="p",
+            puzzle_id="000000000000000f",
             puzzle=board,
             solution=board,
             metadata={"game_id": "ATL196808080", "chain_target": 9},
@@ -60,7 +60,7 @@ class TestTheFormatSurvivesDisk:
     def test_a_signature_written_over_the_full_package_still_checks_on_the_published_half(
         self, tmp_path: Path, board: Board
     ) -> None:
-        signed = sign(Package(puzzle_id="p", puzzle=board, solution=board), SECRET)
+        signed = sign(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), SECRET)
         path = tmp_path / "published.json"
 
         write(path, signed.published())
@@ -71,7 +71,7 @@ class TestTheFormatSurvivesDisk:
         # A future schema must fail loudly rather than be read with today's assumptions, which is
         # the whole point of seam C2's versioning.
         path = tmp_path / "future.json"
-        document = Package(puzzle_id="p", puzzle=board).as_json()
+        document = Package(puzzle_id="000000000000000f", puzzle=board).as_json()
         document["schema"] = package_format.SCHEMA_VERSION + 1
         path.write_text(json.dumps(document), encoding="utf-8")
 
@@ -94,7 +94,12 @@ class TestTheFormatSurvivesDisk:
 
     def test_it_refuses_a_package_with_fields_missing(self, tmp_path: Path) -> None:
         path = tmp_path / "partial.json"
-        path.write_text(json.dumps({"schema": package_format.SCHEMA_VERSION, "puzzle_id": "p"}), encoding="utf-8")
+        # A contract-shaped id on purpose: the point of this test is the missing board, and an id the
+        # envelope would reject on its own would refuse the file before the board was ever looked at.
+        path.write_text(
+            json.dumps({"schema": package_format.SCHEMA_VERSION, "puzzle_id": "000000000000000f"}),
+            encoding="utf-8",
+        )
 
         with pytest.raises(PackageError, match="missing or malformed"):
             read(path)
@@ -118,7 +123,7 @@ class TestItSaysWhenItCannotAnswer:
         monkeypatch.setattr(reason, "NODE_BUDGET", 3)
         puzzle = blank(board, {"batting": [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=puzzle, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.UNDECIDED
@@ -136,7 +141,7 @@ class TestItSaysWhenItCannotAnswer:
 
 class TestMalformedPackages:
     def test_a_package_with_no_source_cannot_be_verified(self, board: Board) -> None:
-        verdict = verify(Package(puzzle_id="p", puzzle=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -147,7 +152,7 @@ class TestMalformedPackages:
         # rather than that the puzzle is hard.
         holed = blank(board, {"batting": [(0, 3)]})
 
-        verdict = verify(Package(puzzle_id="p", puzzle=board, solution=holed), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=holed), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -164,7 +169,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=shorter, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=shorter, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -184,7 +189,7 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=without, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=without, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -212,7 +217,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=elsewhere, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=elsewhere, solution=board), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -240,7 +245,7 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="p", puzzle=broken, solution=broken), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=broken, solution=broken), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.BAD_DATA
@@ -252,12 +257,16 @@ class TestTheTally:
         # The distribution is what says whether the generator is behaving, so it has to distinguish
         # layers rather than only count failures.
         verdicts = [
-            verify(Package(puzzle_id="a", puzzle=board, solution=board), secret=UNSIGNED),
+            verify(Package(puzzle_id="000000000000000a", puzzle=board, solution=board), secret=UNSIGNED),
             verify(
-                Package(puzzle_id="b", puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}), solution=board),
+                Package(
+                    puzzle_id="000000000000000b",
+                    puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}),
+                    solution=board,
+                ),
                 secret=UNSIGNED,
             ),
-            verify(Package(puzzle_id="c", puzzle=board), secret=UNSIGNED),
+            verify(Package(puzzle_id="000000000000000c", puzzle=board), secret=UNSIGNED),
         ]
 
         counts = tally(verdicts)
@@ -270,4 +279,4 @@ class TestTheTally:
         assert tally([]) == {"accepted": 0}
 
     def test_a_verdict_knows_whether_it_passed(self) -> None:
-        assert Verdict(puzzle_id="p").accepted
+        assert Verdict(puzzle_id="000000000000000f").accepted

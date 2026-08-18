@@ -20,7 +20,7 @@ SECRET = b"a test secret, not the one that signs anything real"
 
 
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="test", puzzle=puzzle, solution=source)
+    return Package(puzzle_id="000000000000001f", puzzle=puzzle, solution=source)
 
 
 def replacing(board: Board, **changes: object) -> Board:

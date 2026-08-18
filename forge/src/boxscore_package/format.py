@@ -21,6 +21,7 @@ offense equal the outs recorded by the opposing pitchers.
 """
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Self
@@ -35,6 +36,18 @@ FOOTNOTE_COLUMNS: Final = ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", 
 
 PITCHING_COLUMNS: Final = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
 """IP, H, R, ER, BB, K, with innings held as outs."""
+
+PUZZLE_ID = re.compile(r"^[0-9a-f]{16}$")
+"""Opaque, sixteen hex characters, as the format document states.
+
+Checked because the identifier reaches filenames and will reach URLs. An id that is not what the
+contract says is not a smaller problem than a malformed board — it is the same problem somewhere the
+board's own validation never looks.
+"""
+
+SIGNATURE = re.compile(r"^[0-9a-f]{64}$")
+"""HMAC-SHA256, hex. A signature of the wrong *type* used to reach `compare_digest`, which raises
+rather than refusing — a malformed file crashing the verifier instead of being rejected by it."""
 
 
 class PackageError(Exception):
@@ -336,14 +349,26 @@ class Package:
         return document
 
     @classmethod
-    def from_json(cls, raw: dict[str, Any]) -> Self:
+    def from_json(cls, raw: object) -> Self:
+        """The envelope, checked here rather than by whoever happens to call this.
+
+        ⚠️ **`read()` guarded the root object and this did not**, so a list or a string reaching this
+        method raised `AttributeError` from `raw.get` instead of `PackageError`. A public boundary that
+        is only safe when entered through one particular door is not a boundary.
+
+        And `schema` was compared with `!=`, which accepts `true`: Python makes `True == 1`. A JSON
+        document declaring `"schema": true` was read as a version 1 package.
+        """
+        if not isinstance(raw, dict):
+            message = f"puzzle package is {type(raw).__name__}, expected an object"
+            raise PackageError(message)
         schema = raw.get("schema")
-        if schema != SCHEMA_VERSION:
+        if not isinstance(schema, int) or isinstance(schema, bool) or schema != SCHEMA_VERSION:
             message = f"puzzle package schema {schema!r}, this code reads {SCHEMA_VERSION}"
             raise PackageError(message)
         try:
             return cls(
-                puzzle_id=raw["puzzle_id"],
+                puzzle_id=_matching(raw.get("puzzle_id"), PUZZLE_ID, "puzzle_id"),
                 puzzle=Board.from_json(raw["puzzle"]),
                 solution=Board.from_json(raw["solution"]) if raw.get("solution") is not None else None,
                 labels=tuple(_strings(raw.get("labels", []), "labels")),
@@ -351,11 +376,25 @@ class Package:
                 reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
                 metadata=_metadata(raw.get("metadata", {})),
                 schema=schema,
-                signature=raw.get("signature"),
+                signature=_matching(raw.get("signature"), SIGNATURE, "signature", optional=True),
             )
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _matching(raw: object, pattern: re.Pattern[str], where: str, *, optional: bool = False) -> Any:  # noqa: ANN401
+    """A string of the shape the contract states, or a refusal naming the field.
+
+    `optional` allows absence, never a wrong shape: a package may be unsigned, and a package whose
+    signature is a number or an empty string is malformed rather than unsigned.
+    """
+    if raw is None and optional:
+        return None
+    if not isinstance(raw, str) or not pattern.fullmatch(raw):
+        message = f"{where} is {raw!r}, expected {pattern.pattern}"
+        raise PackageError(message)
+    return raw
 
 
 def _metadata(raw: object) -> dict[str, Any]:
@@ -372,6 +411,8 @@ def read(path: Path) -> Package:
     except json.JSONDecodeError as error:
         message = f"{path} is not valid JSON: {error}"
         raise PackageError(message) from error
+    # The root check lives in `from_json` now, where every caller gets it. Kept here only to name
+    # the file in the message, which a caller reading a path wants and the method cannot know.
     if not isinstance(raw, dict):
         message = f"{path} does not hold a puzzle package"
         raise PackageError(message)
