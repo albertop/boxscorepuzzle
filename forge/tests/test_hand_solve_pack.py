@@ -9,6 +9,7 @@ So the audit is tested for what it *rejects*. An audit that never fires cannot b
 that is broken.
 """
 
+import random
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -59,6 +60,10 @@ def a_valid_pack() -> list[SimpleNamespace]:
         for position in range(quota):
             pack.append(board(target, index, certified=position >= here))
             index += 1
+    # Shuffled, because the audit now rejects a pack ordered by chain — an ascending sequence
+    # produces an ascending rating whatever the boards are like. A fixture built in rung order was
+    # the audit working, not the audit misfiring.
+    random.Random(7).shuffle(pack)  # noqa: S311  - a fixture order, not a secret
     return pack
 
 
@@ -70,8 +75,11 @@ class TestTheAuditPasses:
 class TestTheAuditRejects:
     def test_a_missing_chain_rung(self) -> None:
         # The failure that already happened: every board at the hard end and none at the easy one.
+        # Found by target rather than by index: the pack is shuffled now, so position 0 is not the
+        # easiest rung and a test that assumed it was would pass for the wrong reason.
         pack = a_valid_pack()
-        pack[0] = board(13, 900)
+        victim = next(index for index, item in enumerate(pack) if item.target == 5)
+        pack[victim] = board(11, 900)
 
         with pytest.raises(SystemExit, match="chain 5 has"):
             audit(pack)
