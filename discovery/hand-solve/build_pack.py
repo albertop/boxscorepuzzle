@@ -46,7 +46,12 @@ from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: 
 
 TARGETS = (5, 7, 9, 11)
 QUOTAS = {5: 8, 7: 11, 9: 14, 11: 17}
-"""Every rung of the week present, weighted towards the hard end where the uncertainty is.
+"""Every rung present, weighted towards the hard end.
+
+⚠️ **These are chain targets and the target variable is now stalls.** Chain counts how long a solve
+is; the operator solved a chain-10 board in under a minute. **This pack must not be printed until
+`erase` can take a stall target** — a pack that says stalls and means chain would repeat the mistake
+it exists to correct.
 
 Explicit quotas rather than weighted sampling. A first version drew by weight and produced no chain-5
 boards at all — with one board per game, the hard targets took every game before the easy ones were
@@ -251,6 +256,7 @@ def survey_box() -> Table:
     """
     lines = [
         ["Time taken: ________ min", "Finished?    Y  /  N"],
+        ["How many times did you have to stop and think?  ______", ""],
         ["How hard was it?     1     2     3     4     5     6", "(1 = very easy, 6 = very hard)"],
         ["If not finished, where did you get stuck?  _________________________________________", ""],
         ["How did it feel?   (tick any)", ""],
@@ -258,7 +264,7 @@ def survey_box() -> Table:
         ["   [   ] Boring — easy, nothing to think about", "   [   ] Good"],
         ["Anything odd?  ____________________________________________________________________", ""],
     ]
-    table = Table(lines, colWidths=[80 * mm, 72 * mm], rowHeights=5.2 * mm)
+    table = Table(lines, colWidths=[80 * mm, 72 * mm], rowHeights=4.9 * mm)
     table.setStyle(
         TableStyle(
             [
@@ -271,12 +277,13 @@ def survey_box() -> Table:
                 ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#666666")),
                 # The four feelings sit two by two rather than one per line: it is a shorter box and
                 # a tick grid reads faster than a list when the same four choices repeat fifty times.
-                ("SPAN", (0, 2), (1, 2)),
+                ("SPAN", (0, 1), (1, 1)),
                 ("SPAN", (0, 3), (1, 3)),
-                ("SPAN", (0, 6), (1, 6)),
+                ("SPAN", (0, 4), (1, 4)),
+                ("SPAN", (0, 7), (1, 7)),
                 ("LINEBELOW", (0, 0), (-1, 0), 0.3, colors.HexColor("#bbbbbb")),
-                ("LINEBELOW", (0, 1), (-1, 1), 0.3, colors.HexColor("#bbbbbb")),
-                ("LINEBELOW", (0, 5), (-1, 5), 0.3, colors.HexColor("#bbbbbb")),
+                ("LINEBELOW", (0, 2), (-1, 2), 0.3, colors.HexColor("#bbbbbb")),
+                ("LINEBELOW", (0, 6), (-1, 6), 0.3, colors.HexColor("#bbbbbb")),
             ]
         )
     )
