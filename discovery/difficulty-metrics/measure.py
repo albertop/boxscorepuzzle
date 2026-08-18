@@ -107,6 +107,21 @@ class Loaded:
     official_hits: int = 0
     official_runs: int = 0
 
+    batter_rbi: tuple[int, ...] = ()
+    """Runs batted in and home runs, per row and in lineup order, carried alongside `direction`
+    rather than inside it.
+
+    They are **candidate** columns (§6): the board ships six, and whether either earns a seventh is a
+    measurement rather than a decision. Putting them in `BattingLine` would add them to every identity,
+    every erasure and every package before that measurement exists, so they travel next to the model
+    and `discovery/rbi-and-hr` assembles the wider rows it needs.
+    """
+
+    batter_home_runs: tuple[int, ...] = ()
+    pitcher_home_runs: tuple[int, ...] = ()
+    """Home runs charged to each pitcher. The offense's total and this one are the same events, which
+    is the cross-team link a home-run column would add."""
+
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
     """Position labels, with any repeat suffixed by order of appearance: `LF-1`, `LF-2`.
@@ -288,7 +303,7 @@ def load(
            WHEN d.F_LF_G=1 THEN 'LF' WHEN d.F_CF_G=1 THEN 'CF' WHEN d.F_RF_G=1 THEN 'RF'
            WHEN d.B_G_DH=1 THEN 'DH' WHEN d.B_G_PH=1 THEN 'PH' WHEN d.B_G_PR=1 THEN 'PR'
            ELSE '?' END AS label,
-      p.name_first, p.name_last
+      p.name_first, p.name_last, d.B_RBI, d.B_HR
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
@@ -309,7 +324,7 @@ def load(
     # pitcher in, which is the real order. The starter has no substitution row, and P_GS puts him
     # first regardless.
     pitch_query = """
-    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, p.name_first, p.name_last
+    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, p.name_first, p.name_last, d.P_HR
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
     LEFT JOIN (SELECT GAME_ID, SUB_ID, MIN(EVENT_ID) AS entered
@@ -414,6 +429,9 @@ def load(
                     source_type or "",
                     offense_hits,
                     offense_runs,
+                    tuple(r[14] for r in batting_rows),
+                    tuple(r[15] for r in batting_rows),
+                    tuple(p[9] for p in pitching_rows),
                 )
             )
     if rejected:

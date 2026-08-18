@@ -40,3 +40,4 @@ desktop.ini
 # The hand-solve answer key. Committing it is harmless to the repository and fatal to the
 # experiment — the fifty boards only measure anything if they are met blind.
 discovery/hand-solve/key.csv
+discovery/**/run.log
