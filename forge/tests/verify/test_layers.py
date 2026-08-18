@@ -99,12 +99,12 @@ class TestLayerOneCatchesBadData:
         assert verdict.rejection.layer is Layer.IDENTITIES
         assert verdict.rejection.fault is Fault.BAD_DATA
 
-    def test_an_erased_footnote_is_malformed_rather_than_hard(self, board: Board) -> None:
-        # §6 gives the footnote line complete and never erased. Without it the row identity does not
-        # close, so this is a broken puzzle rather than a difficult one.
-        notes = [list(row) for row in board.footnotes]
-        notes[0][0] = None
-        puzzle = replacing(board, footnotes=tuple(tuple(row) for row in notes))
+    def test_an_erased_footnote_total_is_malformed_rather_than_hard(self, board: Board) -> None:
+        # ⚠️ The **totals** row, not a per-batter cell. Those are erasable now: each is an unknown
+        # inside the row identity, with the totals row supplying the number that closes it. Erase the
+        # totals row instead and the identity has two unknowns and no way to separate them, which is
+        # a broken puzzle rather than a difficult one.
+        puzzle = replacing(board, footnote_totals=(None, *board.footnote_totals[1:]))
 
         verdict = verify(package(puzzle, board), secret=UNSIGNED)
 

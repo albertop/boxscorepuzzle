@@ -31,11 +31,12 @@ from boxscore_forge.constraints import (
     batting_cell,
     batting_total_cell,
     cell_values,
+    footnote_cell,
     pitching_cell,
     pitching_total_cell,
     shape_of,
 )
-from boxscore_forge.identities import BATTING_COLUMNS, PITCHING_COLUMNS
+from boxscore_forge.identities import BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS
 from boxscore_forge.solver import Solution, solve
 
 
@@ -50,17 +51,26 @@ class Puzzle:
 
 
 def erasable(direction: Direction) -> list[str]:
-    """The grid, and only the grid.
+    """The grid, and the footnote line's per-batter cells.
 
-    The line score is the board's anchor and is given complete (§6); the footnotes are given too,
-    because without them the row identity does not close and the puzzle would need a term the
-    player cannot see.
+    The line score is the board's anchor and is given complete (§6), and so is the **footnote totals**
+    row — the row identity needs those to close, and a puzzle missing a term the player cannot see is
+    broken rather than hard.
+
+    ⚠️ **The per-batter footnote cells are unknowns, and that is a change to §6.** They were given
+    because the identity needs the numbers, and the totals row supplies them: HBP, SF, SH and CI are
+    each an unknown *inside* the row identity with its column sum available to close it.
+
+    Measured, which is why it changed: with the footnote line given, the median board stalls 5 times
+    at full erasure and only 56% reach five. With these cells open it is 15 and every board reaches
+    five. It costs no column and no pixel — the footnote line is already on the board.
     """
     shape = shape_of(direction)
     cells = [batting_cell(index, column) for index in range(shape.batter_count) for column in BATTING_COLUMNS]
     cells += [batting_total_cell(column) for column in BATTING_COLUMNS]
     cells += [pitching_cell(index, column) for index in range(shape.pitcher_count) for column in PITCHING_COLUMNS]
     cells += [pitching_total_cell(column) for column in PITCHING_COLUMNS]
+    cells += [footnote_cell(index, column) for index in range(shape.batter_count) for column in FOOTNOTE_COLUMNS]
     return sorted(cells)
 
 

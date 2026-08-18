@@ -75,11 +75,15 @@ class TestItOnlyTouchesTheGrid:
         assert puzzle is not None
         assert not any(cell.startswith("line_score") for cell in puzzle.erased)
 
-    def test_never_erases_a_footnote(self, cubs_at_braves_1968: Direction) -> None:
+    def test_never_erases_the_footnote_totals_or_the_team_footnote(self, cubs_at_braves_1968: Direction) -> None:
+        # ⚠️ Narrower than it was. A **per-batter** footnote cell is now erasable — it is an unknown
+        # inside the row identity, and opening them takes the median board from 5 stalls to 15. What
+        # stays given is the totals row and left-on-base: without those the row identity has two
+        # unknowns and no way to separate them, which is a broken puzzle rather than a hard one.
         puzzle = erase(cubs_at_braves_1968, target_chain=8, seed=9)
 
         assert puzzle is not None
-        assert not any(cell.startswith(("footnotes", "footnote_totals", "team_footnotes")) for cell in puzzle.erased)
+        assert not any(cell.startswith(("footnote_totals", "team_footnotes")) for cell in puzzle.erased)
 
     @pytest.mark.parametrize("name", sorted(ORDERINGS))
     def test_no_ordering_reaches_outside_the_grid(self, cubs_at_braves_1968: Direction, name: str) -> None:

@@ -264,8 +264,14 @@ def _structure_faults(puzzle: Board, source: Board) -> list[str]:
         faults.append(f"{len(puzzle.footnotes)} footnote rows against {len(puzzle.batting)} batters")
     if puzzle.line_score != source.line_score:
         faults.append("the puzzle's line score differs from the source's")
-    if any(value is None for row in puzzle.footnotes for value in row):
-        faults.append("a footnote cell is erased, and §6 gives the footnote line complete")
+    # ⚠️ A per-batter footnote cell **may** be erased, and this check used to reject it. §6 gave the
+    # whole footnote line because the row identity needs its numbers — and the footnote *totals* row
+    # supplies them, so each per-batter cell is an unknown inside an identity that can close. Opening
+    # them is what takes the median board from 5 stalls to 15 and from 56% of boards reaching five to
+    # all of them, at no cost in columns or pixels.
+    #
+    # The totals row below is still required complete. Without it the row identity has two unknowns
+    # and no way to separate them, which is a broken puzzle rather than a hard one.
     if any(value is None for value in puzzle.footnote_totals):
         faults.append("a footnote total is erased, and §6 gives the footnote line complete")
     if puzzle.left_on_base is None:
