@@ -20,3 +20,10 @@ decades: {1910: 4, 1920: 4, 1930: 4, 1940: 4, 1950: 4, 1960: 4, 1970: 4, 1980: 4
 
   If grouped comes within a stall or two of separate, grouped wins: three columns saved,
   one unknown per row instead of four, and the board stays closer to what §6 describes.
+
+=== DOES THE NUMBER OF FOOTNOTE CATEGORIES TRACK STALLS ===
+  Not a filter to simplify. If two or three categories produce more stalls than one, it is
+  a free selection criterion that complicates, and the column set does not change either way.
+  categories  share of pool  ceiling p50  stalls at 5  blanks at 5
+           1           48%           10            5           27
+           2           21%            8            5           29
