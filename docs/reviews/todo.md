@@ -432,6 +432,70 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## v04 — verified, none rejected
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P1-01 the manifest commit destroys the snapshot readers are following | real | and the sweep also eats a concurrent publisher's staging directory |
+| P1-02 signed packages behind an unsigned manifest | real | the release inventory is the one thing no signature covers |
+| P2-01 provenance projected by two unordered `TOP 1` queries | real, **latent** | 0 of 203,908 games have more than one provenance row |
+| P2-02 the ceiling pack overclaims "ceiling" | real | one seed, one ordering, one greedy path per direction |
+| P2-03 the comparator can null over a changed cohort | real | intersection compared, duplicates collapsed silently |
+| P2-04 `families_used` and `family_counts` contradict each other | real | `family_counts` reads only `from_identity` |
+
+### P1-01 — the atomic rename was necessary and is not sufficient
+
+Replacing `manifest.json` atomically stops a reader seeing a torn pointer. It does not make *fetch the
+manifest* and *fetch a puzzle* one transaction: a reader holding generation A gets a 404 when the
+publisher commits B and immediately deletes A, and a cached manifest stretches that window far beyond
+the filesystem operation. **The test I wrote asserts the unsafe behaviour** — `not (tmp_path / first).
+exists()` right after `_publish` returns — so it encodes the defect as the contract.
+
+Two more in the same sweep, both mine: the cleanup deletes every directory that is not the new
+generation, which includes **another publisher's staging directory**, and `manifest.json.pending` is a
+fixed name, so two publishers collide on it. Nothing makes the single-writer assumption true.
+
+### P1-02 — the one thing no signature covers
+
+Each package authenticates itself. The manifest decides *which* packages are the release, and it is
+unsigned: omit ids, point at a retained generation, point at nothing. Every package the client does
+receive still passes its own check, so the indicator says authentic while the release is not.
+
+⚠️ **This is entangled with v03-P2-04 and must not be solved by adding a second shared secret to
+`serve`** — the review says so and it is right. The signing migration and this are one piece of work.
+The anti-rollback half, a monotonic release sequence, is independent and can be specified now.
+
+### P2-01 — real, latent, and exactly the shape this project keeps producing
+
+Eligibility uses `EXISTS` over the accepted sources with `is_deduced = 0`. The evidence *projected* for
+certification comes from two separate `SELECT TOP 1` subqueries with no `ORDER BY` and no acceptance
+predicate. Three places, one rule, and the projection is not bound to the row that qualified.
+
+**Measured: every game has exactly one provenance row — 0 of 203,908 with more than one.** So it cannot
+fire today, which is the reason to fix it rather than to close it: a check that cannot fire is
+indistinguishable from one that is broken, and "one row per game" is an invariant nobody asserts.
+
+### P2-02 — the same overclaim I corrected an hour earlier, one level up
+
+`19` is the highest value seen on **one greedy path per direction, one seed, one ordering, 48
+directions**. It is not a per-board maximum, not a sample bound, and not a family ceiling — stall count
+depends on which cells are absent and is not known to be monotonic in blank count. The script and the
+pack say "ceiling" and "the top". **Rename before the pack is solved**, since a solver anchored to a
+wrong upper endpoint is the one thing the pack cannot recover from.
+
+### P2-03 — the instrument built to prevent a false null still has a path to one
+
+`compare()` keys rows by `(game_id, seed)` into a dict, which drops duplicates without a word, then
+compares the intersection and treats one shared key as sufficient. If a change removes exactly the
+boards it affects, the comparison reports a clean null over the survivors. Exact key-set equality by
+default; partial comparison behind a flag and labelled non-experimental.
+
+### P2-04 — one solve, two answers
+
+`families_used` counts a global-assisted bound as having used the global family. `family_counts` reads
+`from_identity`, which is `None` for every bounding step, so the same immutable result says the family
+was required and returns a count of zero. No consumer today, and that is exactly when to fix it.
+
 ## v03 — verified, none rejected
 
 Seven findings, every one checked against the code rather than against the report. **No no-go was
