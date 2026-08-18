@@ -2178,6 +2178,32 @@ can drift; a provenance column is permanent, queryable data — and §22's layer
 found under and rebuildable from the zips. 202,036 games, 3,465 of them deduced. Pool queries join
 it: `WHERE is_deduced = 0 AND source_type <> 'EVR'`.
 
+### Negro Leagues games are excluded, and that is a position rather than housekeeping
+
+**MLB reclassified the Negro Leagues as major leagues in December 2020.** Leaving them out of a
+baseball product is therefore a decision someone can read backwards, and stated as one line in a list
+it reads as disinterest. It is not, and the reasoning belongs on the record.
+
+**The reason is data quality, and it is the same criterion that excludes deduced event files.**
+Retrosheet's Negro Leagues data is transcribed from newspaper box scores rather than scored from a
+scoresheet, so a column that was never printed arrives as nought rather than as unknown: **93.7% of
+their batter rows carry K = 0 against 74.2% in contemporary regular play.** A board built from them
+would state strikeout figures that nobody recorded.
+
+**The awkward part, said plainly: they pass every identity.** 3,744 directions, zero row-identity
+failures, zero mismatches on all four cross-team sums — cleaner than the 1935–1949 control, which has
+one of each. So layer 1 of §22 does *not* catch them on its own merits, and the exclusion is a
+provenance rule rather than an arithmetic one. A board that balances perfectly and is quietly wrong
+is the failure mode §22 calls the worst, because no later layer can see it.
+
+**The acknowledged cost.** Josh Gibson and Satchel Paige are genuinely recognisable — a fan knows
+them, and the progressive reveal (§7) would land well on either. But that is two or three names
+across 1,872 games, against a pool that already has eighteen years of calendar without them. **It
+does not change the conclusion**, and it is worth saying that it was weighed rather than overlooked.
+
+*If Retrosheet's Negro Leagues coverage ever gains scored play-by-play rather than transcribed box
+scores, this decision should be revisited on its merits.*
+
 ### The exclusion list turned out to have a second entry
 
 The provenance load left **1,872 games with no row**, all of them Negro Leagues: Retrosheet ships one
@@ -2496,12 +2522,15 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Blocking**
 
 - [x] ~~Player names~~ — **resolved:** progressive reveal (§7)
-- [~] **v1 board — partially resolved.** Column set, six-column ceiling, line-score-as-anchor and per-batter footnotes are decided (§6). Technique distribution and compressibility are measured (§31, §5). **What remains provisional is row counts and roster caps**, blocked on one measurement only: the real height budget from a browser prototype. *Erasure percentage is no longer a parameter — the generator targets a chain length and the cell count is whatever reaching it costs (§31).* **Puzzle quality outranks board size — if the measurement says the board is too small to produce hard puzzles, the board changes**, and §6 records that the question has become "how many rows do we want" rather than "how many fit".
+- [x] ~~**v1 board.**~~ — **resolved (August 2026).** Column set, six-column ceiling, line-score-as-anchor and per-batter footnotes decided in §6; roster caps decided at **≤13 batters and ≤4 pitchers** (§5, §6). The browser prototype ran and its finding was that rows on screen do not bind, which is what freed both caps. *Erasure percentage is not a parameter — the generator targets a chain length and the cell count is whatever reaching it costs (§31).* The principle that puzzle quality outranks board size held: the pitcher cap moved because it was costing era, not because the board grew.
 
 **Game core**
 
-- [ ] **Erasure algorithm.** Its input is a **target chain length**, not a cell count: chain length grades more cleanly than how many cells are blank (§31), so erasure is the means and the cell count is whatever reaching the target costs. Still open: in what order cells come out, whether the pattern is symmetric, and — after the compressibility measurement — whether the target needs a companion constraint on zero density, since a cascade of zero-forcings counts as a long chain without being hard (§5)
+- [x] ~~**Erasure algorithm.**~~ — **resolved (August 2026).** Its input is a target chain length and the cell count is whatever reaching it costs (§31). Ordering is `row_first`, chosen because it pads the easy board least; symmetry was measured, found real and free, and **dropped** because mirroring a boxscore pairs the leadoff hitter with the ninth and means nothing in baseball. The zero-density companion constraint is unnecessary: the 30% gate handles it at admission (§5)
 - [x] ~~Which cells are never erased~~ — **resolved:** the line score, by width constraint (§6)
+- [ ] ⚠️ **Layer 3 does not verify human derivability.** It runs interval propagation to a fixed point over forty-odd simultaneous relations, which is stronger than any person. Measured: at a chain target of 13, only **71%** of published boards also certify under one-relation-at-a-time solving. The true figure for a human is somewhere between 71% and 100% and is currently unknown (§22)
+- [ ] **Whether layer 3b becomes a gate.** Decided by the fifty-board hand-solve rather than by further measurement — two solvers already bracket the answer and neither of them is a player. For: 29% is inside the 30% discard §22 calls free. Against: the weak solver is a caricature in the other direction (§22)
+- [ ] **The fifty-board hand-solve is a launch gate, not a review step.** It is the only real verification of human derivability that exists, and the only check the common-author risk does not touch. Boards, solutions, key and recording sheet are built in `discovery/hand-solve/` (§22)
 - [ ] Error handling: progressive reveal already forces row validation; still to define whether there's an error limit and what happens on failure
 - [ ] What exactly a hint is: reveal a cell, flag a contradiction, or suggest a technique?
 - [x] ~~Saving, pausing, resuming~~ — **resolved:** the puzzle stays open all day and saves itself (§27)
@@ -2513,7 +2542,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 
 - [x] ~~What the final reveal shows~~ — **resolved:** template-generated card with comparative data and a Baseball Reference link (§29)
 - [ ] What the share grid encodes without spoilers (no names)
-- [ ] Where the revealed name appears on mobile, since it doesn't fit in the label column (§6)
+- [x] ~~Where the revealed name appears on mobile~~ — **resolved:** in the row label itself, as the surname abbreviated to seven characters, disambiguated by first initial where two are identical (§6, §7)
 - [ ] How candidates mode works without hover (§6)
 
 **Level 100**
@@ -2536,7 +2565,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Data**
 
 - [x] ~~Retrosheet coverage~~ — **measured (August 2026), re-measured under the decided caps:** funnel in §5. 110,833 surviving directions, **12,218** after the zero-density gate — 18.1 years of calendar
-- [ ] **The era the gate leaves behind.** 78% of the shippable pool is pre-1950 and 4.7% is post-1980, and both filters push the same way. A product question about the reveal (§7), not a pool question — the levers are in §5
+- [x] ~~**The era the gate leaves behind.**~~ — **decided: a 5% pre-1950 calendar quota**, roughly eighteen puzzles a year. A quota on the calendar and not a filter on the pool: nothing is discarded, and the calendar builder rations which directions get used. It is what made the pitcher cap the binding constraint and moved it to ≤4 (§5)
 - [x] ~~Is T3 reachable~~ — **resolved: no, and no column set changes that.** Every identity is a sum over a row or a column, so two of them share at most one cell (§4)
 - [x] ~~The column set~~ — **resolved: `PA, AB, R, H, BB, K`** with footnotes attributed per batter by position label (§6, §7)
 - [x] ~~Technique distribution~~ — **measured (August 2026):** two axes replace the ladder, and the calendar model is in §31
@@ -2545,10 +2574,10 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Bottleneck frequency as a difficulty dimension~~ — **measured and rejected (August 2026).** No board pinches to a single move more than twice, and the frequency rises monotonically with erasure count rather than varying within a level, so there is nothing in it to grade. Closed; do not propose it again (§31)
 - [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
 - [x] ~~**Erasure ordering.**~~ — **measured (August 2026), and it is not a lever.** Its input is a target chain length, not a number of cells (§21). All four orderings reach the same ceiling; `column_first` loses on every axis and is the one worth removing; symmetric erasure is real and free, so it is taste. §31 carries the numbers and the ceiling correction
-- [ ] **Whether the generator targets one metric or three.** Resolution p90 is independent of chain and worth aiming at; search cost fixes itself once the chain is long. A joint target costs 2.39× the pool, which is affordable. **The thresholds are a product decision and are not set** — bands go on chain length, against real solving times from the January beta rather than anyone's estimate
+- [x] ~~**Whether the generator targets one metric or three.**~~ — **resolved: one.** Target chain length, report search cost, and no resolution ceiling. The ceiling was going to cap long arithmetic on hard boards; measured inside the publishable range it turned out long arithmetic is *Monday's* problem — a single blank in a full column is the eleven-number step, and erasing more gives each step fewer known terms. 11% of chain-5 boards reach resolution 10 against 3% at chain 13 (§31). **The difficulty bands themselves are still unset** and go on chain length, against real solving times from the January beta
 - [x] ~~**Whether a resolution ceiling is needed at all.**~~ — **measured, and it is not (August 2026).** Inside the publishable range the long-arithmetic tail is thin and points the wrong way: see §31
 - [x] ~~**Footnote row ambiguity.**~~ — **removed at the source (August 2026).** Repeated position labels are suffixed by order of appearance, so `SF: LF-2` names one row. The erasure constraint and the domain-bounding model it implied are not needed (§5)
-- [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
+- [x] ~~Re-measure era distribution after the zero-density gate~~ — **done (August 2026):** the decade table is in §5, and it moved the opposite way from the prediction. The calendar does need era weighting, which is the 5% quota below
 - [x] ~~**Loader fix:** add a provenance column so deduced event files are distinguishable (§32)~~ — **done (August 2026):** `dbo.retroGameProvenance`, 202,036 games. It immediately found 1,872 Negro Leagues games that had been in the pool all along; they are excluded too (§32)
 - [x] ~~Prior arithmetic validation~~ — **resolved:** layer 1 of §22
 - [x] ~~No-repetition policy~~ — **resolved:** at batch generation (§21)
