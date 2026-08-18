@@ -103,7 +103,7 @@ def _cells(values: list[object], blank: list[int]) -> str:
     )
 
 
-def _board_html(board: dict[str, object]) -> str:
+def _board_html(board: dict[str, object], *, tint: bool = True, heading: str | None = None) -> str:
     score = board["lineScore"]  # type: ignore[index]
     innings = max(len(score["offense"]), len(score["defense"]))  # type: ignore[index,call-overload]
     head = (
@@ -125,19 +125,28 @@ def _board_html(board: dict[str, object]) -> str:
             f"<td class='{'summary' if position == 0 else ''}'><b>{value}</b></td>"
             for position, value in enumerate(rhe)  # type: ignore[arg-type]
         )
-        rows += f"<tr class='{'ours' if is_ours else ''}'><td class='side'>{side}</td>{cells}{summary}</tr>"
+        mark = "ours" if (is_ours and tint) else ""
+        rows += f"<tr class='{mark}'><td class='side'>{side}</td>{cells}{summary}</tr>"
+
+    # The section headers name the team, not only the role. The batting-pitching cross is one of the
+    # four families and the part §3 says the puzzle degenerates without, but a player can only use it
+    # once they see that the hits allowed below are the hits in the *other* team's line score row.
+    # The two are always opposites by the board's construction, and saying so is what makes it
+    # obvious these are two teams rather than two halves of one.
+    batting_team = "HOME" if board["offenseIsHome"] else "AWAY"
+    pitching_team = "AWAY" if board["offenseIsHome"] else "HOME"
 
     blanks = board["blanks"]  # type: ignore[index]
     grid = "<thead><tr><th class='label'></th>" + "".join(
         f"<th class='col'>{name}</th>" for name in ("PA", "AB", "R", "H", "BB", "K")
-    ) + "</tr></thead><tbody><tr class='section'><td colspan='7'>BATTING</td></tr>"
+    ) + f"</tr></thead><tbody><tr class='section'><td colspan='7'>{batting_team} BATTING</td></tr>"
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
         label = board["labels"][index]  # type: ignore[index]
         grid += f"<tr><th class='label'>{label}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
         + _cells(board["battingTotals"], blanks["battingTotals"])  # type: ignore[arg-type,index]
-        + "</tr><tr class='section'><td colspan='7'>PITCHING</td></tr>"
+        + f"</tr><tr class='section'><td colspan='7'>{pitching_team} PITCHING</td></tr>"
         + "<tr><th class='label'></th>"
         + "".join(f"<th class='col'>{name}</th>" for name in ("IP", "H", "R", "ER", "BB", "K"))
         + "</tr>"
@@ -154,8 +163,9 @@ def _board_html(board: dict[str, object]) -> str:
     )
 
     footnotes = "; ".join(board["footnotes"])  # type: ignore[arg-type]
+    title = heading or str(board["season"])
     return (
-        f"<section><h2>{board['season']}</h2><p class='note'>{board['note']}</p>"
+        f"<section><h2>{title}</h2><p class='note'>{board['note']}</p>"
         f"<table class='line'>{head}{rows}</table><div class='foot'>{footnotes}</div>"
         f"<table class='grid'>{grid}</table></section>"
     )
@@ -173,7 +183,26 @@ def page(boards: list[dict[str, object]]) -> str:
         "are the blanks the player fills. Two questions: whether four pitching rows read as noise "
         "beside two, and whether a high resolution p90 is depth or arithmetic.</p>"
         + "".join(_board_html(board) for board in boards)
+        + _tint_comparison(boards)
         + "</body></html>"
+    )
+
+
+def _tint_comparison(boards: list[dict[str, object]]) -> str:
+    """The same board twice, with and without the tinted line score row.
+
+    The tint was there to connect the batting section to its own runs. Now that the section headers
+    name the team, the question is whether it still helps or says the same thing twice.
+    """
+    if not boards:
+        return ""
+    board = boards[0]
+    return (
+        "<h1 style='margin-top:28px'>Is the line score tint still earning its place?</h1>"
+        "<p class='intro'>The same board twice. The headers now name the team for each section, so "
+        "the tinted row may be saying it a second time.</p>"
+        + _board_html(board, tint=True, heading="WITH the tint")
+        + _board_html(board, tint=False, heading="WITHOUT the tint")
     )
 
 

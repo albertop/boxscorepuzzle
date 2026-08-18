@@ -1,0 +1,34 @@
+144 gated directions at ≤13 batters and ≤4 pitchers, walking only to chain 13
+decades: {1910: 12, 1920: 12, 1930: 12, 1940: 12, 1950: 12, 1960: 12, 1970: 12, 1980: 12, 1990: 12, 2000: 12, 2010: 12, 2020: 12}
+batting rows: {9: 51, 10: 43, 11: 26, 12: 11, 13: 13}
+
+=== RESOLUTION p90 INSIDE THE PUBLISHABLE RANGE ===
+ target     n   p10   p50   p90   max    >= 9   >= 10   >= 11
+      5   432     7     8    10    12     40%     11%      2%
+      7   431     7     8     9    12     33%      9%      2%
+      9   428     6     8     9    12     29%      8%      1%
+     11   422     6     8     9    12     21%      5%      1%
+     13   414     5     7     9    11     12%      3%      0%
+  If the tail is thin here, the ceiling has nothing left to cap.
+
+=== AT THE HARDEST PUBLISHED TARGET (13), WHO CARRIES THE TAIL ===
+ batting rows  boards  resolution p50   p90   >= 10
+            9     141               7     8      0%
+           10     123               6     8      0%
+           11      78               8     9      3%
+           12      33               7     9      3%
+           13      39               8    10     23%
+
+  decade  boards  resolution p50   >= 10
+    1910      34               6      0%
+    1920      32               7      0%
+    1930      33               7      0%
+    1940      34               6      0%
+    1950      34               7      3%
+    1960      36               7      0%
+    1970      36               7      3%
+    1980      36               8      6%
+    1990      33               7      0%
+    2000      34               7      3%
+    2010      36               7      8%
+    2020      36               8     11%

@@ -141,13 +141,16 @@ function grid(b) {
   const pit = r => b.blanks ? b.blanks.pitching[r] : [(r + 2) % 6];
 
   let html = "<thead>" + head(BAT) + "</thead><tbody>";
-  html += "<tr class='section'><td colspan='7'>BATTING</td></tr>";
+  // Team first, then role. The batting-pitching cross is unusable until the player sees that the
+  // hits allowed below belong to the other team, and the two sections are always opposites.
+  const battingTeam = b.offenseIsHome ? "HOME" : "AWAY", pitchingTeam = b.offenseIsHome ? "AWAY" : "HOME";
+  html += "<tr class='section'><td colspan='7'>" + battingTeam + " BATTING</td></tr>";
   b.batting.forEach((row, r) => {
     html += "<tr><th class='label'>" + label(b, r) + "</th>" + cells(row, bat(r)) + "</tr>";
   });
   html += "<tr class='totals' id='batTotals'><td class='label'>TOTALS</td>" +
     cells(b.battingTotals, b.blanks ? b.blanks.battingTotals : []) + "</tr>";
-  html += "<tr class='section'><td colspan='7'>PITCHING</td></tr>";
+  html += "<tr class='section'><td colspan='7'>" + pitchingTeam + " PITCHING</td></tr>";
   html += "<tr><th class='label'></th>" + PIT.map(x => "<th class='col' style='font-size:11px'>" + x + "</th>").join("") + "</tr>";
   b.pitching.forEach((row, r) => {
     // SP and RP-n rather than P1..P4. The label carries deduction: a starter is where the long

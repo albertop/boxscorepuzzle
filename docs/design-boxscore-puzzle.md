@@ -1820,6 +1820,33 @@ measurement: the selection pressure exists exactly where a large fraction fails.
 
 **Monday at the low end of 5, Saturday at 13.**
 
+### ✅ And the resolution ceiling is not needed — long arithmetic is an *easy*-board problem
+
+A ceiling on resolution p90 was proposed against the step that combines eleven known numbers, which
+is addition rather than deduction. Rescaling the week to 13 changed the question from "what should
+the ceiling be" to "is there anything left to cap", and the answer is no. Measured over 144 gated
+directions, twelve per decade, walking only as far as the week goes:
+
+| Chain target | p50 | p90 | max | ≥ 10 | ≥ 11 |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 8 | 10 | 12 | **11%** | 2% |
+| 9 | 8 | 9 | 12 | 8% | 1% |
+| **13** | **7** | **9** | 11 | **3%** | 0% |
+
+**The tail thins as the chain grows, which is the opposite of the premise.** A board erased to a
+chain of 5 still has columns with a single blank, and a single blank in a full column *is* the
+eleven-number step. Erase more and the columns carry several blanks, so each step combines fewer
+known terms. The arithmetic-heavy board is the Monday board, not the Saturday one.
+
+At the hardest published target the whole tail sits in one place: **23% of thirteen-row boards reach
+resolution 10, against 0–3% for nine to twelve rows**, and by decade it is 11% in the 2020s and 8% in
+the 2010s against 0% for most of the century — the same batting-row mechanism, at a size that no
+longer matters.
+
+**So no ceiling, and the decade skew it would have carried is avoided entirely.** *If one is ever
+wanted it belongs at the easy end, where 11% of chain-5 boards clear 10 — and it would still be a
+covert batter cap, so it needs the same scrutiny then.*
+
 ### The character axis survives to 13 — as a minority route, not a restored lever
 
 > *⚠️ The table below is pre-cap-change, measured at ≤2 pitchers where cross-team was required by
@@ -2385,7 +2412,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~Does board character separate the solve~~ — **measured, mostly no (August 2026).** Roster shape and live footnotes do not; only batting rows and total runs move anything, and both through effort rather than character (§31)
 - [x] ~~**Erasure ordering.**~~ — **measured (August 2026), and it is not a lever.** Its input is a target chain length, not a number of cells (§21). All four orderings reach the same ceiling; `column_first` loses on every axis and is the one worth removing; symmetric erasure is real and free, so it is taste. §31 carries the numbers and the ceiling correction
 - [ ] **Whether the generator targets one metric or three.** Resolution p90 is independent of chain and worth aiming at; search cost fixes itself once the chain is long. A joint target costs 2.39× the pool, which is affordable. **The thresholds are a product decision and are not set** — bands go on chain length, against real solving times from the January beta rather than anyone's estimate
-- [ ] **Whether a resolution ceiling is needed at all.** It was proposed against long arithmetic on hard boards, and those boards are no longer published now that the week tops at 13. Being re-asked inside the publishable range before any threshold is set: an absolute ceiling of 7 would discard 50–67% of post-1970 boards against 0–17% of the 1950s, and scaling it by row count inverts that skew instead of removing it — a nine-row 1910 board already sits at resolution 8
+- [x] ~~**Whether a resolution ceiling is needed at all.**~~ — **measured, and it is not (August 2026).** Inside the publishable range the long-arithmetic tail is thin and points the wrong way: see §31
 - [x] ~~**Footnote row ambiguity.**~~ — **removed at the source (August 2026).** Repeated position labels are suffixed by order of appearance, so `SF: LF-2` names one row. The erasure constraint and the domain-bounding model it implied are not needed (§5)
 - [ ] Re-measure era distribution after the zero-density gate, before deciding whether the calendar needs era weighting (§5)
 - [x] ~~**Loader fix:** add a provenance column so deduced event files are distinguishable (§32)~~ — **done (August 2026):** `dbo.retroGameProvenance`, 202,036 games. It immediately found 1,872 Negro Leagues games that had been in the pool all along; they are excluded too (§32)
