@@ -671,6 +671,42 @@ not only the aggregates. A null that survives that is a null; the earlier one wa
 
 ## Noticed in passing
 
+### The row label is not the position the row represents
+
+Spotted by eye on a printed board: `DH-1, DH-2` and `CF-1, CF-2, CF-3` in one lineup. **Three centre
+fielders in a game is not a thing that happens**, and no arithmetic check can see it — the board
+balances perfectly with the labels wrong.
+
+**Cause.** `_batting_labels` suffixes repeats of a label, and the label comes from a `CASE` over the
+`F_*_G` flags in `retroDailyReg`. Those flags mean *appeared at this position at some point in the
+game*, not *this is the position this row represents*, and the `CASE` picks whichever flag comes first
+in a fixed priority — fielding positions ahead of `B_G_PH` and `B_G_PR`. So a pinch hitter who then
+took over in centre is a `CF`, and three men who each spent an inning there become `CF-1`, `CF-2`,
+`CF-3`.
+
+**The right source is `dbo.retroSubstitutionsReg`**, which carries `SUB_FLD_CD` — the position the
+entering player came in at. It is already joined for the pitcher order and was never used for batters.
+
+**Measured:** across 400,000 substituted batting rows, the current label disagrees with the entry
+position on **28,011 of them, 7.0%**. The largest groups are `DH` for a man who entered as `PH` (6,092)
+and as `PR` (3,851), and outfielders labelled by a position they moved to rather than entered at
+(`CF`→`RF` 3,465, `LF`→`RF` 2,205, `LF`→`CF` 1,704).
+
+⚠️ **This is the class of defect the four §22 layers cannot see**, and the second one found by looking
+at a rendered board rather than by computing anything.
+
+**What it damages.** Not solvability — the arithmetic is untouched and the suffixes keep the labels
+unique, so footnote attribution (`HBP: SS`) still points at one row. It damages **§7**, where the label
+is the row's only identity during play, and it damages the hand-solve packs specifically: a
+baseball-literate solver who reads `CF-3` stops trusting the board, and trust is what those packs are
+measuring. **Both packs should be rebuilt after the fix**, the five-board ceiling pack included.
+
+**One design question inside the fix, and it is not mechanical.** A man who enters as a pinch hitter and
+stays in at centre is one row with two true answers. Labelling him `PH` says how he arrived; `CF` says
+where he played. §7 wants the label to identify the row on screen, and the same question decides
+whether `DH` should ever lose to `PH`.
+
+
 ### `extend-include` claims discovery is linted and nothing lints it
 
 `forge/pyproject.toml` adds `../discovery/**/*.py` to ruff's file patterns, with a comment saying the
