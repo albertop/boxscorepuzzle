@@ -69,8 +69,17 @@ def blanks(puzzle: Puzzle, loaded: Loaded) -> dict[str, object]:
 
 
 def render(loaded: Loaded, puzzle: Puzzle, note: str) -> dict[str, object]:
+    """One board, with the column set it was rendered under travelling inside it.
+
+    ⚠️ **The columns used to be read at page-build time.** `render` collected the values and `page`
+    drew the headers, so six boards rendered under six different configurations all came out wearing
+    the last one's columns — the same defect as the hand-written headers, one level down: two moments,
+    two states, and nothing tying them together.
+    """
     board = to_json(loaded, note)
     board["blanks"] = blanks(puzzle, loaded)
+    board["battingColumns"] = BATTING_COLUMNS
+    board["pitchingColumns"] = PITCHING_COLUMNS
     return board
 
 
@@ -97,7 +106,8 @@ table.grid th, table.grid td { text-align: center; vertical-align: middle; borde
                                font-variant-numeric: tabular-nums; padding: 0; }
 table.grid th.label, table.grid td.label { text-align: left; width: 66px; padding-left: 4px;
                                            font-size: 11px; overflow: hidden; white-space: nowrap; }
-table.grid td.cell, table.grid th.col { width: calc((100% - 66px) / 6); }
+table.grid { --columns: 6; }
+table.grid td.cell, table.grid th.col { width: calc((100% - 66px) / var(--columns)); }
 table.grid td.cell { height: 44px; font-size: 15px; }
 table.grid td.blank { background: #f4f4f4; }
 table.grid thead th { background: #ddd; height: 22px; font-size: 11px; }
@@ -105,6 +115,32 @@ table.grid tr.section td { background: #333; color: #fff; font-size: 10px; text-
                            padding-left: 4px; height: 16px; letter-spacing: .05em; }
 table.grid tr.totals td { background: #ddd; font-weight: 700; height: 34px; }
 """
+
+
+PRINTED_AS = {
+    "plate_appearances": "PA",
+    "at_bats": "AB",
+    "runs": "R",
+    "hits": "H",
+    "walks": "BB",
+    "strikeouts": "K",
+    "runs_batted_in": "RBI",
+    "home_runs": "HR",
+    "outs": "IP",
+    "earned_runs": "ER",
+}
+"""What each column is printed as, keyed by the model's own field names.
+
+⚠️ **The headers used to be two hand-written tuples and the rows came from `BATTING_COLUMNS`.** A
+measurement that added a seventh column rendered six identical base boards and looked entirely
+correct: the page is the check on the numbers, and it was reporting the board the renderer believed
+in rather than the board that was measured. Derived from the column list now, so a header cannot go
+missing without the cell going with it.
+"""
+
+
+def _headers(columns: tuple[str, ...]) -> str:
+    return "".join(f"<th class='col'>{esc(PRINTED_AS.get(name, name))}</th>" for name in columns)
 
 
 def _cells(values: list[object], blank: list[int]) -> str:
@@ -151,18 +187,21 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     pitching_team = "AWAY" if board["offenseIsHome"] else "HOME"
 
     blanks = board["blanks"]  # type: ignore[index]
-    grid = "<thead><tr><th class='label'></th>" + "".join(
-        f"<th class='col'>{esc(name)}</th>" for name in ("PA", "AB", "R", "H", "BB", "K")
-    ) + f"</tr></thead><tbody><tr class='section'><td colspan='7'>{esc(batting_team)} BATTING</td></tr>"
+    # The widest section decides the cell width: a seven-column pitching line under a six-column
+    # batting line would otherwise render at two different widths in one table.
+    batting_columns: tuple[str, ...] = board.get("battingColumns", BATTING_COLUMNS)  # type: ignore[assignment]
+    pitching_columns: tuple[str, ...] = board.get("pitchingColumns", PITCHING_COLUMNS)  # type: ignore[assignment]
+    columns = max(len(batting_columns), len(pitching_columns))
+    grid = f"<colgroup style='--columns:{columns}'></colgroup>" + "<thead><tr><th class='label'></th>" + _headers(batting_columns) + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
         label = board["labels"][index]  # type: ignore[index]
         grid += f"<tr><th class='label'>{esc(label)}</th>{_cells(row, blanks['batting'][index])}</tr>"  # type: ignore[index]
     grid += (
         "<tr class='totals'><td class='label'>TOTALS</td>"
         + _cells(board["battingTotals"], blanks["battingTotals"])  # type: ignore[arg-type,index]
-        + f"</tr><tr class='section'><td colspan='7'>{esc(pitching_team)} PITCHING</td></tr>"
+        + f"</tr><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(pitching_team)} PITCHING</td></tr>"
         + "<tr><th class='label'></th>"
-        + "".join(f"<th class='col'>{esc(name)}</th>" for name in ("IP", "H", "R", "ER", "BB", "K"))
+        + _headers(pitching_columns)
         + "</tr>"
     )
     for index, row in enumerate(board["pitching"]):  # type: ignore[arg-type]

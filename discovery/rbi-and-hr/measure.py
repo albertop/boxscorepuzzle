@@ -652,6 +652,22 @@ def render_examples(sample: list[Loaded], out: Path) -> None:
 
 
 def main() -> None:
+    out = Path(__file__).resolve().parent / "look-at-these.html"
+    if "--render-only" in sys.argv:
+        # ⚠️ Here because the page is the check on the numbers and it was wrong: the renderer had its
+        # headers written out by hand, so a seven-column board rendered as six and looked right. The
+        # numbers survived that - the instrument assertions are what proved the columns changed - but
+        # the page did not, and re-running the whole measurement to redraw it would take an hour.
+        sample = [item for item in load(1, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+                  if not I.find_violations(item.direction)][:RENDERED]
+        if not sample:
+            message = "no gated direction to render"
+            raise SystemExit(message)
+        render_examples(sample, out)
+        configure(VARIANTS[0])
+        print(f"{len(sample)} boards rendered to {out}")
+        return
+
     sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate at {SAMPLE_PER_DECADE} per decade"
@@ -678,7 +694,6 @@ def main() -> None:
     report_structure(structures)
     report(results, len(sample))
 
-    out = Path(__file__).resolve().parent / "look-at-these.html"
     render_examples(sample, out)
     configure(VARIANTS[0])
     print(f"\nboards written to {out} - read them before trusting anything above")
