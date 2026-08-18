@@ -46,7 +46,7 @@ from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 
-TARGETS = (6, 8, 10, 11, 13, 15)
+TARGETS = (6, 8, 10)
 GATE = 0.25
 SEEDS = (1, 2)
 SAMPLE_PER_DECADE = 5
@@ -67,6 +67,7 @@ class Result:
     pruned_families: frozenset[str]
     pitching_blanks: int
     pruned_pitching_blanks: int
+    pruned_pitcher_row_blanks: int
 
     @property
     def share(self) -> float:
@@ -176,6 +177,7 @@ def run(loaded: Loaded, ordering: str, seed: int) -> list[Result]:
                     pruned_families=frozenset(f.value for f in after.families_used),
                     pitching_blanks=sum(1 for c in erased if c.startswith(("pitching[", "pitching_totals"))),
                     pruned_pitching_blanks=sum(1 for c in kept if c.startswith(("pitching[", "pitching_totals"))),
+                    pruned_pitcher_row_blanks=sum(1 for c in kept if c.startswith("pitching[")),
                 )
             )
         if not wanted:
@@ -269,41 +271,91 @@ def report_pruning(results: list[Result]) -> None:
 
 
 def render_comparison(sample: list[Loaded]) -> None:
-    """Six boards pruned, beside the same six as erased today. Dense, or merely sparse?"""
-    boards: list[dict[str, object]] = []
-    for loaded in sample[:6]:
-        shape = shape_of(loaded.direction)
-        values = cell_values(loaded.direction)
-        rng = random.Random(3)  # noqa: S311
-        erased: set[str] = set()
-        loose: set[str] | None = None
-        for cell in ORDERINGS["row_first"](erasable(loaded.direction), loaded.direction, rng):
-            trial = erased | {cell}
-            solution = solve(shape, {n: v for n, v in values.items() if n not in trial})
-            if not solution.is_complete:
-                continue
-            erased = trial
-            if solution.chain_length >= 6:
-                loose = set(erased)
-                break
-        if loose is None:
-            continue
-        kept = prune(shape, values, set(loose), 6)
-        boards.append(render(loaded, SimpleNamespace(erased=frozenset(loose)), f"as erased today — {len(loose)} blanks"))
-        boards.append(render(loaded, SimpleNamespace(erased=frozenset(kept)), f"PRUNED - {len(kept)} blanks, same chain and families"))
+    """Pruned boards at each candidate rung, so the floor can be chosen by looking.
 
-    out = _ROOT / "discovery" / "independent-cells" / "pruned-against-loose.html"
+    The pruned-against-unpruned comparison is settled; this one asks how 6, 8 and 10 read against
+    each other. **A blank ratio comes with it**, because nine blanks in sixty-eight cells is 13% and
+    that may read as a filled boxscore with a few typos rather than as a puzzle.
+    """
+    boards: list[dict[str, object]] = []
+    ratios: dict[int, list[float]] = {}
+    for target in TARGETS:
+        drawn = 0
+        for loaded in sample:
+            if drawn >= 4:
+                break
+            shape = shape_of(loaded.direction)
+            values = cell_values(loaded.direction)
+            rng = random.Random(3)  # noqa: S311
+            erased: set[str] = set()
+            reached = False
+            for cell in ORDERINGS["row_first"](erasable(loaded.direction), loaded.direction, rng):
+                trial = erased | {cell}
+                solution = solve(shape, {n: v for n, v in values.items() if n not in trial})
+                if not solution.is_complete:
+                    continue
+                erased = trial
+                if solution.chain_length >= target:
+                    reached = True
+                    break
+            if not reached:
+                continue
+            kept = prune(shape, values, set(erased), target)
+            cells = len(erasable(loaded.direction))
+            ratio = len(kept) / cells
+            ratios.setdefault(target, []).append(ratio)
+            boards.append(
+                render(
+                    loaded,
+                    SimpleNamespace(erased=frozenset(kept)),
+                    f"CHAIN {target} - {len(kept)} blanks of {cells} cells ({ratio:.0%})",
+                )
+            )
+            drawn += 1
+
+    out = _ROOT / "discovery" / "independent-cells" / "the-three-rungs.html"
     out.write_text(
         page(
             boards,
-            title="Pruned against as-erased, chain 6",
-            intro="Each pair is one board twice at the same chain length: as the erasure produces it "
-            "today, then with every blank the chain did not need handed back as given. The question "
-            "is whether the pruned half reads as dense or merely as sparse.",
+            title="Chain 6, 8 and 10 - pruned, side by side",
+            intro="Four pruned boards at each candidate rung, in order. Every blank is necessary: the "
+            "chain needs it, or a family would be lost, or the pitching section would become "
+            "decoration. The question is which rung reads as a puzzle rather than as a filled "
+            "boxscore with a few gaps.",
         ),
         encoding="utf-8",
     )
-    print(f"\n{len(boards)} boards ({len(boards) // 2} pairs) written to {out}")
+    print(f"{len(boards)} boards written to {out}")
+    print("")
+    print("=== HOW MUCH OF THE BOARD IS BLANK, BY RUNG ===")
+    for target in sorted(ratios):
+        values_here = ratios[target]
+        print(
+            f"  chain {target:>2}: {statistics.fmean(values_here):.0%} blank"
+            f"  ({statistics.median([r for r in values_here]):.0%} median, {len(values_here)} boards)"
+        )
+    print("  A sudoku runs about 60% empty. Nobody is copying that, but 13% may read as a")
+    print("  completed boxscore with a few typos rather than as a puzzle.")
+
+
+def report_pitching_location(results: list[Result]) -> None:
+    """Does the retained pitching blank land in the totals row or in a pitcher line?
+
+    A blank in the totals row satisfies the constraint and does make the section participate, but
+    weakly: completing it is one addition over the pitcher lines. A blank *inside* a pitcher line
+    forces the cross-team route instead, which is the participation that was wanted.
+    """
+    print("")
+    print("=== WHERE THE RETAINED PITCHING BLANK LANDS ===")
+    heads = f"{'target':>8}{'boards':>8}{'in a pitcher row':>19}{'totals only':>14}"
+    print(heads)
+    for target in TARGETS:
+        group = [r for r in results if r.target == target and r.pruned_pitching_blanks]
+        if not group:
+            continue
+        in_row = sum(1 for r in group if r.pruned_pitcher_row_blanks)
+        print(f"{target:>8}{len(group):>8}{in_row / len(group):>18.0%}{1 - in_row / len(group):>13.0%}")
+    print("  If it is nearly always the totals row, the constraint should ask for a pitcher row.")
 
 
 def main() -> None:
@@ -323,6 +375,7 @@ def main() -> None:
     print(f"{len(results)} measured boards")
     report(results)
     report_pruning(results)
+    report_pitching_location(results)
 
 
 if __name__ == "__main__":

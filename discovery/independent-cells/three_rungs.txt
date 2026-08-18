@@ -1,0 +1,63 @@
+60 gated directions, gate 25%
+decades: {1910: 5, 1920: 5, 1930: 5, 1940: 5, 1950: 5, 1960: 5, 1970: 5, 1980: 5, 1990: 5, 2000: 5, 2010: 5, 2020: 5}
+12 boards written to C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\independent-cells\the-three-rungs.html
+
+=== HOW MUCH OF THE BOARD IS BLANK, BY RUNG ===
+  chain  6: 12% blank  (12% median, 4 boards)
+  chain  8: 16% blank  (15% median, 4 boards)
+  chain 10: 17% blank  (17% median, 4 boards)
+  A sudoku runs about 60% empty. Nobody is copying that, but 13% may read as a
+  completed boxscore with a few typos rather than as a puzzle.
+1032 measured boards
+
+=== THE FOUR ORDERINGS AGAINST THE METRIC THAT MATTERS ===
+row_first was chosen on fewest trivial steps, before this existed.
+     ordering  target  blanks  independent   share  dead-end  per step
+ column_first       6      17           10     58%         1      2.75
+ column_first       8      20           12     54%         1      2.54
+ column_first      10      25           12     49%         1      2.33
+
+       random       6      19           12     58%         1      2.93
+       random       8      23           13     55%         1      2.71
+       random      10      26           13     51%         1      2.53
+
+    row_first       6      15            9     58%         1      2.65
+    row_first       8      22           12     54%         1      2.52
+    row_first      10      25           13     51%         1      2.41
+
+=== WHAT PRUNING REMOVES ===
+  target   before   after   removed   share before   share after  still reaches
+       6       17       8         9            58%           24%           100%
+       8       22      10        12            54%           19%           100%
+      10       25      12        13            50%           15%           100%
+  Pruning cannot cost pool: the board reached the target before pruning began.
+
+=== FAMILY COVERAGE, AND WHETHER PITCHING STAYS IN THE PUZZLE ===
+  target   families before   after  lost any   pitch blanks   after  none left
+       6              2.98    2.98         0              6       2          7
+       8              3.29    3.29         0              7       4          0
+      10              3.59    3.59         0              8       4          0
+  none left counts boards whose pitching section became decoration.
+
+=== IS THE FORCED PITCHING BLANK ITSELF FILLER ===
+  A pitching cell resolved against given totals is independent, so the constraint could
+  reintroduce what pruning removes. Pruning only hands blanks back, and the retained one
+  comes from a set that already reached the target - confirmed rather than assumed:
+    chain  6: 349 boards keep a pitching blank, independent share 24%
+    chain  8: 345 boards keep a pitching blank, independent share 19%
+    chain 10: 331 boards keep a pitching blank, independent share 15%
+
+=== FAMILY DISTRIBUTION ON PRUNED BOARDS ===
+  The ceiling was lowered to 11 on pre-pruning saturation. A pruned board is a different
+  object, so the question is open again.
+  target  boards  all four   three    two  blanks
+       6     356      19%     61%    20%       8
+       8     345      39%     50%    11%      10
+      10     331      63%     34%     4%      12
+
+=== WHERE THE RETAINED PITCHING BLANK LANDS ===
+  target  boards   in a pitcher row   totals only
+       6     349               87%          13%
+       8     345               92%           8%
+      10     331               93%           7%
+  If it is nearly always the totals row, the constraint should ask for a pitcher row.
