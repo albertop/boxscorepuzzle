@@ -277,7 +277,9 @@ def main() -> None:
     late = sum(1 for item in found if item.found_on_path > paths // 2)
     print("")
     print(f"highest observed, per board, best of {paths} paths each ({len(found)} boards): {everything[:10]}")
-    print("⚠️ not a ceiling: a greedy walk visits one corner of the space of erasure sets, and stall")
+    # Plain text on purpose. Every long run here is redirected to a file, Windows gives a redirected
+    # stream cp1252, and a report that dies on its own warning sign loses the compute that produced it.
+    print("NOT A CEILING: a greedy walk visits one corner of the space of erasure sets, and stall")
     print(f"   count is not known to be monotonic in blank count. This is a lower bound from {paths} starts.")
     print(f"convergence: {late} of {len(found)} boards found their best in the second half of the search")
     print(f"   ({late / len(found):.0%}) — a high share means the search was still improving when it stopped")
