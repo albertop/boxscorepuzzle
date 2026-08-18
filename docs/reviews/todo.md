@@ -471,7 +471,7 @@ global relation. That is why the tests assert the mechanism rather than the outc
 `left_on_base` is a case non-global bounding cannot reach and global bounding can, and the other three
 cells of the relation are covered by column sums. The null is a null rather than a hole.
 
-### v03-P2-04 — real, and stopped short deliberately
+### v03-P2-04 — open, blocked by a dependency. **Not pending by priority.**
 
 A MAC cannot express the property §33 needs. The note in `signing.py` justified HMAC by saying no
 third party needs to verify — which is about *who verifies*, when the requirement is about *who can
@@ -479,24 +479,30 @@ produce*. Every verifier of an HMAC is also a signer, so the verification secret
 forge's signing authority: a deployment backup or a diagnostic dump is enough to mint a package with
 altered answers that the service cannot distinguish from a real one.
 
-**The false justification is out of the code already**, replaced by the threat model and a note saying
-the question is not settled. Reading the old comment and concluding it was is the failure that matters
-most while the fix waits.
+**The false justification is out of the code.** `signing.py` now states what the signature actually
+guarantees — that the message came from someone holding the key, not that it came from the forge — and
+that this contradicts the architecture. The defect is still there; it has stopped being disguised as a
+decision, which is the part that could be fixed today.
 
-**What the fix needs, and why it is not half-built.** Ed25519, private key on the forge, public key
-deployed to `serve`, key id in the signed envelope for rotation. Two things attached, neither of them
-mine to decide:
+**It has a date, and the date is not a preference.** The fix must land **before `serve` exists**. The
+day the VPS verifies packages is the day the verification key leaves the laptop, and the defect goes
+from theoretical to real at that moment. Until then there is exactly one key and it is on the machine
+that is allowed to sign.
 
-1. **A dependency.** Ed25519 is not in the standard library. `cryptography` has to be added and
-   `uv.lock` regenerated — and `uv` is not on this environment's PATH and the venv carries no `pip`,
-   so it cannot be done from here. Hand-rolling the primitive is not an option worth naming twice.
-2. **A format change.** The signature goes from 64 hex characters to 128 and the envelope gains a key
-   id. `docs/package-format-v1.md` is titled *frozen* at schema 1. Nothing has shipped and `serve`
-   does not exist, so amending schema 1 is defensible — but "frozen" is a promise the document makes,
-   and breaking it or bumping to schema 2 is the operator's call, not a detail of the repair.
+**Decided:** amend schema 1 rather than bump to 2. Nothing has been published, `serve` does not exist,
+and there are no consumers — the *frozen* heading is a promise to stop churning the format, not a
+promise made to anybody yet.
 
-Also worth rotating the current shared secret before production if it has ever left the local
-reference-fixture workflow.
+**Blocking:** Ed25519 is not in the standard library and `cryptography` is not installed. `uv` is not
+on this environment's PATH; `ensurepip` can bootstrap `pip` into the venv, but installing that way
+would leave `uv.lock` describing an environment that no longer exists, and the lockfile is the
+reproducibility guarantee rather than a build artefact. **`uv add cryptography` is the one step this
+is waiting on.** Hand-rolling the primitive is not an alternative: a homemade Ed25519 would be worse
+than the defect it repairs.
+
+**The shape of the fix**, so it is not redesigned later: private key on the forge, public key deployed
+to `serve`, `key_id` in the signed envelope for rotation, signature 128 hex rather than 64. And rotate
+the current shared secret before production if it has ever left the local reference-fixture workflow.
 
 ### v03-P2-05 — closed, does not apply
 
