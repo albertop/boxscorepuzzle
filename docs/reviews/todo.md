@@ -444,8 +444,8 @@ declared, and one is aimed at a measurement that was running while the review wa
 | P1-01 evidence is not bound to a game | real | **closed** | `Evidence` carries no game or puzzle id, and `is_deduced` is rebuilt from the source name |
 | P2-02 duplicate staged puzzle | real | **closed** | `seen` is built after both entries are appended |
 | P2-03 envelope accepts malformed values | real | **closed** | `schema: true` passes, because `True == 1` |
-| P2-04 HMAC lets the server forge | real | *next* | symmetric key, asymmetric architecture |
-| P2-05 the RBI/HR run is not paired | real | open | one seed, and zero density counts the grid only |
+| P2-04 HMAC lets the server forge | real | *blocked on a dependency* | symmetric key, asymmetric architecture |
+| P2-05 the RBI/HR run is not paired | real | **closed — does not apply** | one seed, and zero density counts the grid only |
 
 **The order is the operator's:** P1-02 first because it invalidates evidence everything else is measured
 on top of, then P2-01 with the before-and-after redone, then P1-01, and P2-05 when the re-run comes.
@@ -470,6 +470,56 @@ measurements to look at is the failure it exists to catch.
 global relation. That is why the tests assert the mechanism rather than the outcome: hiding
 `left_on_base` is a case non-global bounding cannot reach and global bounding can, and the other three
 cells of the relation are covered by column sums. The null is a null rather than a hole.
+
+### v03-P2-04 — real, and stopped short deliberately
+
+A MAC cannot express the property §33 needs. The note in `signing.py` justified HMAC by saying no
+third party needs to verify — which is about *who verifies*, when the requirement is about *who can
+produce*. Every verifier of an HMAC is also a signer, so the verification secret on the VPS **is** the
+forge's signing authority: a deployment backup or a diagnostic dump is enough to mint a package with
+altered answers that the service cannot distinguish from a real one.
+
+**The false justification is out of the code already**, replaced by the threat model and a note saying
+the question is not settled. Reading the old comment and concluding it was is the failure that matters
+most while the fix waits.
+
+**What the fix needs, and why it is not half-built.** Ed25519, private key on the forge, public key
+deployed to `serve`, key id in the signed envelope for rotation. Two things attached, neither of them
+mine to decide:
+
+1. **A dependency.** Ed25519 is not in the standard library. `cryptography` has to be added and
+   `uv.lock` regenerated — and `uv` is not on this environment's PATH and the venv carries no `pip`,
+   so it cannot be done from here. Hand-rolling the primitive is not an option worth naming twice.
+2. **A format change.** The signature goes from 64 hex characters to 128 and the envelope gains a key
+   id. `docs/package-format-v1.md` is titled *frozen* at schema 1. Nothing has shipped and `serve`
+   does not exist, so amending schema 1 is defensible — but "frozen" is a promise the document makes,
+   and breaking it or bumping to schema 2 is the operator's call, not a detail of the repair.
+
+Also worth rotating the current shared secret before production if it has ever left the local
+reference-fixture workflow.
+
+### v03-P2-05 — closed, does not apply
+
+**The finding is correct and the question it would settle is already answered by data it cannot
+touch.** The variants call `row_first` with one seed over candidate lists of different lengths, so the
+common cells do not keep their order and part of any difference between configurations is the shuffle;
+and `zero_density` counts the grid only while the report called it every cell.
+
+What a paired re-run would fix is *how many blanks each configuration needs to reach a stall target*.
+That comparison only matters when choosing between configurations that add something. **None of them
+does:** the constraint graph carries 78 independent cycles in all six, identical. Neither RBI nor home
+runs adds a single cycle — the home-run cells appear only in home-run equations, so the block hangs off
+the board disconnected. That is topology. It does not depend on the erasure order, the seed, or the
+zero-density denominator, which is precisely why the defect cannot reach it.
+
+So the comparison is not re-run. Recorded as *does not apply* rather than *fixed*, so it is not
+reopened later on the belief that a doubt was left standing.
+
+**Carried forward instead.** If total bases, doubles or triples are ever measured, that comparison has
+to be paired from the start: one stable priority permutation for the cells the configurations share,
+separately controlled insertion points for the new ones, several seeds, and paired per-game deltas with
+spread rather than medians alone. State whether zero density is grid-only or all-erasable-cells, and
+apply the same denominator to every placement. **The lesson applied forwards, not backwards.**
 
 ### v03-P2-03 — closed
 

@@ -15,8 +15,26 @@ compact JSON with sorted keys, so it is reproducible from the parsed package alo
 what a receiver can check; the source boxscore never leaves the forge and is excluded on purpose —
 including it would make the signature unverifiable at the only place it matters.
 
-HMAC-SHA256 with a shared secret rather than a public-key signature: both ends are ours, one key
-lives on the laptop and one on the VPS, and there is no third party who needs to verify anything.
+⚠️ **HMAC is the wrong primitive here, and the reason it was chosen answers a question nobody asked.**
+The note this replaces said a public-key signature was unnecessary because both ends are ours and
+there is no third party who needs to verify anything. That is about *who needs to verify*. The
+property §33 actually needs is about *who can produce*: the forge laptop is the only machine allowed
+to make inventory and the service may only serve what it received.
+
+A MAC cannot express that. Every verifier of an HMAC is also a signer, so the verification secret on
+the VPS **is** the forge's signing authority. Read access to a deployment backup, a diagnostic dump or
+the environment is enough to mint a package with altered answers, altered reveal text or altered
+metadata that the service cannot tell from a real one.
+
+Nothing is wrong with SHA-256 or `compare_digest`. The defect is authority placement, and the fix is
+an asymmetric signature — Ed25519, private key on the forge, public key deployed to `serve`, with a
+key id in the signed envelope so it can be rotated.
+
+**Not yet done, and deliberately not half done.** It needs `cryptography` as a dependency, and it
+changes the format: the signature goes from 64 hex characters to 128 and the envelope gains a key id,
+which `docs/package-format-v1.md` currently calls frozen at schema 1. Both are recorded in
+`docs/reviews/todo.md` as v03-P2-04. Until then this module signs with a shared secret and this note
+is here so nobody reads the old justification and concludes the question was settled.
 """
 
 import hmac
