@@ -207,10 +207,18 @@ what the player does when the number goes up** — and if the answer is "types a
 measuring the board rather than the game.
 
 ⚠️ **And the correction is a correction, not a new result.** The earlier figures were not noisy. They
-were counting the wrong thing, and everything derived from them — the stall ceiling, the coverage
-percentages, the 5-versus-15 gap, the ladder rungs — inherits the error and is being re-measured. On the
-first board checked, excluding zeros made *erasable footnotes indistinguishable from footnotes given
-entirely*: ceilings of 7, 9 and 1 in both arms, against 14, 17 and 14 with zeros erasable.
+were counting the wrong thing, and everything derived from them inherits the error: the stall ceiling
+and its 27% convergence, the coverage percentages, the 5-versus-15 gap, the ladder's rungs, and the
+blanks per target. **The pool run closed it.** Coverage with the cells erasable and with them given is
+the same at every target; pair by pair the two are identical on every field in 91% of trials, and the
+rest differ only in the blank count. **96% of the pool's footnote terms are zero.** The cells are given
+again, and everything built for the open case — the cell drawing, the per-board cap, the large-group
+constraint, the erased-attribution design — was **deleted rather than disabled**.
+
+⚠️ **The check that would have caught it is the one that did.** Not a test, not a review: a person doing
+the task and comparing the feeling against the number. It survived several reviews because nothing about
+it was wrong — so **for every metric, ask what the player does when the number goes up.** If the answer
+is "types a zero", the metric is measuring the board rather than the game.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that

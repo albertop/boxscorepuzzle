@@ -206,58 +206,40 @@ export function paint(node, game) {
 /* ---- the footnote line ----------------------------------------------------------------------- */
 
 /**
- * LOB, HBP, SF, SH and CI, attributed per batter and **labelled by the lineup slot, never by name** —
- * a name would hand the player a row before they earned it (§7).
+ * LOB, HBP, SF, SH and CI, **given** and read-only, attributed per batter and labelled by the lineup
+ * slot rather than by name — a name would hand the player a row before they earned it (§7).
  *
- * ⚠️ A term whose per-batter cell is erased is shown as a question, not omitted. The blank is part of
- * the puzzle: the measurement says a group carrying a live term blocks the rest of the board in the
- * majority of trials, so hiding the fact that a term exists would remove the deduction entirely.
+ * ⚠️ **These were erasable cells for a week and are text again, on a measurement.** The cells were
+ * opened because a run said they took the median board from 5 stalls to 15; the run was counting the
+ * solver deducing zeros. With them given, coverage at every target is the same as with them erasable,
+ * because **96% of the pool's footnote terms are zero** and most boards have not one term to erase.
+ *
+ * The cell drawing that lived here — `v05-P1-02`, the last open item across ten reviews — is **deleted
+ * rather than disabled**, with the four-line block and its 24% of the screen. A drawing kept for a case
+ * that no longer exists is a mechanism kept past its problem.
+ *
+ * ⚠️ The totals row is still never erased and the count is still always known, so nothing here invents
+ * uncertainty: a term whose total is zero did not happen and is not printed at all. §6 warns that nine
+ * boards in ten carry nothing on this line and that players learn to stop reading it, which is why a
+ * live term is marked and an empty one is not printed.
  */
-export function renderFootnotes(puzzle, game, onSelect) {
+export function renderFootnotes(puzzle, game) {
   const line = el("div", "footnotes");
   line.append(el("span", "term lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
 
   for (const column of FOOTNOTE_COLUMNS) {
-    // ⚠️ **The totals row is never erased, so the count is always known** (§6 — the row identity does
-    // not close without it). The version this replaces printed `?` whenever any per-batter cell in a
-    // column was blank, which produced `HBP: ?` on a game with no hit batsmen at all. Nothing invents
-    // uncertainty the arithmetic has already removed.
     const total = game.value(footnoteTotalCell(column));
-    if (total === null) continue;
+    if (total === null || total === 0) continue;
 
-    const known = [];
-    const unknown = [];
+    const holders = [];
     puzzle.puzzle.footnotes.forEach((_, row) => {
-      const name = footnoteCell(row, column);
-      if (game.isBlank(name)) unknown.push({ name, slot: puzzle.slotReferences[row] });
-      else if (game.value(name) > 0) known.push(`#${puzzle.slotReferences[row]}${game.value(name) > 1 ? `×${game.value(name)}` : ""}`);
+      const value = game.value(footnoteCell(row, column));
+      if (value > 0) holders.push(`#${puzzle.slotReferences[row]}${value > 1 ? `×${value}` : ""}`);
     });
-    // ⚠️ **A term with nothing to show and nothing to fill is not printed.** §6 warns that nine boards
-    // in ten have every term at zero and that players learn to stop reading the line; a row of empty
-    // labels is how that habit is taught.
-    if (total === 0 && unknown.length === 0) continue;
 
-    // ⚠️ **`live` and `zero` were declared in the stylesheet and never applied.** Both rules were
-    // dead, so a real hit batsman had exactly the hierarchy of a term that never happened. §6 warns
-    // that nine boards in ten carry nothing here and that players therefore learn to stop looking —
-    // the prominence *is* the mechanism, and it went missing when this function was rewritten.
-    const term = el("span", `term ${total > 0 ? "live" : "zero"}`);
-    const label = el("span", "term-label", `${text(`column.${column}`)}: ${total}`);
-    term.append(label);
-    if (known.length) term.append(el("span", "who", known.join(", ")));
-    for (const { name, slot } of unknown) {
-      // The same cell the player has been filling all along, drawn somewhere else. `paint` and the
-      // selection find it by `data-cell` exactly as they find one in the grid.
-      const cell = el("span", "cell");
-      cell.dataset.cell = name;
-      paint(cell, game);
-      cell.addEventListener("click", () => onSelect(name));
-      reachable(cell, { label: `${text(`column.${column}`)}, ${text("board.slot")}${slot}`, selected: false });
-      term.append(cell, el("span", "who", `#${slot}`));
-    }
-    // Tapping the label selects the term's first unknown, so the target is the label and the box
-    // together and the box can stay small in a line of text.
-    if (unknown.length) label.addEventListener("click", () => onSelect(unknown[0].name));
+    const term = el("span", "term live");
+    term.append(el("span", "term-label", `${text(`column.${column}`)}: ${total}`));
+    term.append(el("span", "who", holders.join(", ")));
     line.append(term);
   }
   return line;

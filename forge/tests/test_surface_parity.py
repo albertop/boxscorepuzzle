@@ -78,45 +78,41 @@ def _expected(board: Board, slots: "list[int]", pack: object) -> dict[str, set[s
     return wanted
 
 
-class TestTheFootnoteLineShowsTheErasedBoard:
-    def test_the_line_says_exactly_what_the_puzzle_says(self, cubs_at_braves_1968: Direction) -> None:
+class TestTheFootnoteLineCannotDisagreeWithTheBoard:
+    """⚠️ **This class guarded a defect that no longer has a way to occur, and it said so itself.**
+
+    It existed because the printed pack drew its footnote line from the *complete* board while the
+    player was graded on the erased one — a printed board easier than the board that was graded
+    (`v05-P1-02`). Its own non-vacuity assertion — *footnote cells have to have been erased for this to
+    test anything* — started failing the moment the footnote line went back to given, which is the guard
+    doing its job rather than a regression.
+
+    **The defect is now structural rather than guarded**: with the terms given, the erased board and the
+    complete board carry the same footnote values, so the two lines cannot differ. What is asserted here
+    is that premise, because it is the thing that would have to break first.
+    """
+
+    def test_no_footnote_cell_is_ever_erased(self, cubs_at_braves_1968: Direction) -> None:
+        _board, _source, erased = _erased_board(cubs_at_braves_1968)
+
+        assert not [cell for cell in erased if cell.startswith("footnotes[")], (
+            "a footnote cell was erased; the parity guard below is no longer structural and has to return"
+        )
+
+    def test_the_line_is_the_same_from_the_puzzle_and_from_the_solution(self, cubs_at_braves_1968: Direction) -> None:
         pack = _pack()
-        board, _source, erased = _erased_board(cubs_at_braves_1968)
-        slots = list(range(1, len(board.batting) + 1))
-        # Non-vacuous: footnote cells have to have been erased for this to test anything.
-        assert [cell for cell in erased if cell.startswith("footnotes[")]
-
-        assert _parsed(pack.footnote_line(board, slots)) == _expected(board, slots, pack)
-
-    def test_no_erased_carrier_leaks_in_any_position(self, cubs_at_braves_1968: Direction) -> None:
-        # The case the substring check passed: a leaked reference after another carrier.
-        pack = _pack()
-        board, source, _ = _erased_board(cubs_at_braves_1968)
-        slots = list(range(1, len(board.batting) + 1))
-        references = pack.slot_references(slots)
-
-        printed = _parsed(pack.footnote_line(board, slots))
-
-        for index, row in enumerate(board.footnotes):
-            for column, value in enumerate(row):
-                if value is None and source.footnotes[index][column]:
-                    label = dict(pack.FOOTNOTE_LABELS)[FOOTNOTE_COLUMNS[column]]
-                    assert references[index] not in printed.get(label, set())
-
-    def test_the_complete_board_says_something_different(self, cubs_at_braves_1968: Direction) -> None:
-        # The can-it-fire case: the defect itself is the line built from the source.
-        pack = _pack()
-        board, source, _ = _erased_board(cubs_at_braves_1968)
+        board, source, _erased = _erased_board(cubs_at_braves_1968)
         slots = list(range(1, len(board.batting) + 1))
 
-        assert _parsed(pack.footnote_line(source, slots)) != _parsed(pack.footnote_line(board, slots))
+        assert _parsed(pack.footnote_line(board, slots)) == _parsed(pack.footnote_line(source, slots))
 
-    def test_left_on_base_stays_visible(self, cubs_at_braves_1968: Direction) -> None:
-        # §6: the footnote totals row and LOB are given, and they close the row identity.
+    def test_the_line_still_carries_the_live_terms(self, cubs_at_braves_1968: Direction) -> None:
+        # A line that printed nothing would satisfy both tests above.
         pack = _pack()
-        board, _, _ = _erased_board(cubs_at_braves_1968)
+        board, _source, _erased = _erased_board(cubs_at_braves_1968)
+        slots = list(range(1, len(board.batting) + 1))
 
-        assert f"LOB: {board.left_on_base}" in pack.footnote_line(board, list(range(1, len(board.batting) + 1)))
+        assert _parsed(pack.footnote_line(board, slots)), "the footnote line prints nothing at all"
 
 
 class TestTheGridShowsTheErasedBoard:
@@ -182,13 +178,22 @@ class TestTheGridShowsTheErasedBoard:
 class TestTheGuardCanFire:
     """A parity test that cannot fail is worth nothing, and this project has shipped two of those today."""
 
-    def test_it_rejects_a_page_built_from_the_complete_board(self, cubs_at_braves_1968: Direction) -> None:
-        pack = _pack()
-        board, source, _ = _erased_board(cubs_at_braves_1968)
-        slots = list(range(1, len(board.batting) + 1))
+    def test_the_erased_board_and_the_source_still_differ_where_erasure_happens(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        """⚠️ The footnote half of this guard can no longer fire, and that is not the same as it passing.
 
-        # The defect exactly: the footnote line rendered from the source beside an erased grid.
-        from_the_source = pack.footnote_line(source, slots)
+        The defect was a page drawn from the *source* beside a grid drawn from the *erased* board. With
+        the footnote terms given, the two footnote lines are equal by construction, so a fire test on
+        them would assert a difference that cannot exist — a check that never fires, which is what this
+        class exists to prevent. That half is asserted as a premise in the class above.
 
-        assert "?" not in from_the_source
-        assert from_the_source != pack.footnote_line(board, slots)
+        What is asserted here is the premise the surviving half rests on: **the grid still differs**, so
+        a parity check over it is still capable of failing. Comparing the rendered tables directly would
+        need a `Loaded` these tests do not build, and fabricating one to reach a stronger-looking
+        assertion is how a guard starts testing its own scaffolding.
+        """
+        board, source, erased = _erased_board(cubs_at_braves_1968)
+
+        assert erased, "nothing was erased at all"
+        assert board.batting != source.batting, "the erased board and the source are the same grid"

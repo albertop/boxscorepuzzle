@@ -165,7 +165,11 @@ class TestItRefusesADuplicatedCandidateList:
     @pytest.mark.parametrize("ordering", sorted(ORDERINGS))
     def test_every_ordering_rejects_a_repeated_cell(self, ordering: str, cubs_at_braves_1968: Direction) -> None:
         cells = erasable(cubs_at_braves_1968)
-        doubled = [*cells, *(cell for cell in cells if cell.startswith("footnotes["))]
+        # ⚠️ The duplicates used to be footnote cells, because that is where the defect happened. The
+        # footnote line is given now, so the doubling moves to the batting grid — the check is about a
+        # repeated *cell*, and tying it to the section that produced it once would have made it vacuous
+        # the moment that section closed.
+        doubled = [*cells, *(cell for cell in cells if cell.startswith("batting["))]
 
         with pytest.raises(ValueError, match="more than once"):
             ORDERINGS[ordering](doubled, cubs_at_braves_1968, random.Random(1))  # noqa: S311
@@ -178,7 +182,15 @@ class TestItRefusesADuplicatedCandidateList:
 
         assert sorted(order) == erasable(cubs_at_braves_1968)
 
-    def test_the_canonical_list_carries_the_footnote_cells(self, cubs_at_braves_1968: Direction) -> None:
-        # The fact the duplication came from not knowing. Stated once, here, so an instrument does
-        # not have to re-derive it and get it wrong again.
-        assert any(cell.startswith("footnotes[") for cell in erasable(cubs_at_braves_1968))
+    def test_the_canonical_list_carries_no_footnote_cell(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ **This asserted the opposite, and the reversal is the point.**
+
+        The duplication happened because an instrument did not know `erasable()` had *gained* the
+        footnote cells and kept adding them itself. The fact was stated here so nobody would have to
+        re-derive it — and the fact has since changed: the cells are given again, on a measurement that
+        showed 96% of the pool's footnote terms are zero and that opening them bought nothing.
+
+        The same reasoning applies in reverse. An instrument that adds them now is adding cells the
+        generator will not erase, which is a quieter version of the same defect.
+        """
+        assert not any(cell.startswith("footnotes[") for cell in erasable(cubs_at_braves_1968))

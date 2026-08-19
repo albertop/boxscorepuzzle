@@ -340,47 +340,18 @@ td.label.substitute { padding-left: 14px; }
 /* ⚠️ **Live footnotes must be visually prominent** (§6). Nine rows in ten have every term at zero, so
    players learn to stop looking — and the row where one appears is exactly the row whose arithmetic
    fails if they miss it. A zero term is muted; a live one is not. */
-/* ⚠️ **The erased term is the same cell, drawn somewhere else.** Not a control of its own: the player
-   has been filling these all along, so it inherits the border, the pale ground, the blue, the selection
-   and the keypad with no exceptions and nothing new to learn. Four colours already carry meaning here
-   and a fifth would have to displace one.
+/* ⚠️ **Live footnotes must be visually prominent** (§6). Nine boards in ten have every term at zero, so
+   players learn to stop looking — and the board where one appears is exactly the one whose arithmetic
+   fails if they miss it. A term whose total is zero is not printed at all.
 
-   ⚠️ **And it was not optional.** Columns whose total is zero were skipped entirely, so their erased
-   cells were drawn nowhere — 18 of this board's 39 blanks had no element to tap and the board could not
-   be finished. Asked of the engine, not eyeballed. */
-.footnotes { padding: 6px 0 12px; font-size: 13px; }
-/* ⚠️ **The touch target is the label *and* the box, and it is 44px in both directions — measured.**
-   The label solves the width: a term runs 103–222px, so the box can stay 26px in a line of text and
-   the thumb still has somewhere to land. It did **not** solve the height. At a text line-height the
-   terms were 29px tall, under the minimum §6 measured, and that is exactly the kind of number that
-   looks fine on a desktop and misses on a phone.
-
-   The cost is stated rather than hidden: 44px rows make this line 44px per wrapped row instead of 29.
-   On a board with ten erased terms that is four rows where there were three. */
-.footnotes .term {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--cell);
-  margin-right: 14px;
-  white-space: nowrap;
-}
-.footnotes .term .cell {
-  display: inline-block;
-  min-width: 26px;
-  height: 26px;
-  line-height: 26px;
-  text-align: center;
-  vertical-align: middle;
-  font-size: 13px;
-}
-/* ⚠️ The reference is **given**, so it is the same black as the rest of the line. It was blue, and blue
-   means *the player typed this* — two meanings on one colour, which is why it did not read right. */
-.footnotes .who { color: var(--ink); font-weight: 700; }
-.footnotes .lob { margin-right: 12px; }
-.footnotes .term.zero { color: var(--rule-strong); }
+   This block held cells for a week. They are gone with the decision that opened them: the terms are
+   given, so the line is text and one row of it. */
+.footnotes { padding: 8px 0 14px; font-size: 13px; line-height: 1.6; }
+.footnotes .term { margin-right: 14px; white-space: nowrap; }
+.footnotes .term.lob { font-weight: 700; }
 .footnotes .term.live { color: var(--ink); font-weight: 700; }
-.footnotes .lob { font-weight: 700; }
+/* The reference is given, so it is the same black as the rest of the line. */
+.footnotes .who { color: var(--ink); font-weight: 700; }
 
 /* ---- keypad ---------------------------------------------------------------------------------- */
 

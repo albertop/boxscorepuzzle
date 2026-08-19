@@ -107,7 +107,7 @@ function boot({ puzzle }) {
         onSelect: select,
       }),
     );
-    scroller.append(renderFootnotes(puzzle, game, select));
+    scroller.append(renderFootnotes(puzzle, game));
     scroller.append(
       renderSection({
         // The other side, always: the board is one team batting against the other's staff.
@@ -128,8 +128,7 @@ function boot({ puzzle }) {
   const repaint = () => {
     for (const node of scroller.querySelectorAll(".cell")) paint(node, game);
     const footnotes = scroller.querySelector(".footnotes");
-    footnotes.replaceWith(renderFootnotes(puzzle, game, select));
-    if (selected) select(selected);
+    footnotes.replaceWith(renderFootnotes(puzzle, game));
   };
 
   app.append(

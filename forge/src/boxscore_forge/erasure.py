@@ -85,39 +85,32 @@ def erasable(direction: Direction) -> list[str]:
     ⚠️ **The four totals the line score prints are not here** — see `SCOREBOARD_DUPLICATES`. They are
     given for the same reason the line score itself is: the board hands them over.
 
-    ⚠️ **The per-batter footnote cells are unknowns, and that is a change to §6.** They were given
-    because the identity needs the numbers, and the totals row supplies them: HBP, SF, SH and CI are
-    each an unknown *inside* the row identity with its column sum available to close it.
+    ⚠️⚠️ **The per-batter footnote cells were opened and are now closed again, on a measurement.**
 
-    ⚠️⚠️ **But only where the value is non-zero, and the correction is large.** When `SH`, `SF`, `HBP`
-    and `CI` are all zero for a batter, the row identity is `PA = AB + BB`: the four terms contribute
-    nothing, *because they did not happen*. Erasing one asks the player to type `0` into a category that
-    never occurred, and it asked the **solver** to deduce it — which the solver did, correctly, and
-    recorded as a step.
+    They were opened because a run reported the median board going from 5 stalls to 15 with them
+    erasable, and only 56% of boards reaching five without them. Both halves were true and **both were
+    counting zeros**: when `HBP`, `SF`, `SH` and `CI` are all zero for a batter the row identity is
+    `PA = AB + BB`, so an erased zero asked the solver to deduce a value that existed only because the
+    thing did not happen — and it did, correctly, recording a step each time.
 
-    **So the 5-versus-15 figure below was counting zeros.** The measurement that opened these cells said
-    they tripled the difficulty; the operator then solved a 19-stall board with the footnote line
-    visible and found it hard *without noticing the footnotes at all*. Both are true: the solver stalled
-    sixteen times filling in zeros, and a person never met them. The instrument was working and pointed
-    at the wrong thing.
+    The pool run that settled it: coverage with the cells erasable-if-non-zero and with them given is
+    **the same at every target**, and pair by pair the two are identical on every field in 91% of trials.
+    The rest differ only in the blank count. **96% of the pool's footnote terms are zero**, and on most
+    boards there is not one term to erase — which is why the two arms cannot be told apart.
 
-    The old figures stay in this docstring as the record of what was believed, marked as superseded.
-    They are being re-measured; whether opening these cells was ever worth anything is the open
-    question, and if the remaining gap is small they go back to given.
+    So this is not "erasable if non-zero". The non-zero rule was the right correction to a wrong
+    decision, and the measurement retired the decision.
+
+    ⚠️ **Everything built for the open case went with it**, rather than being disabled: the footnote cell
+    drawing, the cap on terms per board, the constraint for large groups, the erased-attribution design.
+    A drawing kept for a case that no longer exists is a mechanism kept past its problem.
     """
     shape = shape_of(direction)
     cells = [batting_cell(index, column) for index in range(shape.batter_count) for column in BATTING_COLUMNS]
     cells += [batting_total_cell(column) for column in BATTING_COLUMNS]
     cells += [pitching_cell(index, column) for index in range(shape.pitcher_count) for column in PITCHING_COLUMNS]
     cells += [pitching_total_cell(column) for column in PITCHING_COLUMNS]
-    # ⚠️ **A footnote term is erasable only if its value is non-zero.** See below.
-    values = cell_values(direction)
-    cells += [
-        footnote_cell(index, column)
-        for index in range(shape.batter_count)
-        for column in FOOTNOTE_COLUMNS
-        if values[footnote_cell(index, column)] != 0
-    ]
+    # ⚠️ **The footnote line is given. No per-batter cell is erasable.** See below.
     return sorted(set(cells) - set(SCOREBOARD_DUPLICATES))
 
 

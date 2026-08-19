@@ -394,99 +394,45 @@ suite("A cell's block, because a column name alone does not identify a column", 
   });
 });
 
-suite("The footnote line marks a live term, because that is the whole mechanism", () => {
-  test("⚠️ a term with a live total gets `live`, and one without gets `zero`", async () => {
-    // ⚠️ The defect: `.term.live` and `.term.zero` were declared in the stylesheet and never applied by
-    // the renderer, so both rules were dead and a real hit batsman had exactly the hierarchy of a
-    // category that never happened. §6 warns that nine boards in ten carry nothing here and that
-    // players therefore learn to stop looking — the prominence *is* the mechanism. A CSS rule with no
-    // class to attach to is a check that never fires, in type.
+suite("The footnote line is given, and says so", () => {
+  test("⚠️ no footnote cell is erasable in any reference package", () => {
+    // The decision, asserted at the level the client meets it. The cells were opened on a measurement
+    // that was counting the solver deducing zeros, and closed on the pool run that reproduced the old
+    // baseline exactly. A package carrying a footnote blank would now be a generator that regressed.
+    for (const { id, raw } of packages) {
+      const board = readPackage(raw).puzzle;
+      const blanks = board.footnotes.flat().filter((value) => value === null).length;
+      assert(blanks === 0, `${id} erases ${blanks} footnote cells; that decision was reversed`);
+    }
+  });
+
+  test("a term that did not happen is not printed, and a live one is marked", async () => {
+    // §6: nine boards in ten carry nothing here and players learn to stop looking, so the prominence is
+    // the mechanism. Both halves asserted — an empty term absent, a live term marked.
     const { renderFootnotes } = await import("../ui/phone/board.js");
     const puzzle = readPackage(packages.find((p) => p.id === "1dc57470b44caded").raw);
     const game = createGame(puzzle);
 
-    const line = renderFootnotes(puzzle, game, () => {});
-    const marked = [...line.querySelectorAll(".term")].filter((n) => !n.classList.contains("lob"));
+    const line = renderFootnotes(puzzle, game);
+    const terms = [...line.querySelectorAll(".term")].filter((n) => !n.classList.contains("lob"));
 
-    assert(marked.length > 0, "this package renders no footnote term, so the test proves nothing");
-    for (const node of marked) {
+    for (const node of terms) {
       const total = Number(node.querySelector(".term-label").textContent.split(": ")[1]);
-      const expected = total > 0 ? "live" : "zero";
-      assert(node.classList.contains(expected), `a term with total ${total} is not marked ${expected}`);
+      assert(total > 0, `a term with total ${total} was printed`);
+      assert(node.classList.contains("live"), "a printed term is not marked live");
     }
-    // Both states have to occur, or the test is only checking one of them.
-    const states = new Set(marked.map((n) => (n.classList.contains("live") ? "live" : "zero")));
-    equal([...states].sort(), ["live", "zero"], "this board does not exercise both states");
   });
-});
 
-suite("Every blank is reachable without a finger", () => {
-  /**
-   * ⚠️ Editable cells were elements with click handlers and nothing else — no focus, no role, no
-   * keyboard, no name, no selected state. The keypad was focusable and useless, because it does nothing
-   * until a cell is selected, so the board was unusable before the first digit. That needs no unusual
-   * setup: a phone and its own screen reader.
-   */
-  const board = async () => {
-    const { renderSection, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
-    const { battingCell } = await import("../engine/columns.js");
+  test("the line carries no editable cell at all", async () => {
+    // Deleted rather than disabled: a drawing kept for a case that no longer exists is a mechanism kept
+    // past its problem, and this is the check that says it is actually gone.
+    const { renderFootnotes } = await import("../ui/phone/board.js");
     const puzzle = readPackage(packages[0].raw);
-    const game = createGame(puzzle);
-    const chosen = [];
-    const node = renderSection({
-      title: "T",
-      columns: columnsFor.batting,
-      rows: puzzle.puzzle.batting,
-      labels: puzzle.labels,
-      slots: puzzle.slotReferences,
-      cellName: battingCell,
-      totalName: totalNameFor.batting,
-      game,
-      onSelect: (name) => chosen.push(name),
-    });
-    return { node, game, chosen };
-  };
 
-  test("every blank is focusable and carries a button role", async () => {
-    const { node, game } = await board();
-    const blanks = [...node.querySelectorAll(".cell")].filter((n) => game.isBlank(n.dataset.cell));
+    const line = renderFootnotes(puzzle, createGame(puzzle));
 
-    assert(blanks.length > 0, "this section has no blanks, so the test proves nothing");
-    for (const cell of blanks) {
-      equal(cell.getAttribute("role"), "button", `${cell.dataset.cell} has no role`);
-      equal(cell.tabIndex, 0, `${cell.dataset.cell} is not focusable`);
-    }
-  });
-
-  test("a given cell is not focusable, because there is nothing to do there", async () => {
-    // A fix that made every cell a button would satisfy the test above and add forty stops to the
-    // traversal that lead nowhere.
-    const { node, game } = await board();
-    const given = [...node.querySelectorAll(".cell")].filter((n) => !game.isBlank(n.dataset.cell));
-
-    assert(given.length > 0, "every cell on this board is blank");
-    for (const cell of given) assert(!cell.hasAttribute("role"), `${cell.dataset.cell} is a button and should not be`);
-  });
-
-  test("the name says which row and which column, not just 'blank'", async () => {
-    const { node, game } = await board();
-    const cell = [...node.querySelectorAll(".cell")].find((n) => game.isBlank(n.dataset.cell));
-
-    const label = cell.getAttribute("aria-label");
-    const column = cell.dataset.cell.split(".")[1];
-
-    assert(label.includes(text(`column.${column}`)), `${label} does not name its column`);
-    assert(label.split(",").length >= 2, `${label} names only one thing`);
-  });
-
-  test("Enter and Space select, and other keys do not", async () => {
-    const { node, game, chosen } = await board();
-    const cell = [...node.querySelectorAll(".cell")].find((n) => game.isBlank(n.dataset.cell));
-
-    for (const key of ["Enter", " "]) cell.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
-    equal(chosen.length, 2, "Enter and Space did not both select");
-    cell.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
-    equal(chosen.length, 2, "an unrelated key selected a cell");
+    equal(line.querySelectorAll(".cell").length, 0, "the footnote line still draws cells");
+    equal(line.querySelectorAll("[data-cell]").length, 0, "the footnote line still names board cells");
   });
 });
 
