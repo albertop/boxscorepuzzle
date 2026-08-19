@@ -2,14 +2,14 @@
 
 ## Where everything stands
 
-**Seventeen reviews, 78 findings, none rejected. One is open and it is not waiting on effort**, and two
+**Eighteen reviews, 79 findings, none rejected. One is open and it is not waiting on effort**, and two
 are **declined on the environment** and recorded in `non-issue.md`.
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v17 is closed except that one — seventy-six of seventy-eight**, with
+**Everything from v01 to v18 is closed except that one — seventy-seven of seventy-nine**, with
 `v16-P1-01` and `v17-P2-01` declined rather than fixed, each with its reason and its reactivation
 condition in `non-issue.md`.
 
@@ -727,6 +727,48 @@ decision gets read from.
 Every run staged through `results.txt.pending`. An atomic final rename protects the destination and not
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
+
+## v18 — verified, none rejected. **One finding, and it was half mine.**
+
+The reviewer ran under the stated environment for the first time, and returned **one** actionable
+finding instead of three or four. That is the rule working: the personas that had been producing
+adversary and concurrency findings reported nothing, in writing, rather than reaching for something.
+
+### v18-P2-01 — the third attempt at the destination preflight, and the guard that let it through
+
+**The tautological guard first, because it is the reason the gap survived.** The v17 test asserted
+
+```python
+assert target.exists() is False or target.name != "results.txt"
+```
+
+*after* `_refuse_unwritable` had cleaned up in `finally` — so `exists()` was always false and the whole
+line was always true. Deleting the statement that creates the probe target left the suite green,
+verified by running it: the guard proved a `replace` **call** had happened, not that it had replaced
+anything. **Eighth of its kind in this project, and written an hour before it was caught.**
+
+⚠️ **The mutation that would have caught it was one I did not run.** I reverted "the probe only creates,
+never replaces" as *both* lines at once, and it went red. Removing only the write — the smaller,
+sneakier revert — was the one that mattered. **A mutation that removes two things at once cannot tell
+which of them the guard is watching.**
+
+**And the finding underneath.** v17's probe replaces one sibling with another, which answers a question
+about the *directory*. `publish` ends in `pending.replace(out)`, against that specific file, and Windows
+lets a handle stay open for read and write while denying deletion — so a results file left open in a
+viewer passes the sibling replace and `os.access` alike, and fails hours later at the one operation
+nobody performed.
+
+**Three versions, each getting one half right:**
+
+| | exercises the real target | safe against a kill |
+|---|---|---|
+| v16 — rename aside and back | ✅ | ❌ the file can be lost |
+| v17 — replace one sibling with another | ❌ | ✅ |
+| v18 — replace `out` with a byte-for-byte copy of itself | ✅ | ✅ |
+
+The third has no disappearance window because **`out` is never the source of a rename**: a crash before
+the replace leaves the original untouched, and a crash during it leaves an atomically identical file.
+The v17 guard that forbids moving the artifact still holds and still means something.
 
 ## v17 — verified, none rejected. **Two fixed, one declined; and one v16 repair withdrawn.**
 

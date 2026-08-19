@@ -556,18 +556,8 @@ def _refuse_unwritable(out: Path) -> None:
     if not out.parent.is_dir():
         message = f"{out.parent} is not a directory; nothing this run produces could be published"
         raise SystemExit(message)
-    # ⚠️ **The probe replaces one probe with another, and never touches `out`.**
-    #
-    # v16 proved the destination by renaming it aside and restoring it in `finally`. That made a
-    # read-only check destructive: `finally` does not run after a kill or a power cut, so an
-    # interruption in the microsecond between the two renames leaves the canonical artifact **gone**,
-    # sitting under a name nobody looks for. This instrument gets stopped by hand — it has been three
-    # times today — so that is not a hypothetical window.
-    #
-    # Replacing an existing sibling exercises the same operation `publish` performs, in the same
-    # directory, without putting the previous result at risk. What it cannot see is an ACL belonging to
-    # `out` itself; `os.access` covers the read-only case, and the rest is not worth losing a completed
-    # five-hour result to.
+    # The directory question: can this process create a file here and replace one that already exists?
+    # `out` itself is asked separately, below, because a sibling cannot answer for it.
     probe = out.with_name(f"{out.name}.probe-{os.getpid()}-{secrets.token_hex(4)}")
     target = probe.with_name(f"{probe.name}.target")
     try:
@@ -580,9 +570,33 @@ def _refuse_unwritable(out: Path) -> None:
     finally:
         probe.unlink(missing_ok=True)
         target.unlink(missing_ok=True)
-    if out.exists() and not os.access(out, os.W_OK):
-        message = f"{out} exists and is not writable; this run could publish nothing"
-        raise SystemExit(message)
+    if out.exists():
+        _prove_replaceable(out)
+
+
+def _prove_replaceable(out: Path) -> None:
+    """Replace an existing destination **with a byte-for-byte copy of itself**, before the run.
+
+    ⚠️ **Three versions, and the first two each got one half right.** v16 renamed the artifact aside and
+    restored it in `finally`, which exercised the right operation and could lose the file to a kill.
+    v17 replaced one probe with another, which is safe and answers a question about the *directory* —
+    while `publish` ends in `pending.replace(out)`, against that specific file. Windows lets a handle be
+    open for read and write and still deny deletion, so a results file left open in a viewer passes both
+    the sibling replace and `os.access` and fails hours later at publication.
+
+    Copying the file's own bytes over itself is the same operation with no disappearance window: a crash
+    before the replace leaves the original untouched, a crash during it leaves an atomically identical
+    file, and `out` is never the *source* of a rename, so it can never be the thing that goes missing.
+    """
+    copy = out.with_name(f"{out.name}.copy-{os.getpid()}-{secrets.token_hex(4)}")
+    try:
+        copy.write_bytes(out.read_bytes())
+        copy.replace(out)
+    except OSError as error:
+        message = f"{out} exists and cannot be replaced ({error}); this run could publish nothing"
+        raise SystemExit(message) from error
+    finally:
+        copy.unlink(missing_ok=True)
 
 
 def _refuse_unless_identified(identity: RunIdentity, *, expect_inputs: bool = False) -> None:

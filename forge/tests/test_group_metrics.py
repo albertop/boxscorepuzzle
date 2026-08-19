@@ -631,40 +631,82 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         assert out.read_text(encoding="utf-8") == "a previous run"
         assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"], "the probe left debris"
 
-    def test_the_probe_replaces_an_existing_file_rather_than_only_creating_one(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        # What `publish` does is replace something already there, so that is the operation to exercise —
-        # in the destination's own directory, on a file of the probe's own.
-        module = _module("measure")
-        replaced: list[tuple[Path, Path]] = []
+    def _record_replaces(self, monkeypatch: pytest.MonkeyPatch) -> list[tuple[Path, Path, bool]]:
+        """Every `replace`, with **whether its target existed at the moment of the call**.
+
+        ⚠️ **That last field is the whole point, and the version this replaces did not have it.** It
+        asserted `target.exists() is False or target.name != "results.txt"` *after* the preflight had
+        already cleaned up in `finally`, so `exists()` was always false and the assertion was always
+        true. Deleting the line that creates the target left the suite green — the guard proved a
+        `replace` call had happened, not that it had replaced anything. Eighth of its kind here.
+        """
+        seen: list[tuple[Path, Path, bool]] = []
         original = Path.replace
 
         def record(self: Path, target: Path) -> Path:
-            replaced.append((self, Path(target)))
+            seen.append((self, Path(target), Path(target).exists()))
             return original(self, target)
 
         monkeypatch.setattr(Path, "replace", record)
+        return seen
+
+    def test_the_probe_replaces_a_file_that_is_actually_there(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # `publish` replaces something already present. A rename onto an absent path is a different
+        # operation and answers a different question.
+        module = _module("measure")
+        replaced = self._record_replaces(monkeypatch)
+
         module._refuse_unwritable(tmp_path / "results.txt")
 
         assert replaced, "the probe never exercised a replace"
-        source, target = replaced[0]
+        source, target, existed = replaced[0]
         assert source.parent == tmp_path and target.parent == tmp_path
-        assert target.exists() is False or target.name != "results.txt"
+        assert existed, "the probe renamed onto an absent path, which proves nothing about replacing"
 
-    def test_a_read_only_destination_is_found_before_the_loader(
+    def test_the_real_destination_is_the_thing_replaced_when_it_exists(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        # The half `os.access` still answers: an existing artifact nothing is allowed to write.
+        """⚠️ **A sibling cannot answer for `out`.** Windows lets a handle stay open for read and write
+        while denying deletion, so a results file left open in a viewer passes the sibling replace and
+        `os.access` alike, and fails hours later at the one operation nobody performed."""
         module = _module("measure")
         out = tmp_path / "results.txt"
         out.write_text("a previous run", encoding="utf-8")
-        monkeypatch.setattr(module.os, "access", lambda *_: False)
+        replaced = self._record_replaces(monkeypatch)
+
+        module._refuse_unwritable(out)
+
+        assert any(target == out and existed for _, target, existed in replaced), "`out` was never replaced"
+        assert all(source != out for source, _, _ in replaced), "`out` was moved, which is the v17 defect"
+        assert out.read_text(encoding="utf-8") == "a previous run", "the artifact did not survive its own check"
+
+    def test_a_destination_that_refuses_replacement_is_found_before_the_loader(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # Only the real destination refuses, so a guard that merely probed the directory stays green
+        # here and this one does not.
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+        out.write_text("a previous run", encoding="utf-8")
+        original = Path.replace
+
+        def refuse_only_the_destination(self: Path, target: Path) -> Path:
+            if Path(target) == out:
+                message = "the file is open in another process"
+                raise OSError(message)
+            return original(self, target)
+
+        monkeypatch.setattr(Path, "replace", refuse_only_the_destination)
         monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unpublishable run"))
         monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(out)])
 
-        with pytest.raises(SystemExit, match="is not writable"):
+        with pytest.raises(SystemExit, match="cannot be replaced"):
             module.main()
+
+        assert out.read_text(encoding="utf-8") == "a previous run", "a refused check cost the previous result"
+        assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"], "the copy was left behind"
 
     def test_output_without_a_path_says_so(self) -> None:
         # Scripts fail with an explanation, not an IndexError three frames down.
