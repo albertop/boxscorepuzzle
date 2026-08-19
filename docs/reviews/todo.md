@@ -6,9 +6,36 @@
 
 | | Open | Why |
 |---|---|---|
-| **v03-P2-04** + **v04-P1-02** | HMAC lets the server forge, and the manifest is unsigned | **one piece of work, blocked on a dependency.** Ed25519 is not in the standard library and `cryptography` cannot be added from this environment; `uv add cryptography` is the step it waits on. Signing the manifest with the existing secret would put a second shared secret in `serve`, which is worse than the gap. **Date: before `serve` exists** |
-| **v05-P1-01** | lineup slots do not cross the package boundary | needs a decision about a schema the format document calls **frozen** |
-| **v05-P1-02** | the erased-attribution drawing | half closed — and **now unblocked**, see below |
+| **v03-P2-04** + **v04-P1-02** | HMAC lets the server forge, and the manifest is unsigned | **unblocked.** `cryptography` is added and locked; Ed25519 signs in 128 hex. Private key on the laptop only, public key to `serve`, fail closed, and **the manifest signed too** — it decides which generation and which puzzles are the delivery, and altering it breaks no package signature. Not urgent until the VPS holds a key, which is why it follows the schema |
+| **v05-P1-01** | lineup slots do not cross the package boundary | **decided and half built.** Schema 2 cut, carrying the reference per batting row; version 1 still parses. **Owed: the writer filling the field, `package-format-v2.md` with the per-field table, and the test asserting document against code in both directions** |
+| **v05-P1-02** | the erased-attribution drawing | half closed. Unblocked by the footnote rerun; waits on the group run for how many candidates a blank separates |
+
+### Schema 2 — cut, and why it is a new version rather than an amendment
+
+Version 1 is append-only by contract, and slot references are not an addition: **without them a client
+cannot resolve `SH: 9b` to a row**, so the package means something different rather than something
+more. Exercising the version scheme now is the point — nothing published, no `serve`, nothing to
+migrate. **A version scheme first used under pressure is one that gets skipped.**
+
+- The reference is the string the board draws and the footnote line prints, **produced once on the
+  forge**. A client deriving it would hold a second copy of a baseball rule, and a wrong copy attaches
+  a term to the wrong row — where the row identity fails while every column total still balances.
+- **Pitching rows carry none**, deliberately: those are the opposing team's pitchers.
+- Validated at the boundary — one per batting row, a slot with an optional letter, no duplicates,
+  absent on version 1 and required on version 2.
+- **The version follows the payload rather than being stamped on it.** A package with references *is*
+  version 2 and one without them *is* version 1, so the two cannot disagree — which also left every
+  existing fixture valid as what it is, instead of forty call sites edited to say what they already said.
+
+**Owed:** the writer filling the field, the version 2 document with the same per-field table as version
+1 including the `published()` column, and the test asserting the document against the code **in both
+directions**.
+
+### The lockfile is back in sync
+
+`uv` was installed by winget and on no shell's PATH, which is why it read as absent. `uv add
+cryptography` ran: declared, locked, installed. **`uv.lock` describes the environment again** — it is
+the reproducibility guarantee and the thing that rebuilds the forge if the laptop is lost.
 
 ## ✅ The footnote question is settled, on a comparison that isolates the treatment
 
