@@ -68,9 +68,14 @@ function boot({ puzzle }) {
       node.classList.toggle("selected", node.dataset.cell === name);
       // The row and column a selected cell shares an equation with. Shown because a deduction is
       // always about a line, and finding it by eye on a 44px grid is the tedious part.
+      const other = node.dataset.cell !== name;
       const sameRow = node.dataset.cell.split(".")[0] === name.split(".")[0];
       const sameColumn = node.dataset.cell.split(".")[1] === name.split(".")[1];
-      node.classList.toggle("peer", node.dataset.cell !== name && (sameRow || sameColumn));
+      // Marked apart, because the row identity and the column sum are two different relations. A cell
+      // that is on both — impossible for a single selection — would take the column's colour, which is
+      // the narrower claim.
+      node.classList.toggle("peer-row", other && sameRow && !sameColumn);
+      node.classList.toggle("peer-column", other && sameColumn);
     }
   };
 

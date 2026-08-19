@@ -22,11 +22,21 @@
   --rule: #d3d7de;
   --rule-strong: #9aa1ad;
   --given: #16181d;
-  --entered: #1b57c4;
+  /* ⚠️ **What the player wrote, and nothing else.** This token used to paint three things: the value
+     in a cell, the slot references beside a live footnote term, and the `?` marks. Only the first is
+     the player's handwriting — the other two are the board stating what it knows and does not know.
+     Painting all three alike would have made the board claim the player had written its own unknowns. */
+  --entered: #8f1d1d;
+  --unknown: #1b57c4;
   --blank: #f4f6f9;
   --selected: #ffe9a8;
   --selected-rule: #c99a12;
-  --peer: #eef2f8;
+  /* The row and the column a selected cell shares an equation with. **Two colours, because they are
+     two different equation families** — the row identity `PA = AB + BB + HBP + SF + SH + CI` and the
+     column sum are separate relations, and a player following one of them is not following the other.
+     One grey for both said they were the same kind of line. */
+  --peer-row: #eef2f8;
+  --peer-column: #f6efe2;
   --muted: #6b7280;
   --keypad: #e8ebf0;
   --key: #ffffff;
@@ -66,11 +76,13 @@
     --rule: #2c3038;
     --rule-strong: #565d69;
     --given: #e6e8ec;
-    --entered: #7fa8ff;
+    --entered: #ff9b9b;
+    --unknown: #7fa8ff;
     --blank: #1b1e24;
     --selected: #4a3c12;
     --selected-rule: #d8ab26;
-    --peer: #1f232a;
+    --peer-row: #1f232a;
+    --peer-column: #2a2418;
     --muted: #9aa1ad;
     --keypad: #0e1013;
     --key: #1b1e24;
@@ -235,7 +247,9 @@ td.cell.given { color: var(--given); }
 td.cell.blank {
   background: var(--blank);
   color: var(--entered);
-  font-weight: 600;
+  /* Bold, because the player's own writing has to be findable at a glance among nine rows of given
+     numbers — and because a cell they filled and a cell they were given are different kinds of fact. */
+  font-weight: 700;
   outline: 1.5px solid var(--rule-strong);
   /* ⚠️ **Drawn just inside the box, and the instruction said outside.** Worth the note, because the
      reason the instruction gave still holds: *the border must not shrink the usable area*. An outline
@@ -247,7 +261,8 @@ td.cell.blank {
   outline-offset: -1px;
 }
 td.cell.blank:empty::after { content: ""; }
-td.cell.peer { background: var(--peer); }
+td.cell.peer-row { background: var(--peer-row); }
+td.cell.peer-column { background: var(--peer-column); }
 td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
 
 /* ---- the footnote line ----------------------------------------------------------------------- */
@@ -260,8 +275,8 @@ td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(
 .footnotes .lob { margin-right: 12px; }
 .footnotes .term.zero { color: var(--rule-strong); }
 .footnotes .term.live { color: var(--ink); font-weight: 700; }
-.footnotes .term.live .who { color: var(--entered); }
-.footnotes .term.unknown { color: var(--entered); font-weight: 700; }
+.footnotes .term.live .who { color: var(--unknown); }
+.footnotes .term.unknown { color: var(--unknown); font-weight: 700; }
 .footnotes .lob { font-weight: 700; }
 
 /* ---- keypad ---------------------------------------------------------------------------------- */
