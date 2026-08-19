@@ -2,15 +2,16 @@
 
 ## Where everything stands
 
-**Seven reviews, 42 findings, none rejected. One review item is open and it is not waiting on effort.**
+**Eight reviews, 47 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
-| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded; the drawing waits on the group run, which says how many candidates a blank must ever separate |
+| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; the drawing waits on the group run, which says how many candidates a blank must ever separate |
 
-**Everything else from seven reviews is closed.** `v05-P1-01` closed with schema 2, and `v03-P2-04`
-with `v04-P1-02` are unblocked — `cryptography` is added and locked, so Ed25519 is work rather than a
-dependency wait.
+**v08 is closed entirely** — all seven, and all seven were in code written the same day. Three were the
+project's own named patterns turned on itself: *a justification travels* (the phase split applied to
+validation), *a check that exists and is never invoked* (`sign_manifest` written and never called), and
+*a mechanism kept past its problem* (version 1 compatibility, whose promise was false anyway).
 
 ## What is left
 
@@ -18,7 +19,14 @@ dependency wait.
 schema 2 it has the contract it needed, and the group run, the drawing and the ladder are forge and
 pack work that does not change what the client reads. It is at zero and February is the window.
 
-### Ed25519 — nearly finished
+### Ed25519 — finished
+
+Key pair, 128-hex signature, the envelope, **the signed manifest**, test keys generated per run, the
+two key modes mutually exclusive, and the writer refusing to publish without the forge's key. The
+public half is in `serve/data/signing-public-key.hex`; the private half is on the laptop and documented
+in `docs/signing-keys.md`.
+
+### What Ed25519 replaced
 
 Done: the key pair, the 128-hex signature, the envelope, **the signed manifest**, and test keys
 generated per run rather than checked in.
