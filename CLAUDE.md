@@ -151,7 +151,13 @@ Cross-check against an **independent source** — the game log, not `retroDailyR
 **One predicate, one place.** If two queries, two modules, or two documents encode the same rule, they
 will drift. Share the definition or assert they agree; do not maintain two copies and hope.
 
-**A check that never fires is indistinguishable from a check that is broken.** Test the failing case. A
+**A check that never fires is indistinguishable from a check that is broken.** **And a rule applied
+outward does not automatically apply inward.** Two guards written in the same session that recorded
+this rule do not fire: a parameterised test calls `_position` with three arguments, so the branch it
+was written to protect never runs, and a "these two agree" test assigns both names from one
+expression, staying green if either consumer stops calling the helper at all. The failure is not that
+the rule was unknown — it was being applied to other people's code the same day. **Check your own
+guard by asking what change it would let through**, not by rereading what it asserts. Test the failing case. A
 threshold set by eye that rejects real data gets loosened until it says nothing, which is worse than not
 having it — it gives false confidence.
 
