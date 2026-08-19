@@ -538,6 +538,57 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
   than kept as a belt** — two places encoding one predicate is the defect this file spent the day
   closing.
 
+## v09 — verified, none rejected
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P2-02 the group run cannot observe what it reports | real, **and it invalidates a result I reported** | `had_to_resolve` is structurally impossible |
+| P1-01 an untrusted key can replace production inventory | real | both banners print, and the key is never compared to the pinned one |
+| P2-01 the default constructor emits documents its own reader refuses | real | `__post_init__` returns early on the normal path |
+
+### v09-P2-02 — I reported a structural zero as a measurement
+
+`groups_in()` hides one slot group's footnote cells and **leaves every other cell given**. So every
+cell the solver deduces is one of the hidden ones, the generator behind `any(...)` is empty, and
+`had_to_resolve` **cannot be true on any board**.
+
+⚠️ **I read that column as "0% everywhere: the assignment never blocks the rest of the board" and said
+so.** It is not a finding about puzzles. It is a metric that has one possible value, reported as though
+it had two — the project's own *a check that never fires* defect, in the output rather than in a guard,
+where it is harder to see because it looks like data.
+
+**And `unique` conflates two questions.** It is true when the restricted human solver finishes *and*
+reproduces the hidden values, so a false result means either several assignments exist or one exists
+and the implemented techniques did not reach it. The report calls the share "uniquely solvable", which
+is only one of those. Mathematical uniqueness needs the enumerator at `limit=2`; human derivability is
+a second axis, not the same one.
+
+**What survives from the run:** the technique split — one-row groups resolve by propagation, two-row
+and larger by bounding, 100% either way on 2,038 and 121 cases. That one is measured. The rest of the
+table is either underpowered or structurally fixed.
+
+### v09-P1-01 — two banners, and no comparison with the key that matters
+
+**Both print.** Replacing the fixtures block left its `print` lines behind, so an ephemeral run
+announces itself correctly and then says it was signed with a key that lives in the repository. One of
+those is false, and an operator classifying the artifacts reads both.
+
+**And the writer never compares the key it signs with against `serve/data/signing-public-key.hex`** —
+zero references to it. Signing with a valid Ed25519 key that is not *the* key produces a batch that
+self-verifies, replaces the live manifest, and is refused by `serve`: an outage reported as a
+successful certified commit. Ephemeral and production also publish through the same `OUT`, so the
+untrusted mode can overwrite the trusted namespace.
+
+**Refusing at read time preserves integrity and not availability**, which is the distinction the fix
+turns on.
+
+### v09-P2-01 — the constructor and the parser apply different rules
+
+`__post_init__` returns early when `schema is None`, which is the normal path, so a package with no
+references serialises as schema 2 and `from_json` refuses it. Duplicates and malformed values pass
+construction too. The reference writer's read-back catches it for that one caller; the shared type
+still lets any other producer build a file the shared reader rejects.
+
 ## v08 — verified, none rejected. **Six of seven closed.**
 
 | Finding | State | What it was |
