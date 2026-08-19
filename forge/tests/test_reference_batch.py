@@ -169,3 +169,38 @@ class TestCommittingTheBatch:
 
         assert "getpid()" in source
         assert '{MANIFEST}.pending"' not in source
+
+
+class TestTheWriterWillNotSignWithTheRepositoryKeyByAccident:
+    """⚠️ **It used to fall back silently.** No `BOXSCORE_SIGNING_SECRET` and the writer signed with a
+    key that lives in this repository, wrote into `serve/data/puzzles`, and passed the same
+    certification path as a real batch. A CI job or a developer running it without the variable
+    produced packages indistinguishable from forge output, and nothing executable enforced the comment
+    saying they were not production. Anyone holding the repository could forge one.
+
+    A missing secret is an error now, and the repository key is reachable only through a flag that
+    announces itself.
+    """
+
+    def _source(self) -> str:
+        return (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
+
+    def test_a_missing_secret_is_an_error_rather_than_a_quieter_mode(self) -> None:
+        source = self._source()
+
+        assert "there is no fallback" in source
+        assert "raise SystemExit(message)" in source
+
+    def test_the_repository_key_is_only_reachable_behind_the_flag(self) -> None:
+        # The check that would have caught the original: the fixture key must not be assigned on any
+        # path that does not first test for the flag.
+        source = self._source()
+        assignment = source.index("secret = FIXTURE_SECRET")
+        guard = source.index('fixtures = "--fixtures" in sys.argv')
+
+        assert guard < assignment
+        assert "if not fixtures:" in source[guard:assignment]
+
+    def test_fixtures_mode_says_so_where_a_person_will_see_it(self) -> None:
+        # A trust profile nobody is told about is the same defect one step quieter.
+        assert "FIXTURES MODE" in self._source()

@@ -48,7 +48,17 @@ OUT = _ROOT / "serve" / "data" / "puzzles"
 MANIFEST = "manifest.json"
 
 SECRET_VARIABLE = "BOXSCORE_SIGNING_SECRET"
-FALLBACK_SECRET = b"reference-puzzles-only, replace before anything is published"
+FIXTURE_SECRET = b"reference-puzzles-only, replace before anything is published"
+"""⚠️ **This key is in the repository, so anything signed with it is forged as easily as it is made.**
+
+It used to be a silent fallback: no `BOXSCORE_SIGNING_SECRET` in the environment and the writer signed
+with this anyway, into `serve/data/puzzles`, through the same certification path as a real batch. A CI
+job or a developer running the script without the variable produced packages indistinguishable from
+forge output, and nothing executable enforced the comment saying they were not production.
+
+It is now reachable only through `--fixtures`, which is loud, and the environment secret is required
+otherwise. A missing secret is an error, never a quieter mode.
+"""
 """A stand-in so this script runs without a configured environment.
 
 It is **not** the publishing secret and must never become one. The real one arrives through the
@@ -280,7 +290,21 @@ def _publish(staging: Path, expected: int) -> str:
 
 
 def main() -> None:
-    secret = os.environ.get(SECRET_VARIABLE, "").encode() or FALLBACK_SECRET
+    fixtures = "--fixtures" in sys.argv
+    secret = os.environ.get(SECRET_VARIABLE, "").encode()
+    if not secret:
+        if not fixtures:
+            message = (
+                f"{SECRET_VARIABLE} is unset. Publishing needs the real key; there is no fallback. "
+                "Pass --fixtures to sign with the repository key instead, which produces packages "
+                "nobody may trust and everybody can forge."
+            )
+            raise SystemExit(message)
+        secret = FIXTURE_SECRET
+        print("=" * 78)
+        print("FIXTURES MODE — signed with the key that lives in this repository.")
+        print("These packages prove the format parses. They prove nothing about where they came from.")
+        print("=" * 78)
     sample = load(4, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
 
     with_substitution = [item for item in sample if len(set(item.slots)) < len(item.slots)]

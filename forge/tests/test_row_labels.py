@@ -44,29 +44,46 @@ class TestThePositionRule:
     """Where he played, not how he arrived — and `PH` only when it is the whole truth."""
 
     @pytest.mark.parametrize(
-        ("appeared_at", "entered_fielding", "entered_as", "expected"),
+        ("appeared_at", "entered_fielding", "entered_as", "started_at", "expected"),
         [
-            # The defect itself: a man recorded at centre who entered in right is a right fielder.
-            ("CF", 9, 11, "RF"),
-            # A pinch hitter who stayed in at centre is a centre fielder. `PH` distinguishes nothing —
-            # every substitute hitter is one — and a printed boxscore prints the position too.
-            ("PH", 8, 11, "CF"),
+            # ⚠️ **`started_at` used to be missing from this table**, so every "starter" case ran the
+            # fallback path and the branch that fixed the two-third-basemen defect was never exercised
+            # by the test written for it. The first row is that defect: a man recorded at both 3B and
+            # CF whose starting lineup code is 8.
+            ("3B", None, None, 8, "CF"),
+            ("CF", None, None, 5, "3B"),
+            ("?", None, None, 10, "DH"),
+            ("DH", None, None, 10, "DH"),
+            # A starter's own code wins over anything the flags say.
+            ("P", None, None, 2, "C"),
+            # The defect as it reached a substitute: recorded at centre, entered in right.
+            ("CF", 9, 11, None, "RF"),
+            # A pinch hitter who stayed in at centre is a centre fielder.
+            ("PH", 8, 11, None, "CF"),
             # The largest group in the 7%: he batted for the designated hitter without taking the slot.
-            ("DH", None, 11, "PH"),
-            ("DH", None, 12, "PR"),
+            ("DH", None, 11, None, "PH"),
+            ("DH", None, 12, None, "PR"),
             # `PH` is the whole truth here: he came in to bat and left.
-            ("?", None, 11, "PH"),
-            # Starters keep what they are recorded at, with no substitution row to consult.
-            ("CF", None, None, "CF"),
-            ("DH", None, None, "DH"),
-            # Entering as the designated hitter is taking the slot.
-            ("?", None, 10, "DH"),
+            ("?", None, 11, None, "PH"),
+            # No substitution row and no lineup code: fall back on what he is recorded at.
+            ("CF", None, None, None, "CF"),
+            ("?", None, 10, None, "DH"),
         ],
     )
     def test_the_label_names_the_position(
-        self, appeared_at: str, entered_fielding: int | None, entered_as: int | None, expected: str
+        self,
+        appeared_at: str,
+        entered_fielding: int | None,
+        entered_as: int | None,
+        started_at: int | None,
+        expected: str,
     ) -> None:
-        assert _loader()._position(appeared_at, entered_fielding, entered_as) == expected
+        assert _loader()._position(appeared_at, entered_fielding, entered_as, started_at) == expected
+
+    def test_the_starting_lineup_code_beats_the_recorded_flags(self) -> None:
+        # The assertion that would have caught the original defect, stated on its own rather than as
+        # one row of a table: the two disagree, and the lineup wins.
+        assert _loader()._position("3B", None, None, 8) != _loader()._position("3B", None, None, None)
 
     def test_the_label_is_the_position_and_nothing_else(self) -> None:
         # ⚠️ The suffix is gone. It existed so a footnote could name a unique row, and the reference
@@ -173,15 +190,45 @@ class TestTheSlotReferenceHasOneSource:
         assert _loader().slot_references([9, 9, 9]) == ("9a", "9b", "9c")
 
     def test_the_cell_and_the_footnote_are_the_same_string_for_the_same_row(self) -> None:
-        """The assertion that matters: one call, one string, both consumers."""
-        slots = [1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9]
-        carries_a_footnote = 10  # the second man in the pitcher's slot
+        """⚠️ **This assigned both names from one expression and was a tautology**: it stayed green if
+        either consumer stopped calling `slot_references` at all, which is the only thing it existed to
+        prevent. It reads the two real consumers now — the slot cell the table draws and the reference
+        the footnote line prints — and requires them to agree.
+        """
+        import importlib.util  # noqa: PLC0415
+        import sys  # noqa: PLC0415
+        from types import SimpleNamespace  # noqa: PLC0415
 
-        references = _loader().slot_references(slots)
-        cell = references[carries_a_footnote]
-        footnote = references[carries_a_footnote]
+        handsolve = Path(__file__).resolve().parents[2] / "discovery" / "hand-solve"
+        for extra in (handsolve, handsolve.parents[0] / "difficulty-metrics"):
+            sys.path.insert(0, str(extra))
+        spec = importlib.util.spec_from_file_location("build_pack_parity", handsolve / "build_pack.py")
+        assert spec is not None and spec.loader is not None
+        pack = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(pack)
 
-        assert cell == footnote == "9b"
+        from boxscore_package.format import Board, LineScore  # noqa: PLC0415
+
+        slots = (9, 9)
+        board = Board(
+            batting=((1, 1, 0, 0, 0, 0), (1, 1, 0, 0, 0, 0)),
+            batting_totals=(2, 2, 0, 0, 0, 0),
+            footnotes=((0, 0, 0, 0), (0, 0, 1, 0)),
+            footnote_totals=(0, 0, 1, 0),
+            left_on_base=1,
+            pitching=((3, 0, 0, 0, 0, 0),),
+            pitching_totals=(3, 0, 0, 0, 0, 0),
+            line_score=LineScore((0,), (0,), 0, 0, 0, 0, 0, 0),
+        )
+        loaded = SimpleNamespace(
+            offense_is_home=True, labels=("P", "P"), pitcher_labels=("SP",), slots=slots, direction=None
+        )
+
+        drawn = [str(cell) for cell in pack.board_table(board, loaded, solved=False)._cellvalues[3]]
+        printed = pack.footnote_line(board, slots)
+
+        assert drawn[0] == "9b", f"the table drew {drawn[0]!r} for the second row of slot 9"
+        assert "SH: 9b" in printed, f"the footnote line printed {printed!r}"
 
     def test_every_reference_carries_its_slot_number(self) -> None:
         # `9b`, never a bare `b`. The footnote prints the same string the cell does, so finding the
