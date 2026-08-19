@@ -485,7 +485,9 @@ def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
         message = f"{len(values)} slot references for {rows} batting rows"
         raise PackageError(message)
     for value in values:
-        if not isinstance(value, str) or not SLOT_REFERENCE.fullmatch(value):
+        # The type says these are strings and `from_json` hands over whatever the file held, so the
+        # runtime check lives at the parse boundary and this one asks only about the shape.
+        if not SLOT_REFERENCE.fullmatch(value):
             message = f"slot reference {value!r} is not a slot with an optional letter"
             raise PackageError(message)
     if len(set(values)) != len(values):
@@ -496,7 +498,7 @@ def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
 
 def _slot_references(raw: object, rows: int) -> tuple[str, ...]:
     """One reference per batting row. Required: schema 1 is gone and there is no version without it."""
-    if not isinstance(raw, list):
+    if not isinstance(raw, list) or not all(isinstance(value, str) for value in raw):
         message = f"slot_references is {raw!r}, expected {rows} strings, one per batting row"
         raise PackageError(message)
     _check_slot_references(tuple(raw), rows)
