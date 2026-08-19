@@ -146,13 +146,21 @@ def report(groups: list[Group]) -> None:
 
     print("")
     print("=== THE CONTROL ===")
-    one = [g for g in groups if g.rows == 1 and g.terms >= 2]
-    two = [g for g in groups if g.rows == 2 and g.terms >= 2]
-    for name, here in (("one row, 2+ terms (not ambiguous at all)", one), ("two rows, 2+ terms", two)):
-        if here:
-            print(f"  {name}: {sum(g.unique for g in here) / len(here):.0%} unique [{len(here)}]")
-    print("  If the first resolves and the second does not, the difficulty is the assignment rather than")
-    print("  carrying several terms — two explanations an aggregate would confuse.")
+    print("⚠️ Exactly two terms on both sides. It used to be `>= 2`, which compares populations that")
+    print("   are composed differently: a multi-row group has more chances to contain events, so its")
+    print("   term distribution is heavier, and a lower rate could come from carrying more terms, from")
+    print("   assignment ambiguity, or from both. The aggregate could not tell them apart while the")
+    print("   text beside it claimed it could — which is the confound this control exists to avoid.")
+    for terms in (2, 3):
+        one = _cohort(cells, 1, terms)
+        two = _cohort(cells, 2, terms)
+        if not one or not two:
+            continue
+        print(f"  {terms} terms exactly:")
+        print(f"    one row  (not ambiguous at all): {sum(g.unique for g in one) / len(one):.0%} unique [{len(one)}]")
+        print(f"    two rows (assignment unknown):   {sum(g.unique for g in two) / len(two):.0%} unique [{len(two)}]")
+    print("  Term count is held fixed and only the number of possible carriers changes, so a difference")
+    print("  is the assignment. The stratified table above is authoritative; this is one slice of it.")
 
 
 def main() -> None:

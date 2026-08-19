@@ -432,6 +432,32 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## v07 — verified, none rejected, both closed
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P1-01 the control confounds assignment with term volume | real | both cohorts built with `terms >= 2` |
+| P2-01 the suffix guard accepts more than one digit | real | `-\d` matches `PH-2` and misses `PH-10` |
+
+### v07-P1-01 — the control had the confound it exists to remove
+
+The named control compares a one-row group against a two-row group to isolate **assignment**: term
+count fixed, only the number of possible carriers changing. It was implemented as `terms >= 2` on both
+sides — and a multi-row group has more chances to contain events, so its term distribution is heavier.
+A lower rate could then come from carrying more terms, from assignment ambiguity, or from both, **and
+the text beside it claimed it could tell them apart**.
+
+Exactly two terms on both sides now, and repeated at three, with the stratified `(rows, terms)` table
+named as authoritative and the control described as one slice of it rather than as a separate result.
+
+### v07-P2-01 — a guard green on the numbers a long game produces
+
+`-\d` matches one digit, so `P-10` and `PH-12` passed a check meant to reject every numbered label —
+and those are exactly the values a substitution-heavy game produces, which is where the grouping
+matters most. The pattern takes any width now, and the can-it-fire case is **synthetic and carries both
+widths**: one historical file cannot define the adversarial space, which is what the first version
+leaned on.
+
 ## v06 — verified, none rejected. **All five are in code written today.**
 
 | Finding | Verdict | What was confirmed |

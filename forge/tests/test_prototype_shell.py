@@ -51,6 +51,13 @@ class TestEveryPrototypeIsAMobilePage:
         assert "width=device-width" not in bare.read_text(encoding="utf-8")
 
 
+SUFFIXED = r">([A-Z0-9]{1,3}-\d+)<"
+r"""⚠️ This was `-\d`, a single digit, so `P-10` and `PH-12` passed a guard meant to reject every
+numbered label — and those are within the shape of the old convention, most likely in exactly the long
+substitution-heavy games where the grouping matters. One historical file cannot define the adversarial
+space, so the can-it-fire case is synthetic and carries both widths."""
+
+
 class TestActivePrototypesUseTheCurrentVisualLanguage:
     """A prototype judged side by side must not show a convention the product dropped.
 
@@ -66,9 +73,23 @@ class TestActivePrototypesUseTheCurrentVisualLanguage:
     def test_no_active_prototype_shows_a_suffixed_position(self, path: Path) -> None:
         import re  # noqa: PLC0415
 
-        found = sorted(set(re.findall(r">([A-Z0-9]{1,3}-\d)<", path.read_text(encoding="utf-8"))))
+        found = sorted(set(re.findall(SUFFIXED, path.read_text(encoding="utf-8"))))
 
         assert not found, f"{path.name} renders suffixed labels {found}; labels are bare positions"
+
+    def test_it_rejects_a_two_digit_suffix(self) -> None:
+        # The gap: a single-digit pattern is green on the numbers a long game actually produces.
+        import re  # noqa: PLC0415
+
+        page = "<td>PH-2</td><td>P-10</td><td>PH-12</td><td>CF</td>"
+
+        assert sorted(set(re.findall(SUFFIXED, page))) == ["P-10", "PH-12", "PH-2"]
+
+    def test_it_accepts_a_page_with_bare_positions(self) -> None:
+        # A pattern that matched everything would satisfy the two tests above.
+        import re  # noqa: PLC0415
+
+        assert not re.findall(SUFFIXED, "<td>CF</td><td>SS</td><td>P</td><td>9b</td>")
 
     def test_the_archived_one_would_be_rejected(self) -> None:
         # The can-it-fire case, and it is a real file rather than a fixture: the page that prompted
@@ -77,7 +98,7 @@ class TestActivePrototypesUseTheCurrentVisualLanguage:
 
         archived = _PROTOTYPES[0].parent / "archive" / "substitute-grouping-sample.html"
         assert archived.exists(), "the archived prototype moved; this guard is no longer proven to fire"
-        found = sorted(set(re.findall(r">([A-Z0-9]{1,3}-\d)<", archived.read_text(encoding="utf-8"))))
+        found = sorted(set(re.findall(SUFFIXED, archived.read_text(encoding="utf-8"))))
 
         assert found, "the archived page no longer contains what this check looks for"
         assert "HISTORICAL" in archived.read_text(encoding="utf-8")
