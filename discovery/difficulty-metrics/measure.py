@@ -282,6 +282,7 @@ def load(
     max_batters: int = 13,
     min_pitchers: int = 0,
     max_pitchers: int = 4,
+    also: tuple[str, ...] = (),
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
 
@@ -292,6 +293,14 @@ def load(
     `min_pitchers` exists to sample an *exact* pitcher count rather than a cap, which is what
     comparing a two-pitcher board against a five-pitcher one requires — under a cap the five-pitcher
     boards would be a handful of outliers inside a sample of two-pitcher ones.
+
+    ⚠️ **`also` names games the sample must contain**, on top of whatever the stratified draw returns.
+    It exists for re-measuring a specific board after a scale changes — the one board carrying a human
+    verdict, say. Without it a script can only *hope* the draw includes what it wants to compare, and a
+    comparison that runs whether or not its subject is present is a check that never fires. Named games
+    still face every filter: the caps, the gate and the provenance rule apply to them exactly as they
+    apply to the draw, so `also` cannot smuggle in a board the pool would refuse. **A named game that
+    does not come back was rejected, and the caller must say so rather than fall silent.**
     """
     import pyodbc  # noqa: PLC0415
 
@@ -398,6 +407,12 @@ def load(
       {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
+    # The same SELECT with the sampling replaced by a name list. Built from the query above rather
+    # than written out, so the caps, the gate and the provenance join cannot drift between the two:
+    # one predicate, one place. `TOP (?)` becomes a large literal because the IN list already bounds it.
+    named_query = query.replace("SELECT TOP (?)", "SELECT TOP 999", 1).replace(
+        "AND g.SEASON BETWEEN ? AND ?", f"AND g.GAME_ID IN ({', '.join('?' * len(also))})", 1
+    )
     # The starting lineup, which is where a *starter* entered. `retroGamesReg` carries nine
     # BAT_ID/FLD_CD pairs per side; the code counts only when the row's player is the man the lineup
     # names in that slot, so a substitute cannot inherit his predecessor's position.
@@ -476,6 +491,14 @@ def load(
         candidates = []
         for decade in range(1910, 2030, 10):
             candidates += cursor.execute(query, limit, decade, decade + 9).fetchall()
+        if also:
+            # ⚠️ Keyed by game *and* offensive team, because a game is two directions and they are two
+            # different boards. Deduplicating on the game id alone would drop the second direction
+            # whenever the draw happened to contain the first — silently halving what was asked for.
+            drawn = {(row[0], row[2]) for row in candidates}
+            candidates += [
+                row for row in cursor.execute(named_query, *also).fetchall() if (row[0], row[2]) not in drawn
+            ]
         for (
             game_id,
             season,

@@ -72,7 +72,15 @@ useful figure in the recalibration, because every other number on the new scale 
 it. Reported if the sample contains it; **said plainly if it does not**, rather than left to look like
 it was never asked for.
 
-Nothing about this board is treated specially in the search. It is watched, not favoured.
+⚠️ **Asked for by name, not hoped for.** The sample is a stratified draw of four directions per
+decade out of a pool in the hundreds of thousands, so the chance of it turning up on its own is
+negligible — which would leave the "not in this sample" branch firing on every run and the comparison
+never actually happening. A check that never fires is indistinguishable from one that is broken. It is
+added to the sample through `load(also=...)`, where it still faces the gate, the caps and the
+provenance rule like every other board.
+
+Nothing about it is treated specially **in the search or in the selection**. It is watched, not
+favoured: it competes for one of the five slots on its stall count alone, and it will usually lose.
 """
 
 SEEDS = (1, 2, 3)
@@ -264,7 +272,7 @@ def main() -> None:
     rng = random.Random(SEED)  # noqa: S311
     sample = [
         item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4, also=(WATCHED,))
         if not find_violations(item.direction)
     ]
     if not sample:
@@ -307,17 +315,21 @@ def main() -> None:
     print(f"blanks in the batting grid: {grid}")
     print(f"uncertified by layer 3b: {sum(1 for c in chosen if not c.certified)} of {len(chosen)}")
     print(f"wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in {_HERE}")
+    # Plain text here too. The block above says why, and then this one printed a warning sign into
+    # the same redirected cp1252 stream — the rule applied outward and not inward, one screen down.
     watched = [row for row in found if row.loaded.game_id == WATCHED]
+    print("")
     if watched:
         best = max(row.stalls for row in watched)
-        print("")
-        print(f"⚠️ THE ONE BOARD WITH A HUMAN VERDICT: {WATCHED}")
-        print(f"   measured 19 stalls / 79 blanks on the scale that counted zeros, and the operator")
-        print(f"   solved it and found it hard. On the corrected scale it reaches {best} stalls.")
+        print(f"THE ONE BOARD WITH A HUMAN VERDICT: {WATCHED}, best of {len(watched)} direction(s)")
+        print("   measured 19 stalls / 79 blanks on the scale that counted zeros, and the operator")
+        rank = sorted((row.stalls for row in found), reverse=True).index(best) + 1
+        print(f"   solved it and found it hard. On the corrected scale it reaches {best} stalls,")
+        print(f"   ranking {rank} of {len(found)} boards searched.")
     else:
-        print("")
-        print(f"⚠️ {WATCHED} is not in this sample, so the one measured-and-judged board could not be")
-        print("   re-measured. Said rather than omitted: its absence is not a null result.")
+        print(f"{WATCHED} was asked for by name and did not come back, so the one measured-and-judged")
+        print("   board could not be re-measured. It was rejected by the gate, the caps, the provenance")
+        print("   rule or an identity check. Said rather than omitted: its absence is not a null result.")
     print(f"(build_pack's own targets are {build_pack.TARGETS}, which are chain rungs and not used here)")
 
 
