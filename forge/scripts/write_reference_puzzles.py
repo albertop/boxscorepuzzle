@@ -195,6 +195,19 @@ def _generation(names: list[str], payloads: list[bytes]) -> str:
     return digest.hexdigest()[:12]
 
 
+def _current_generation(manifest: Path) -> str:
+    """The generation the published manifest names, or nothing if there is no readable manifest."""
+    if not manifest.exists():
+        return ""
+    try:
+        return str(json.loads(manifest.read_text(encoding="utf-8")).get("generation", ""))
+    except (json.JSONDecodeError, OSError):
+        # A manifest we cannot read names nothing we can protect. Retaining everything would be the
+        # safe reading, but a directory that grows without bound is its own failure; the sweep below
+        # keeps only what this run publishes.
+        return ""
+
+
 def _publish(staging: Path, expected: int) -> str:
     """Swap the whole batch in with one atomic rename, or leave the published set untouched.
 
@@ -233,7 +246,10 @@ def _publish(staging: Path, expected: int) -> str:
         staging.replace(home)
 
     manifest = OUT / MANIFEST
-    pending = OUT / f"{MANIFEST}.pending"
+    # ⚠️ **The pending file is named per process.** A fixed name is a collision point between two
+    # publishers, and nothing here makes the single-writer assumption true.
+    pending = OUT / f"{MANIFEST}.pending-{os.getpid()}"
+    superseded = _current_generation(manifest)
     pending.write_text(
         json.dumps(
             {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)},
@@ -245,8 +261,18 @@ def _publish(staging: Path, expected: int) -> str:
     # The commit. Everything above this line can fail without changing what is published.
     pending.replace(manifest)
 
+    # ⚠️ **The generation the manifest used to name is kept.** Replacing the manifest atomically stops
+    # a reader seeing a torn pointer; it does not make *fetch the manifest* and *fetch a puzzle* one
+    # transaction. A reader — or a CDN — holding the previous manifest asks for one of its puzzles
+    # after the swap, and deleting that generation at commit time turns a normal release into a 404
+    # for everyone mid-solve. A cached manifest stretches that window far past the rename.
+    #
+    # So the commit path collects nothing. One generation back is retained, and anything older is
+    # swept on the *next* publish, by which time no live manifest can name it. Staging directories are
+    # skipped entirely: they may belong to another process.
+    keep = {generation, superseded}
     for stale in OUT.iterdir():
-        if stale.is_dir() and stale.name != generation:
+        if stale.is_dir() and stale.name not in keep and not stale.name.startswith("."):
             for leftover in stale.iterdir():
                 leftover.unlink()
             stale.rmdir()

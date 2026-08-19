@@ -122,8 +122,14 @@ serve/data/puzzles/
   <generation>/<puzzle_id>.json
 ```
 
-**A reader follows the manifest and reads only the puzzles it names.** Files under a generation the
-manifest does not name are leftovers being swept, not inventory.
+**A reader follows the manifest and reads only the puzzles it names.**
+
+⚠️ **The generation the manifest previously named is retained.** Replacing the manifest atomically
+stops a reader seeing a torn pointer; it does not make *fetch the manifest* and *fetch a puzzle* one
+transaction, and a cached manifest stretches the gap between them far past the rename. A reader
+holding the old pointer must still be able to read all of it. **One generation back is kept, and the
+commit path collects nothing** — anything older is swept on the next publish, by which time no live
+manifest can name it.
 
 ⚠️ **Replacing the manifest is the commit, and it is the only atomic step there is.** Per-file atomic
 renames stop a reader seeing half a file; they cannot stop it seeing three puzzles from one generation

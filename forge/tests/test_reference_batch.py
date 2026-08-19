@@ -104,7 +104,7 @@ class TestCommittingTheBatch:
         assert first == second
         assert [path.name for path in tmp_path.iterdir() if path.is_dir()] == [first]
 
-    def test_changed_contents_take_a_new_generation_and_sweep_the_old(self, tmp_path: Path) -> None:
+    def test_changed_contents_take_a_new_generation(self, tmp_path: Path) -> None:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
         first = writer._publish(staging, 2)
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
@@ -113,20 +113,59 @@ class TestCommittingTheBatch:
         second = writer._publish(changed, 2)
 
         assert second != first
-        assert [path.name for path in tmp_path.iterdir() if path.is_dir()] == [second]
         assert json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))["generation"] == second
 
-    def test_the_previous_generation_stays_readable_until_the_manifest_moves(self, tmp_path: Path) -> None:
-        # What a directory of atomically renamed files cannot give: a reader following the manifest
-        # sees one whole batch or the other, never three puzzles from each.
+    def test_a_reader_holding_the_previous_manifest_can_still_read_all_of_it(self, tmp_path: Path) -> None:
+        """⚠️ **The test this replaces asserted the opposite**, and so encoded the defect as the
+        contract: it required the previous directory to be gone the moment `_publish` returned.
+
+        An atomic rename stops a reader seeing a torn manifest. It does not make *fetch the manifest*
+        and *fetch a puzzle* one transaction, and a cached manifest stretches the gap between them far
+        past the rename. Deleting the superseded generation at commit turns an ordinary release into a
+        404 for everyone holding the old pointer.
+        """
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
         first = writer._publish(staging, 2)
+        # What a reader captured before the next publish.
+        held = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
         writer.OUT = tmp_path
 
-        # The staged generation exists on disk before the commit, and the manifest still names the old
-        # one, so nothing a reader can reach has changed yet.
-        assert json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))["generation"] == first
-        assert (tmp_path / first / "bbb.json").exists()
         writer._publish(changed, 2)
+
+        assert held["generation"] == first
+        for puzzle in held["puzzles"]:
+            assert (tmp_path / first / f"{puzzle}.json").exists(), "the reader's generation was deleted under it"
+
+    def test_only_one_generation_back_is_kept(self, tmp_path: Path) -> None:
+        # Retention is not accumulation. The commit path collects nothing; the run after next sweeps
+        # what no live manifest can name.
+        writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
+        first = writer._publish(staging, 2)
+        for names in (["aaa.json", "ccc.json"], ["aaa.json", "ddd.json"]):
+            _, more = self._stage(tmp_path, names)
+            writer.OUT = tmp_path
+            writer._publish(more, 2)
+
         assert not (tmp_path / first).exists()
+        assert len([path for path in tmp_path.iterdir() if path.is_dir()]) == 2
+
+    def test_a_concurrent_staging_directory_is_not_swept(self, tmp_path: Path) -> None:
+        # The sweep used to delete every directory that was not the new generation, which includes
+        # another publisher's staging area mid-run.
+        writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
+        other = tmp_path / ".staging-other"
+        other.mkdir()
+        (other / "work.json").write_text("{}", encoding="utf-8")
+
+        writer._publish(staging, 2)
+
+        assert (other / "work.json").exists()
+
+    def test_the_pending_manifest_is_named_per_process(self, tmp_path: Path) -> None:
+        # A fixed pending name is a collision point, and nothing makes the single-writer assumption
+        # true. Asserted on the source rather than by racing two publishers.
+        source = (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
+
+        assert "getpid()" in source
+        assert f'{{MANIFEST}}.pending"' not in source
