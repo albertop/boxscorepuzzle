@@ -1,4 +1,24 @@
-# Code review v01 — accepted findings
+# Review backlog
+
+## Where everything stands
+
+**Seven reviews, 42 findings, none rejected. Four remain open and none of them is waiting on effort.**
+
+| | Open | Why |
+|---|---|---|
+| **v03-P2-04** + **v04-P1-02** | HMAC lets the server forge, and the manifest is unsigned | **one piece of work, blocked on a dependency.** Ed25519 is not in the standard library and `cryptography` cannot be added from this environment; `uv add cryptography` is the step it waits on. Signing the manifest with the existing secret would put a second shared secret in `serve`, which is worse than the gap. **Date: before `serve` exists** — the day the VPS verifies packages is the day the verification key leaves the laptop |
+| **v05-P1-01** | lineup slots do not cross the package boundary | needs a decision about a schema the format document calls **frozen**. The board design depends on it and the client cannot reconstruct it |
+| **v05-P1-02** | the erased-attribution representation | half closed. The mechanical half is done and tested; the drawing waits on the group measurement, which says how many candidates a blank must separate |
+| **v06-P1-01** | open-versus-given | **fixed and rerunning.** Until it lands, *footnotes are erasable* has no support |
+| **v04-P2-01, P2-03, P2-04** | provenance projection, cohort comparator, family-count semantics | open, small, and none blocks anything |
+
+⚠️ **Three things are blocked on the rerun, not on effort:** the generator constraint, the
+erased-attribution drawing, and the ladder pack. All three assume an answer that is currently
+unsupported, and one of them determines what the other two look like.
+
+**What is not a review finding and blocks publication:** the ladder pack — 19, 16, 13, 9 and 6 stalls,
+rungs filled from boards of similar reach so the ladder varies stalls and not headroom, `audit()`
+reporting the uncertified share per rung rather than requiring it. And the operator solving it.
 
 Source: `code_review_v01.md` (2026-08-18). Every finding was accepted; `non-issue.md` records the one
 scope correction rather than a rejection.
