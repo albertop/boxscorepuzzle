@@ -84,8 +84,11 @@ def reveal_for(loaded: Loaded) -> Reveal:
     # first six files claimed a lineup for a team it never played for. The names and the code have to
     # come from one source or nothing checks that they agree.
     return Reveal(
-        batter_names=tuple(f"{first} {last}".strip() or "Unknown" for first, last in loaded.names),
-        pitcher_names=tuple(f"{first} {last}".strip() or "Unknown" for first, last in loaded.pitcher_names),
+        # Composed by the loader, not here. ⚠️ This joined a `(first, last)` pair with
+        # `.strip() or "Unknown"` while the prototype builder joined the same pair with neither — one
+        # rule in two places, disagreeing about the players who have no given name on record.
+        batter_names=loaded.names,
+        pitcher_names=loaded.pitcher_names,
         offense_team=loaded.offense_team,
         defense_team=loaded.defense_team,
         played_on=f"{loaded.game_id[3:7]}-{loaded.game_id[7:9]}-{loaded.game_id[9:11]}",

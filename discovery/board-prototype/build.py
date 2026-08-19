@@ -97,8 +97,10 @@ def to_json(loaded: Loaded, note: str) -> dict[str, object]:
         ]
         + [f"LOB: {direction.team_footnotes.left_on_base}"],
         "pitcherLabels": list(loaded.pitcher_labels),
-        "names": [{"first": first, "last": last} for first, last in loaded.names],
-        "revealed": {str(index): f"{first} {last}" for index, (first, last) in enumerate(loaded.names)},
+        # One composed name, from the loader. The pair this used to split was joined here without
+        # the strip or the fallback the reference writer applied to the same data.
+        "names": list(loaded.names),
+        "revealed": dict(enumerate(loaded.names)),
     }
 
 

@@ -2260,6 +2260,60 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## ⚠⚠ The reveal read the wrong table, and the wrong column of the right one
+
+**Found by the operator asking whether `dbo.regPeople` was used anywhere.** It was, in two places, and
+both were wrong in a way nothing could detect.
+
+### The table
+
+`regPeople` does not belong to the Retrosheet collection — it is a different dataset that happens to
+carry a `key_retro` column. Matched against the players the pool actually contains:
+
+| table | matched | of |
+|---|---|---|
+| `dbo.regPeople` | 19,703 | 20,019 |
+| **`dbo.retroMaster`** | **20,019** | 20,019 |
+
+⚠️ **A join that resolves 98.4% looks exactly like one that resolves 100%.** The 316 it missed fell
+through the `LEFT JOIN`, hit `f"{first} {last}".strip() or "Unknown"` with both fields empty, and were
+published as `Unknown` — **losing the surname as well**. The placeholder-name check in `plausibility`
+could not see it, because `Unknown` is not blank. Nothing rejected a board over it.
+
+### The column
+
+`retroMaster.first` is the **full legal given name** — `Henry Louis` for Hank Aaron, `John Franklin` for
+Home Run Baker. `nickname` is what the man was called. §7 says the reveal *is* the real boxscore, so a
+name built from `first` prints something no boxscore, no broadcast and no player ever used.
+
+Read off the corrected loader rather than assumed: `Home Run Baker`, `Bunny Brief`, `Stuffy McInnis`,
+`Chief Bender`, `Tris Speaker`, `Tiny Osborne`.
+
+### A surname alone is the answer, not a failure
+
+113 players in the pool have neither a nickname nor a given name on record. Their identifiers carry `u`
+in the fifth position — Retrosheet's mark for *first name unknown* — and each appears in two to five
+rows: one-game men from the early era. `Pitts` is what is known, and `Pitts` is what prints. The old
+code already got this case right; what it lost was the other one.
+
+⚠️ **An unknown name is now left empty rather than filled with a placeholder**, so the
+plausibility check that rejects a blank reveal name is the thing that fires. A fallback string would
+satisfy that check while publishing a fact nobody has.
+
+### And the composition was in two places with two rules
+
+`write_reference_puzzles.py` joined the `(first, last)` pair with `.strip() or "Unknown"`;
+`board-prototype/build.py` joined the same pair with neither. **One rule, two places, disagreeing
+exactly on the players with no given name.** `full_name()` lives in the loader now and nothing
+downstream reassembles it — a test asserts no consumer composes its own.
+
+### The guard forbade describing the defect it guards against
+
+Its first version asserted `"regPeople" not in source` and fired on the docstring explaining why the
+table was replaced. It forbids `dbo.regPeople` now — the join, not the word. Small, and the same shape
+as every over-broad check recorded here: a rule that cannot distinguish its subject from a mention of
+its subject.
+
 ## ⚠⚠ The footnote line could not say *two*, and 2.73% of the pool was unsolvable
 
 **Found by a person reading a printed page**, which is the only thing that has ever found this class of

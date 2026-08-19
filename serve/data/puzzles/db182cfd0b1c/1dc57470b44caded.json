@@ -1,19 +1,20 @@
 {
  "labels": [
-  "2B",
-  "CF",
-  "C",
-  "1B",
   "RF",
   "LF",
+  "1B",
+  "CF",
+  "3B",
   "3B",
   "SS",
+  "C",
+  "2B",
   "P"
  ],
  "metadata": {
-  "batters": 9,
-  "blanks": 34,
-  "chain_length": 21,
+  "batters": 10,
+  "blanks": 30,
+  "chain_length": 12,
   "difficulty_model": "stalls",
   "families": [
    "column_sum",
@@ -24,10 +25,10 @@
   "note": "reference data for serve, not inventory",
   "pitchers": 2,
   "seed": 6,
-  "stalls": 7,
-  "target_stalls": 7
+  "stalls": 3,
+  "target_stalls": 3
  },
- "offense_is_home": false,
+ "offense_is_home": true,
  "pitcher_labels": [
   "SP",
   "RP-1"
@@ -37,17 +38,17 @@
    [
     5,
     null,
-    1,
+    null,
     0,
-    1,
+    0,
     null
    ],
    [
     5,
     null,
     1,
-    null,
-    null,
+    1,
+    0,
     1
    ],
    [
@@ -55,68 +56,76 @@
     null,
     1,
     2,
-    1,
-    null
+    0,
+    0
    ],
    [
-    5,
+    4,
     4,
     1,
+    3,
+    null,
+    1
+   ],
+   [
     2,
-    null,
-    2
-   ],
-   [
-    5,
-    null,
-    null,
-    1,
+    2,
+    0,
+    0,
     null,
     1
    ],
    [
-    4,
-    null,
-    null,
-    1,
-    null,
-    null
-   ],
-   [
-    4,
-    null,
-    1,
-    1,
-    null,
-    1
-   ],
-   [
-    4,
-    null,
-    null,
-    1,
-    1,
-    1
-   ],
-   [
-    4,
+    2,
     null,
     null,
     0,
+    0,
+    1
+   ],
+   [
+    4,
     null,
-    3
+    2,
+    1,
+    null,
+    1
+   ],
+   [
+    4,
+    null,
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
+    null,
+    null,
+    2,
+    0,
+    1
+   ],
+   [
+    4,
+    4,
+    null,
+    null,
+    null,
+    null
    ]
   ],
   "batting_totals": [
    null,
-   37,
-   5,
-   9,
-   4,
+   null,
+   6,
+   12,
+   null,
    null
   ],
   "footnote_totals": [
-   0,
+   1,
    0,
    0,
    0
@@ -135,6 +144,12 @@
     0
    ],
    [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
     0,
     0,
     0,
@@ -177,94 +192,95 @@
     0
    ]
   ],
-  "left_on_base": 9,
+  "left_on_base": 8,
   "line_score": {
    "defense_by_inning": [
+    1,
     0,
     0,
     0,
     0,
+    2,
     0,
     0,
-    0,
-    0,
-    1
+    0
    ],
-   "defense_errors": 2,
+   "defense_errors": 1,
    "defense_hits": 6,
-   "defense_runs": 1,
+   "defense_runs": 3,
    "offense_by_inning": [
     0,
     0,
     0,
-    1,
-    1,
+    2,
+    4,
     0,
     0,
-    1,
-    2
+    0
    ],
-   "offense_errors": 1,
-   "offense_hits": 9,
-   "offense_runs": 5
+   "offense_errors": 4,
+   "offense_hits": 12,
+   "offense_runs": 6
   },
   "pitching": [
    [
     null,
-    7,
+    6,
+    2,
     null,
-    null,
-    null,
-    6
+    1,
+    null
    ],
    [
-    3,
+    12,
     null,
-    2,
     null,
-    2,
-    null
+    null,
+    null,
+    2
    ]
   ],
   "pitching_totals": [
-   null,
-   9,
-   5,
-   5,
-   null,
-   9
+   24,
+   12,
+   6,
+   6,
+   2,
+   6
   ]
  },
- "puzzle_id": "a86790f4b74df312",
+ "puzzle_id": "1dc57470b44caded",
  "reveal": {
   "batter_names": [
-   "Max Bishop",
-   "Doc Cramer",
-   "Mickey Cochrane",
-   "Jimmie Foxx",
-   "Bob Johnson",
-   "Lou Finney",
-   "Pinky Higgins",
-   "Ed Cihocki",
-   "Lefty Grove"
+   "Max Flack",
+   "Taylor Douthit",
+   "Jim Bottomley",
+   "Heinie Mueller",
+   "Milt Stock",
+   "Jake Flowers",
+   "Les Bell",
+   "Harry McCurdy",
+   "Howard Freigau",
+   "Johnny Stuart"
   ],
   "card": "",
-  "defense_team": "WS1",
-  "offense_team": "PHA",
+  "defense_team": "CHN",
+  "offense_team": "SLN",
   "pitcher_names": [
-   "Lefty Stewart",
-   "Jack Russell"
+   "Tiny Osborne",
+   "Nick Dumovich"
   ],
-  "played_on": "1933-04-14"
+  "played_on": "1923-10-07"
  },
- "schema": 3,
- "signature": "076fbcacefdae1b11efb633024cc23eb4f00c6c6d1e361ada7a08847b04906250b381c7d234baa070deab5b2cf11572e82179d0290858cfcf4d962c01c6af003",
+ "schema": 4,
+ "signature": "08af7b19eda370ca37b7619a11f24b247f929e49658e3d476caba89043804f76e213ac18ab70b41c9259a817c84e089310150c2decfb5224ef234f7b8b11d108",
  "slot_references": [
   "1",
   "2",
   "3",
   "4",
-  "5",
+  "5a",
+  "5b",
   "6",
   "7",
   "8",
@@ -274,55 +290,15 @@
   "batting": [
    [
     5,
-    4,
-    1,
-    0,
-    1,
-    0
-   ],
-   [
-    5,
-    5,
-    1,
-    1,
-    0,
-    1
-   ],
-   [
-    5,
-    4,
-    1,
-    2,
-    1,
-    0
-   ],
-   [
-    5,
-    4,
-    1,
-    2,
-    1,
-    2
-   ],
-   [
-    5,
     5,
     0,
-    1,
     0,
-    1
-   ],
-   [
-    4,
-    4,
-    0,
-    1,
     0,
     0
    ],
    [
-    4,
-    4,
+    5,
+    5,
     1,
     1,
     0,
@@ -331,30 +307,78 @@
    [
     4,
     3,
+    1,
+    2,
     0,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
+    3,
+    0,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    2,
+    2,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    4,
+    3,
+    2,
     1,
     1,
     1
    ],
    [
     4,
+    3,
+    1,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
     4,
     0,
+    2,
     0,
+    1
+   ],
+   [
+    4,
+    4,
     0,
-    3
+    2,
+    0,
+    0
    ]
   ],
   "batting_totals": [
-   41,
-   37,
-   5,
-   9,
-   4,
-   9
+   38,
+   35,
+   6,
+   12,
+   2,
+   6
   ],
   "footnote_totals": [
-   0,
+   1,
    0,
    0,
    0
@@ -373,6 +397,12 @@
     0
    ],
    [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
     0,
     0,
     0,
@@ -415,62 +445,61 @@
     0
    ]
   ],
-  "left_on_base": 9,
+  "left_on_base": 8,
   "line_score": {
    "defense_by_inning": [
+    1,
     0,
     0,
     0,
     0,
+    2,
     0,
     0,
-    0,
-    0,
-    1
+    0
    ],
-   "defense_errors": 2,
+   "defense_errors": 1,
    "defense_hits": 6,
-   "defense_runs": 1,
+   "defense_runs": 3,
    "offense_by_inning": [
     0,
     0,
     0,
-    1,
-    1,
+    2,
+    4,
     0,
     0,
-    1,
-    2
+    0
    ],
-   "offense_errors": 1,
-   "offense_hits": 9,
-   "offense_runs": 5
+   "offense_errors": 4,
+   "offense_hits": 12,
+   "offense_runs": 6
   },
   "pitching": [
    [
-    24,
-    7,
-    3,
-    3,
+    12,
+    6,
     2,
-    6
+    2,
+    1,
+    4
    ],
    [
-    3,
-    2,
-    2,
-    2,
-    2,
-    3
+    12,
+    6,
+    4,
+    4,
+    1,
+    2
    ]
   ],
   "pitching_totals": [
-   27,
-   9,
-   5,
-   5,
-   4,
-   9
+   24,
+   12,
+   6,
+   6,
+   2,
+   6
   ]
  }
 }

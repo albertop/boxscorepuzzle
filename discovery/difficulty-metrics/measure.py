@@ -83,6 +83,31 @@ TAIL_TRIM = 3
 SEED = 20260817
 
 
+def full_name(nickname: str | None, last: str | None) -> str:
+    """A player's name for the final reveal (§7): **the name he was known by, plus the surname.**
+
+    ⚠️ **`nickname`, never `first`.** In `retroMaster` the `first` column is the full legal given name
+    — `Henry Louis` for Hank Aaron, `Fausto Andres` for Andy Abad — and `nickname` is what the man was
+    called. A reveal built from `first` prints a name no boxscore, no broadcast and no player ever used.
+
+    ⚠️ **A surname alone is a real answer, not a failure.** 113 of the players the pool contains have
+    neither a nickname nor a given name on record; their Retrosheet identifiers carry `u` in the fifth
+    position, which is that file's mark for *first name unknown*, and every one of them appears in two
+    to five rows — one-game men from the early era. `Pitts` is what is known about him, and `Pitts` is
+    what gets printed.
+
+    ⚠️ **What the old code lost was different, and worse.** `f"{first} {last}".strip() or "Unknown"`
+    handled a missing given name correctly — it produced the surname. The fallback fired only when
+    *both* were empty, which happened when the player had **no row in `regPeople` at all**: 316 of the
+    20,019 players in the pool. Those were published as `Unknown`, losing the surname too, and the
+    placeholder-name check could not see it because `Unknown` is not blank.
+
+    An empty result is left empty on purpose: `plausibility.faults` rejects a blank reveal name, and
+    that check only means something if this function does not paper over the case.
+    """
+    return f"{(nickname or '').strip()} {(last or '').strip()}".strip()
+
+
 @dataclass(frozen=True, slots=True)
 class Loaded:
     game_id: str
@@ -90,7 +115,14 @@ class Loaded:
     direction: Direction
     labels: tuple[str, ...]
     offense_is_home: bool
-    names: tuple[tuple[str, str], ...]
+    names: tuple[str, ...]
+    """The batters' full names, **composed once here** (§7).
+
+    ⚠️ **This was a `(first, last)` pair and two consumers joined it differently** — the reference
+    writer with `.strip() or "Unknown"`, the prototype builder with neither. One rule, two places, and
+    they disagreed about a player with no given name on record. The loader composes it now and nothing
+    downstream reassembles it.
+    """
     pitcher_labels: tuple[str, ...] = ()
     offense_team: str = ""
     """The club that batted. ⚠️ **Not** `game_id[:3]`, which is the *home* club and coincides only
@@ -98,7 +130,7 @@ class Loaded:
     the names cannot disagree."""
 
     defense_team: str = ""
-    pitcher_names: tuple[tuple[str, str], ...] = ()
+    pitcher_names: tuple[str, ...] = ()
     source_type: str = ""
     """Carried so the publication gate can be given evidence rather than assuming it."""
 
@@ -435,7 +467,7 @@ def load(
            WHEN d.F_LF_G=1 THEN 'LF' WHEN d.F_CF_G=1 THEN 'CF' WHEN d.F_RF_G=1 THEN 'RF'
            WHEN d.B_G_DH=1 THEN 'DH' WHEN d.B_G_PH=1 THEN 'PH' WHEN d.B_G_PR=1 THEN 'PR'
            ELSE '?' END AS label,
-      p.name_first, p.name_last, d.B_RBI, d.B_HR,
+      m.nickname, m.last, d.B_RBI, d.B_HR,
       -- ⚠️ The position a substitute *entered at*. The F_*_G flags above mean "appeared here at some
       -- point", and the CASE picks by a fixed priority, so a pinch hitter who later took centre came
       -- out as CF and three men who each spent an inning there became CF-1, CF-2, CF-3. A lineup with
@@ -454,7 +486,8 @@ def load(
            THEN (CASE d.SLOT_CT {lineup_fld} END) END AS started_at
     FROM dbo.retroDailyReg d
     LEFT JOIN dbo.retroGamesReg g ON g.GAME_ID = d.GAME_ID
-    LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
+    -- The Retrosheet master file, keyed by the same identifier the daily rows carry.
+    LEFT JOIN dbo.retroMaster m ON m.playerID = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
     -- plate appearance at all, and 83% of those also pitched — the designated-hitter era's pitchers,
     -- who are on the card and never come up. They belong on no board. Each one is six cells of nought
@@ -473,9 +506,10 @@ def load(
     # pitcher in, which is the real order. The starter has no substitution row, and P_GS puts him
     # first regardless.
     pitch_query = """
-    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, p.name_first, p.name_last, d.P_HR
+    SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, m.nickname, m.last, d.P_HR
     FROM dbo.retroDailyReg d
-    LEFT JOIN dbo.regPeople p ON p.key_retro = d.PLAYER_ID
+    -- The Retrosheet master file, keyed by the same identifier the daily rows carry.
+    LEFT JOIN dbo.retroMaster m ON m.playerID = d.PLAYER_ID
     LEFT JOIN (SELECT GAME_ID, SUB_ID, MIN(EVENT_ID) AS entered
                FROM dbo.retroSubstitutionsReg WHERE SUB_FLD_CD = 1
                GROUP BY GAME_ID, SUB_ID) s
@@ -583,11 +617,11 @@ def load(
                     direction,
                     _batting_labels([_position(r[11], r[16], r[17], r[19]) for r in batting_rows]),
                     bool(is_home),
-                    tuple((r[12] or "", r[13] or "") for r in batting_rows),
+                    tuple(full_name(r[12], r[13]) for r in batting_rows),
                     _pitcher_labels([p[6] for p in pitching_rows]),
                     offense,
                     defense,
-                    tuple((p[7] or "", p[8] or "") for p in pitching_rows),
+                    tuple(full_name(p[7], p[8]) for p in pitching_rows),
                     source_type or "",
                     offense_hits,
                     offense_runs,
