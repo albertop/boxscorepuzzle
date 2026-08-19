@@ -161,6 +161,15 @@ guard by asking what change it would let through**, not by rereading what it ass
 threshold set by eye that rejects real data gets loosened until it says nothing, which is worse than not
 having it — it gives false confidence.
 
+**Any comparison between configurations states, in the script and at the point of comparison, how it
+keeps the ordering stable — or it does not run.** Twice in one day a comparison filtered its candidate
+list and then ordered what was left, so the configurations differed in trajectory as well as in
+treatment. The second time, the fix was written down in the same file where the finding was recorded.
+That is not ignorance: **a lesson filed as something to apply going forward is not a check performed
+while writing the next comparison.** And note what unanimity is worth here — if one configuration's
+ordering is systematically worse, every item moves the same way, so a 47-of-47 result is consistent
+with the confound rather than evidence against it.
+
 **A confound has no signature in the results, so looking at the output cannot catch it.** Every other
 defect recorded here was found by rendering something and reading it — the zero-heavy board, the
 phantom rows, the wrong club, the mislabelled positions. A confound is different in kind: a ladder

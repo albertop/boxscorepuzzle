@@ -61,13 +61,35 @@ def stalls_in(solution: Solution) -> int:
     return count
 
 
-def walk(loaded: Loaded, *, footnotes_open: bool) -> Walk | None:
-    """Erase as far as the board allows, recording the ceiling and where each target was first met."""
-    direction = loaded.direction
-    cells = [cell for cell in erasable(direction) if footnotes_open or not cell.startswith("footnotes[")]
-    shape, values = shape_of(direction), cell_values(direction)
-    candidates = ORDERINGS[DEFAULT_ORDERING](cells, direction, random.Random(SEED))  # noqa: S311
+def orders(loaded: Loaded) -> tuple[list[str], list[str]]:
+    """One canonical order, and the *given* order obtained by filtering it.
 
+    ⚠️ **This is the whole experiment.** The first version filtered the candidate list and then ordered
+    what was left, so `_row_first` bucketed lists of different lengths, the same seed produced different
+    shuffles, and the cells both treatments share did not keep their relative order. The two walks then
+    differed in the treatment **and** in the erasure trajectory, which is v03-P2-05 rebuilt in the
+    measurement that was answering the question.
+
+    **Unanimity cannot repair that.** If one treatment's ordering is systematically worse, every board
+    moves the same way, so 47 of 47 was consistent with the confound rather than evidence against it.
+
+    Ordering once and filtering afterwards preserves the relative order of every shared cell by
+    construction, which is the only way this comparison isolates the treatment.
+    """
+    everything = ORDERINGS[DEFAULT_ORDERING](erasable(loaded.direction), loaded.direction, random.Random(SEED))  # noqa: S311
+    return everything, [cell for cell in everything if not cell.startswith("footnotes[")]
+
+
+def walk(loaded: Loaded, candidates: list[str]) -> Walk:
+    """Erase along the given order as far as the board allows.
+
+    ⚠️ **A ceiling of zero is an outcome, not a failure.** This used to return `None` there and the
+    caller dropped the whole pair — which removes precisely the boards where the *given* treatment made
+    no progress, the most informative case for the question being asked, and biases the weaker
+    treatment upward. 48 directions producing 47 pairs was the visible edge of it.
+    """
+    direction = loaded.direction
+    shape, values = shape_of(direction), cell_values(direction)
     erased: set[str] = set()
     blanks_at: dict[int, int] = {}
     ceiling = 0
@@ -82,7 +104,7 @@ def walk(loaded: Loaded, *, footnotes_open: bool) -> Walk | None:
         for target in TARGETS:
             if stalls >= target and target not in blanks_at:
                 blanks_at[target] = len(erased)
-    return Walk(ceiling=ceiling, blanks_at=blanks_at, erasable=len(candidates)) if ceiling else None
+    return Walk(ceiling=ceiling, blanks_at=blanks_at, erasable=len(candidates))
 
 
 def report(pairs: list[tuple[str, Walk, Walk]]) -> None:
@@ -111,7 +133,7 @@ def report(pairs: list[tuple[str, Walk, Walk]]) -> None:
 
     print("")
     print("=== DOES 5-AGAINST-15 REPRODUCE? ===")
-    print(f"  the claim: median ceiling 5 with footnotes given, 15 with them open")
+    print("  the claim: median ceiling 5 with footnotes given, 15 with them open")
     print(f"  measured:  median ceiling {statistics.median(given):.0f} given, {statistics.median(opened):.0f} open")
     print(f"  coverage at 5 stalls: {sum(1 for p in pairs if 5 in p[2].blanks_at) / len(pairs):.0%} given "
           f"(the claim said 56%), {sum(1 for p in pairs if 5 in p[1].blanks_at) / len(pairs):.0%} open")
@@ -127,9 +149,9 @@ def main() -> None:
 
     pairs: list[tuple[str, Walk, Walk]] = []
     for number, item in enumerate(sample, start=1):
-        opened, given = walk(item, footnotes_open=True), walk(item, footnotes_open=False)
-        if opened and given:
-            pairs.append((item.game_id, opened, given))
+        everything, without = orders(item)
+        # Every eligible direction produces a pair. Nothing is dropped for scoring zero.
+        pairs.append((item.game_id, walk(item, everything), walk(item, without)))
         if number % 10 == 0:
             print(f"  {number}/{len(sample)} paired", flush=True)
     if not pairs:
