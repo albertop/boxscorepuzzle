@@ -27,11 +27,11 @@ FAMILIES = {
     # turns the `+` into `%2B`, so the request asks for a family literally called "Roboto+Condensed"
     # and Google answers 400. One encoding, in one place.
     #
-    # ⚠️ IBM Plex Sans Condensed was the other candidate. It has the better `1` in isolation — a foot
-    # serif, against Roboto's bare stem — and it lost anyway, on a fact about *this* board: the cells
-    # hold digits, and the labels are position abbreviations. **No `I` and no `l` are ever drawn**, so
-    # the confusion the specimen showed is one this board cannot have. See the note in board.css.
-    "roboto-condensed": "Roboto Condensed",
+    # ⚠️ Roboto Condensed was the other candidate and lost on the character the instruction named:
+    # it draws `1` as a bare stem with an angled flag and no foot. Checked on screen rather than
+    # argued — all three weights had loaded and the digit's advance differed from the fallback's, so
+    # the bare `1` is the face's design and not a webfont that failed to arrive.
+    "plex-condensed": "IBM Plex Sans Condensed",
 }
 WEIGHTS = (400, 600, 700)
 

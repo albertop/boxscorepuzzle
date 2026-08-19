@@ -323,6 +323,67 @@ is the older one wearing new clothes: *a sample that evaluates the board is rend
 content*. A glyph specimen is not the board, and choosing from it imported a problem the board does not
 have.
 
+## Colour, and what each colour is allowed to mean
+
+Four things carry meaning and no more. **Every one of them is spent, so a fifth has to displace
+something rather than be added.**
+
+| | |
+|---|---|
+| **Fenway green** | what is *given* — the scoreboard and the section headers, the parts the player never touches |
+| **Amber** | the selected cell |
+| **Cream** | the row and column that cell shares an equation with |
+| **Blue** | what the player wrote, and the board's own footnote references |
+
+**The keypad is neutral grey on purpose.** It was Fenway green for one render, and that said the keypad
+and the scoreboard were the same kind of object when they are opposites: one is given and untouchable,
+the other is where the player acts. It is also a third of the screen, and a third of the screen in
+saturated green competes with the board.
+
+⚠️ **Red is reserved for errors and is not spent on anything else.** Entered values were red for one
+render, and it was wrong twice over: red is the one colour every player reads as *this is wrong*, so
+spending it on "I typed this" leaves nothing for the case where no other colour works — and in a
+deduction puzzle what the player types is not provisional. Once it balances it is as settled as what was
+given, so red said *tentative* and said *incorrect*, and neither was true.
+
+**Blue rather than the givens' black in bold**, and the totals row is what settled it: weight cannot
+mark an entry there, because that row is bold already — and the real packages erase batting and pitching
+totals, so it is an input surface, in the one row every column sum closes on. Colour works everywhere;
+weight had a hole exactly where the board is most consulted. One blue for both meanings rather than two
+a shade apart: the eye files two similar blues as one category and then discovers they are not.
+
+⚠️ **The pale ground means one thing: empty and editable.** A filled cell keeps its border and goes
+white, so only the digit carries the colour. Filled cells used to keep the pale ground, and a blue `5`
+on pale blue read like an empty pale-blue cell at a glance. It also protects the three empty states —
+plain, cream, amber — which are already close to the limit of what separates without looking twice.
+**Check them on a device before adding a fourth.**
+
+## ⚠️ Noticed in the render: a blank that is a lookup, not a deduction
+
+The `H` total was erased, and the scoreboard prints `AWAY H 15` two centimetres above it. The cell was
+copied, not deduced.
+
+**It is not a bug.** `line_score.offense_hits = batting_totals.hits` is a real equation the solver
+carries, in the `column_sum` family. But it is a **two-term** equation with one unknown — the cheapest
+move on the board, and far cheaper than a column sum over nine rows — so the solver counts a step where
+the player does a lookup.
+
+Four cells are in this position: `batting_totals.R`, `batting_totals.H`, `pitching_totals.R` and
+`pitching_totals.H`, all verified equal to their line-score counterpart in every reference solution.
+
+**Measured on the six reference packages:** every single one erases exactly one of them — five times
+`batting_totals.H`, once `pitching_totals.R`. Six of 204 blanks, 2.9%.
+
+**What is not yet measured, and what would change if it were:** whether the rate holds across the pool,
+and whether these steps inflate the reported chain length and stall count. If they do, the generator
+should refuse to erase a total the scoreboard already prints, or the solver should not count the move —
+which is a generator change, so the measurement is decision-bearing rather than curiosity. It needs the
+database and belongs with forge work, not here.
+
+⚠️ Worth naming for what it is: **filler wearing a new face.** The pruning experiment was about blanks
+that add nothing to the solve, and this is the same thing appearing in the one place nobody looked —
+the row that was assumed to be a read-only anchor until the real packages said otherwise.
+
 ## Open — waiting on the operator
 
 **The section header's ground.** Three are in `board.css`, switchable by `data-header` on the root, which

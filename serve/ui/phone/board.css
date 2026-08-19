@@ -17,23 +17,27 @@
    lining up**, which is the one failure a grid of numbers cannot absorb. `tools/fetch_fonts.py`
    downloads and subsets; `fonts.css` carries the faces.
 
-   ⚠️ **Roboto Condensed.** Both candidates carry true tabular figures — measured, ten `1`s and ten `8`s
-   to the same pixel — so the non-negotiable property was a tie, and the choice came down to the rest.
+   ⚠️ **IBM Plex Sans Condensed, and it took two passes to get here.** Both candidates carry true
+   tabular figures — measured, ten `1`s and ten `8`s to the same pixel — so the non-negotiable property
+   was a tie and the choice fell to the `1`.
 
-   ⚠️ **The recommendation that lost was mine, and it was reasoned from a specimen this board does not
-   render.** IBM Plex draws the better `1` in isolation: a foot serif, against Roboto's bare stem, with
-   `I` and `l` clearly distinct. But the specimen contained `I` and `l` because *I put them there*. The
-   cells hold digits; the labels are position abbreviations — `CF`, `SS`, `2B`, `RP-1` — and **no `I`
-   and no `l` are ever drawn on this board**. Nor is there a text cursor for a `1` to be mistaken for:
-   entry is by keypad and a cell shows a value, never a caret. The confusion the comparison was decided
-   on cannot occur here. Judged on what the board actually renders — six columns of digits, where
-   Roboto's narrower figures leave more air — the operator's preference is the better call.
+   Roboto Condensed shipped first, on preference and on an argument of mine that was wrong in one
+   direction and right in the other. Wrong: I first recommended Plex partly because Roboto draws `I` and
+   `l` as one vertical stroke — but this board never renders either character, so that comparison was
+   decided on a specimen the board does not contain. Right: Roboto also draws `1` as a bare stem with an
+   angled flag and **no foot**, and that character the board renders constantly. On screen it reads as a
+   cursor. Checked before switching, rather than assumed: all three weights had loaded and the digit's
+   advance differed from the fallback's, so the bare `1` was the design and not a webfont that failed to
+   arrive.
+
+   Plex gives the `1` a foot serif. Its `⅓` and `⅔` are tighter than Roboto's, which costs four pixels
+   of type size on two keypad keys — a cheap price for the digit that appears in every column.
 
    One family at three weights, not two families. The clubs use a display face beside a body face
    because they have full pages; this has 375 pixels, and two families on that width compete. The
    difference comes from weight and colour. */
 :root {
-  --face: "Roboto Condensed";
+  --face: "IBM Plex Sans Condensed";
   --cell: 44px;
   --slot-column: 24px;
   --label-column: 66px;
@@ -48,7 +52,22 @@
      in a cell, the slot references beside a live footnote term, and the `?` marks. Only the first is
      the player's handwriting — the other two are the board stating what it knows and does not know.
      Painting all three alike would have made the board claim the player had written its own unknowns. */
-  --entered: #8f1d1d;
+  /* ⚠️ **Not red, and the same blue the footnote line already uses.**
+
+     Red is the one colour every player reads as *this is wrong*. Spent on "I typed this" it is
+     unavailable for errors, and an error is the one thing no other colour can carry. It was also
+     false twice over: in a deduction puzzle what the player types is not provisional — once it
+     balances it is as settled as what was given — so red said *tentative* and said *incorrect*.
+
+     One blue for both meanings rather than two similar ones. Two blues a shade apart, carrying
+     different meanings, is worse than one carrying both: the eye files them as the same category and
+     then discovers they are not.
+
+     ⚠️ **The alternative was the givens' black in bold, and the totals row is what settled it.** Weight
+     cannot mark an entry there, because the totals row is bold already — and the real packages erase
+     batting and pitching totals, so it is an input surface, in the one row every column sum closes on.
+     Colour works everywhere; weight had a hole exactly where the board is most consulted. */
+  --entered: #1b57c4;
   --unknown: #1b57c4;
   --blank: #f4f6f9;
   --selected: #ffe9a8;
@@ -60,10 +79,12 @@
      it answers *where do I look*, not *which equation is this*. Operator's call, and the right one. */
   --peer: #f6efe2;
   --muted: #6b7280;
-  /* Slate green in place of the grey: the panel the keys sit on, in the scoreboard's hue desaturated
-     and darkened. The keys themselves stay light — they are the thing being pressed, and a dark key on
-     a dark panel loses the edge that says where one ends. */
-  --keypad: #4b5f57;
+  /* ⚠️ **Neutral, and deliberately not the scoreboard's green.** The green belongs to what is *given* —
+     the scoreboard and the section headers, the parts the player never touches. The keypad is the
+     opposite: it is where the player acts. One colour across both would say they are the same kind of
+     object. It is also a third of the screen, and a third of the screen in saturated green competes
+     with the board, which is where attention belongs. */
+  --keypad: #e6e8ec;
   --key: #ffffff;
   --key-ink: #16181d;
 
@@ -93,14 +114,14 @@
     --rule: #2c3038;
     --rule-strong: #565d69;
     --given: #e6e8ec;
-    --entered: #ff9b9b;
+    --entered: #7fa8ff;
     --unknown: #7fa8ff;
     --blank: #1b1e24;
     --selected: #4a3c12;
     --selected-rule: #d8ab26;
     --peer: #2a2418;
     --muted: #9aa1ad;
-    --keypad: #2c3b35;
+    --keypad: #16181c;
     --key: #1b1e24;
     --key-ink: #e6e8ec;
     /* The scoreboard keeps its colour in the dark: it is a physical object, and a physical object does
@@ -266,11 +287,18 @@ td.cell.given { color: var(--given); }
    `outline` rather than `border`, and that is the whole point: an outline is drawn outside the border
    box and **takes part in no layout**, so the 44px touch target keeps all 44 of its pixels. A 1.5px
    border inside the cell would have quietly made it 41px, which is under the minimum §6 measured. */
+/* ⚠️ **The pale ground means one thing: empty and editable.** A filled cell kept it, so a blue `5` on
+   pale blue and an empty pale-blue cell read alike at a glance — the ground was saying *editable* and
+   being heard as *empty*. Filled goes white and the digit alone carries the colour, which also keeps
+   the three empty states — plain, cream on the active row or column, amber on the active cell — as far
+   apart as they were. They were already close to the limit of what separates at a glance. */
+td.cell.blank.filled { background: var(--paper); }
+
 td.cell.blank {
   background: var(--blank);
   color: var(--entered);
-  /* Bold, because the player's own writing has to be findable at a glance among nine rows of given
-     numbers — and because a cell they filled and a cell they were given are different kinds of fact. */
+  /* The player's own writing has to be findable at a glance among nine rows of given numbers: a cell
+     they filled and a cell they were given are different kinds of fact. */
   font-weight: 700;
   outline: 1.5px solid var(--rule-strong);
   /* ⚠️ **Drawn just inside the box, and the instruction said outside.** Worth the note, because the
@@ -322,5 +350,6 @@ td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(
 }
 .keypad button:active { background: var(--selected); }
 .keypad button.wide { grid-column: span 2; font-size: 14px; }
-.keypad button.thirds { font-size: 18px; }
+/* Larger than the digits: Plex draws the fractions tightly and the numerator closes up at 16px. */
+.keypad button.thirds { font-size: 22px; }
 .keypad button:disabled { opacity: .35; }

@@ -2061,6 +2061,23 @@ preamble every script needs) and `E501`. Those are real style debt rather than n
 being ignored away; they need a pass. And **nothing still runs ruff over `../discovery` automatically** —
 that belongs with the CI workflow, and CI does not exist yet.
 
+## ⚠️ Noticed while rendering the engine: a blank the scoreboard already answers
+
+`line_score.offense_hits = batting_totals.hits` and three siblings — `batting_totals.R`,
+`pitching_totals.R`, `pitching_totals.H` — are two-term equations. When the generator erases one, the
+player reads the number off the scoreboard; the solver records a deduction. **Every one of the six
+reference packages erases exactly one of the four**: five times `batting_totals.H`, once
+`pitching_totals.R`. Six of 204 blanks, 2.9%.
+
+Not a bug — the relation is real and in the `column_sum` family. The question is whether a blank with a
+lookup in it should count towards a stall or a chain, and whether the rate holds across the pool.
+**Filler wearing a new face**, in the row that was assumed to be a read-only anchor until the real
+packages showed it carries blanks.
+
+**Needs the database, so it is forge work.** What would change: the generator refusing to erase a total
+the scoreboard prints, or the solver not counting the move. Recorded before continuing rather than
+mentioned in passing.
+
 ## What is actually left
 
 Not review findings — these are the things the repairs unblocked.

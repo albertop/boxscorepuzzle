@@ -168,6 +168,7 @@ export function paint(node, game) {
   const blank = game.isBlank(name);
   const value = game.value(name);
   node.classList.toggle("blank", blank);
+  node.classList.toggle("filled", blank && value !== null);
   node.classList.toggle("given", !blank);
   const isInnings = name.startsWith("pitching") && name.endsWith(".outs");
   node.textContent = value === null ? "" : isInnings ? inningsToDisplay(value) : String(value);
