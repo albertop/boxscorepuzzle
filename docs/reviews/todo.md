@@ -794,6 +794,18 @@ failing. It is not broken; it is measuring the easy half of the range.
 **So it is not migrated, it is replaced.** The pack that is wanted is the stall ladder — **19, 16, 13,
 9 and 6** — which does not exist yet.
 
+⚠️ **The rungs must be filled from boards of similar reach, or the ladder measures two things.** A
+board whose observed maximum is 21 erased down to 6 stalls has structural room to spare; a board whose
+maximum is 7 erased to 6 is squeezed to its limit. **Both are labelled "6 stalls" and there is no
+reason to think they feel alike** — and nobody knows which of the two is representative, which is
+exactly why they must not be mixed.
+
+If the five rungs are filled from boards with widely different maxima, then stall count and *headroom*
+vary together across the ladder and no answer separates them. The fix is cheap and the input already
+exists: the ceiling run computes a per-board maximum, so **select boards within a narrow band of
+maxima and let only the erasure target vary between rungs.** Then the one thing that changes from rung
+to rung is the number of stalls, which is the thing being measured.
+
 ⚠️ **And the one-third uncertified quota stops making sense on a ladder.** With fixed rungs the
 uncertified share is a **measured property of each rung** rather than something the pack imposes: the
 19 rung carries boards 3b will not certify — the five at the top demonstrated it, four of five
