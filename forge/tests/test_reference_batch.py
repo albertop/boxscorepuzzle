@@ -162,10 +162,10 @@ class TestCommittingTheBatch:
 
         assert (other / "work.json").exists()
 
-    def test_the_pending_manifest_is_named_per_process(self, tmp_path: Path) -> None:
+    def test_the_pending_manifest_is_named_per_process(self) -> None:
         # A fixed pending name is a collision point, and nothing makes the single-writer assumption
         # true. Asserted on the source rather than by racing two publishers.
         source = (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
 
         assert "getpid()" in source
-        assert f'{{MANIFEST}}.pending"' not in source
+        assert '{MANIFEST}.pending"' not in source
