@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Eleven reviews, 58 findings, none rejected. One is open and it is not waiting on effort.**
+**Twelve reviews, 62 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
@@ -559,6 +559,54 @@ the group hidden, no erasure involved, so tripling their cost would have changed
 definition of each metric. ⚠️ **A results file with no provenance cannot be told from a stale one**, and
 the file previously on disk was exactly that: output from an instrument whose blockage column could not
 vary, with nothing inside it saying so. `result schema 2` is what distinguishes the two now.
+
+## v12 — verified, none rejected. **All four closed.**
+
+| Finding | State | What it was |
+|---|---|---|
+| P1-01 the guard accepted the implementation it replaced | **closed** | `assert ... in (True, False)` |
+| P2-01 coverage counted group evaluations as erasures | **closed** | nine successes for one call on a nine-group board |
+| P2-02 provenance published as complete without identifying the code | **closed** | `--dirty` does not see untracked files |
+| P2-03 every run staged through the same pending filename | **closed** | an atomic rename does not protect preparation |
+
+### v12-P1-01 — the fifth tautological guard, in the class that exists to prove the fix
+
+`assert metrics.stops_progress(...) in (True, False)` is satisfied by the corrected function **and by
+the one it replaced**, so reverting the fix would have left the named guard green. The project records
+a fix as closed under the rule that it must have a test that fails without it, and this one did not
+satisfy that rule.
+
+It uses a deterministic fake solver now and asserts exact outcomes both ways, plus a case that
+demonstrates **the old construction compared a board with itself** on the same input where the
+production function must disagree. Derivability likewise asserts a known-derivable and a
+known-underivable board rather than membership in the set of booleans.
+
+⚠️ **Five guards of this shape in one day**, and the pattern is always the same: a test written
+immediately after the fix, asserting what the fixed code obviously does rather than what the broken
+code obviously did not. **The question that catches it is not "does this assert the right thing" but
+"would this have failed yesterday".**
+
+### v12-P2-01 — a denominator and a coverage figure are different numbers
+
+`erase` runs once per direction and seed, before the direction becomes slot groups. Reporting
+`groups × seeds` as *erasures attempted* counted group-erasure evaluations, and summing `group.trials`
+claimed one successful erasure once per group on its board — nine successes for one call on a
+nine-group direction. The repeated count is the right denominator for a per-group per-erasure rate and
+the wrong measure of how often the eraser worked; both are printed now, each labelled as what it is.
+
+### v12-P2-02 — a stamp that cannot identify the code must not publish
+
+`git describe --dirty` does not see untracked files, so an untracked helper changed the result while
+the revision read clean. The stamp asks for untracked state explicitly and carries a **hash of
+`measure.py` and `metrics.py` as they ran** — a commit says what was committed, a hash says what ran.
+And a run whose revision comes back `unknown` **refuses to publish**, rather than occupying the name a
+decision gets read from.
+
+### v12-P2-03 — the same class already removed once
+
+Every run staged through `results.txt.pending`. An atomic final rename protects the destination and not
+the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
+is per process with a nonce, cleaned in `finally`.
 
 ## v11 — verified, none rejected. **All four closed.**
 

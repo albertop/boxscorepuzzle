@@ -22,6 +22,7 @@ offense equal the outs recorded by the opposing pitchers.
 
 import json
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Self
@@ -471,7 +472,7 @@ class Package:
             raise PackageError(message) from error
 
 
-def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
+def _check_slot_references(values: "Sequence[object]", rows: int) -> None:
     """The complete rule, in one place, used by construction **and** by parsing.
 
     ⚠️ **These applied different subsets.** `__post_init__` checked the count and `from_json` checked
@@ -485,9 +486,12 @@ def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
         message = f"{len(values)} slot references for {rows} batting rows"
         raise PackageError(message)
     for index, value in enumerate(values):
-        # The type says these are strings and `from_json` hands over whatever the file held, so the
-        # runtime check lives at the parse boundary and this one asks only about the shape.
-        # ⚠️ The type check lived in the parser only, so a direct `Package(...)` carrying `1` or
+        # ⚠️ **The parameter is `Sequence[object]` on purpose.** Typing it `tuple[str, ...]` made
+        # mypy call this branch unreachable — correct about the annotation and wrong about the world,
+        # because `__post_init__` receives whatever a caller passed. An annotation that promises more
+        # than the boundary can check turns a real guard into dead code.
+        #
+        # The type check lived in the parser only, so a direct `Package(...)` carrying `1` or
         # `None` reached the regex and raised a bare `TypeError`: the same malformed field with a
         # different error contract depending on which supported path built it, and neither path is
         # the exception.
