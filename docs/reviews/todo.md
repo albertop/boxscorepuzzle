@@ -42,6 +42,42 @@ constructing the collision, which is the only way this class can be found. ⚠�
 did not collide**; the finding was right and its demonstration was wrong, which is its own small lesson
 about accepting a worked example instead of running it.
 
+## ⚖️ What the reviewer does not know: the environment is one laptop
+
+**One laptop, the operator and Claude. No CI yet, no second developer, no concurrent editors, no
+adversary inside the repository.** The reviewer reasons from a generic professional setup and cannot
+see this, so it produces findings that are correct in the abstract and unreachable here.
+
+**Those are declined, and the decision is written down.** Not fixed quietly, not argued with — recorded
+with the finding's id, why it cannot arise in this environment, and what would have to change for it to
+become real. A declined finding is a decision the operator can reverse when the environment changes; a
+silently skipped one is a hole nobody knows about.
+
+⚠️ **The test is *does this need a second actor or a second process I do not control?*** — not *is this
+unlikely*. The distinction matters because it is easy to get backwards:
+
+| | |
+|---|---|
+| **Declined** | needs a second developer, a shared build agent, a hostile contributor, a race between two humans |
+| **Fixed** | reachable by one person on one machine, however exotic it sounds |
+
+`v16-P2-01` is the worked example of the second row. It arrived with an attack scenario about a
+compromised build step, which is not reachable here — but the underlying defect was **two innocent
+untracked trees producing one identity**, which needs no second actor at all. The framing was out of
+scope and the defect was not, and reading only the framing would have declined a real correctness bug.
+
+### Declined so far
+
+| Finding | Why it cannot arise here |
+|---|---|
+| `v16-P1-01`, the launcher half | Closing the import-to-`identify()` window and the untracked two-observation window means running the worker from an immutable git worktree. The window is milliseconds on a machine with one operator and no concurrent editor. **Would become real** with CI, a second developer, or any unattended scheduler |
+
+⚠️ **Some mechanisms of this shape are already built and stay built.** `publish()`'s per-writer staging
+name is the clear case: two overlapping runs of a five-hour instrument is a concurrency argument, and on
+one laptop it is thin. It is kept because it exists, is tested and costs nothing — **not because it
+would be built again today.** Recorded so the ledger does not read as a precedent for building the next
+one.
+
 ## What is left
 
 **`serve` runs in parallel with everything below it**, not after. It depends on none of them: since
