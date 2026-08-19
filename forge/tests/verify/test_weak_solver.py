@@ -18,6 +18,16 @@ from boxscore_verify.verify import derivable_in_view
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 
 
+
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 def weakly(board: Board, **kwargs: bool) -> object:
     return derive_in_view(relations(board), all_cells(board), values_of(board), **kwargs)
 
@@ -80,9 +90,11 @@ class TestTheReportedProperty:
     def test_a_derivable_board_certifies(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(3, 3)]})
 
-        assert derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board))
+        assert derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board,
+            slot_references=refs(puzzle)))
 
     def test_an_ambiguous_board_does_not(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        assert not derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board))
+        assert not derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board,
+            slot_references=refs(puzzle)))

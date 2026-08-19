@@ -29,6 +29,16 @@ GAME = "SLN19680808"
 OFFENSE = "CHN"
 
 
+
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 def good_evidence(board: Board) -> Evidence:
     """Evidence that describes this board and this game, with every field it can be checked on."""
     return Evidence(
@@ -51,6 +61,7 @@ def package_for(board: Board) -> Package:
     from boxscore_package.format import Reveal  # noqa: PLC0415
 
     return Package(
+        slot_references=refs(board),
         # The identifier the evidence implies. It used to be an arbitrary string, which is exactly the
         # gap: nothing tied a package to the game its evidence described.
         puzzle_id=expected_puzzle_id(GAME, OFFENSE),

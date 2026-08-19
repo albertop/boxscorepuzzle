@@ -25,8 +25,18 @@ from boxscore_package.format import (
 from boxscore_verify.verify import UNSIGNED, verify
 
 
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
-    document = Package(puzzle_id="000000000000000f", puzzle=board, solution=board).as_json()
+    document = Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
+        slot_references=refs(board)).as_json()
     for key, value in changes.items():
         section, _, field = key.partition("__")
         if field:
@@ -102,7 +112,8 @@ class TestTheSignatureCannotBeSkippedByAccident:
         # ⚠️ The finding. A publish path whose secret is unset would previously verify nothing and
         # report a pass — misconfiguration reading as success.
         with pytest.raises(ValueError, match="pass UNSIGNED"):
-            verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), secret=None)
+            verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
+                slot_references=refs(board)), secret=None)
 
     def test_there_is_no_default_to_forget(self) -> None:
         parameter = inspect.signature(verify).parameters["secret"]
@@ -111,7 +122,8 @@ class TestTheSignatureCannotBeSkippedByAccident:
         assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
     def test_skipping_it_deliberately_is_allowed(self, board: Board) -> None:
-        assert verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), secret=UNSIGNED).accepted
+        assert verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
+            slot_references=refs(board)), secret=UNSIGNED).accepted
 
 
 class TestTheTwoSidesUseTheSameVocabulary:
@@ -170,7 +182,8 @@ class TestTheEnvelopeIsCheckedToo:
     """
 
     def _document(self, board: Board) -> dict[str, object]:
-        return Package(puzzle_id="000000000000000f", puzzle=board, solution=board).as_json()
+        return Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
+            slot_references=refs(board)).as_json()
 
     @pytest.mark.parametrize("root", [[], "a package", 7, None, True])
     def test_a_root_that_is_not_an_object_is_refused(self, root: object) -> None:

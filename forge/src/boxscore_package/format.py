@@ -29,7 +29,7 @@ from typing import Any, Final, Self
 SCHEMA_VERSION: Final = 2
 """What this code writes. Version 1 stays readable — see `READABLE`."""
 
-READABLE: Final = (1, SCHEMA_VERSION)  # TODO(v08-P1-03): drop 1 with the fixture migration
+READABLE: Final = (SCHEMA_VERSION,)
 """⚠️ **Version 1 was frozen and this is not an amendment to it.** The contract calls version 1
 append-only, and slot references are not an addition: without them a client cannot resolve `SH: 9b` to
 a row, so the package means something different rather than something more. That is a new version.
@@ -352,7 +352,15 @@ class Package:
 
     @property
     def written_as(self) -> int:
-        return self.schema if self.schema is not None else (SCHEMA_VERSION if self.slot_references else 1)
+        """⚠️ **One version, so nothing derives it any more.**
+
+        This returned 1 for a package without slot references, which was right while both versions
+        existed: a version is a statement about the payload. Version 1 is gone — its signatures are
+        HMAC and this parser only accepts Ed25519, so the compatibility promise was false and no
+        consumer needed it — and with one version left, deriving would only manufacture a document
+        this code cannot read back.
+        """
+        return self.schema if self.schema is not None else SCHEMA_VERSION
     signature: str | None = None
 
     def published(self) -> Self:

@@ -27,8 +27,18 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
+
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="000000000000001f", puzzle=puzzle, solution=source)
+    return Package(puzzle_id="000000000000001f", puzzle=puzzle, solution=source, slot_references=refs(puzzle))
 
 
 def replacing(board: Board, **changes: object) -> Board:
@@ -199,7 +209,7 @@ class TestTheSignatureCatchesCorruptionInTransit:
             puzzle=blank(board, {"batting": [(0, 3)]}),
             solution=signed.solution,
             metadata=signed.metadata,
-            signature=signed.signature,
+            signature=signed.signature, slot_references=refs(blank(board, {'batting': [(0, 3)]})),
         )
 
         verdict = verify(tampered, secret=PUBLIC)

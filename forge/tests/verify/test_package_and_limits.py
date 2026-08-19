@@ -33,10 +33,21 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
+
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 class TestTheFormatSurvivesDisk:
     def test_a_package_round_trips(self, tmp_path: Path, board: Board) -> None:
         original = sign(
-            Package(puzzle_id="000000000000002f", puzzle=board, solution=board, metadata={"season": 1968}), SECRET
+            Package(puzzle_id="000000000000002f", puzzle=board, solution=board, metadata={"season": 1968},
+                slot_references=refs(board)), SECRET
         )
         path = tmp_path / "puzzle.json"
 
@@ -56,7 +67,7 @@ class TestTheFormatSurvivesDisk:
             puzzle_id="000000000000000f",
             puzzle=board,
             solution=board,
-            metadata={"game_id": "ATL196808080", "chain_target": 9},
+            metadata={"game_id": "ATL196808080", "chain_target": 9}, slot_references=refs(board),
         )
 
         published = full.published()
@@ -68,7 +79,8 @@ class TestTheFormatSurvivesDisk:
     def test_a_signature_written_over_the_full_package_still_checks_on_the_published_half(
         self, tmp_path: Path, board: Board
     ) -> None:
-        signed = sign(Package(puzzle_id="000000000000000f", puzzle=board, solution=board), SECRET)
+        signed = sign(Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
+            slot_references=refs(board)), SECRET)
         path = tmp_path / "published.json"
 
         write(path, signed.published())
@@ -79,7 +91,7 @@ class TestTheFormatSurvivesDisk:
         # A future schema must fail loudly rather than be read with today's assumptions, which is
         # the whole point of seam C2's versioning.
         path = tmp_path / "future.json"
-        document = Package(puzzle_id="000000000000000f", puzzle=board).as_json()
+        document = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)).as_json()
         document["schema"] = package_format.SCHEMA_VERSION + 1
         path.write_text(json.dumps(document), encoding="utf-8")
 
@@ -131,7 +143,8 @@ class TestItSaysWhenItCannotAnswer:
         monkeypatch.setattr(reason, "NODE_BUDGET", 3)
         puzzle = blank(board, {"batting": [(0, 3), (1, 3), (2, 3), (3, 3), (4, 3)]})
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board,
+            slot_references=refs(puzzle)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.UNDECIDED
@@ -149,7 +162,8 @@ class TestItSaysWhenItCannotAnswer:
 
 class TestMalformedPackages:
     def test_a_package_with_no_source_cannot_be_verified(self, board: Board) -> None:
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)),
+            secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -160,7 +174,8 @@ class TestMalformedPackages:
         # rather than that the puzzle is hard.
         holed = blank(board, {"batting": [(0, 3)]})
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=holed), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=holed,
+            slot_references=refs(board)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -177,7 +192,8 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=shorter, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=shorter, solution=board,
+            slot_references=refs(shorter)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -197,7 +213,8 @@ class TestMalformedPackages:
             line_score=board.line_score,
         )
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=without, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=without, solution=board,
+            slot_references=refs(without)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -225,7 +242,8 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=elsewhere, solution=board), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=elsewhere, solution=board,
+            slot_references=refs(elsewhere)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.MALFORMED
@@ -253,7 +271,8 @@ class TestMalformedPackages:
             ),
         )
 
-        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=broken, solution=broken), secret=UNSIGNED)
+        verdict = verify(Package(puzzle_id="000000000000000f", puzzle=broken, solution=broken,
+            slot_references=refs(broken)), secret=UNSIGNED)
 
         assert verdict.rejection is not None
         assert verdict.rejection.fault is Fault.BAD_DATA
@@ -265,16 +284,17 @@ class TestTheTally:
         # The distribution is what says whether the generator is behaving, so it has to distinguish
         # layers rather than only count failures.
         verdicts = [
-            verify(Package(puzzle_id="000000000000000a", puzzle=board, solution=board), secret=UNSIGNED),
+            verify(Package(puzzle_id="000000000000000a", puzzle=board, solution=board,
+                slot_references=refs(board)), secret=UNSIGNED),
             verify(
                 Package(
                     puzzle_id="000000000000000b",
                     puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}),
-                    solution=board,
+                    solution=board, slot_references=refs(blank(board, {'batting': [(0, 3), (1, 3)]})),
                 ),
                 secret=UNSIGNED,
             ),
-            verify(Package(puzzle_id="000000000000000c", puzzle=board), secret=UNSIGNED),
+            verify(Package(puzzle_id="000000000000000c", puzzle=board, slot_references=refs(board)), secret=UNSIGNED),
         ]
 
         counts = tally(verdicts)

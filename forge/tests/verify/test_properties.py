@@ -31,6 +31,16 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
+
+def refs(board: object) -> tuple[str, ...]:
+    """One slot reference per batting row — the shape a package must carry since schema 2.
+
+    A helper rather than the expression inline: it appears in every fixture, and the property being
+    fixed is *one per row*, which a name states and a comprehension buries.
+    """
+    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+
+
 def _split(draw: st.DrawFn, total: int, parts: int) -> list[int]:
     """Break a total into `parts` non-negative pieces, so pitching lines add up by construction."""
     cuts = sorted(draw(st.lists(st.integers(0, total), min_size=parts - 1, max_size=parts - 1)))
@@ -100,7 +110,7 @@ def boards(draw: st.DrawFn) -> Board:
 
 
 def _package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="property", puzzle=puzzle, solution=source)
+    return Package(puzzle_id="property", puzzle=puzzle, solution=source, slot_references=refs(puzzle))
 
 
 class TestABoardBuiltFromTheIdentitiesSatisfiesThem:
@@ -174,21 +184,25 @@ class TestTheSignatureTracksTheContent:
         rows = [[0 if value is None else value for value in row] for row in board.batting]
         row = index % len(rows)
         rows[row][0] += 1
+        # The board rebuilt once and used twice, rather than constructed inline in both places:
+        # two copies of the same expression is how they come to differ.
+        altered = Board(
+            batting=tuple(tuple(entry) for entry in rows),
+            batting_totals=board.batting_totals,
+            footnotes=board.footnotes,
+            footnote_totals=board.footnote_totals,
+            left_on_base=board.left_on_base,
+            pitching=board.pitching,
+            pitching_totals=board.pitching_totals,
+            line_score=board.line_score,
+        )
         tampered = Package(
             puzzle_id=signed.puzzle_id,
-            puzzle=Board(
-                batting=tuple(tuple(entry) for entry in rows),
-                batting_totals=board.batting_totals,
-                footnotes=board.footnotes,
-                footnote_totals=board.footnote_totals,
-                left_on_base=board.left_on_base,
-                pitching=board.pitching,
-                pitching_totals=board.pitching_totals,
-                line_score=board.line_score,
-            ),
+            puzzle=altered,
             solution=signed.solution,
             metadata=signed.metadata,
             signature=signed.signature,
+            slot_references=refs(altered),
         )
 
         with pytest.raises(SignatureError):
@@ -224,7 +238,7 @@ class TestTheSignatureTracksTheContent:
                 pitching_totals=board.pitching_totals,
                 line_score=board.line_score,
             ),
-            signature=signed.signature,
+            signature=signed.signature, slot_references=refs(signed.puzzle),
         )
 
         with pytest.raises(SignatureError):
