@@ -13,6 +13,7 @@ import {
   PITCHING_COLUMNS,
   battingTotalCell,
   footnoteCell,
+  footnoteTotalCell,
   inningsToDisplay,
   pitchingTotalCell,
 } from "../../engine/columns.js";
@@ -187,23 +188,37 @@ export function renderFootnotes(puzzle, game) {
   line.append(el("span", "lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
 
   for (const column of FOOTNOTE_COLUMNS) {
+    // ⚠️ **The totals row is never erased, so the count is always known** (§6 — the row identity does
+    // not close without it). Everything below follows from that, and the version this replaces did not
+    // use it: it asked whether any per-batter cell was blank and printed `?` if so, which produced
+    // `HBP: ?` on a game with **no hit batsmen at all** and `SH: #5 +?` where the single sacrifice was
+    // already accounted for. Three of four terms were false and the fourth was noise.
+    //
+    // Nothing invents uncertainty the arithmetic has already removed. A total of zero means the thing
+    // did not happen and the term is not printed; §6 warns that nine boards in ten have every term at
+    // zero, and four question marks on a board with one live term is exactly how a player learns to
+    // stop reading this line.
+    const total = game.value(footnoteTotalCell(column));
+    if (total === null || total === 0) continue;
+
     const holders = [];
-    let unknown = false;
+    let attributed = 0;
     puzzle.puzzle.footnotes.forEach((_, row) => {
       const value = game.value(footnoteCell(row, column));
-      if (value === null) unknown = true;
-      // ⚠️ **`#` in front, because a bare slot reference collides with a count.** Rendered without it,
-      // a sacrifice hit by the second batter printed as `SH: 2`, which reads as *two sacrifice hits* —
-      // the footnote stating a fact it is not stating. The board already calls this column `#`.
-      else if (value > 0) holders.push(`#${puzzle.slotReferences[row]}${value > 1 ? `×${value}` : ""}`);
+      if (value !== null && value > 0) {
+        holders.push(`#${puzzle.slotReferences[row]}${value > 1 ? `×${value}` : ""}`);
+        attributed += value;
+      }
     });
-    const total = game.value(`footnote_totals.${column}`);
-    if (total === 0 && !unknown) continue;
+    // What is left to attribute, not whether a cell happens to be blank. Once the holders account for
+    // the total there is nothing unknown, however many blanks remain — they are all zeroes.
+    const missing = total - attributed;
 
-    const term = el("span", `term ${unknown ? "unknown" : holders.length ? "live" : "zero"}`);
-    term.append(document.createTextNode(`${text(`column.${column}`)}: `));
-    term.append(el("span", "who", holders.join(", ") || (unknown ? "?" : "0")));
-    if (unknown && holders.length) term.append(document.createTextNode(" +?"));
+    const term = el("span", `term ${missing > 0 ? "unknown" : "live"}`);
+    term.append(document.createTextNode(`${text(`column.${column}`)}: ${total} `));
+    const who = [...holders];
+    if (missing > 0) who.push(missing > 1 ? `${text("footnote.unattributed")}×${missing}` : text("footnote.unattributed"));
+    term.append(el("span", "who", who.join(", ")));
     line.append(term);
   }
   return line;

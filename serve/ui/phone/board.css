@@ -31,15 +31,19 @@
   --blank: #f4f6f9;
   --selected: #ffe9a8;
   --selected-rule: #c99a12;
-  /* The row and the column a selected cell shares an equation with. **Two colours, because they are
-     two different equation families** — the row identity `PA = AB + BB + HBP + SF + SH + CI` and the
-     column sum are separate relations, and a player following one of them is not following the other.
-     One grey for both said they were the same kind of line. */
-  --peer-row: #eef2f8;
-  --peer-column: #f6efe2;
+  /* The row and the column a selected cell shares an equation with. **One tint for both**, from the
+     selection's own family, so the two lines read as *what this cell is connected to* rather than as
+     two kinds of thing. The version before this gave them separate colours on the reasoning that the
+     row identity and the column sum are different relations — true, and not what the highlight is for:
+     it answers *where do I look*, not *which equation is this*. Operator's call, and the right one. */
+  --peer: #f6efe2;
   --muted: #6b7280;
-  --keypad: #e8ebf0;
+  /* Slate green in place of the grey: the panel the keys sit on, in the scoreboard's hue desaturated
+     and darkened. The keys themselves stay light — they are the thing being pressed, and a dark key on
+     a dark panel loses the edge that says where one ends. */
+  --keypad: #4b5f57;
   --key: #ffffff;
+  --key-ink: #16181d;
 
   /* The scoreboard. One colour, named for where it comes from, so a future change is a decision about
      the object rather than about a hex value nobody can place. */
@@ -48,26 +52,17 @@
   --scoreboard-dim: #b9cdc5;
   --scoreboard-rule: rgba(242, 246, 244, 0.35);
 
-  /* Two candidates for the section header block, both live so they can be rendered side by side
-     against the scoreboard rather than argued about. `data-header="grey"` on the root picks the
-     second. The loser gets deleted once it has been looked at. */
-  --header-ground: #16241f;
-  --header-ink: #ffffff;
-}
-
-:root[data-header="grey"] {
-  --header-ground: #22262b;
-  --header-ink: #ffffff;
-}
-
-/* ⚠️ A third, because rendering the first two answered a different question than the one asked. At
-   near-black the hue does not read: rgb(22,36,31) and rgb(34,38,43) are indistinguishable on the board,
-   so "take it from the scoreboard's family" bought nothing. This one is dark enough to be a header and
-   green enough to be the same object as the scoreboard. */
-:root[data-header="kin"] {
+  /* ⚠️ **Chosen by rendering, and the losers are deleted.** Two of the three lived here behind a
+     `data-header` attribute so they could be compared on the real board; keeping them would be three
+     things every future change has to hold working. The finding worth remembering: the first two
+     candidates were a near-black green and a near-black grey, and **at near-black the hue does not
+     read** — they were indistinguishable in situ, so "take it from the scoreboard's family" bought
+     nothing until the green was allowed to be green. */
   --header-ground: #1f362e;
   --header-ink: #ffffff;
 }
+
+
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -81,16 +76,15 @@
     --blank: #1b1e24;
     --selected: #4a3c12;
     --selected-rule: #d8ab26;
-    --peer-row: #1f232a;
-    --peer-column: #2a2418;
+    --peer: #2a2418;
     --muted: #9aa1ad;
-    --keypad: #0e1013;
+    --keypad: #2c3b35;
     --key: #1b1e24;
+    --key-ink: #e6e8ec;
     /* The scoreboard keeps its colour in the dark: it is a physical object, and a physical object does
        not change paint when the room does. Only the surround moves. */
-    --header-ground: #101a16;
+    --header-ground: #16281f;
   }
-  :root[data-header="grey"] { --header-ground: #1a1d21; }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -261,8 +255,7 @@ td.cell.blank {
   outline-offset: -1px;
 }
 td.cell.blank:empty::after { content: ""; }
-td.cell.peer-row { background: var(--peer-row); }
-td.cell.peer-column { background: var(--peer-column); }
+td.cell.peer { background: var(--peer); }
 td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
 
 /* ---- the footnote line ----------------------------------------------------------------------- */
@@ -294,7 +287,7 @@ td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(
   border: 0;
   border-radius: 8px;
   background: var(--key);
-  color: var(--ink);
+  color: var(--key-ink);
   font: inherit;
   font-size: 18px;
   font-variant-numeric: tabular-nums;

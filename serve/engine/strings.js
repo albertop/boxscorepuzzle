@@ -34,6 +34,8 @@ const en = {
   "board.pitching": "PITCHING",
   "board.totals": "Totals",
   "board.left_on_base": "LOB",
+  // The mark for an occurrence the board knows happened and the player has not yet placed.
+  "footnote.unattributed": "?",
   // The mark a printed boxscore puts where a half-inning was never played. Not a zero — that states a
   // fact that did not happen — and not a dash, which reads as *nothing here* rather than *not played*.
   "board.inning_not_played": "x",
