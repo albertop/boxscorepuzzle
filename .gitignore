@@ -51,3 +51,9 @@ discovery/**/run.log
 # Throwaway batches. Signed by a key that existed for one run, so they are worth nothing to keep
 # and must never be mistaken for inventory.
 discovery/ephemeral-puzzles/
+
+# ⚠️ The reference writer's staging directory. The published packages under serve/data/puzzles/ ARE
+# committed — they are the format sample serve is built against — but the staging area is transient and
+# holds whatever a failed run left behind. It reached a commit once, from a run that discarded four of
+# six boards and left the rest on disk.
+serve/data/puzzles/.staging/
