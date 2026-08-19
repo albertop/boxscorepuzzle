@@ -52,7 +52,17 @@ class TestTheGateIsAnAcceptanceList:
     def test_the_loader_requires_a_provenance_row(self) -> None:
         text = loader_text()
 
-        assert re.search(r"AND EXISTS \(SELECT 1 FROM dbo\.retroGameProvenance", text)
+        # ⚠️ **This asserted `AND EXISTS (...)`, which is one implementation of the rule rather than the
+        # rule.** The projection is now a `CROSS APPLY` that selects the qualifying row and takes both
+        # evidence fields from it, so a game with no accepted, non-deduced provenance row produces no row
+        # at all — same guarantee, and the acceptance predicate lives in one place instead of two. What
+        # must hold is that the requirement is *positive*: an acceptance list, never an exclusion list,
+        # because a `NOT EXISTS` passes when the row is missing.
+        joined = re.search(r"CROSS APPLY \(SELECT TOP 1 .*?\) AS prov", text, re.S)
+
+        assert joined, "the provenance row is no longer selected by a CROSS APPLY; check the rule survived"
+        assert "p.is_deduced = 0" in joined.group(0)
+        assert "p.source_type IN ({accepted})" in joined.group(0)
 
     def test_it_names_the_sources_it_accepts(self) -> None:
         # An acceptance list is the point: a source kind nobody has seen yet is excluded by not being

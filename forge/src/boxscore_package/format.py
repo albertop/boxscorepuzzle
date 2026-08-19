@@ -26,7 +26,19 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Self
 
-SCHEMA_VERSION: Final = 1
+SCHEMA_VERSION: Final = 2
+"""What this code writes. Version 1 stays readable — see `READABLE`."""
+
+READABLE: Final = (1, 2)
+"""⚠️ **Version 1 was frozen and this is not an amendment to it.** The contract calls version 1
+append-only, and slot references are not an addition: without them a client cannot resolve `SH: 9b` to
+a row, so the package means something different rather than something more. That is a new version.
+
+Cutting it now is the point. Nothing is published, `serve` does not exist, and there is nothing to
+migrate — **a version scheme first exercised under pressure is one that gets skipped.** Both versions
+parse; the reader dispatches on the field, which is what the contract promised and costs almost
+nothing while there is one reader.
+"""
 
 BATTING_COLUMNS: Final = ("plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts")
 """PA, AB, R, H, BB, K — the six the board shows (§6). Order is part of the format."""
@@ -36,6 +48,14 @@ FOOTNOTE_COLUMNS: Final = ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", 
 
 PITCHING_COLUMNS: Final = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
 """IP, H, R, ER, BB, K, with innings held as outs."""
+
+SLOT_REFERENCE = re.compile(r"^[1-9][a-z]?$")
+"""`9` where a lineup slot holds one row, `9a`/`9b` where it is shared — the string the board draws and
+the footnote line prints, **produced once on the forge and never derived by a client**.
+
+Deriving it there would be a second copy of a baseball rule, and a wrong one attaches a footnote term
+to the wrong row: the row identity then fails while every column total still balances.
+"""
 
 PUZZLE_ID = re.compile(r"^[0-9a-f]{16}$")
 """Opaque, sixteen hex characters, as the format document states.
@@ -307,7 +327,25 @@ class Package:
 
     reveal: Reveal | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
-    schema: int = SCHEMA_VERSION
+    slot_references: tuple[str, ...] | None = None
+    """One per batting row, in row order. Required from schema 2; absent in version 1 packages.
+
+    **Pitching rows carry none, deliberately.** Those are the *opposing* team's pitchers and have no
+    place in this batting order, so a slot there would name a row that does not exist.
+    """
+
+    schema: int | None = None
+    """The version this package *is*, or `None` to let the payload decide.
+
+    ⚠️ **A version is a statement about the payload, not a stamp applied to it.** A package carrying
+    slot references is a version 2 package and one without them is a version 1 package, so the two
+    cannot disagree: `written_as` derives it. Set it explicitly only to assert what a parsed document
+    claimed.
+    """
+
+    @property
+    def written_as(self) -> int:
+        return self.schema if self.schema is not None else (SCHEMA_VERSION if self.slot_references else 1)
     signature: str | None = None
 
     def published(self) -> Self:
@@ -333,13 +371,15 @@ class Package:
 
     def as_json(self) -> dict[str, Any]:
         document: dict[str, Any] = {
-            "schema": self.schema,
+            "schema": self.written_as,
             "puzzle_id": self.puzzle_id,
             "puzzle": self.puzzle.as_json(),
             "metadata": self.metadata,
         }
         document["labels"] = list(self.labels)
         document["pitcher_labels"] = list(self.pitcher_labels)
+        if self.slot_references is not None:
+            document["slot_references"] = list(self.slot_references)
         if self.solution is not None:
             document["solution"] = self.solution.as_json()
         if self.reveal is not None:
@@ -363,24 +403,56 @@ class Package:
             message = f"puzzle package is {type(raw).__name__}, expected an object"
             raise PackageError(message)
         schema = raw.get("schema")
-        if not isinstance(schema, int) or isinstance(schema, bool) or schema != SCHEMA_VERSION:
-            message = f"puzzle package schema {schema!r}, this code reads {SCHEMA_VERSION}"
+        if not isinstance(schema, int) or isinstance(schema, bool) or schema not in READABLE:
+            message = f"puzzle package schema {schema!r}, this code reads {list(READABLE)}"
             raise PackageError(message)
         try:
+            # Hoisted so the slot references can be checked against the board they belong to: one per
+            # batting row is the property, and it cannot be stated without the rows.
+            puzzle = Board.from_json(raw["puzzle"])
             return cls(
                 puzzle_id=_matching(raw.get("puzzle_id"), PUZZLE_ID, "puzzle_id"),
-                puzzle=Board.from_json(raw["puzzle"]),
+                puzzle=puzzle,
                 solution=Board.from_json(raw["solution"]) if raw.get("solution") is not None else None,
                 labels=tuple(_strings(raw.get("labels", []), "labels")),
                 pitcher_labels=tuple(_strings(raw.get("pitcher_labels", []), "pitcher_labels")),
                 reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
+                slot_references=_slot_references(raw.get("slot_references"), schema, len(puzzle.batting)),
                 metadata=_metadata(raw.get("metadata", {})),
-                schema=schema,
+                # Not stored. `written_as` derives the version from the payload, and a document
+                # whose declared version disagreed with its content was rejected above — so keeping
+                # the parsed number would only let a round trip differ from its original.
+                schema=None,
                 signature=_matching(raw.get("signature"), SIGNATURE, "signature", optional=True),
             )
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _slot_references(raw: object, schema: int, rows: int) -> tuple[str, ...] | None:
+    """One reference per batting row, validated at the boundary like every other field.
+
+    Absent is correct in a version 1 package and an error from version 2: the field is what the client
+    resolves a footnote against, so a version 2 package without it is malformed rather than sparse.
+    """
+    if schema < SCHEMA_VERSION:
+        if raw is not None:
+            message = f"slot_references is present on a schema {schema} package, which has no such field"
+            raise PackageError(message)
+        return None
+    if not isinstance(raw, list) or len(raw) != rows:
+        message = f"slot_references is {raw!r}, expected {rows} strings, one per batting row"
+        raise PackageError(message)
+    for value in raw:
+        if not isinstance(value, str) or not SLOT_REFERENCE.fullmatch(value):
+            message = f"slot reference {value!r} is not a slot with an optional letter"
+            raise PackageError(message)
+    if len(set(raw)) != len(raw):
+        # A duplicate makes a footnote unresolvable, which is the one thing the field exists to do.
+        message = f"slot_references repeats a value: {raw}"
+        raise PackageError(message)
+    return tuple(raw)
 
 
 def _matching(raw: object, pattern: re.Pattern[str], where: str, *, optional: bool = False) -> Any:  # noqa: ANN401
