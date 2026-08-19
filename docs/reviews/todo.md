@@ -2282,6 +2282,45 @@ Not review findings — these are the things the repairs unblocked.
 **Nothing is labelled easy, medium or hard until the pack comes back.** Five stalls was an example the
 operator gave, not a standard.
 
+## Noticed while making the client green again after the regeneration
+
+**Two tests pinned a package id, and the id is derived from the game.** `serve/tests/package-vectors.json`
+named `9f42acb60c536afd`; regeneration renamed it and all sixteen conformance vectors failed on a missing
+file rather than on anything about the contract — at exactly the moment they were most worth reading. A
+second pin, in the footnote suite, named a board that happened to survive the same regeneration, so it
+looked fine while carrying the identical defect. **Both now ask for what they need** — the manifest's
+first package, and *a* package with a live footnote term — and the second asserts one exists, so an
+empty find is a failure rather than a pass.
+
+**`traversal()` ranked footnotes last, and no footnote is blank any more.** The branch could not fire.
+Deleted rather than commented out, with the test rewritten from *footnotes come last* to *the traversal
+reaches no footnote at all* — which fails loudly if the cells are ever reopened instead of silently
+interleaving them with the batting grid.
+
+**The watched board was hoped for, not asked for.** `build_ceiling_pack.py` reported where
+`WAS201307070` — the one board with a human verdict against a measured number — lands on the corrected
+scale, but only if a stratified draw of four directions per decade happened to contain it out of a pool
+in the hundreds of thousands. It never would. The `else` branch was the whole instrument. `load()` now
+takes `also=(...)`, which adds named games to the draw **while still applying the gate, the caps and
+the provenance rule**, so a named board cannot be smuggled past a filter and a board that does not come
+back was genuinely rejected. Deduplicated on game *and* offensive team, because a game is two boards.
+
+**A warning sign printed into a cp1252 stream, one screen below the comment saying not to.** The
+`WATCHED` block used `⚠️` directly under a comment explaining that every long run here is redirected,
+that Windows gives a redirected stream cp1252, and that a report dying on its own warning sign loses the
+compute that produced it. The rule was applied outward and not inward, in the same file, within thirty
+lines. Now plain text.
+
+### Not fixed, recorded
+
+**`discovery/` carries 19 lint findings under the project's own ruff config.** `extend-include` pulls it
+into scope deliberately — the duplicate `audit()` that disabled a launch-gate check lived there — but
+nothing runs ruff over it in a gate, so the findings accumulated: unused `noqa` directives, an unsorted
+import block, two long lines, `PLR0911` on `_position`, and several `PLR2004` magic values. None is a
+defect on its own. Together they are the "a check that fires on everything carries no information"
+condition, one step before the scope stops being read at all. **Not fixed here because it is unrelated
+to the work in hand and would bury it.**
+
 ## Void rather than confirming anything
 
 The **grouped-versus-separate footnote comparison** was measured through the adapter that restores
