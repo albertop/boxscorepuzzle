@@ -30,6 +30,7 @@ Read-only against DGL. Run from `forge/`.
 import contextlib
 import hashlib
 import io
+import json
 import os
 import secrets
 import subprocess
@@ -66,7 +67,7 @@ group hidden, so they cannot move with the seed."""
 
 TARGET_STALLS = 8
 COLUMNS = (0, 1, 2, 3, "4+")
-RESULT_SCHEMA = 3
+RESULT_SCHEMA = 4
 """1 could not vary, 2 could not fire where it mattered. A reader of an old file needs to know which."""
 
 
@@ -250,8 +251,14 @@ class RunIdentity:
 
     ⚠️ **And it named no input.** A direction count is not the data: the database can change while the
     revision and the source hash stay identical, producing a different sample under the same
-    provenance. `inputs` digests the boards as loaded, with the identifiers beside it so the digest can
-    be checked rather than trusted.
+    provenance.
+
+    ⚠️ **Then it digested the identifiers instead of the boards.** `game_id:offense_team` is a *label*.
+    Every batting, footnote and pitching value, every lineup slot — everything `groups_in` actually
+    reads — could change under the same label and the digest would not move. That is the project's own
+    failure shape one level in: a check that cannot distinguish, reporting as though it had. The digest
+    now covers exactly what the measurement consumes, per direction, and the per-direction digests are
+    **rendered in the artifact** so the aggregate can be checked rather than trusted.
     """
 
     revision: str
@@ -259,7 +266,9 @@ class RunIdentity:
     untracked: str
     instrument: str
     inputs: str = "not yet loaded"
-    directions: tuple[str, ...] = ()
+    directions: tuple[tuple[str, str], ...] = ()
+    """`(identifier, digest)` per direction, sorted. The aggregate alone says two runs differ; these
+    say *which board* differs, which is the difference between a signal and an actionable one."""
 
     @property
     def publishable(self) -> bool:
@@ -269,23 +278,45 @@ class RunIdentity:
         return "unknown" not in (self.revision, self.tracked_changes, self.untracked)
 
     def with_inputs(self, sample: list[Loaded]) -> "RunIdentity":
-        identifiers = tuple(sorted(f"{item.game_id}:{item.offense_team}" for item in sample))
-        digest = hashlib.sha256("".join(identifiers).encode()).hexdigest()[:12]
-        return replace(self, inputs=digest, directions=identifiers)
+        """Digest every board by its **contents**, immediately after `load()` and before measuring."""
+        per_direction = tuple(sorted((f"{item.game_id}:{item.offense_team}", _board_digest(item)) for item in sample))
+        aggregate = hashlib.sha256("".join(a + b for a, b in per_direction).encode()).hexdigest()[:12]
+        return replace(self, inputs=aggregate, directions=per_direction)
+
+
+def _board_digest(item: Loaded) -> str:
+    """Exactly what `groups_in` reads off a board, canonically serialised.
+
+    ⚠️ **Scoped to what the measurement consumes, not to everything the loader carries.** `groups_in`
+    reads `cell_values(direction)` and `loaded.slots` and nothing else, so those are what determine the
+    result and those are what the digest covers. Widening it to names, teams or source flags would make
+    the digest move for reasons that cannot change a number, which is how a check becomes noise.
+    """
+    canonical = json.dumps(
+        {"cells": cell_values(item.direction), "slots": list(item.slots)},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode()).hexdigest()[:12]
 
 
 def identify() -> RunIdentity:
     """Read the world once, at the top of the run, before anything is measured."""
     porcelain = _git("status", "--porcelain", "--untracked-files=all")
-    if porcelain == "unknown":
+    # ⚠️ **A status line is not a file's contents.** `_describe` hashed the porcelain output, so two
+    # different edits to the same path produced the same digest — the same defect as digesting an
+    # identifier instead of a board, in the field next to it. Tracked edits are digested from the diff
+    # and untracked files from their bytes.
+    diff = _git_bytes("diff", "--binary", "HEAD")
+    if porcelain == "unknown" or diff is None:
         tracked = untracked = "unknown"
     else:
         entries = porcelain.splitlines()
         # ⚠️ Untracked and modified were counted together and both labelled `+untracked`, so an
-        # ordinary edit read as an unknown file — and two different dirty trees with the same count
-        # were indistinguishable. Separated, each with a digest of its own contents.
-        tracked = _describe([line for line in entries if not line.startswith("??")])
-        untracked = _describe([line for line in entries if line.startswith("??")])
+        # ordinary edit read as an unknown file. Two questions, two answers.
+        tracked = _describe([line[3:] for line in entries if not line.startswith("??")], diff)
+        untracked_paths = [line[3:] for line in entries if line.startswith("??")]
+        untracked = _describe(untracked_paths, _bytes_of(untracked_paths))
     return RunIdentity(
         revision=_git("rev-parse", "--short", "HEAD"),
         tracked_changes=tracked,
@@ -294,11 +325,24 @@ def identify() -> RunIdentity:
     )
 
 
-def _describe(entries: list[str]) -> str:
-    """`clean`, or a count with a digest — so two different dirty trees do not look alike."""
-    if not entries:
+def _describe(paths: list[str], contents: bytes) -> str:
+    """`clean`, or a count with a digest over the paths **and the bytes that changed**."""
+    if not paths:
         return "clean"
-    return f"{len(entries)} files, {hashlib.sha256(''.join(sorted(entries)).encode()).hexdigest()[:8]}"
+    digest = hashlib.sha256("".join(sorted(paths)).encode() + contents).hexdigest()[:8]
+    return f"{len(paths)} files, {digest}"
+
+
+def _bytes_of(paths: list[str]) -> bytes:
+    """The contents of every untracked file, in path order. Unreadable ones are named, not skipped."""
+    blob = b""
+    for path in sorted(paths):
+        target = _ROOT / path
+        try:
+            blob += path.encode() + target.read_bytes()
+        except OSError:
+            blob += path.encode() + b"<unreadable>"
+    return blob
 
 
 def _git(*arguments: str) -> str:
@@ -311,8 +355,29 @@ def _git(*arguments: str) -> str:
             check=True,
             timeout=10,
         ).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
         return "unknown"
+
+
+def _git_bytes(*arguments: str) -> bytes | None:
+    """Git output undecoded, or `None` when the command failed.
+
+    ⚠️ **`None` rather than `b""`, because empty output is a legitimate answer.** The first version of
+    this asked `_git` for `diff --binary`, which returns bytes a text pipe cannot decode: the reader
+    thread died, `stdout` came back `None` and the caller raised. Had it degraded one step more
+    gracefully it would have returned an empty string — and an empty diff reads as *nothing changed*,
+    so a failure to read the tree would have published a dirty tree as clean. That is this project's
+    named failure shape: the absence of a check reading as the presence of a passing one.
+    """
+    try:
+        return subprocess.run(  # noqa: S603
+            ["git", "-C", str(_ROOT), *arguments],  # noqa: S607
+            capture_output=True,
+            check=True,
+            timeout=10,
+        ).stdout
+    except (OSError, subprocess.SubprocessError):
+        return None
 
 
 def source_hashes() -> str:
@@ -322,7 +387,12 @@ def source_hashes() -> str:
     which is the gap `--dirty` leaves open.
     """
     digest = hashlib.sha256()
-    for path in sorted((_HERE / "measure.py", _HERE / "metrics.py")):
+    # ⚠️ **The loader belongs here.** It chooses the sample and builds every board, and it lives in a
+    # sibling discovery directory rather than in `boxscore_forge` — so neither this hash nor the
+    # revision's dependency graph reached it. Everything else the run touches is tracked, and the
+    # tracked-changes digest is what covers those.
+    sources = (_HERE / "measure.py", _HERE / "metrics.py", _ROOT / "discovery" / "difficulty-metrics" / "measure.py")
+    for path in sorted(sources):
         digest.update(path.read_bytes())
     return digest.hexdigest()[:12]
 
@@ -338,12 +408,12 @@ def provenance(identity: "RunIdentity", coverage: "Coverage", groups: int, trial
     return "\n".join(
         [
             "=== WHAT PRODUCED THIS ===",
-            f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire where it mattered)",
+            f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire; 3 digested labels)",
             f"  revision           {identity.revision}",
             f"  tracked changes    {identity.tracked_changes}",
             f"  untracked files    {identity.untracked}",
             f"  instrument         sha256 {identity.instrument}   (hashed before the run)",
-            f"  inputs             sha256 {identity.inputs} over {len(identity.directions)} directions",
+            f"  inputs             sha256 {identity.inputs} over {len(identity.directions)} directions, listed below",
             f"  sample             {coverage.directions} directions, {SAMPLE_PER_DECADE} per decade, gate {GATE:.0%}",
             (
                 f"  erasures           {SEEDS} per direction; {coverage.reached} of "
@@ -354,9 +424,23 @@ def provenance(identity: "RunIdentity", coverage: "Coverage", groups: int, trial
             "  blockage           counterfactual, per trial; the baseline restores the group whatever",
             "                     the erasure did to it, so the only difference is the assignment",
             "  derivability       conditional on exactly one completion",
+            "",
+            "=== THE BOARDS THIS DIGEST COVERS ===",
+            # ⚠️ The aggregate says two runs differ. Without the list it cannot say which board, and a
+            # digest nobody can check is a claim rather than evidence.
+            *(f"  {identifier:<20} {digest}" for identifier, digest in identity.directions),
             "COMPLETE",
         ]
     )
+
+
+def _refuse_unless_identified(identity: RunIdentity) -> None:
+    """A result that cannot say what produced it is worse than no result: it occupies the name a
+    decision gets read from. *Either* repository question failing is enough, since an untracked file
+    can shadow an imported dependency without touching a commit."""
+    if not identity.publishable:
+        message = f"provenance is incomplete ({identity}); refusing to run"
+        raise SystemExit(message)
 
 
 def publish(
@@ -394,6 +478,16 @@ def publish(
 def main() -> None:
     out = Path(sys.argv[sys.argv.index("--output") + 1]) if "--output" in sys.argv else _HERE / "results.txt"
     identity = identify()
+    # ⚠️ **Fail closed *before* the work, not after.** This check sat after the sample, three seeds of
+    # erasure and every solve — hours of compute whose outcome was already decided, since nothing later
+    # can repair an `unknown` repository field. A guaranteed-discarded run that looks like a
+    # progressing experiment is worse than an immediate refusal.
+    _refuse_unless_identified(identity)
+    # Same reason, one field over: a destination that cannot be written to is known now and discovered
+    # in five hours otherwise, with nothing to show for them.
+    if not out.parent.is_dir():
+        message = f"{out.parent} is not a directory; nothing this run produces could be published"
+        raise SystemExit(message)
     sample = [
         item
         for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
@@ -426,12 +520,9 @@ def main() -> None:
         print("")
         print(provenance(identity, coverage, len(groups), sum(group.trials for group in groups)))
     text = captured.getvalue()
-    if not identity.publishable:
-        # Fail closed. A result that cannot say what produced it is worse than no result, because it
-        # occupies the name a decision gets read from — and *either* repository question failing is
-        # enough, since an untracked file can shadow an imported dependency without touching a commit.
-        message = f"provenance is incomplete ({identity}); refusing to publish"
-        raise SystemExit(message)
+    # The second gate. `identify()` is frozen, so this cannot disagree with the first — it is here
+    # because a publication path that trusts an earlier check is one refactor from having no check.
+    _refuse_unless_identified(identity)
     print(text)
     publish(out, text)
     print(f"written to {out}")

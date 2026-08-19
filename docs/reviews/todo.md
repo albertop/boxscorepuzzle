@@ -2,24 +2,29 @@
 
 ## Where everything stands
 
-**Thirteen reviews, 65 findings, none rejected. One is open and it is not waiting on effort.**
+**Fourteen reviews, 68 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v13 is closed except that one — sixty-four of sixty-five.**
+**Everything from v01 to v14 is closed except that one — sixty-seven of sixty-eight.**
 
 ⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
 plausible value**, and no amount of care in the reading catches it — only a guard that fails when the
 measurement is blind.
 
-⚠️ **And v13 found the same shape one layer out.** The instrument's own *stamp* was blind: it named the
-code but not the data, it read the tree hours after the run it describes, and it refused to publish on
-one of the two questions it asks. A provenance block that cannot distinguish two runs is an instrument
-that cannot distinguish, reporting as though it had — the identical defect, in the part of the file that
-exists to certify the rest.
+⚠️ **And v13 and v14 found the same shape one layer out, twice.** The instrument's own *stamp* was
+blind: v13 found it read the tree hours after the run it describes and refused to publish on one of the
+two questions it asks; v14 found that what it did hash were **labels rather than values** — the
+identifier instead of the boxscore, the porcelain status line instead of the bytes that changed. A
+provenance block that cannot distinguish two runs is an instrument that cannot distinguish, reporting as
+though it had — the identical defect, in the part of the file that exists to certify the rest.
+
+⚠️ **Worth naming as a class, because it now has four instances.** *A name is not the thing.* A
+`game_id` is not a boxscore, a status line is not a diff, a heading string is not a denominator, and a
+row-label suffix is not a lineup slot. Every one of them read correctly and identified nothing.
 
 ## What is left
 
@@ -52,6 +57,7 @@ every id left in the list still verifies.
 | v10-P2-01/03, v11-P2-01/02 | the **denominators did not match the questions**, and one was chosen by a heading string |
 | v12-P1-01 | the **guard for the second fix accepted the implementation it replaced** |
 | v13-P1-01 | the **stamp could not identify the run**: gathered at the end, naming no input, refusing on one question of two |
+| v14-P1-01 | the **stamp digested labels, not values**: the same identifier over a different boxscore was the same digest |
 
 **Only the first produced a reported number**, and it reached the operator as a finding before anyone
 noticed the column had one possible value. The other four were caught before a run completed — which is
@@ -60,20 +66,28 @@ the difference between a review that costs an afternoon and one that costs a dec
 The instrument now: measurements as pure functions in `metrics.py` that the tests **call**; report rows
 carrying their own eligibility and denominators as callables; three erasure seeds with per-trial rates;
 run-level coverage kept separate from group trials; **an immutable `RunIdentity` captured before the
-first board and rendered afterwards**, carrying the code digest, the tracked and untracked tree states
-separately, and a digest of the sampled directions with the identifiers beside it; a per-writer staging
-path extracted into `publish()` so a collision can be forced in a test; and a refusal to publish when
-**either** repository question is unknown.
+first board**, carrying a code digest that includes the loader, the tracked and untracked tree states
+digested from the diff and from file bytes, and **a per-board content digest listed in the artifact** so
+the aggregate can be recomputed; a refusal that fires **before** the sample is loaded rather than after
+every solve; a per-writer staging path extracted into `publish()` so a collision can be forced in a
+test; and a refusal to publish when **any** repository question is unknown.
 
-⚠️ **Every one of those five is now guarded by a test that fails when the fix is reverted**, checked by
-reverting them rather than by rereading the assertions.
+Result schema is **4**. Schema 3 artifacts digested labels, so they cannot be compared with these and
+must not present as the same contract.
 
-### ▶ The run is going, at `20e6e1f` on a clean tree
+⚠️ **Every one of those ten fixes is guarded by a test that fails when the fix is reverted**, checked by
+reverting each one and watching a named test go red — not by rereading the assertions.
 
-Launched 2026-08-19 09:22 with `revision 20e6e1f`, `tracked clean`, `untracked clean`,
-`instrument 3bd046853118` — the identity captured before the first board, which is the condition the
-stamp now enforces rather than reports. Three seeds, eight directions per decade, the 25% gate,
-`≤13` batters and `≤4` pitchers, target 8 stalls.
+### ▶ The run — stopped at ten minutes by v14, restarted
+
+The first launch (09:22, `20e6e1f`) was stopped after ten minutes: `v14-P1-01` lands on the artifact it
+would have produced, and it had not yet finished loading. **The evidence would not have been wrong — the
+tree was clean at a known commit, which pins everything the weak digest failed to pin — but the stamp
+would have carried a claim the artifact did not support**, and a provenance nobody can check is a claim
+rather than evidence. Ten minutes is the entire cost of that decision.
+
+Three seeds, eight directions per decade, the 25% gate, `≤13` batters and `≤4` pitchers, target 8
+stalls.
 
 **What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
 often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
@@ -648,6 +662,77 @@ Every run staged through `results.txt.pending`. An atomic final rename protects 
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
 
+## v14 — verified, none rejected. **All three closed, plus two of three further improvements.**
+
+Three findings, all downstream of v13's closures. The pattern is worth stating: **v13 built the right
+mechanism and v14 found it was measuring the wrong thing.** A fix that is structurally correct and
+substantively empty is harder to see than a missing fix, because the mechanism is there to point at.
+
+### v14-P1-01 — the digests covered the names, not the things
+
+**The input digest hashed `game_id:offense_team`.** That is a label. Every batting, footnote and
+pitching value, and every lineup slot — everything `groups_in` actually reads — could change under the
+same label and the digest would not move. A loader repair, a database reload or a corrected roster
+produces a different measurement under an identical provenance. The v13 test changed the *sample* by
+adding a direction; it never held the identifiers fixed and changed a board, which is the only case that
+distinguishes the two implementations.
+
+Now digested per direction over `cell_values(direction)` and `loaded.slots` — **scoped to what the
+measurement consumes**, not to everything the loader carries, so the digest cannot move for reasons that
+cannot change a number.
+
+**The artifact printed a count where it promised a list.** The docstring said the identifiers sat beside
+the digest so it could be checked; `provenance()` rendered `over N directions`. The aggregate says two
+runs differ and cannot say *which board* differs. The stamp now lists every `identifier digest` pair.
+
+**The tree digest hashed porcelain status lines.** Status codes and paths, not bytes — so two different
+edits to the same file were the same dirty tree. Tracked changes are now digested from `git diff
+--binary HEAD` and untracked files from their own bytes.
+
+**And `source_hashes()` covered `measure.py` and `metrics.py` only.** The loader that chooses the sample
+and builds every board lives in a sibling discovery directory, so neither that hash nor the revision's
+dependency graph reached it. Added.
+
+⚠️ **One near miss worth keeping.** The first attempt asked the *text* helper for `diff --binary`, whose
+output no text pipe can decode: the reader thread died and the caller raised. One step more graceful and
+it would have returned an empty string — and **an empty diff reads as *nothing changed***, so a failure
+to read the tree would have published a dirty tree as clean. The bytes helper returns `None` on failure,
+and `None` is unknown rather than empty, with a test that injects the failure.
+
+### v14-P2-01 — a refusal that fired after the work it was meant to save
+
+`identify()` knows before any data is loaded whether the repository questions were answerable, and
+nothing later can repair an `unknown` field. The check nevertheless ran after the sample, three seeds of
+erasure across every direction, every solve and the rendered report — so a transient `git` failure
+consumed the run's full length before refusing to publish, presenting for hours as a progressing
+experiment that was never eligible.
+
+Moved immediately after `identify()`, with the pre-publication check kept because a publication path
+that trusts an earlier check is one refactor from having no check. **The guard replaces `load` with a
+function that fails the test if called.** The output destination is validated in the same place, for the
+same reason.
+
+### v14-P2-02 — the container repair had no regression guard
+
+v13-P2-01 was recorded closed on a manual check. Reverting `_check_slot_references` to accept any
+`Sequence`, or removing the tuple canonicalisation, would have left every boundary test green: the
+existing ones test a *short* tuple and an *empty* one, both of which fail on length whatever the
+container is.
+
+⚠️ **The backlog's wording was the problem, not just the missing test.** "Verified both ways" was true
+of a manual check and reads as an automated one — which is how a ledger stops corresponding to the
+repository. Two `Package(...)` tests now hold it: a bare string is refused by type, and a list is stored
+as a tuple whose serialisation does not change when the caller mutates what it passed.
+
+### Further improvements
+
+**Taken:** the result schema is now 4, so label-digesting artifacts cannot present as this contract; and
+the output destination is checked alongside the early provenance gate.
+
+**Not taken:** a lint command naming both trees belongs with the CI workflow, which does not exist yet.
+`per-file-ignores` now covers `../discovery`, which is what made the T201 noise stop hiding real
+findings, but **nothing still runs ruff over that tree automatically.**
+
 ## v13 — verified, none rejected. **All three closed.**
 
 Three findings, all in the group instrument, all about the part of it that certifies the rest.
@@ -686,8 +771,11 @@ each matching `^[1-9][a-z]?$`, all distinct. A `list` passed too, which defeats 
 caller keeps a reference and can mutate the package after construction.
 
 It now takes `object`, rejects `str` and anything that is not a tuple or list by name, and
-`__post_init__` canonicalises to a tuple through `object.__setattr__`. Verified both ways: a `str` is
-refused with the type in the message, and a caller mutating the list it passed cannot change the package.
+`__post_init__` canonicalises to a tuple through `object.__setattr__`.
+
+⚠️ **Closed on a manual check, which v14-P2-02 correctly refused.** This paragraph said "verified both
+ways", which was true of a session command and reads as a test. Two `Package(...)` guards at the
+boundary now hold it, each confirmed to fail when its half of the repair is reverted.
 
 ### v13-P2-02 — a staging name that could not be tested
 

@@ -18,7 +18,7 @@ import io
 import sys
 from collections.abc import Callable
 from contextlib import redirect_stdout
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -250,31 +250,117 @@ class TestTheArtifactDeclaresItself:
         assert "untracked files    clean" in stamp
         assert "instrument         sha256" in stamp, "the instrument is not identified by content"
 
-    def test_the_stamp_names_the_inputs_and_not_only_their_count(self) -> None:
+    def _sample(self, board: Direction, slots: tuple[int, ...] = (), name: str = "ATL196805110") -> object:
+        return SimpleNamespace(
+            game_id=name,
+            offense_team="CHN",
+            direction=board,
+            slots=slots or tuple(range(1, len(board.batting) + 1)),
+        )
+
+    def test_the_stamp_names_the_inputs_and_not_only_their_count(self, cubs_at_braves_1968: Direction) -> None:
         """⚠️ A direction count is not the data. The database can change between runs while the
         revision and the source digest are identical, so two different samples carried one provenance.
         """
         module = _module("measure")
-        boards = [SimpleNamespace(game_id="ATL196805110", offense_team="CHN")]
+        boards = [self._sample(cubs_at_braves_1968)]
 
         identity = self._identity(module).with_inputs(boards)
-        other = self._identity(module).with_inputs([*boards, SimpleNamespace(game_id="X", offense_team="Y")])
+        other = self._identity(module).with_inputs([*boards, self._sample(cubs_at_braves_1968, name="BOS197000000")])
 
-        assert identity.directions == ("ATL196805110:CHN",)
+        assert [name for name, _ in identity.directions] == ["ATL196805110:CHN"]
         assert identity.inputs != other.inputs, "the digest did not follow the sample"
         assert f"inputs             sha256 {identity.inputs} over 1 directions" in self._stamp(module, identity)
 
-    def test_the_digest_does_not_depend_on_the_order_the_loader_returned(self) -> None:
+    def test_the_same_identifier_carrying_different_values_is_a_different_input(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        """⚠️ **The defect: the digest covered the label, not the board.**
+
+        `game_id:offense_team` is a name. Every batting, footnote and pitching value could change under
+        it — a loader repair, a database reload, a corrected roster — and the digest would not move, so
+        two runs over different boxscores carried one provenance. This is stated as the case it must
+        distinguish: identical identifiers, one changed cell.
+        """
+        module = _module("measure")
+        first, *rest = cubs_at_braves_1968.batting
+        altered = replace(cubs_at_braves_1968, batting=(replace(first, hits=first.hits + 1), *rest))
+
+        original = self._identity(module).with_inputs([self._sample(cubs_at_braves_1968)])
+        changed = self._identity(module).with_inputs([self._sample(altered)])
+
+        assert [name for name, _ in original.directions] == [name for name, _ in changed.directions]
+        assert original.inputs != changed.inputs, "one changed hit did not move the input digest"
+
+    def test_the_lineup_slots_are_part_of_the_input(self, cubs_at_braves_1968: Direction) -> None:
+        # The slots are what `groups_in` partitions on, so a board with the same cells and different
+        # slots is a different measurement.
+        module = _module("measure")
+        rows = len(cubs_at_braves_1968.batting)
+
+        original = self._identity(module).with_inputs([self._sample(cubs_at_braves_1968)])
+        regrouped = self._identity(module).with_inputs(
+            [self._sample(cubs_at_braves_1968, slots=(1,) * 2 + tuple(range(3, rows + 1)))]
+        )
+
+        assert original.inputs != regrouped.inputs
+
+    def test_the_artifact_lists_the_boards_its_digest_covers(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ The stamp said the identifiers sat beside the digest and printed only their count.
+
+        An aggregate says two runs differ; it cannot say *which board* differs, and a digest nobody can
+        recompute is a claim rather than evidence.
+        """
+        module = _module("measure")
+        identity = self._identity(module).with_inputs([self._sample(cubs_at_braves_1968)])
+
+        stamp = self._stamp(module, identity)
+
+        name, digest = identity.directions[0]
+        assert name in stamp and digest in stamp, "the artifact does not name the board it measured"
+        assert stamp.strip().endswith("COMPLETE"), "the listing displaced the completion marker"
+
+    def test_the_digest_does_not_depend_on_the_order_the_loader_returned(self, cubs_at_braves_1968: Direction) -> None:
         # Sorted before hashing, so a reordered sample is recognised as the same inputs rather than
         # reported as different ones.
         module = _module("measure")
-        one = SimpleNamespace(game_id="A", offense_team="X")
-        two = SimpleNamespace(game_id="B", offense_team="Y")
+        one = self._sample(cubs_at_braves_1968, name="A")
+        two = self._sample(cubs_at_braves_1968, name="B")
 
         first = self._identity(module).with_inputs([one, two])
         reversed_order = self._identity(module).with_inputs([two, one])
 
         assert first.inputs == reversed_order.inputs
+
+    def test_two_edits_to_one_path_are_two_different_trees(self) -> None:
+        """⚠️ `_describe` hashed the porcelain status lines — status codes and paths, not bytes.
+
+        Two different edits to the same file produced the same digest, which is the label-instead-of-
+        contents defect again, in the field next to it.
+        """
+        module = _module("measure")
+
+        one = module._describe([" M forge/src/x.py"], b"@@ -1 +1 @@ first edit")
+        two = module._describe([" M forge/src/x.py"], b"@@ -1 +1 @@ second edit")
+
+        assert one != two, "the tracked digest ignored what actually changed"
+        assert module._describe([], b"") == "clean"
+
+    def test_a_failed_diff_is_not_an_empty_diff(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """⚠️ The near miss worth keeping: `git diff --binary` returns bytes a text pipe cannot decode.
+
+        Asked through the text helper it raised, and one step more gracefully it would have returned an
+        empty string — which reads as *nothing changed*, publishing a dirty tree as clean. So the bytes
+        helper returns `None` on failure, and `None` is unknown rather than empty.
+        """
+        module = _module("measure")
+        monkeypatch.setattr(module, "_git_bytes", lambda *_: None)
+        monkeypatch.setattr(module, "_git", lambda *_: " M forge/src/x.py")
+
+        identity = module.identify()
+
+        assert identity.tracked_changes == "unknown"
+        assert identity.publishable is False
 
     @pytest.mark.parametrize(
         ("field", "publishable"),
@@ -289,6 +375,42 @@ class TestTheArtifactDeclaresItself:
 
         assert self._identity(module, **{field: "unknown"}).publishable is publishable
         assert self._identity(module).publishable is True, "a clean identity must publish"
+
+
+class TestTheRunRefusesBeforeItSpendsAnything:
+    """⚠️ The gate sat after the sample, three seeds of erasure and every solve.
+
+    Nothing after `identify()` can repair an `unknown` repository field, so the refusal was decided
+    before the work began and discovered hours later. A guaranteed-discarded run that looks like a
+    progressing experiment is worse than an immediate refusal.
+    """
+
+    def test_an_unidentified_run_never_reaches_the_loader(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        module = _module("measure")
+        monkeypatch.setattr(module, "_git", lambda *_: "unknown")
+        monkeypatch.setattr(module, "_git_bytes", lambda *_: None)
+        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran on an unpublishable run"))
+        monkeypatch.setattr(sys, "argv", ["measure.py"])
+
+        with pytest.raises(SystemExit, match="provenance is incomplete"):
+            module.main()
+
+    def test_an_unwritable_destination_is_found_before_the_loader(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The same class as the gate above: knowable now, discovered in five hours otherwise.
+        module = _module("measure")
+        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unwritable output"))
+        monkeypatch.setattr(sys, "argv", ["measure.py", "--output", "no/such/place/results.txt"])
+
+        with pytest.raises(SystemExit, match="is not a directory"):
+            module.main()
+
+    def test_an_identified_run_passes_the_gate(self) -> None:
+        # A gate that refuses everything would satisfy the test above.
+        module = _module("measure")
+
+        module._refuse_unless_identified(
+            module.RunIdentity(revision="abc", tracked_changes="clean", untracked="clean", instrument="0")
+        )
 
 
 class TestPublicationCannotCollideOrLeaveDebris:

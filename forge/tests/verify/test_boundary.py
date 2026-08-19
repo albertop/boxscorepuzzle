@@ -42,8 +42,9 @@ def refs(board: object) -> tuple[str, ...]:
 
 
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
-    document = Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
-        slot_references=refs(board)).as_json()
+    document = Package(
+        puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)
+    ).as_json()
     for key, value in changes.items():
         section, _, field = key.partition("__")
         if field:
@@ -119,8 +120,10 @@ class TestTheSignatureCannotBeSkippedByAccident:
         # ⚠️ The finding. A publish path whose secret is unset would previously verify nothing and
         # report a pass — misconfiguration reading as success.
         with pytest.raises(ValueError, match="pass UNSIGNED"):
-            verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
-                slot_references=refs(board)), secret=None)
+            verify(
+                Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)),
+                secret=None,
+            )
 
     def test_there_is_no_default_to_forget(self) -> None:
         parameter = inspect.signature(verify).parameters["secret"]
@@ -129,8 +132,10 @@ class TestTheSignatureCannotBeSkippedByAccident:
         assert parameter.kind is inspect.Parameter.KEYWORD_ONLY
 
     def test_skipping_it_deliberately_is_allowed(self, board: Board) -> None:
-        assert verify(Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
-            slot_references=refs(board)), secret=UNSIGNED).accepted
+        assert verify(
+            Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)),
+            secret=UNSIGNED,
+        ).accepted
 
 
 class TestTheTwoSidesUseTheSameVocabulary:
@@ -189,8 +194,9 @@ class TestTheEnvelopeIsCheckedToo:
     """
 
     def _document(self, board: Board) -> dict[str, object]:
-        return Package(puzzle_id="000000000000000f", puzzle=board, solution=board,
-            slot_references=refs(board)).as_json()
+        return Package(
+            puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)
+        ).as_json()
 
     @pytest.mark.parametrize("root", [[], "a package", 7, None, True])
     def test_a_root_that_is_not_an_object_is_refused(self, root: object) -> None:
@@ -290,6 +296,38 @@ class TestAPackageCannotContradictItself:
         )
 
         assert package.written_as == 2
+
+    def test_a_bare_string_is_not_a_sequence_of_references(self, board: Board) -> None:
+        """⚠️ **The container was never checked, only its contents.**
+
+        The check took a `Sequence[str]` and validated length, per-item grammar and uniqueness. A `str`
+        **is** a `Sequence`, so a nine-row package given `"123456789"` passed all three — nine
+        characters, each matching `^[1-9][a-z]?$`, all distinct. Every rule fired and every one was
+        answered by the wrong kind of object.
+        """
+        rows = len(board.batting)
+        assert 1 < rows < 10, "this board cannot express the defect; it needs one character per row"
+
+        with pytest.raises(PackageError, match="slot_references is str"):
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=board,
+                slot_references="".join(str(index + 1) for index in range(rows)),
+            )
+
+    def test_a_list_is_stored_as_a_tuple_the_caller_cannot_reach(self, board: Board) -> None:
+        """A `list` passed every element rule too, and that defeats the frozen dataclass: the caller
+        keeps the reference and can change the package after it was built — after signing, in the
+        writer's case, so the signed shape and the object stop agreeing."""
+        references = [str(index + 1) for index in range(len(board.batting))]
+
+        package = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=references)
+        before = package.as_json()
+        references[0] = "9"
+
+        assert isinstance(package.slot_references, tuple), "the caller still owns the container"
+        assert package.slot_references == tuple(str(index + 1) for index in range(len(board.batting)))
+        assert package.as_json() == before, "mutating the caller's list changed the serialised package"
 
 
 class TestConstructionAndParsingApplyTheSameRule:
