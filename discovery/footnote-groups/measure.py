@@ -50,7 +50,18 @@ from boxscore_verify.rules import all_cells, relations, values_of  # noqa: E402
 
 SAMPLE_PER_DECADE = 20
 GATE = 0.25
-SEED = 907
+SEEDS = (907, 908, 909)
+"""⚠️ **One erasure per board is one sample, not a rate.** Whether a group gates progress depends
+on which cells are blank, and the erasure decides that — so a single seed makes every board
+contribute one observation while the report presents a population share.
+
+Third instance of this shape today: the stall ceiling from one greedy path, and open-against-given
+from one ordering. Both were corrected by searching several and reporting the spread. This is the
+same correction applied **before** the run rather than after the number had been believed.
+
+**Only blockage needs it.** Completions and derivability are measured on the complete board with
+the group hidden, no erasure involved, so they cannot move with the seed."""
+
 TARGET_STALLS = 8
 COLUMNS = (0, 1, 2, 3, "4+")
 
@@ -66,6 +77,8 @@ class Group:
     One is unique; two means the assignment is genuinely ambiguous and no technique can fix it."""
 
     derivable: bool
+    trials: int = 0
+    stopped: int = 0
     """Whether the restricted human solver reaches the values. Only meaningful when there is exactly
     one completion — otherwise there is nothing to reach."""
 
@@ -103,8 +116,8 @@ def groups_in(loaded: Loaded) -> list[Group]:
 
     # ⚠️ A real erasure, so `blocked` has other unknowns to be waited on by. Without it that metric
     # cannot be true, which is exactly how it came to read 0% everywhere.
-    puzzle = erase(direction, target_stalls=TARGET_STALLS, seed=SEED)
-    erased = puzzle.erased if puzzle is not None else frozenset()
+    drawn = [erase(direction, target_stalls=TARGET_STALLS, seed=seed) for seed in SEEDS]
+    erasures = [puzzle.erased for puzzle in drawn if puzzle is not None]
 
     found: list[Group] = []
     for indexes in by_slot.values():
@@ -127,13 +140,22 @@ def groups_in(loaded: Loaded) -> list[Group]:
         # is progress the group was gating.
         blocked: bool | None = None
         used = False
-        if puzzle is not None:
-            baseline = solve(shape, {name: value for name, value in values.items() if name not in erased})
-            treatment = solve(shape, {name: value for name, value in values.items() if name not in (erased | hidden)})
-            outside_before = {cell for cell in baseline.values if cell not in hidden}
-            outside_after = {cell for cell in treatment.values if cell not in hidden}
-            blocked = bool(outside_before - outside_after)
-            used = any(hidden & step.depends_on for step in treatment.deductions if step.cell not in hidden)
+        stopped = 0
+        for erased in erasures:
+            given = {name: value for name, value in values.items() if name not in erased}
+            baseline = solve(shape, given)
+            treatment = solve(shape, {k: v for k, v in given.items() if k not in hidden})
+            before = {cell for cell in baseline.values if cell not in hidden}
+            after = {cell for cell in treatment.values if cell not in hidden}
+            stopped += bool(before - after)
+            used = used or any(
+                hidden & step.depends_on for step in treatment.deductions if step.cell not in hidden
+            )
+        if erasures:
+            # ⚠️ **Any** erasure that stops progress makes the group a gate, not a majority of them.
+            # A board a player can meet is a board that can be dealt, so the question is whether an
+            # unfair one exists, not whether it is typical. `trials` and `stopped` carry the spread.
+            blocked = stopped > 0
 
         found.append(
             Group(
@@ -143,6 +165,8 @@ def groups_in(loaded: Loaded) -> list[Group]:
                 derivable=derivable,
                 blocked=blocked,
                 used=used,
+                trials=len(erasures),
+                stopped=stopped,
             )
         )
     return found
@@ -222,6 +246,31 @@ def report(groups: list[Group], boards: int) -> None:
     print(f"\n({len(groups)} slot groups from {boards} boards)")
 
 
+def stamp(boards: int, groups: int) -> str:
+    """What produced this file, in the file.
+
+    ⚠️ **A results file with no provenance cannot be told from a stale one.** The version this
+    replaced left an output on disk from an instrument whose blockage metric could not vary;
+    nothing inside it said so, and nothing inside a good run would have said that either.
+    """
+    revision = "unknown"
+    head = _ROOT / ".git" / "HEAD"
+    if head.exists():
+        ref = head.read_text(encoding="utf-8").strip()
+        target = _ROOT / ".git" / ref.removeprefix("ref: ") if ref.startswith("ref:") else None
+        revision = target.read_text(encoding="utf-8").strip()[:12] if target and target.exists() else ref[:12]
+    lines = [
+        "=== WHAT PRODUCED THIS ===",
+        "  result schema      2   (1 was the instrument whose blockage metric could not vary)",
+        f"  revision           {revision}",
+        f"  sample             {boards} directions, {SAMPLE_PER_DECADE} per decade, gate {GATE:.0%}",
+        f"  erasure seeds      {SEEDS} at {TARGET_STALLS} stalls",
+        f"  groups             {groups}",
+        "  blockage           counterfactual, any erasure that stops outside progress",
+        "  derivability       conditional on exactly one completion",
+    ]
+    return chr(10).join(lines)
+
 def main() -> None:
     sample = [
         item
@@ -240,6 +289,8 @@ def main() -> None:
     if not groups:
         raise SystemExit("no slot groups were produced; the sample carried no lineups")
     report(groups, len(sample))
+    print("")
+    print(stamp(len(sample), len(groups)))
 
 
 if __name__ == "__main__":

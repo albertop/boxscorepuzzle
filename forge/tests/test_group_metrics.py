@@ -66,7 +66,7 @@ class TestSomethingCanWaitOnTheAssignment:
         source = (_GROUPS / "measure.py").read_text(encoding="utf-8")
 
         assert "erase(direction, target_stalls=TARGET_STALLS" in source
-        assert "erased | hidden" in source
+        assert "if k not in hidden" in source
 
 
 class TestCardinalityAndDerivabilityAreSeparate:
@@ -114,7 +114,7 @@ class TestTheBlockagePredicateItself:
     def test_the_instrument_compares_two_closures(self) -> None:
         source = (_GROUPS / "measure.py").read_text(encoding="utf-8")
 
-        assert "outside_before - outside_after" in source
+        assert "before - after" in source
         assert "baseline = solve(" in source and "treatment = solve(" in source
 
     def test_an_unmeasured_trial_is_not_a_negative(self) -> None:
@@ -125,6 +125,8 @@ class TestTheBlockagePredicateItself:
 
         assert "blocked: bool | None" in source
         assert "group.blocked is not None" in source
+        # And several erasures, since one is a sample of size one for a question the erasure decides.
+        assert "SEEDS = (" in source and "for seed in SEEDS" in source
 
     def test_derivability_is_conditional_on_a_single_completion(self) -> None:
         # Non-unique groups contributed negatives to a rate whose denominator should hold only the
