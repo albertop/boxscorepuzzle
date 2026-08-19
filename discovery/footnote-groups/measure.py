@@ -77,30 +77,31 @@ class Group:
     One is unique; two means the assignment is genuinely ambiguous and no technique can fix it."""
 
     derivable: bool
-    trials: int = 0
-    stopped: int = 0
     """Whether the restricted human solver reaches the values. Only meaningful when there is exactly
     one completion — otherwise there is nothing to reach."""
 
     blocked: bool | None
-    """Whether hiding the assignment **stops** outside progress. `None` when the trial could not be
-    measured because no erasure reached the target.
+    """Whether hiding the assignment **stops** outside progress. `None` when no erasure reached the
+    target, so the trial could not be measured at all.
 
-    ⚠️ **Counterfactual, not observed dependency.** The first version marked a group blocking when some
-    deduction outside it recorded a dependency on it. That is evidence one solver path *used* the
-    value, not that the board had to wait: when hiding the group prevents an outside deduction
-    entirely, no such step exists and the metric said `False` — a false negative for the strongest
-    possible blockage. It compares two closures now, the same puzzle with the group available and with
-    it additionally hidden, and blockage is an outside cell the baseline reaches and the treatment
-    does not.
+    ⚠️ **Counterfactual, not observed dependency.** The first version marked a group blocking when
+    some deduction outside it recorded a dependency on it — evidence one solver path *used* the
+    value, not that the board had to wait. When hiding the group prevents an outside deduction
+    entirely no such step exists, so the strongest possible blockage read as none. It compares two
+    closures now: an outside cell the baseline reaches and the treatment does not.
 
-    ⚠️ **And `None` is not `False`.** A trial where `erase` returned nothing used to become an empty
-    erasure and therefore a measured negative, which biases the rate downward — selectively, since
-    boards that resist erasure are not a random subset."""
+    ⚠️ **And `None` is not `False`.** A trial where `erase` returned nothing became an empty erasure
+    and therefore a measured negative, biasing the rate downward — selectively, since boards that
+    resist erasure are not a random subset."""
 
     used: bool
-    """Whether any outside deduction leaned on the group. Kept as its own reading rather than folded
-    into blockage: using a value and needing it are different claims."""
+    """Whether any outside deduction leaned on the group. Its own reading rather than folded into
+    blockage: using a value and needing it are different claims."""
+
+    trials: int
+    stopped: int
+    """How many erasures were tried and how many stopped outside progress. Printed beside the rate,
+    because one of three and three of three are the same boolean and different findings."""
 
 
 def _hidden_cells(indexes: list[int]) -> set[str]:

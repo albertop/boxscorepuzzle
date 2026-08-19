@@ -6,7 +6,7 @@
 
 | | Open | Why |
 |---|---|---|
-| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; the drawing waits on the group run, and **the instrument that answers it can finally observe the question** |
+| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing is in flight** |
 
 **v10 is closed entirely**, and so is v09. Its three findings were all in code written the same day, and one of them
 had already produced a wrong statement to the operator before it was caught.
@@ -535,6 +535,30 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
   unordered `TOP 1` subqueries that were not bound to it. The duplicated `EXISTS` is **removed rather
   than kept as a belt** — two places encoding one predicate is the defect this file spent the day
   closing.
+
+### Before the run — what the instrument owed, and now carries
+
+Two things stood between the corrected instrument and a result worth believing, and both are the same
+lesson arriving early for once.
+
+**Several erasures per board.** Whether a group gates progress depends on which cells are blank, and
+the erasure decides that — so one seed made every board contribute a single observation while the
+report presented a population share. **Third instance of this shape**, after the stall ceiling from one
+greedy path and open-against-given from one ordering. The other two were corrected *after* the number
+had been believed; this one before the run.
+
+Blockage counts **any** erasure that stops outside progress rather than a majority: a board a player
+can meet is a board that can be dealt, so the question is whether an unfair one exists, not whether it
+is typical. `trials` and `stopped` carry the spread beside it, because one of three and three of three
+are the same boolean and different findings.
+
+**Only blockage needs the seeds.** Completions and derivability are read off the complete board with
+the group hidden, no erasure involved, so tripling their cost would have changed nothing.
+
+**And the output carries what produced it** — result schema, revision, sample, seeds, target, and the
+definition of each metric. ⚠️ **A results file with no provenance cannot be told from a stale one**, and
+the file previously on disk was exactly that: output from an instrument whose blockage column could not
+vary, with nothing inside it saying so. `result schema 2` is what distinguishes the two now.
 
 ## v10 — verified, none rejected. **All four closed.**
 
