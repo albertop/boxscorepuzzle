@@ -155,6 +155,15 @@ will drift. Share the definition or assert they agree; do not maintain two copie
 threshold set by eye that rejects real data gets loosened until it says nothing, which is worse than not
 having it — it gives false confidence.
 
+**A confound has no signature in the results, so looking at the output cannot catch it.** Every other
+defect recorded here was found by rendering something and reading it — the zero-heavy board, the
+phantom rows, the wrong club, the mislabelled positions. A confound is different in kind: a ladder
+whose rungs mix boards with very different headroom varies two things at once, and its report reads
+**exactly as clean as one that varies only the intended thing**. No number in the output distinguishes
+them. **It can only be prevented while the instrument is being designed** — by asking, before building,
+what else changes when the variable changes. Looking harder afterwards is not a weaker version of this
+check; it is not the same check at all.
+
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
 could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*
