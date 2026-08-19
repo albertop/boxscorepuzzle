@@ -11,7 +11,29 @@
  * added; the label column is what would have to give, and it is already at seven characters.
  */
 
+/* ⚠️ **Self-hosted, never linked.** §23 requires the day's puzzle to be playable with the backend
+   down, and a webfont fetched from a third party is a dependency in the play path. Worse than a missing
+   glyph: the board would lay out in a fallback with different metrics and **the columns would stop
+   lining up**, which is the one failure a grid of numbers cannot absorb. `tools/fetch_fonts.py`
+   downloads and subsets; `fonts.css` carries the faces.
+
+   ⚠️ **Roboto Condensed.** Both candidates carry true tabular figures — measured, ten `1`s and ten `8`s
+   to the same pixel — so the non-negotiable property was a tie, and the choice came down to the rest.
+
+   ⚠️ **The recommendation that lost was mine, and it was reasoned from a specimen this board does not
+   render.** IBM Plex draws the better `1` in isolation: a foot serif, against Roboto's bare stem, with
+   `I` and `l` clearly distinct. But the specimen contained `I` and `l` because *I put them there*. The
+   cells hold digits; the labels are position abbreviations — `CF`, `SS`, `2B`, `RP-1` — and **no `I`
+   and no `l` are ever drawn on this board**. Nor is there a text cursor for a `1` to be mistaken for:
+   entry is by keypad and a cell shows a value, never a caret. The confusion the comparison was decided
+   on cannot occur here. Judged on what the board actually renders — six columns of digits, where
+   Roboto's narrower figures leave more air — the operator's preference is the better call.
+
+   One family at three weights, not two families. The clubs use a display face beside a body face
+   because they have full pages; this has 375 pixels, and two families on that width compete. The
+   difference comes from weight and colour. */
 :root {
+  --face: "Roboto Condensed";
   --cell: 44px;
   --slot-column: 24px;
   --label-column: 66px;
@@ -94,7 +116,13 @@ html, body {
   height: 100%;
   background: var(--paper);
   color: var(--ink);
-  font: 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  font: 15px/1.2 var(--face), system-ui, -apple-system, sans-serif;
+  /* ⚠️ **Tabular figures, everywhere, non-negotiable.** Proportional digits make a `1` narrower than an
+     `8`, so a column's width depends on the values in it and the grid shifts as the player fills it —
+     the most visible possible defect on a board that is ninety per cent numbers. Set on `body` rather
+     than on the tables, because the scoreboard, the footnote line and the keypad are numbers too. */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
   /* The board must not rubber-band as a page; only the scroller inside it scrolls. */
   overscroll-behavior: none;
 }
@@ -294,5 +322,5 @@ td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(
 }
 .keypad button:active { background: var(--selected); }
 .keypad button.wide { grid-column: span 2; font-size: 14px; }
-.keypad button.thirds { font-size: 16px; }
+.keypad button.thirds { font-size: 18px; }
 .keypad button:disabled { opacity: .35; }

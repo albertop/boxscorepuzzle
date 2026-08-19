@@ -280,6 +280,49 @@ Rolling back would mean rolling back the client too. Recorded rather than resolv
 problem once inventory exists, and the honest fix is that a schema change invalidates retained
 generations rather than pretending they are usable.
 
+## Typography
+
+**Roboto Condensed, self-hosted, at three weights. One family, not two.**
+
+**Tabular figures are the non-negotiable property**, and they are asserted rather than assumed: the test
+measures ten `1`s against ten `8`s and requires the same pixel. Without them a `1` is narrower than an
+`8`, so a column's width depends on the values in it and **the grid shifts as the player fills it** —
+the most visible possible defect on a board that is ninety per cent numbers. Set on `body`, not on the
+tables, because the scoreboard, the footnote line and the keypad are numbers too.
+
+**One family at three weights, not a display face beside a body face.** The clubs use two because they
+lay out full pages; this has 375 pixels, and two families on that width compete for the same small
+space. The difference comes from weight and colour.
+
+**Self-hosted, never linked.** §23 requires the day's puzzle to be playable with the backend down, and a
+webfont fetched from a third party is a dependency in the play path. The failure is worse than a missing
+glyph: the board would lay out in a fallback's metrics and **the columns would stop lining up**, which
+is the one thing a grid of numbers cannot absorb. `tools/fetch_fonts.py` downloads and subsets — 68 KB
+for three weights, against 208 KB for the plain latin subset — and **derives the character set from the
+string catalogue and the packages** rather than from a typed list, because a hand-written list is a
+second copy that goes stale the first time a string is added.
+
+Both candidates are SIL Open Font License 1.1, checked before shipping: this product charges money, and
+a licence that forbids that forbids launch. Nearly every club body face — Trade Gothic, Frutiger,
+Tungsten, Akzidenz — is licensed, which is what settled the shortlist.
+
+### ⚠️ The comparison I got wrong
+
+IBM Plex Sans Condensed was the other candidate and I recommended it, on the character the instruction
+named: its `1` has a foot serif where Roboto's is a bare stem, and its `I` and `l` are clearly distinct
+where Roboto draws both as the same vertical stroke.
+
+**The specimen contained `I` and `l` because I put them there.** This board never draws either one. The
+cells hold digits; the labels are position abbreviations — `CF`, `SS`, `2B`, `RP-1` — and there is no
+text cursor for a `1` to be mistaken for, because entry is by keypad and a cell shows a value, never a
+caret. **The confusion the comparison was decided on cannot occur here.**
+
+Judged on what the board actually renders, Roboto's narrower figures leave more air in six columns and
+its fractions are cleaner on the keypad. The operator's preference was the better call, and the lesson
+is the older one wearing new clothes: *a sample that evaluates the board is rendered with the board's
+content*. A glyph specimen is not the board, and choosing from it imported a problem the board does not
+have.
+
 ## Open — waiting on the operator
 
 **The section header's ground.** Three are in `board.css`, switchable by `data-header` on the root, which

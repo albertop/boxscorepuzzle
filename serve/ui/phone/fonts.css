@@ -1,0 +1,28 @@
+/* Both faces are SIL Open Font License 1.1, which permits redistribution with the site — checked
+   before shipping, because this product charges money and a licence that forbids that forbids
+   launch. Subset by `tools/fetch_fonts.py` to the characters the catalogue and the packages use.
+   Served from here and never linked: see the note in board.css. */
+
+@font-face {
+  font-family: 'Roboto Condensed';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('../fonts/roboto-condensed-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('../fonts/roboto-condensed-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Roboto Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url('../fonts/roboto-condensed-700.woff2') format('woff2');
+}
