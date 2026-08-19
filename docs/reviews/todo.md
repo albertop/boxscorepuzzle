@@ -2,11 +2,11 @@
 
 ## Where everything stands
 
-**Ten reviews, 54 findings, none rejected. One is open and it is not waiting on effort.**
+**Eleven reviews, 58 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
-| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing is in flight** |
+| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
 **v10 is closed entirely**, and so is v09. Its three findings were all in code written the same day, and one of them
 had already produced a wrong statement to the operator before it was caught.
@@ -559,6 +559,48 @@ the group hidden, no erasure involved, so tripling their cost would have changed
 definition of each metric. ⚠️ **A results file with no provenance cannot be told from a stale one**, and
 the file previously on disk was exactly that: output from an instrument whose blockage column could not
 vary, with nothing inside it saying so. `result schema 2` is what distinguishes the two now.
+
+## v11 — verified, none rejected. **All four closed.**
+
+| Finding | State | What it was |
+|---|---|---|
+| P1-01 the counterfactual baseline left the group hidden | **closed** | and it invalidated the run in flight |
+| P2-01 unequal and zero trial exposure | **closed** | one boolean over one, two or three trials |
+| P2-02 report titles chose statistical denominators | **closed** | `_eligible()` matched on the heading string |
+| P2-03 the stamp did not identify the code that ran | **closed** | a loose ref, no dirty state, no owned artifact |
+
+### v11-P1-01 — the same blindness, one level in
+
+The baseline removed every cell in the sampled erasure. **Footnote cells are erasable**, so when the
+erasure had already hidden the group, baseline and treatment were the same board and blockage was
+forced false — **on exactly the published states the question is about**. A low rate could not be told
+from a baseline that never revealed the assignment.
+
+⚠️ **This is the third time this instrument produced a number that could not have been anything else**,
+and the second time it was the blockage metric. First it could not vary at all; then it could not fire
+where it mattered. Each fix was correct and each left the next one standing, which is what makes the
+class worth naming rather than the bug: **a measurement can be blind in a way that shows up as a
+plausible value.**
+
+The run in flight when this landed was stopped. It was measuring the same thing the same way.
+
+### v11-P2-02 — display copy deciding statistics
+
+`_eligible()` chose a population by testing whether a heading began with `DERIVABLE` or `HIDING`.
+Renaming a heading would have restored the unconditional denominator with nothing failing — the
+fragment stays in the file, and the tests looked for the fragment. **Formatting deciding a statistical
+question is the same shape as formatting deciding a domain rule**, which this project has now had four
+times.
+
+Each row carries its eligibility, numerator and denominator as callables, and the tests call `report()`
+over a mixed set and assert both halves of every fraction.
+
+### What the tests changed to
+
+Every test written for this instrument until now asserted on **source text** or on **trace activity**,
+and every one passed while the thing it guarded was broken. The measurements are pure functions in
+`metrics.py` and the tests call them — including a constructed adversarial case where the erasure
+contains the group, and an assertion that the *old* construction compared a board with itself.
 
 ## v10 — verified, none rejected. **All four closed.**
 
