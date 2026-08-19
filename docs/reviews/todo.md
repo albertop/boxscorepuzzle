@@ -35,6 +35,12 @@ contents were the string `<unreadable>`, and `out.parent.is_dir()` read as writa
 fail-closed rule CLAUDE.md names first, and it keeps arriving in the code written to satisfy the
 previous review — which is the useful part of the observation, not the rule itself.
 
+⚠️ **And v18 says something about the method rather than the code.** Reverting a fix is how the last six
+reviews found what the assertions did not — but **a revert that removes two things at once cannot tell
+which of them the guard is watching.** v17's probe mutation deleted both the file creation and the
+replace, went red, and was believed; deleting only the creation left the suite green and was the case
+that mattered. *The revert has to be the smallest change that undoes the claim*, not the whole block.
+
 ⚠️ **v16 adds the third, and it is the one no amount of care in the reading catches**: *a digest is only
 as strong as its encoding.* Paths and file bytes were concatenated with no lengths and no separators, so
 two entirely different untracked trees produced one identity — and **the code looks right**. There is no
@@ -117,7 +123,7 @@ reverting each one and watching a named test go red — not by rereading the ass
 paid for itself in v15**: two mutations left everything green, one because the mutation was bad and one
 because a guard was missing.
 
-### ▶ The run — going, at `44d9582` on a clean tree. **v15 did not stop it.**
+### ▶ The run — **measuring**, at `44d9582` on a clean tree
 
 | | |
 |---|---|
@@ -126,6 +132,8 @@ because a guard was missing.
 | instrument | `4f894c5391eb` — measure, metrics **and the loader** |
 | result schema | **4** |
 | parameters | three seeds, eight directions per decade, the 25% gate, `≤13` batters, `≤4` pitchers, target 8 stalls |
+| gated sample | **240 directions** |
+| progress | measuring since ~10:35; the log reports every 20 boards |
 
 **The first launch (09:22, `20e6e1f`) was stopped after ten minutes.** `v14-P1-01` lands on the artifact
 it would have produced, and it had not yet finished loading. **The evidence would not have been wrong —
@@ -134,13 +142,16 @@ stamp would have carried a claim the artifact did not support**, and a provenanc
 claim rather than evidence. Ten minutes is the entire cost of that decision, and it is the argument for
 reviewing an instrument before trusting a number rather than after.
 
-⚠️ **The loader is the slow part, and it prints nothing.** Both launches sat with an empty log for their
-first ten minutes: `load()` gates every candidate direction on zero density before the first board is
-measured. An empty log early is the expected state, not a stall — the first line is the gated-direction
-count.
+**The gate returned 240 directions**, and measurement started at roughly the one-hour mark.
 
-**v15 and v16 landed mid-run and the run was left alone both times**, which is the opposite of the v14
-call and rests on a different fact. v14 changed what the stamp *would say about this run*. v15 closes **failure windows** —
+⚠️ **The loader is the slow part by a wide margin, and it prints nothing while it works.** Both launches
+sat with an empty log for their first *hour*, not the ten minutes first assumed: `load()` gates every
+candidate direction on zero density before the first board is measured. An empty log early is the
+expected state, not a stall. **Worth carrying forward as a fact about this instrument** — the next person
+watching it, including me in a later session, will otherwise read the silence as a hang and kill it.
+
+**v15, v16, v17 and v18 all landed mid-run and the run was left alone each time**, which is the
+opposite of the v14 call and rests on a different fact. v14 changed what the stamp *would say about this run*. v15 closes **failure windows** —
 a disagreement between two git snapshots, an unreadable file, an unwritable destination — and none of
 them is open here: the tree was clean at capture, the destination is fine, and `format.py` is not on the
 run's path. Its `instrument 4f894c5391eb` identifies the v14 file **by content**, which is recoverable
@@ -154,6 +165,10 @@ another. **And the result schema moves to 5 because of it.** Two files claiming 
 eight-hex and sixteen-hex tree digests would be two contracts under one number, which is exactly what
 the version exists to prevent — the improvement v14 took, applied to a change that is about identity
 rather than about a metric. This run will produce a schema 4 artifact, correctly labelled as one.
+
+**v17 and v18 changed only the preflight and the diff parser**, both of which ran to completion before
+this run started measuring. Nothing they touch is on the path of a run already past `identify()` and
+`load()`, so there was nothing to reconsider.
 
 **What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
 often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
