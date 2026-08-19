@@ -340,31 +340,29 @@ class TestTheArtifactDeclaresItself:
         """
         module = _module("measure")
 
-        one = module._describe([" M forge/src/x.py"], b"@@ -1 +1 @@ first edit")
-        two = module._describe([" M forge/src/x.py"], b"@@ -1 +1 @@ second edit")
+        one = module._describe(1, b"@@ -1 +1 @@ first edit")
+        two = module._describe(1, b"@@ -1 +1 @@ second edit")
 
         assert one != two, "the tracked digest ignored what actually changed"
-        assert module._describe([], b"") == "clean"
+        assert module._describe(0, b"") == "clean"
 
-    def test_a_diff_with_no_status_paths_is_unknown_and_never_clean(self) -> None:
-        """⚠️ **`clean` was returned whenever the path list was empty, whatever the contents said.**
+    def test_bytes_with_no_file_count_are_unknown_and_never_clean(self) -> None:
+        """⚠️ **`clean` was returned whenever the count was zero, whatever the bytes said.**
 
-        The paths and the bytes come from two commands against a mutable working tree, so `git status`
-        can report nothing tracked while `git diff` carries a change made between the two calls. The
-        stamp then said *clean* over a run that used an edited solver — the one outcome this field
-        exists to make impossible.
+        A count and a preimage can disagree, and the stamp then said *clean* over a run that used an
+        edited solver — the one outcome this field exists to make impossible.
         """
         module = _module("measure")
 
-        assert module._describe([], b"@@ -1 +1 @@ an edit status did not see") == "unknown"
-        assert module._describe([], b"") == "clean", "an actually clean tree must still read clean"
+        assert module._describe(0, b"@@ -1 +1 @@ an edit the count did not see") == "unknown"
+        assert module._describe(0, b"") == "clean", "an actually clean tree must still read clean"
 
     def test_the_conservative_direction_is_kept_rather_than_refused(self) -> None:
-        # Paths with an empty diff over-reports: a file restored between the two calls. That costs an
+        # A count with no bytes over-reports: a file restored between the two calls. That costs an
         # unnecessary rerun, which is the right way to be wrong, so it stays dirty rather than unknown.
         module = _module("measure")
 
-        assert module._describe([" M forge/src/x.py"], b"").startswith("1 files")
+        assert module._describe(1, b"").startswith("1 files")
 
     def test_an_unreadable_untracked_file_is_unknown_rather_than_a_marker(self) -> None:
         """⚠️ It became the literal string `<unreadable>` and published anyway, so two different files
@@ -373,7 +371,7 @@ class TestTheArtifactDeclaresItself:
         module = _module("measure")
 
         assert module._bytes_of(["no/such/file.py"]) is None
-        assert module._describe(["no/such/file.py"], module._bytes_of(["no/such/file.py"])) == "unknown"
+        assert module._describe(1, module._bytes_of(["no/such/file.py"])) == "unknown"
 
     def test_a_path_needing_quotes_survives_the_porcelain_parse(self) -> None:
         """⚠️ Sliced from the text form, porcelain quotes and escapes any awkward path, so
@@ -409,8 +407,31 @@ class TestTheArtifactDeclaresItself:
             b"diff --git a/discovery/y.py b/discovery/y.py\n@@ -1 +1 @@\n-c\n+d\n"
         )
 
-        assert module._diff_paths(diff) == ["forge/src/x.py", "discovery/y.py"]
-        assert module._diff_paths(b"") == [], "an empty diff names nothing, which is a clean tree"
+        assert module._diff_files(diff) == 2
+        assert module._diff_files(b"") == 0, "an empty diff names nothing, which is a clean tree"
+
+    def test_a_diff_whose_paths_git_quotes_is_still_counted(self) -> None:
+        """⚠️ **The version this replaces re-implemented git's quoting, and refused a valid diff.**
+
+        Git writes `diff --git "a/…"` for a path carrying a tab, a quote, a backslash or — under the
+        usual `core.quotePath` — an accented character. The parser matched only the bare
+        `diff --git a/` form, so such a diff produced no paths: the count was zero, the bytes were not,
+        and `_describe` refused the run. **An accented filename in a Spanish repository is enough**,
+        which makes this a false refusal reachable on any afternoon.
+
+        `diff --git ` is the part that does not vary, and a count is all the digest needed — the bytes
+        already name the files.
+        """
+        module = _module("measure")
+        quoted = (
+            b'diff --git "a/forge/a\tb.py" "b/forge/a\tb.py"\n'
+            b"@@ -1 +1 @@\n-a\n+b\n"
+            b'diff --git "a/docs/resumen-espa\xc3\xb1ol.md" "b/docs/resumen-espa\xc3\xb1ol.md"\n'
+            b"@@ -1 +1 @@\n-c\n+d\n"
+        )
+
+        assert module._diff_files(quoted) == 2, "a quoted header was not counted"
+        assert module._describe(module._diff_files(quoted), quoted) != "unknown", "a valid diff was refused"
 
     def test_identify_digests_the_diffs_own_paths_and_not_the_status_listing(
         self, monkeypatch: pytest.MonkeyPatch
@@ -431,8 +452,8 @@ class TestTheArtifactDeclaresItself:
         monkeypatch.setattr(module, "_git_bytes", observe)
         monkeypatch.setattr(module, "_git", lambda *_: "abc1234")
 
-        assert module.identify().tracked_changes == module._describe(["fresh.py"], diff)
-        assert module.identify().tracked_changes != module._describe(["stale.py"], diff)
+        assert module.identify().tracked_changes == module._describe(1, diff)
+        assert module.identify().tracked_changes != module._describe(2, diff)
 
     def test_two_different_untracked_trees_cannot_share_an_identity(self) -> None:
         """⚠️ **The encoding was not injective**, and no adversary was required.
@@ -444,10 +465,10 @@ class TestTheArtifactDeclaresItself:
         module = _module("measure")
 
         one = module._describe(
-            ["a", "bc"], module._record(b"a") + module._record(b"b") + module._record(b"bc") + module._record(b"")
+            2, module._record(b"a") + module._record(b"b") + module._record(b"bc") + module._record(b"")
         )
         two = module._describe(
-            ["ab", "c"], module._record(b"ab") + module._record(b"b") + module._record(b"c") + module._record(b"")
+            2, module._record(b"ab") + module._record(b"b") + module._record(b"c") + module._record(b"")
         )
 
         assert one != two, "two different untracked trees still share one identity"
@@ -457,7 +478,7 @@ class TestTheArtifactDeclaresItself:
         # displayed identity matches an approved one.
         module = _module("measure")
 
-        digest = module._describe(["x.py"], b"content").split(", ")[1]
+        digest = module._describe(1, b"content").split(", ")[1]
 
         assert len(digest) == 16
 
@@ -581,44 +602,69 @@ class TestTheRunRefusesBeforeItSpendsAnything:
 
         assert seen and all(path.parent == tmp_path for path in seen)
 
-    def test_an_existing_output_that_cannot_be_replaced_is_found_before_the_loader(
+    def test_the_preflight_never_moves_the_artifact_it_is_checking(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """⚠️ **Creating a sibling proves the directory, not the target.**
+        """⚠️ **v16 proved the destination by renaming it aside and restoring it in `finally`.**
 
-        `publish` ends in `pending.replace(out)`, and on Windows an existing `out` can be read-only,
-        held open without delete sharing, or carry an ACL of its own while a fresh sibling is created
-        happily — a results file left open in an editor is the realistic case. It failed only inside
-        `publish`, hours later, which is the cost this preflight exists to avoid.
+        That made a read-only check destructive. `finally` does not run after a kill or a power cut, so
+        an interruption in the microsecond between the two renames left the canonical artifact gone,
+        under a name nobody looks for. **This instrument gets stopped by hand** — three times in one
+        afternoon — so the window is not hypothetical.
+
+        Stated as what it forbids: renaming `out` fails the test outright, and the preflight must
+        complete anyway.
         """
         module = _module("measure")
         out = tmp_path / "results.txt"
         out.write_text("a previous run", encoding="utf-8")
         original = Path.replace
 
-        def refuse_the_target(self: Path, target: object) -> Path:
+        def forbid_moving_the_artifact(self: Path, target: object) -> Path:
             if self == out:
-                message = "the file is in use by another process"
-                raise OSError(message)
+                pytest.fail("the preflight moved the canonical artifact")
             return original(self, target)
 
-        monkeypatch.setattr(Path, "replace", refuse_the_target)
-        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unpublishable run"))
-        monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(out)])
-
-        with pytest.raises(SystemExit, match="cannot be replaced"):
-            module.main()
-
-    def test_proving_replaceability_leaves_the_existing_file_where_it_was(self, tmp_path: Path) -> None:
-        # The check moves the file, so it has to put it back — including when the run never happens.
-        module = _module("measure")
-        out = tmp_path / "results.txt"
-        out.write_text("a previous run", encoding="utf-8")
-
+        monkeypatch.setattr(Path, "replace", forbid_moving_the_artifact)
         module._refuse_unwritable(out)
 
         assert out.read_text(encoding="utf-8") == "a previous run"
-        assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"]
+        assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"], "the probe left debris"
+
+    def test_the_probe_replaces_an_existing_file_rather_than_only_creating_one(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # What `publish` does is replace something already there, so that is the operation to exercise —
+        # in the destination's own directory, on a file of the probe's own.
+        module = _module("measure")
+        replaced: list[tuple[Path, Path]] = []
+        original = Path.replace
+
+        def record(self: Path, target: Path) -> Path:
+            replaced.append((self, Path(target)))
+            return original(self, target)
+
+        monkeypatch.setattr(Path, "replace", record)
+        module._refuse_unwritable(tmp_path / "results.txt")
+
+        assert replaced, "the probe never exercised a replace"
+        source, target = replaced[0]
+        assert source.parent == tmp_path and target.parent == tmp_path
+        assert target.exists() is False or target.name != "results.txt"
+
+    def test_a_read_only_destination_is_found_before_the_loader(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # The half `os.access` still answers: an existing artifact nothing is allowed to write.
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+        out.write_text("a previous run", encoding="utf-8")
+        monkeypatch.setattr(module.os, "access", lambda *_: False)
+        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unpublishable run"))
+        monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(out)])
+
+        with pytest.raises(SystemExit, match="is not writable"):
+            module.main()
 
     def test_output_without_a_path_says_so(self) -> None:
         # Scripts fail with an explanation, not an IndexError three frames down.

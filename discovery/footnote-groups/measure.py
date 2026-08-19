@@ -327,9 +327,8 @@ def identify() -> RunIdentity:
     else:
         # ⚠️ Untracked and modified were counted together and both labelled `+untracked`, so an
         # ordinary edit read as an unknown file. Two questions, two answers.
-        untracked_paths = listed
-        tracked = _describe(_diff_paths(diff), diff)
-        untracked = _describe(untracked_paths, _bytes_of(untracked_paths))
+        tracked = _describe(_diff_files(diff), diff)
+        untracked = _describe(len(listed), _bytes_of(listed))
     return RunIdentity(
         revision=_git("rev-parse", "--short", "HEAD"),
         tracked_changes=tracked,
@@ -338,30 +337,32 @@ def identify() -> RunIdentity:
     )
 
 
-def _describe(paths: list[str], contents: bytes | None) -> str:
-    """`clean`, or a count with a digest over the paths **and the bytes that changed**.
+def _describe(files: int, preimage: bytes | None) -> str:
+    """`clean`, or a count with a digest over the bytes that changed.
 
-    ⚠️ **`clean` was returned whenever the path list was empty, whatever the contents said.** The paths
-    and the bytes come from two commands against a mutable tree, so `git status` can report nothing
-    tracked while `git diff` carries a change made between the two calls — and the artifact then said
-    *clean* over a run that used an edited solver. **A contradiction between the two is not a clean
-    tree; it is an unreadable one**, and the whole point of this field is that it fails closed.
+    ⚠️ **`clean` was returned whenever the file count was zero, whatever the bytes said.** A count and
+    a preimage can disagree, and the artifact then said *clean* over a run that used an edited solver.
+    **A contradiction between them is not a clean tree; it is an unreadable one**, and the whole point
+    of this field is that it fails closed.
 
-    The two directions are not symmetric, and only one is dangerous. Contents without paths
-    under-reports and is refused. Paths without contents over-reports and is kept, because a dirty
+    The two directions are not symmetric, and only one is dangerous. Bytes without a count
+    under-reports and is refused. A count without bytes over-reports and is kept, because a dirty
     digest over a tree that has since been restored costs nothing but an unnecessary rerun.
+
+    ⚠️ **This took a path list until v17, and building that list meant re-implementing git's quoting.**
+    A path with a tab, a quote or an accented character makes git write `diff --git "a/…` — so the
+    parser found nothing, the count was zero, the bytes were not, and the run **refused to start on a
+    perfectly good diff.** A Spanish filename is enough. The caller now hands over a count and the raw
+    bytes, and the bytes already name the files.
     """
-    if contents is None:
+    if preimage is None:
         return "unknown"
-    if contents and not paths:
+    if preimage and not files:
         return "unknown"
-    if not paths:
+    if not files:
         return "clean"
-    # ⚠️ Length-prefixed, and **sixteen** hex characters. Eight is 32 bits, which is small enough to
-    # search by varying a disposable file until the displayed identity matches an approved one.
-    preimage = b"".join(_record(path.encode("utf-8", "surrogateescape")) for path in sorted(paths))
-    digest = hashlib.sha256(preimage + contents).hexdigest()[:16]
-    return f"{len(paths)} files, {digest}"
+    digest = hashlib.sha256(preimage).hexdigest()[:16]
+    return f"{files} files, {digest}"
 
 
 def _bytes_of(paths: list[str]) -> bytes | None:
@@ -392,20 +393,20 @@ def _record(field: bytes) -> bytes:
     return f"{len(field)}:".encode() + field
 
 
-def _diff_paths(diff: bytes) -> list[str]:
-    """The paths named by a `--binary` diff, taken from the snapshot the bytes came from.
+def _diff_files(diff: bytes) -> int:
+    """How many file sections a `--binary` diff carries, counted without decoding a single path.
 
-    `diff --git a/<path> b/<path>` is the header of every file section. Reading the paths here rather
-    than from a second `git status` is what makes the two halves of the tracked digest one observation.
+    ⚠️ **The version this replaces read the paths out of the header, which meant re-implementing git's
+    quoting rules.** Git writes `diff --git "a/x\ty.py" "b/x\ty.py"` for a path with a tab, a quote, a
+    backslash or — under the usual `core.quotePath` — an accented character. The parser matched only
+    the bare `diff --git a/` form, so such a diff yielded no paths at all: the count was zero, the bytes
+    were not, and `_describe` refused the run on a diff git had produced perfectly well.
+
+    `diff --git ` is the part of the header that does not vary, and a count is all the digest ever
+    needed from it — **the bytes already name the files**, and they are what gets hashed. Not parsing a
+    presentation format is the fix; parsing it more cleverly is the same bug with more code.
     """
-    prefix = b"diff --git a/"
-    paths = []
-    for line in diff.splitlines():
-        if line.startswith(prefix):
-            body = line[len(prefix) :]
-            half = body.find(b" b/")
-            paths.append(body[:half].decode("utf-8", "surrogateescape") if half > 0 else body.decode())
-    return paths
+    return len([line for line in diff.splitlines() if line.startswith(b"diff --git ")])
 
 
 def _porcelain_paths(raw: bytes | None) -> list[str] | None:
@@ -555,42 +556,33 @@ def _refuse_unwritable(out: Path) -> None:
     if not out.parent.is_dir():
         message = f"{out.parent} is not a directory; nothing this run produces could be published"
         raise SystemExit(message)
+    # ⚠️ **The probe replaces one probe with another, and never touches `out`.**
+    #
+    # v16 proved the destination by renaming it aside and restoring it in `finally`. That made a
+    # read-only check destructive: `finally` does not run after a kill or a power cut, so an
+    # interruption in the microsecond between the two renames leaves the canonical artifact **gone**,
+    # sitting under a name nobody looks for. This instrument gets stopped by hand — it has been three
+    # times today — so that is not a hypothetical window.
+    #
+    # Replacing an existing sibling exercises the same operation `publish` performs, in the same
+    # directory, without putting the previous result at risk. What it cannot see is an ACL belonging to
+    # `out` itself; `os.access` covers the read-only case, and the rest is not worth losing a completed
+    # five-hour result to.
     probe = out.with_name(f"{out.name}.probe-{os.getpid()}-{secrets.token_hex(4)}")
-    moved = probe.with_name(f"{probe.name}.moved")
+    target = probe.with_name(f"{probe.name}.target")
     try:
         probe.write_bytes(b"")
-        probe.replace(moved)
+        target.write_bytes(b"")
+        probe.replace(target)
     except OSError as error:
         message = f"{out.parent} cannot be written to ({error}); this run could publish nothing"
         raise SystemExit(message) from error
     finally:
         probe.unlink(missing_ok=True)
-        moved.unlink(missing_ok=True)
-    if out.exists():
-        _prove_replaceable(out)
-
-
-def _prove_replaceable(out: Path) -> None:
-    """Rename an existing destination away and back, which is the right `publish` actually needs.
-
-    ⚠️ **Creating a sibling proves the directory, not the target.** `publish` ends in
-    `pending.replace(out)`, and on Windows an existing `out` can be read-only, held open by another
-    process without delete sharing, or carry an ACL of its own while a fresh sibling is created
-    happily. That is the realistic case — a results file left open in an editor — and it failed only
-    inside `publish`, hours later, which is the whole cost this preflight exists to avoid.
-
-    Renaming the file away and back is the same right `replace` needs, and it is restored in `finally`
-    so an interruption between the two leaves the file where it was.
-    """
-    aside = out.with_name(f"{out.name}.replaceable-{os.getpid()}-{secrets.token_hex(4)}")
-    try:
-        out.replace(aside)
-    except OSError as error:
-        message = f"{out} exists and cannot be replaced ({error}); this run could publish nothing"
-        raise SystemExit(message) from error
-    finally:
-        if aside.exists():
-            aside.replace(out)
+        target.unlink(missing_ok=True)
+    if out.exists() and not os.access(out, os.W_OK):
+        message = f"{out} exists and is not writable; this run could publish nothing"
+        raise SystemExit(message)
 
 
 def _refuse_unless_identified(identity: RunIdentity, *, expect_inputs: bool = False) -> None:

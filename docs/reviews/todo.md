@@ -2,15 +2,16 @@
 
 ## Where everything stands
 
-**Sixteen reviews, 75 findings, none rejected. One is open and it is not waiting on effort.**
+**Seventeen reviews, 78 findings, none rejected. One is open and it is not waiting on effort**, and two
+are **declined on the environment** and recorded in `non-issue.md`.
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v16 is closed except that one — seventy-four of seventy-five.** One of the
-seventy-four, `v16-P1-01`, is closed **as far as it goes without a launcher**, and what remains open in
-it is written down in its own entry rather than folded into the count.
+**Everything from v01 to v17 is closed except that one — seventy-six of seventy-eight**, with
+`v16-P1-01` and `v17-P2-01` declined rather than fixed, each with its reason and its reactivation
+condition in `non-issue.md`.
 
 ⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
@@ -42,41 +43,18 @@ constructing the collision, which is the only way this class can be found. ⚠�
 did not collide**; the finding was right and its demonstration was wrong, which is its own small lesson
 about accepting a worked example instead of running it.
 
-## ⚖️ What the reviewer does not know: the environment is one laptop
+## ⚖️ Findings not fixed as stated live in `non-issue.md`
 
-**One laptop, the operator and Claude. No CI yet, no second developer, no concurrent editors, no
-adversary inside the repository.** The reviewer reasons from a generic professional setup and cannot
-see this, so it produces findings that are correct in the abstract and unreachable here.
+**The reviewer cannot see the environment: one laptop, the operator and Claude.** Findings whose failure
+mode needs a more complex setup — a second developer, a shared build agent, a hostile contributor — are
+declined rather than built, and **the decision goes in `docs/reviews/non-issue.md`** with what would have
+to change for it to become real.
 
-**Those are declined, and the decision is written down.** Not fixed quietly, not argued with — recorded
-with the finding's id, why it cannot arise in this environment, and what would have to change for it to
-become real. A declined finding is a decision the operator can reverse when the environment changes; a
-silently skipped one is a hole nobody knows about.
+⚠️ **The test is *does this need a second actor?*** — not *is this unlikely*. `v16-P2-01` is why: it
+arrived wrapped in an attack scenario that is out of scope here, and the defect underneath needed no
+adversary at all.
 
-⚠️ **The test is *does this need a second actor or a second process I do not control?*** — not *is this
-unlikely*. The distinction matters because it is easy to get backwards:
-
-| | |
-|---|---|
-| **Declined** | needs a second developer, a shared build agent, a hostile contributor, a race between two humans |
-| **Fixed** | reachable by one person on one machine, however exotic it sounds |
-
-`v16-P2-01` is the worked example of the second row. It arrived with an attack scenario about a
-compromised build step, which is not reachable here — but the underlying defect was **two innocent
-untracked trees producing one identity**, which needs no second actor at all. The framing was out of
-scope and the defect was not, and reading only the framing would have declined a real correctness bug.
-
-### Declined so far
-
-| Finding | Why it cannot arise here |
-|---|---|
-| `v16-P1-01`, the launcher half | Closing the import-to-`identify()` window and the untracked two-observation window means running the worker from an immutable git worktree. The window is milliseconds on a machine with one operator and no concurrent editor. **Would become real** with CI, a second developer, or any unattended scheduler |
-
-⚠️ **Some mechanisms of this shape are already built and stay built.** `publish()`'s per-writer staging
-name is the clear case: two overlapping runs of a five-hour instrument is a concurrency argument, and on
-one laptop it is thin. It is kept because it exists, is tested and costs nothing — **not because it
-would be built again today.** Recorded so the ledger does not read as a precedent for building the next
-one.
+Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
 
 ## What is left
 
@@ -112,6 +90,7 @@ every id left in the list still verifies.
 | v14-P1-01 | the **stamp digested labels, not values**: the same identifier over a different boxscore was the same digest |
 | v15-P1-01 | the **stamp could report `clean` on a contradiction**: an empty path list outvoted a non-empty diff |
 | v16-P1-01 | the **stamp mixed two snapshots**: status and diff were separate observations of a tree that can change between them |
+| v17-P2-02 | the **stamp refused a valid diff**: the path parser could not read a filename git had quoted |
 
 **Only the first produced a reported number**, and it reached the operator as a finding before anyone
 noticed the column had one possible value. The other four were caught before a run completed — which is
@@ -749,6 +728,57 @@ Every run staged through `results.txt.pending`. An atomic final rename protects 
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
 
+## v17 — verified, none rejected. **Two fixed, one declined; and one v16 repair withdrawn.**
+
+Three findings. **The interesting one is that a v16 fix had to be taken back out** — it closed a late
+failure by introducing a way to lose a finished result, which is a worse trade than the one it replaced.
+
+### v17-P1-01 — the preflight moved the artifact it was checking. **v16-P2-02 is withdrawn**
+
+v16 proved an existing destination by renaming it aside and restoring it in `finally`. **That made a
+read-only check destructive.** `finally` does not run after a kill, a crash or a power cut, so an
+interruption in the microsecond between the two renames leaves the canonical artifact **gone** — sitting
+under a name nobody looks for.
+
+⚠️ **This instrument gets stopped by hand.** Three times in one afternoon. The window is not
+hypothetical, and losing a completed five-hour result to a Ctrl-C is worse than discovering an
+unwritable destination late.
+
+The finding also describes a lost-update race between two concurrent runs. **That half is out of scope**
+— it needs a second process nobody here starts — but it does not need to be argued, because the repair
+for the reachable half removes it too.
+
+**The preflight now replaces one probe with another, in the destination's own directory, and never
+touches `out`.** That exercises the operation `publish` performs without putting the previous result at
+risk. What it cannot see is an ACL belonging to `out` itself; `os.access` covers the read-only case, and
+the remainder is not worth a lost result.
+
+⚠️ **Worth recording as a shape, not just an incident.** v16-P2-02 was a correct finding and its repair
+was reviewed, tested and mutation-checked — and it was still a net loss, because *the cost of the fix
+landed somewhere the finding was not looking.* A repair is not finished when it closes the case; it is
+finished when what it costs has been weighed against what it saved.
+
+### v17-P2-02 — the stamp refused a diff git had written perfectly well
+
+`_diff_paths` matched only headers beginning `diff --git a/`. Git writes `diff --git "a/…"` for any path
+carrying a tab, a quote, a backslash or — under the usual `core.quotePath` — an accented character. Such
+a diff yielded no paths: the count was zero, the bytes were not, and `_describe` correctly refused the
+run as unreadable.
+
+**An accented filename in a Spanish repository is enough**, which makes this a false refusal reachable
+on any afternoon — and the fail-closed guard from v15 is what turns a parsing gap into a stopped run.
+
+**The fix is to stop parsing a presentation format.** `_describe` now takes a count and the raw bytes:
+`diff --git ` is the part of the header that does not vary, a count is all the digest ever needed, and
+**the bytes already name the files.** Parsing git's quoting rules more cleverly would have been the same
+bug with more code.
+
+### v17-P2-01 — declined. See `non-issue.md`
+
+64-bit and 48-bit digest widths are collision-feasible **for an actor generating candidates**. Nothing
+generates candidates here, and at 48 bits four hundred real boards collide with probability around
+3 × 10⁻¹³. Declined on the threat rather than the cost, with the reactivation condition recorded.
+
 ## v16 — verified, none rejected. **Three closed; the fourth closed as far as it goes.**
 
 Four findings. **v15 fixed what the digests refused; v16 found what they could not distinguish** — and
@@ -796,15 +826,19 @@ independence has a limit: the exposure is a millisecond window on the operator's
 concurrent editor, and the mechanism to close it is larger than the instrument it would protect. It is
 written here so it is a known limit and not an assumption.
 
-### v16-P2-02 — the preflight proved the directory, not the destination
+### v16-P2-02 — the preflight proved the directory, not the destination. **Withdrawn by `v17-P1-01`**
 
 Creating a fresh sibling and renaming it proves the parent permits creation. `publish` ends in
 `pending.replace(out)`, and on Windows an existing `out` can be read-only, held open by another process
 without delete sharing, or carry an ACL of its own while the sibling probe succeeds happily. **A results
 file left open in an editor is the realistic case**, and it failed only inside `publish`, hours later.
 
-An existing destination is now renamed away and back — the same right `replace` needs — and restored in
-`finally` so an interruption leaves the file where it was.
+An existing destination was renamed away and back — the same right `replace` needs — and restored in
+`finally`.
+
+⚠️ **`v17-P1-01` withdrew that.** `finally` does not run after a kill, so the repair could lose the
+previous result entirely. The preflight now replaces one probe with another and never touches `out`;
+`os.access` covers the read-only case, and a target-specific ACL is not worth a lost five-hour result.
 
 ### v16-P2-03 — `2.0 == 2`, so the constructor accepted a schema its parser refuses
 

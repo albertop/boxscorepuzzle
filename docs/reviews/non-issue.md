@@ -1,14 +1,74 @@
-# Code review v01 — findings not accepted as stated
+# Findings not fixed as stated
 
-**Nothing was rejected.** All eight findings were verified in the code and all eight are fixed; the
-record is in `todo.md`.
+**Nothing has been rejected as wrong.** Every finding in every review was verified in the code. This
+file holds the ones that were **not fixed as written** — a scope correction, or a decision that the
+failure mode cannot arise in this environment — because a decision that is not written down reads later
+as agreement, and a silently skipped finding is a hole nobody knows about.
 
-This file exists because one finding was accepted with its **scope corrected**, and a correction that
-is not written down reads later as agreement.
+`todo.md` holds what was fixed. This holds what was not, and why.
 
 ---
 
-## v01-P2-4 — accepted, but it was not a data bug
+## ⚖️ The environment the reviewer cannot see
+
+**One laptop, the operator and Claude. No CI yet, no second developer, no concurrent editors, no
+adversary inside the repository.** The reviewer reasons from a generic professional setup, so it
+produces findings that are correct in the abstract and unreachable here.
+
+⚠️ **The test is *does this need a second actor or a second process I do not control?*** — not *is this
+unlikely*. The distinction is easy to get backwards:
+
+| | |
+|---|---|
+| **Declined** | needs a second developer, a shared build agent, a hostile contributor, a race between two humans |
+| **Fixed** | reachable by one person on one machine, however exotic it sounds |
+
+`v16-P2-01` is the worked example of the second row. It arrived with an attack scenario about a
+compromised build step, which is not reachable here — but the defect underneath was **two innocent
+untracked trees producing one identity**, which needs no second actor at all. Reading only the framing
+would have declined a real correctness bug.
+
+Every entry below names what would have to change about the environment for the finding to become real.
+
+---
+
+## v16-P1-01 (the launcher half) — declined: needs a second editor or an unattended scheduler
+
+**Fixed:** the tracked half. Paths now come from the binary diff itself, so that digest is one snapshot
+and cannot contradict itself.
+
+**Declined:** closing the remaining windows — Python imports the instrument before `identify()` runs,
+and untracked files need a listing and a read. Both are millisecond gaps between operations in one
+process on one machine.
+
+The repair is a launcher that captures a manifest, starts the worker from a clean git worktree matching
+it, and publishes only from there. That is a larger mechanism than the instrument it would protect.
+
+**Would become real with:** CI, a second developer, or any scheduler running the instrument unattended
+while the tree can change.
+
+---
+
+## v17-P2-01 (digest widths) — declined: needs an adversary generating candidates
+
+The tracked and untracked digests show 64 bits; the instrument, board and aggregate digests show 48. A
+birthday collision needs about 2³² and 2²⁴ **deliberately generated** candidates respectively.
+
+**Nothing generates candidates here.** With four hundred real boards the accidental collision
+probability at 48 bits is around 3 × 10⁻¹³, and the tree digests cover files nobody is manufacturing.
+The exploitation path the finding describes — preparing two families of trees and searching offline for
+a cross-family collision — requires a contributor or a compromised build step, neither of which exists.
+
+⚠️ **This is declined on the threat, not on the cost.** Widening the slices is a one-character change,
+and it is not being made because bumping the result schema a third time to defend against an absent
+adversary is churn that makes artifacts harder to compare, not easier.
+
+**Would become real with:** any actor who can put files in the tree and wants an approved provenance
+label. If that ever happens the fix is to take full SHA-256 everywhere and move the schema once.
+
+---
+
+## v01-P2-4 — accepted, but it was not a data bug. **A scope correction, not a decline**
 
 **The review's finding stands and the fix is done.** The model called the fourth footnote term
 `reached_on_interference` and the package schema called it `catcher_interference`; it is now
