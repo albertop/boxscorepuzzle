@@ -4,6 +4,8 @@ A daily puzzle where the player reconstructs the boxscore of a real Major League
 
 **Design document: `docs/design-boxscore-puzzle.md`. Read it before proposing architecture or product changes. Section references below (§N) point to it.**
 
+**Engine brief: `docs/serve-brief.md`. Read it before touching `serve/`.** It is the standing direction for the client — one puzzle and three interfaces, a core that knows nothing about screens, phone first — and it is where `serve` decisions get recorded as they are taken, rather than in commit messages.
+
 Status: design complete at the "what and why" level. Implementation starting.
 
 ---
