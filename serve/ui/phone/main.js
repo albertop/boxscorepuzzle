@@ -71,7 +71,13 @@ function boot({ puzzle }) {
       const other = node.dataset.cell !== name;
       const sameRow = node.dataset.cell.split(".")[0] === name.split(".")[0];
       const sameColumn = node.dataset.cell.split(".")[1] === name.split(".")[1];
-      node.classList.toggle("peer", other && (sameRow || sameColumn));
+      // ⚠️ **The footnote line takes the amber and nothing else.** The highlight answers *which cells
+      // does this one share an equation with*, and it answers it by lying along a row or a column — a
+      // shape the grid has and the line does not. Tinting `#5a` and `#5b` because they share a column
+      // showed a relation the line's own layout does not express, so the cue said something the eye
+      // could not follow. Selected, yes; related, not here.
+      const inLine = node.closest(".footnotes") !== null;
+      node.classList.toggle("peer", !inLine && other && (sameRow || sameColumn));
     }
   };
 

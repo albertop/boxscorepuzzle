@@ -1,0 +1,62 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>footnote block height</title>
+<!--
+  What the footnote block costs vertically, measured on the real packages at 375px.
+
+  ⚠️ **Rendered with the board's own renderer**, not a copy of it: this page imports `renderFootnotes`
+  and `board.css` and puts the result in a 375px box. A page with its own version of the line would
+  measure something the product does not have, which this project has done twice and both times the
+  judgement would have been made on a board that does not exist.
+
+  §6's height budget was measured when the footnote line was one row of text. It is now cells.
+-->
+<link rel="stylesheet" href="../ui/phone/fonts.css">
+<link rel="stylesheet" href="../ui/phone/board.css">
+<style>
+  body { font: 13px system-ui; margin: 12px; background: #fff; color: #16181d; }
+  .frame { width: 375px; padding: 0 8px; box-sizing: border-box; border: 1px dashed #9aa1ad; margin: 6px 0 14px; }
+  table { border-collapse: collapse; font: 12px ui-monospace, monospace; margin-bottom: 14px; }
+  th, td { border: 1px solid #d3d7de; padding: 3px 8px; text-align: right; }
+  th { background: #f4f6f9; }
+  caption { text-align: left; font-weight: 700; padding: 6px 0; }
+</style>
+<div id="out"></div>
+<script type="module">
+  import { createGame } from "../engine/game.js";
+  import { readPackage } from "../engine/package.js";
+  import { renderFootnotes } from "../ui/phone/board.js";
+
+  const out = document.getElementById("out");
+  const manifest = await (await fetch("../data/puzzles/manifest.json", { cache: "no-store" })).json();
+
+  const rows = [];
+  for (const id of manifest.puzzles) {
+    const raw = await (await fetch(`../data/puzzles/${manifest.generation}/${id}.json`)).json();
+    const puzzle = readPackage(raw);
+    const game = createGame(puzzle);
+    const frame = document.createElement("div");
+    frame.className = "frame";
+    frame.append(renderFootnotes(puzzle, game, () => {}));
+    out.append(frame);
+    const line = frame.querySelector(".footnotes");
+    const terms = line.querySelectorAll(".cell").length;
+    rows.push({ id: id.slice(0, 8), terms, height: Math.round(line.getBoundingClientRect().height) });
+  }
+
+  const table = document.createElement("table");
+  table.innerHTML =
+    "<caption>the footnote block at 375px, rendered with the board's own renderer</caption>" +
+    "<tr><th>package</th><th>erased terms</th><th>block height</th><th>share of 812px</th><th>rows of 44px</th></tr>" +
+    rows
+      .sort((a, b) => a.terms - b.terms)
+      .map(
+        (r) =>
+          `<tr><td>${r.id}</td><td>${r.terms}</td><td>${r.height}px</td>` +
+          `<td>${((r.height / 812) * 100).toFixed(0)}%</td><td>${Math.round(r.height / 44)}</td></tr>`,
+      )
+      .join("");
+  out.prepend(table);
+  globalThis.__heights = rows;
+</script>
