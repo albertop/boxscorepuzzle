@@ -2,13 +2,13 @@
 
 ## Where everything stands
 
-**Fourteen reviews, 68 findings, none rejected. One is open and it is not waiting on effort.**
+**Fifteen reviews, 71 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v14 is closed except that one — sixty-seven of sixty-eight.**
+**Everything from v01 to v15 is closed except that one — seventy of seventy-one.**
 
 ⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
@@ -25,6 +25,12 @@ though it had — the identical defect, in the part of the file that exists to c
 ⚠️ **Worth naming as a class, because it now has four instances.** *A name is not the thing.* A
 `game_id` is not a boxscore, a status line is not a diff, a heading string is not a denominator, and a
 row-label suffix is not a lineup slot. Every one of them read correctly and identified nothing.
+
+⚠️ **And v15 found the second class in the same three functions**: *the absence of a reading is not a
+reading of absence.* An empty path list read as a clean tree, an unreadable file read as a file whose
+contents were the string `<unreadable>`, and `out.parent.is_dir()` read as writability. This is the
+fail-closed rule CLAUDE.md names first, and it keeps arriving in the code written to satisfy the
+previous review — which is the useful part of the observation, not the rule itself.
 
 ## What is left
 
@@ -58,6 +64,7 @@ every id left in the list still verifies.
 | v12-P1-01 | the **guard for the second fix accepted the implementation it replaced** |
 | v13-P1-01 | the **stamp could not identify the run**: gathered at the end, naming no input, refusing on one question of two |
 | v14-P1-01 | the **stamp digested labels, not values**: the same identifier over a different boxscore was the same digest |
+| v15-P1-01 | the **stamp could report `clean` on a contradiction**: an empty path list outvoted a non-empty diff |
 
 **Only the first produced a reported number**, and it reached the operator as a finding before anyone
 noticed the column had one possible value. The other four were caught before a run completed — which is
@@ -68,17 +75,21 @@ carrying their own eligibility and denominators as callables; three erasure seed
 run-level coverage kept separate from group trials; **an immutable `RunIdentity` captured before the
 first board**, carrying a code digest that includes the loader, the tracked and untracked tree states
 digested from the diff and from file bytes, and **a per-board content digest listed in the artifact** so
-the aggregate can be recomputed; a refusal that fires **before** the sample is loaded rather than after
-every solve; a per-writer staging path extracted into `publish()` so a collision can be forced in a
-test; and a refusal to publish when **any** repository question is unknown.
+the aggregate can be recomputed; **any disagreement between the two git snapshots reported as unknown
+rather than clean**; a refusal that fires **before** the sample is loaded rather than after every solve,
+with the destination proved writable by writing; a per-writer staging path extracted into `publish()` so
+a collision can be forced in a test; and a refusal to publish when any repository question is unknown or
+the identity names no inputs.
 
 Result schema is **4**. Schema 3 artifacts digested labels, so they cannot be compared with these and
 must not present as the same contract.
 
-⚠️ **Every one of those ten fixes is guarded by a test that fails when the fix is reverted**, checked by
-reverting each one and watching a named test go red — not by rereading the assertions.
+⚠️ **Every one of those fixes is guarded by a test that fails when the fix is reverted**, checked by
+reverting each one and watching a named test go red — not by rereading the assertions. **That practice
+paid for itself in v15**: two mutations left everything green, one because the mutation was bad and one
+because a guard was missing.
 
-### ▶ The run — going, at `44d9582` on a clean tree
+### ▶ The run — going, at `44d9582` on a clean tree. **v15 did not stop it.**
 
 | | |
 |---|---|
@@ -99,6 +110,14 @@ reviewing an instrument before trusting a number rather than after.
 first ten minutes: `load()` gates every candidate direction on zero density before the first board is
 measured. An empty log early is the expected state, not a stall — the first line is the gated-direction
 count.
+
+**v15 landed mid-run and the run was left alone**, which is the opposite of the v14 call and rests on a
+different fact. v14 changed what the stamp *would say about this run*. v15 closes **failure windows** —
+a disagreement between two git snapshots, an unreadable file, an unwritable destination — and none of
+them is open here: the tree was clean at capture, the destination is fine, and `format.py` is not on the
+run's path. Its `instrument 4f894c5391eb` identifies the v14 file **by content**, which is recoverable
+from `44d9582`, so the artifact stays checkable. Restarting would have cost twenty minutes and corrected
+nothing.
 
 **What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
 often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
@@ -673,6 +692,74 @@ Every run staged through `results.txt.pending`. An atomic final rename protects 
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
 
+## v15 — verified, none rejected. **All three closed, plus two of three further improvements.**
+
+Three findings, all inside the v14 repairs. **v14 fixed what the digests covered; v15 found what they
+did when they could not cover anything.**
+
+### v15-P1-01 — `clean` was what an empty path list meant, whatever the bytes said
+
+`_describe` returned `clean` the moment its path list was empty and never looked at `contents`. Paths
+and bytes come from **two commands against a mutable working tree**: `git status` can report nothing
+tracked while `git diff` carries a change made between the two calls, and the stamp then certifies a
+clean tree over a run that used an edited solver, eraser or verifier — none of which the three-file
+instrument hash covered.
+
+**The two directions are not symmetric, and only one is dangerous.** Contents without paths
+under-reports and is now `unknown`. Paths without contents over-reports and is kept dirty, because a
+dirty digest over a tree that has since been restored costs one unnecessary rerun, which is the right
+way to be wrong.
+
+**An unreadable untracked file became the literal string `<unreadable>` and published anyway**, so two
+different files nobody could read were one identity. Same rule as the diff: a failure to read is not a
+reading. It returns `None`, and `None` is unknown.
+
+**And porcelain is parsed with `-z`.** In the text form git quotes and escapes any awkward path, so
+`"src/a\tb.py"` arrived with its quotes attached, opened nothing, and became that marker — the failure
+feeding itself. A rename's source path is its own NUL-terminated record and is consumed rather than read
+as the next status line.
+
+### v15-P2-01 — an existence test standing in for writability
+
+The early gate asked `out.parent.is_dir()`. A directory sitting at `out`, a read-only parent, a full
+disk — every one passes and fails five hours later inside `publish()`, which is exactly the cost
+`v14-P2-01` moved the provenance gate to avoid, one field over. **The only check that answers the
+question is the operation**, so it now writes a uniquely named probe in the destination's own directory,
+replaces it, and removes both.
+
+Also here: the publication gate requires the identity to **name its inputs**, which the preflight cannot
+ask because nothing is loaded yet — otherwise a stamp reading `inputs not yet loaded` would certify an
+artifact that names no data. And `--output` with no value says so instead of raising `IndexError`.
+
+### v15-P2-02 — the annotation and the constructor described different languages
+
+The v13 repair accepted a list and canonicalised it to a tuple, while the field stayed annotated
+`tuple[str, ...] | None`. A typed producer could not use the supported path without an error, and a
+mutable container was admitted into a frozen object whose entire purpose is that a signed package cannot
+change after signing.
+
+**Resolved by refusing rather than converting.** No caller passes a list, and `from_json` converts at the
+parse boundary — which is where a conversion belongs, and is why JSON's list still round-trips. One
+contract in three places instead of two contracts in two.
+
+### ⚠️ The sixth guard that did not guard, and this time reverting found it
+
+Every fix in v13, v14 and v15 was checked by reverting it and watching a named test go red. In v15 two
+mutations left the suite green:
+
+| Mutation | What it turned out to be |
+|---|---|
+| `status == "??"` → `startswith("?")` | a **bad mutation** — behaviourally identical, since no other status starts with `?`. Re-run against the real revert (`-z` parsing → `splitlines()`), two tests failed |
+| the probe's **write** removed entirely | **a real hole.** Every destination test exercises the `is_dir()` branch and none of them the writing, so "writability is proved by writing" had no test at all |
+
+The second is this project's named shape, in code written to close a finding about the same shape. The
+guard now states what it forbids: the write is made to fail and a refusal must follow, so an
+implementation that stops writing never triggers it and fails there.
+
+**And the first is worth keeping as method.** A mutation that changes nothing observable is not evidence
+the guard is weak; it is evidence the mutation was not a revert. Reverting has to mean *the previous
+implementation*, not *a nearby edit*.
+
 ## v14 — verified, none rejected. **All three closed, plus two of three further improvements.**
 
 Three findings, all downstream of v13's closures. The pattern is worth stating: **v13 built the right
@@ -782,7 +869,9 @@ each matching `^[1-9][a-z]?$`, all distinct. A `list` passed too, which defeats 
 caller keeps a reference and can mutate the package after construction.
 
 It now takes `object`, rejects `str` and anything that is not a tuple or list by name, and
-`__post_init__` canonicalises to a tuple through `object.__setattr__`.
+`__post_init__` canonicalises to a tuple through `object.__setattr__`. **Superseded by `v15-P2-02`:
+the canonicalisation is gone and a list is refused outright, because accepting one made the field's
+annotation and its constructor say different things.**
 
 ⚠️ **Closed on a manual check, which v14-P2-02 correctly refused.** This paragraph said "verified both
 ways", which was true of a session command and reads as a test. Two `Package(...)` guards at the
