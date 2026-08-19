@@ -37,7 +37,7 @@
    because they have full pages; this has 375 pixels, and two families on that width compete. The
    difference comes from weight and colour. */
 :root {
-  --face: "IBM Plex Sans Condensed";
+  --face: "Roboto Condensed";
   --cell: 44px;
   --slot-column: 24px;
   --label-column: 66px;

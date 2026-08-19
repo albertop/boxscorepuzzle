@@ -27,11 +27,13 @@ FAMILIES = {
     # turns the `+` into `%2B`, so the request asks for a family literally called "Roboto+Condensed"
     # and Google answers 400. One encoding, in one place.
     #
-    # ⚠️ Roboto Condensed was the other candidate and lost on the character the instruction named:
-    # it draws `1` as a bare stem with an angled flag and no foot. Checked on screen rather than
-    # argued — all three weights had loaded and the digit's advance differed from the fallback's, so
-    # the bare `1` is the face's design and not a webfont that failed to arrive.
-    "plex-condensed": "IBM Plex Sans Condensed",
+    # ⚠️ **Roboto Condensed, and the round trip is worth recording.** IBM Plex was the other
+    # candidate and it draws the better `1` — a foot serif, against Roboto's bare stem. It shipped
+    # briefly, because the instruction said a bare `1` was grounds to take the other candidate and I
+    # read a conditional as binding. **The operator prefers Roboto, having seen both on the board**,
+    # and that is the judgement the brief says a real device makes. The tradeoff stays on the record:
+    # Roboto's `1` has no foot, and this board renders `1` constantly.
+    "roboto-condensed": "Roboto Condensed",
 }
 WEIGHTS = (400, 600, 700)
 

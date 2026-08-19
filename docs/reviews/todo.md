@@ -2078,6 +2078,55 @@ packages showed it carries blanks.
 the scoreboard prints, or the solver not counting the move. Recorded before continuing rather than
 mentioned in passing.
 
+## ⚠️⚠️ Every stall figure in this project counted zeros — the correction
+
+**Priority A1, and it invalidates numbers rather than adding one.**
+
+A footnote term worth zero was erasable. When `HBP`, `SF`, `SH` and `CI` are all zero for a batter the
+row identity is `PA = AB + BB` — the terms contribute nothing *because they did not happen* — so an
+erased zero asks the player to type `0` into a category that never occurred. The solver deduced it,
+correctly, and **recorded a stall**.
+
+**On the reference fixture, 35 of its 36 footnote cells are zero.**
+
+### The measurement that settles it, on one board, three treatments, same seeds
+
+| treatment | candidate cells | stall ceiling per seed | max |
+|---|---:|---|---:|
+| footnotes fully erasable — **what every figure was measured under** | 110 | 14, 17, 14 | 17 |
+| footnotes erasable only where non-zero — **now** | 75 | 7, 9, 1 | 9 |
+| footnotes **given entirely** | 74 | 7, 9, 1 | **9** |
+
+⚠️ **The last two rows are identical.** On this board, opening the footnotes bought *nothing at all*
+once the zeros were excluded — not "most of the gap was zeros", **all of it**. One board, and one whose
+footnote line is almost entirely empty, so the pool measurement still has to run. But the direction is
+not in doubt.
+
+### What this invalidates
+
+Everything derived from a stall count taken with zeros erasable:
+
+- the **stall ceiling** and its 27% convergence
+- the **coverage** figures at each target
+- the **5-versus-15** gap that was the whole argument for opening the footnote cells
+- the **ladder rungs** — 19, 16, 13, 9, 6 — which are stall counts
+- the **group run's** blocking percentages, which were measured at a target of 8 stalls
+
+### How it was found, which is the part worth keeping
+
+**The operator solved a 19-stall board with the footnote terms visible and found it hard.** So the
+difficulty was there without them, and the measurement said the opposite. No test could have caught it —
+the solver was working correctly and the values were genuinely unknown to it. They were just worth zero.
+Recorded in `CLAUDE.md` as a class of its own: *a working instrument pointed at the wrong thing*, as
+distinct from the broken instruments the earlier entries describe.
+
+### Open, and it may close the question for good
+
+If the pool measurement agrees with the board above, **erasable footnotes were never worth anything** and
+they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
+move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
+blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
 ## What is actually left
 
 Not review findings — these are the things the repairs unblocked.

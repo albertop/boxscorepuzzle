@@ -89,16 +89,35 @@ def erasable(direction: Direction) -> list[str]:
     because the identity needs the numbers, and the totals row supplies them: HBP, SF, SH and CI are
     each an unknown *inside* the row identity with its column sum available to close it.
 
-    Measured, which is why it changed: with the footnote line given, the median board stalls 5 times
-    at full erasure and only 56% reach five. With these cells open it is 15 and every board reaches
-    five. It costs no column and no pixel — the footnote line is already on the board.
+    ⚠️⚠️ **But only where the value is non-zero, and the correction is large.** When `SH`, `SF`, `HBP`
+    and `CI` are all zero for a batter, the row identity is `PA = AB + BB`: the four terms contribute
+    nothing, *because they did not happen*. Erasing one asks the player to type `0` into a category that
+    never occurred, and it asked the **solver** to deduce it — which the solver did, correctly, and
+    recorded as a step.
+
+    **So the 5-versus-15 figure below was counting zeros.** The measurement that opened these cells said
+    they tripled the difficulty; the operator then solved a 19-stall board with the footnote line
+    visible and found it hard *without noticing the footnotes at all*. Both are true: the solver stalled
+    sixteen times filling in zeros, and a person never met them. The instrument was working and pointed
+    at the wrong thing.
+
+    The old figures stay in this docstring as the record of what was believed, marked as superseded.
+    They are being re-measured; whether opening these cells was ever worth anything is the open
+    question, and if the remaining gap is small they go back to given.
     """
     shape = shape_of(direction)
     cells = [batting_cell(index, column) for index in range(shape.batter_count) for column in BATTING_COLUMNS]
     cells += [batting_total_cell(column) for column in BATTING_COLUMNS]
     cells += [pitching_cell(index, column) for index in range(shape.pitcher_count) for column in PITCHING_COLUMNS]
     cells += [pitching_total_cell(column) for column in PITCHING_COLUMNS]
-    cells += [footnote_cell(index, column) for index in range(shape.batter_count) for column in FOOTNOTE_COLUMNS]
+    # ⚠️ **A footnote term is erasable only if its value is non-zero.** See below.
+    values = cell_values(direction)
+    cells += [
+        footnote_cell(index, column)
+        for index in range(shape.batter_count)
+        for column in FOOTNOTE_COLUMNS
+        if values[footnote_cell(index, column)] != 0
+    ]
     return sorted(set(cells) - set(SCOREBOARD_DUPLICATES))
 
 

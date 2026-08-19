@@ -188,6 +188,30 @@ is hard to see from inside it. The discipline is not doubting any single measure
 "nothing", it does not run. Some open questions will keep imperfect numbers, and that is the correct
 state to build in.
 
+**A metric can be correctly computed and still measure something the player never encounters.** Every
+other measurement defect recorded here was a *broken* instrument — a metric that could not vary, a
+baseline that removed what it was testing, a denominator chosen by a heading string. This one was a
+**working instrument pointed at the wrong thing**, and that is a different failure with a different cure.
+
+The footnote cells were opened because a measurement said they took the median board from 5 stalls to
+15. They did — the solver deduced every erased footnote value, correctly, and recorded each as a step.
+But when `HBP`, `SF`, `SH` and `CI` are all zero for a batter the row identity is `PA = AB + BB`: those
+terms contribute nothing *because they did not happen*. On the reference fixture **35 of 36 footnote
+cells are zero**. The solver stalled sixteen times filling in zeros; a person never met one.
+
+**It was found by a human solving a board and noticing the numbers did not match his experience** — a
+19-stall board that was hard with the footnotes visible, which meant the difficulty was there without
+them. No test could have caught it: the solver was working, the values were genuinely unknown to it, and
+the arithmetic was right. The check that exists for this is not a test. **It is asking, of every metric,
+what the player does when the number goes up** — and if the answer is "types a zero", the metric is
+measuring the board rather than the game.
+
+⚠️ **And the correction is a correction, not a new result.** The earlier figures were not noisy. They
+were counting the wrong thing, and everything derived from them — the stall ceiling, the coverage
+percentages, the 5-versus-15 gap, the ladder rungs — inherits the error and is being re-measured. On the
+first board checked, excluding zeros made *erasable footnotes indistinguishable from footnotes given
+entirely*: ceilings of 7, 9 and 1 in both arms, against 14, 17 and 14 with zeros erasable.
+
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
 could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*

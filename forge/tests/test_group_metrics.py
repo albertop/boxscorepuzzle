@@ -788,11 +788,22 @@ class TestPublicationCannotCollideOrLeaveDebris:
 
 
 class TestBlockageCanStillBeObserved:
+    """⚠️ **The target here fell from 8 stalls to 1, and that is the finding rather than a repair.**
+
+    When zero-valued footnote terms stopped being erasable, this board's stall ceiling collapsed: the
+    three seeds now reach 7, 9 and **1**. Before, all three reached 8 comfortably. So most of what this
+    board's stall count measured was the solver deducing zeros — values genuinely unknown to it, worth
+    nothing to a player.
+
+    The target is 1 because that is what every seed still reaches. Raising it to make the test look
+    healthier would be relaxing a rule to reach a number, which §22 forbids for puzzles and which is no
+    better here.
+    """
     def test_an_erased_board_deduces_something_outside_the_group(self, cubs_at_braves_1968: Direction) -> None:
         # Not a claim that this board blocks — a claim that the comparison is capable of showing it.
         from boxscore_forge.solver import solve  # noqa: PLC0415
 
-        puzzle = erase(cubs_at_braves_1968, target_stalls=8, seed=907)
+        puzzle = erase(cubs_at_braves_1968, target_stalls=1, seed=907)
 
         assert puzzle is not None
         shape, values = shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968)
@@ -804,4 +815,4 @@ class TestBlockageCanStillBeObserved:
     @pytest.mark.parametrize("seed", [907, 908, 909])
     def test_each_seed_is_a_separate_trial(self, seed: int, cubs_at_braves_1968: Direction) -> None:
         # One erasure per board is one sample of the thing blockage measures, not a rate.
-        assert erase(cubs_at_braves_1968, target_stalls=8, seed=seed) is not None
+        assert erase(cubs_at_braves_1968, target_stalls=1, seed=seed) is not None
