@@ -432,6 +432,56 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## v05 — verified, none rejected
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P1-02 the renderers hand back erased footnotes | real, **and it invalidates the packs built today** | `footnote_line` reads `direction.batter_footnotes` while `board_table` draws `candidate.puzzle` |
+| P1-01 lineup slots do not cross the package boundary | real | `Package` carries no slots and they cannot be reconstructed |
+| P1-03 the writer signs with a repository-known fallback | real | no executable boundary enforces the comment |
+| P2-01 `ambiguity()` now measures duplicate positions | real | it groups by `labels`, which no longer disambiguate |
+| P2-02 search-cost thresholds are in an obsolete unit | real | normalised 0–1 compared against 5, 10, 20 |
+| P2-03 the prototypes need ~405px, not 375 | real | 375px section plus 14px body padding, and no viewport meta |
+| P2-04 the new guards do not exercise what they claim | real, **mine, today** | see below |
+
+### v05-P1-02 — the printed board is easier than the board that was graded
+
+`erasable()` includes the per-batter footnote cells, `to_board` correctly turns an erased one into
+`None`, and stalls, chain and layer 3b are all measured with it unknown. Then `build_pack` prints the
+footnote line from **`loaded.direction`** — the complete source — while the grid beside it draws
+`candidate.puzzle`. **A value removed for grading is handed back on the page.**
+
+This is not v02-P1-01 again. That fixed `Direction → Board`; this is `Board → the human-visible
+artifact`, one boundary further out, and the same shape.
+
+⚠️ **The ceiling pack built this evening is affected**, and so would the ladder be. Any answer about
+perceived difficulty, tedium or layer 3b would be about a board nobody solved. **Do not print a pack
+until the footnote line comes from `candidate.puzzle.footnotes`** — which also needs a visible
+representation for an erased attribution, since a blank in a sparse line has to be resolvable rather
+than merely absent.
+
+And the documents disagree in a way that makes recurrence easy: `CLAUDE.md` says the per-batter
+footnotes are erasable, and a still-active design section says the footnote line is complete and never
+erased.
+
+### v05-P2-04 — two guards written today that do not guard
+
+Both are mine and both were written in the commits that closed other findings.
+
+- **`_position` is called with three arguments** in the parameterisation, so `started_at` defaults to
+  `None` and every "starter" case exercises the fallback path. **The branch that fixed the
+  two-third-basemen defect is not covered by the test written for it.**
+- **`test_the_cell_and_the_footnote_are_the_same_string_for_the_same_row` assigns both names from the
+  same expression.** It is a tautology: it stays green if `board_table` or `footnote_line` stops
+  calling `slot_references` entirely, which is the only thing it was meant to prevent.
+- The AST guard matches a punctuation literal with `in` against a name containing `label`, and misses
+  `startswith`, indexing, regexes and aliases — and exempts by basename, so a new renderer with the
+  same filename inherits the exemption.
+
+**This is a check that never fires, written by someone who had just recorded that a check which never
+fires is indistinguishable from a broken one.** The rule was known and applied to other people's code
+in the same session.
+
 ## v04 — verified, none rejected
 
 | Finding | Verdict | State | What was confirmed |
