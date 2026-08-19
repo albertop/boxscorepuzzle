@@ -82,14 +82,14 @@ class TestCommittingTheBatch:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
 
         with pytest.raises(SystemExit, match="staged files, wanted 3"):
-            writer._publish(staging, 3, _KEY)
+            writer._publish(staging, 3, _KEY, tmp_path)
 
         assert not (tmp_path / "manifest.json").exists()
 
     def test_a_complete_batch_publishes_a_manifest_naming_every_puzzle(self, tmp_path: Path) -> None:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
 
-        generation = writer._publish(staging, 2, _KEY)
+        generation = writer._publish(staging, 2, _KEY, tmp_path)
 
         manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["generation"] == generation
@@ -100,22 +100,22 @@ class TestCommittingTheBatch:
         # §21: regenerating produces the same thing rather than a new thing. The generation is derived
         # from the contents, so an unchanged batch republishes as a no-op instead of accumulating.
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2, _KEY)
+        first = writer._publish(staging, 2, _KEY, tmp_path)
         _, again = self._stage(tmp_path, ["aaa.json", "bbb.json"])
         writer.OUT = tmp_path
 
-        second = writer._publish(again, 2, _KEY)
+        second = writer._publish(again, 2, _KEY, tmp_path)
 
         assert first == second
         assert [path.name for path in tmp_path.iterdir() if path.is_dir()] == [first]
 
     def test_changed_contents_take_a_new_generation(self, tmp_path: Path) -> None:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2, _KEY)
+        first = writer._publish(staging, 2, _KEY, tmp_path)
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
         writer.OUT = tmp_path
 
-        second = writer._publish(changed, 2, _KEY)
+        second = writer._publish(changed, 2, _KEY, tmp_path)
 
         assert second != first
         assert json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))["generation"] == second
@@ -130,13 +130,13 @@ class TestCommittingTheBatch:
         404 for everyone holding the old pointer.
         """
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2, _KEY)
+        first = writer._publish(staging, 2, _KEY, tmp_path)
         # What a reader captured before the next publish.
         held = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
         writer.OUT = tmp_path
 
-        writer._publish(changed, 2, _KEY)
+        writer._publish(changed, 2, _KEY, tmp_path)
 
         assert held["generation"] == first
         for puzzle in held["puzzles"]:
@@ -146,11 +146,11 @@ class TestCommittingTheBatch:
         # Retention is not accumulation. The commit path collects nothing; the run after next sweeps
         # what no live manifest can name.
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2, _KEY)
+        first = writer._publish(staging, 2, _KEY, tmp_path)
         for names in (["aaa.json", "ccc.json"], ["aaa.json", "ddd.json"]):
             _, more = self._stage(tmp_path, names)
             writer.OUT = tmp_path
-            writer._publish(more, 2, _KEY)
+            writer._publish(more, 2, _KEY, tmp_path)
 
         assert not (tmp_path / first).exists()
         assert len([path for path in tmp_path.iterdir() if path.is_dir()]) == 2
@@ -163,7 +163,7 @@ class TestCommittingTheBatch:
         other.mkdir()
         (other / "work.json").write_text("{}", encoding="utf-8")
 
-        writer._publish(staging, 2, _KEY)
+        writer._publish(staging, 2, _KEY, tmp_path)
 
         assert (other / "work.json").exists()
 
@@ -176,7 +176,72 @@ class TestCommittingTheBatch:
         assert '{MANIFEST}.pending"' not in source
 
 
-class TestTheWriterWillNotSignWithAKeyAnybodyHas:
+class TestTheTrustDomainDecidesTheDestination:
+    """⚠️ **Behaviour, not source text.** These asserted on strings in the script, which proves the
+    words are present and nothing about what the writer does.
+
+    Both modes used to publish through the production directory, so an `--ephemeral` run — which needs
+    no key and anyone able to execute the writer can start — replaced the live manifest with one signed
+    by a key `serve` does not hold. `serve` refusing it preserves integrity and **not availability**:
+    the inventory goes dark while the publisher reports a certified commit.
+    """
+
+    def _resolve(self, monkeypatch: object, *, flag: bool, key: str | None) -> tuple[object, object]:
+        writer = _writer()
+        monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"] if flag else ["w"])  # type: ignore[attr-defined]
+        if key is None:
+            monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)  # type: ignore[attr-defined]
+        else:
+            monkeypatch.setenv(writer.KEY_VARIABLE, key)  # type: ignore[attr-defined]
+        return writer, writer.key_and_destination()
+
+    def test_an_ephemeral_batch_cannot_reach_the_served_directory(self, monkeypatch: object) -> None:
+        writer, (_, out) = self._resolve(monkeypatch, flag=True, key=None)
+
+        assert out == writer.EPHEMERAL_OUT
+        assert "serve" not in out.parts
+
+    def test_a_key_that_serve_does_not_pin_is_refused_before_anything_is_written(
+        self, monkeypatch: object
+    ) -> None:
+        # A valid Ed25519 key that is not *the* key used to self-verify and publish, because the check
+        # derived the public half from the key that had just signed. That proves internal consistency
+        # and nothing about the deployed reader.
+        with pytest.raises(SystemExit, match="does not match the key serve pins"):
+            self._resolve(monkeypatch, flag=False, key="11" * 32)
+
+    def test_the_pinned_key_publishes_to_the_served_directory(self, monkeypatch: object) -> None:
+        # The other direction. A guard that refuses everything would satisfy the test above.
+        writer = _writer()
+        pinned = writer.PINNED_PUBLIC_KEY.read_text(encoding="utf-8").strip()
+        private = Ed25519PrivateKey.generate()
+        monkeypatch.setattr(  # type: ignore[attr-defined]
+            writer, "PINNED_PUBLIC_KEY", writer.PINNED_PUBLIC_KEY
+        )
+        # Use a key whose public half really is the pinned one by pinning this key's public half.
+        temp = writer.EPHEMERAL_OUT.parent / "pinned-for-test.hex"
+        temp.parent.mkdir(parents=True, exist_ok=True)
+        temp.write_text(private.public_key().public_bytes_raw().hex(), encoding="utf-8")
+        monkeypatch.setattr(writer, "PINNED_PUBLIC_KEY", temp)  # type: ignore[attr-defined]
+        monkeypatch.setattr(writer.sys, "argv", ["w"])  # type: ignore[attr-defined]
+        monkeypatch.setenv(writer.KEY_VARIABLE, private.private_bytes_raw().hex())  # type: ignore[attr-defined]
+
+        _, out = writer.key_and_destination()
+
+        assert out == writer.OUT
+        assert pinned  # the real pin exists and was not what this test compared against
+        temp.unlink()
+
+    def test_the_two_modes_are_still_exclusive(self, monkeypatch: object) -> None:
+        with pytest.raises(SystemExit, match="Refusing to guess which trust"):
+            self._resolve(monkeypatch, flag=True, key="11" * 32)
+
+    def test_neither_is_an_error(self, monkeypatch: object) -> None:
+        with pytest.raises(SystemExit, match="is unset"):
+            self._resolve(monkeypatch, flag=False, key=None)
+
+
+class TestNoKeyMaterialLivesInTheScript:
     """⚠️ **The repository key and the fixtures mode are gone, not guarded.**
 
     Both existed because an HMAC key is symmetric: a convenient one in the tree let the script run, and
@@ -212,7 +277,7 @@ class TestTheWriterWillNotSignWithAKeyAnybodyHas:
         guard = source.index('ephemeral = "--ephemeral" in sys.argv')
 
         assert guard < generated
-        assert "EPHEMERAL KEY" in source
+        assert "EPHEMERAL" in source
 
     def test_it_says_serve_will_refuse_the_batch(self) -> None:
         # A mode that announces itself is not the same as one that cannot be mistaken for the real
@@ -237,7 +302,7 @@ class TestTheManifestIsSigned:
         staging.mkdir(parents=True)
         for name in ("aaa.json", "bbb.json"):
             (staging / name).write_text('{"puzzle_id": "x"}', encoding="utf-8")
-        writer._publish(staging, 2, _KEY)
+        writer._publish(staging, 2, _KEY, tmp_path)
         return json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
 
     def test_it_carries_a_signature(self, tmp_path: Path) -> None:

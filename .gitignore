@@ -47,3 +47,7 @@ discovery/**/run.log
 # directory and never in Git: a leaked signing key means anyone can sign inventory serve accepts.
 *.signing-key
 .boxscorepuzzle-signing-key
+
+# Throwaway batches. Signed by a key that existed for one run, so they are worth nothing to keep
+# and must never be mistaken for inventory.
+discovery/ephemeral-puzzles/
