@@ -71,8 +71,8 @@ GATE = 0.25
 SEED = 50
 SAMPLE_PER_DECADE = 8
 
-BATTING_HEADS = ("PA", "AB", "R", "H", "BB", "K")
-PITCHING_HEADS = ("IP", "H", "R", "ER", "BB", "K")
+BATTING_HEADS = ("PA", "AB", "R", "H", "BB", "SO")
+PITCHING_HEADS = ("IP", "H", "R", "ER", "BB", "SO")
 FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
 
 
@@ -243,7 +243,7 @@ FORMULAS = (
     "PA = AB + BB + HBP + SF + SH + CI &nbsp;&nbsp;|&nbsp;&nbsp; "
     "Column totals = sum of the rows &nbsp;&nbsp;|&nbsp;&nbsp; "
     "PA = Outs + Runs + LOB<br/>"
-    "Team H = hits allowed by the opposing pitchers (same for BB, K, R) &nbsp;&nbsp;|&nbsp;&nbsp; "
+    "Team H = hits allowed by the opposing pitchers (same for BB, SO, R) &nbsp;&nbsp;|&nbsp;&nbsp; "
     "Outs = 3 x innings pitched &nbsp;&nbsp;|&nbsp;&nbsp; "
     "AB &ge; H &nbsp;&nbsp;|&nbsp;&nbsp; ER &le; R &nbsp;&nbsp;|&nbsp;&nbsp; nothing below zero"
 )

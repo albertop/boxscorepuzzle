@@ -17,7 +17,12 @@ const en = {
   "column.runs": "R",
   "column.hits": "H",
   "column.walks": "BB",
-  "column.strikeouts": "K",
+  // ⚠️ `SO`, not `K`. A printed boxscore labels the column `SO`; `K` is scorer's notation, what
+  // goes in the notebook rather than in the paper. The argument that fixed the column order was
+  // convention, and it applies to the label with equal force. Decided when the order was fixed
+  // (§6) and deferred because it touched the package schema; done now, while schema 3 is being
+  // cut, because doing it today costs nothing and doing it later costs a version.
+  "column.strikeouts": "SO",
   "column.outs": "IP",
   "column.earned_runs": "ER",
   "column.hit_by_pitch": "HBP",

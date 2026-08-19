@@ -11,10 +11,10 @@
  * sides of the boundary and a bug report can quote one string.
  */
 
-/** PA, AB, R, H, BB, K — the six the board shows (§6). RBI was dropped for PA. */
+/** PA, AB, R, H, BB, SO — the six the board shows (§6). RBI was dropped for PA. */
 export const BATTING_COLUMNS = ["plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts"];
 
-/** IP, H, R, ER, BB, K, with innings held as outs and rendered as thirds. */
+/** IP, H, R, ER, BB, SO, with innings held as outs and rendered as thirds. */
 export const PITCHING_COLUMNS = ["outs", "hits", "runs", "earned_runs", "walks", "strikeouts"];
 
 /** HBP, SF, SH, CI — the footnote line. **Per-batter cells are erasable; the totals row is not** (§6). */

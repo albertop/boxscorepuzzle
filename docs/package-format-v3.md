@@ -69,12 +69,12 @@ really does, so the two cannot drift.
 
 | Field | Type | Null cells? | Meaning |
 |---|---|---|---|
-| `batting` | list of rows, 6 wide | yes | `PA, AB, R, H, BB, K` — the column order is part of the format (§6). |
+| `batting` | list of rows, 6 wide | yes | `PA, AB, R, H, BB, SO` — the column order is part of the format (§6). The keys are `plate_appearances … strikeouts`; `SO` is the printed label and always was the same column. |
 | `batting_totals` | row, 6 wide | yes | The totals line, erasable like any row. |
 | `footnotes` | list of rows, 4 wide | **yes** | `HBP, SF, SH, CI`, one row per batter. ⚠️ **Erasable** — each is an unknown inside the row identity, closed by the totals row below (§5, §6). |
 | `footnote_totals` | row, 4 wide | **no** | Never erased; a null here is malformed rather than difficult. |
 | `left_on_base` | integer | yes | The team footnote. Without it the global identity cannot be expressed at all. |
-| `pitching` | list of rows, 6 wide | yes | `IP, H, R, ER, BB, K`, **innings held as outs**. |
+| `pitching` | list of rows, 6 wide | yes | `IP, H, R, ER, BB, SO`, **innings held as outs**. |
 | `pitching_totals` | row, 6 wide | yes | |
 | `line_score` | object | no | The board's anchor: shown complete, never erased (§6). Every field required. |
 

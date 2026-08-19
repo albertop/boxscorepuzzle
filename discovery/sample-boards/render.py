@@ -33,8 +33,8 @@ from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
 from boxscore_forge.solver import Solution, Technique, solve
 
-BATTING_HEADERS = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "K"))
-PITCHING_HEADERS = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
+BATTING_HEADERS = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "SO"))
+PITCHING_HEADERS = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "SO"))
 FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
 BLANK = "  ·"
 SEED = 20260819

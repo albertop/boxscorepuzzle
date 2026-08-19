@@ -127,7 +127,7 @@ PRINTED_AS = {
     "runs": "R",
     "hits": "H",
     "walks": "BB",
-    "strikeouts": "K",
+    "strikeouts": "SO",
     "runs_batted_in": "RBI",
     "home_runs": "HR",
     "outs": "IP",

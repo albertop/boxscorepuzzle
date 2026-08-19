@@ -221,7 +221,7 @@ Found by rendering the six and reading them, in the first session. Each is a fac
 a preference.
 
 **1. The pinned totals row is an input surface.** §6 pins it "because the totals are consulted
-constantly", which reads as a read-only anchor. **Every one of the six erases batting totals** — H and K
+constantly", which reads as a read-only anchor. **Every one of the six erases batting totals** — H and SO
 most often — and four of six erase a pitching total. So the pinned row needs full 44px targets, and
 tapping a pinned cell must not move the board underneath it. What is *never* erased is the footnote
 totals row and LOB, because the row identity does not close without the first and the global identity
@@ -235,7 +235,7 @@ that did not happen** while leaving every total balanced. Nothing arithmetic cat
 **3. Two sections means two headers and two totals rows.** §6 says "header and totals row stay pinned",
 singular. Batting and pitching have different columns, so there are two of each and they compete for
 the same edges. The first version made the section title sticky above the column headings: the moment
-you scrolled, `BATTING` covered `PA AB R H BB K` and the board lost the only thing that says what a
+you scrolled, `BATTING` covered `PA AB R H BB SO` and the board lost the only thing that says what a
 column is. **The section name is not the header row** — found by scrolling and looking.
 
 **4. A bare slot reference in the footnote reads as a count.** A sacrifice hit by the second batter
@@ -383,6 +383,34 @@ database and belongs with forge work, not here.
 ⚠️ Worth naming for what it is: **filler wearing a new face.** The pruning experiment was about blanks
 that add nothing to the solve, and this is the same thing appearing in the one place nobody looked —
 the row that was assumed to be a read-only anchor until the real packages said otherwise.
+
+## Rendering for judgement: use the package's own solution
+
+⚠️ **A rendered board must balance.** The demo values in the first renders were invented — plausible
+digits typed to show a colour — and a board that does not balance **trains the eye to accept boards that
+do not balance**. Five defects in this project were found by a person reading a printed board, and every
+one of them was a board that looked fine until it was read properly. A screenshot with made-up numbers
+spends that instrument.
+
+Fill from `game.cells()`'s own `answer`, and assert nothing was mistyped before believing the picture.
+
+## ⚠️ A right answer reached by a wrong argument — the typeface
+
+Recorded as such, because **the argument is what gets reused and the answer is not**.
+
+I recommended IBM Plex over Roboto Condensed, and the recommendation was correct. The argument was not:
+I decided it on a specimen containing `I` and `l`, which **this board never draws** — the cells hold
+digits and the labels are position abbreviations. When the operator preferred Roboto I switched, still
+without noticing that my reason had been wrong for a reason that did not rescue Roboto.
+
+What actually mattered was in the same specimen and I let it ride: Roboto draws `1` as a bare stem with
+no foot, and `1` is a character this board renders constantly. The operator saw it on the rendered board
+and said so, and the check confirmed the face had loaded — so the bare `1` was the design, not a webfont
+that failed to arrive.
+
+**The lesson is the recorded one wearing new clothes**: a sample that evaluates the board is rendered
+with the board's content. A glyph specimen is not the board, and choosing from one imported a
+consideration the board does not have while burying the one it does.
 
 ## Open — waiting on the operator
 

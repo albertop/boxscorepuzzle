@@ -60,13 +60,13 @@ mechanism preserved past its problem.
 """
 
 BATTING_COLUMNS: Final = ("plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts")
-"""PA, AB, R, H, BB, K — the six the board shows (§6). Order is part of the format."""
+"""PA, AB, R, H, BB, SO — the six the board shows (§6). Order is part of the format."""
 
 FOOTNOTE_COLUMNS: Final = ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
 """HBP, SF, SH, CI — the footnote line, given complete and never erased (§6)."""
 
 PITCHING_COLUMNS: Final = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
-"""IP, H, R, ER, BB, K, with innings held as outs."""
+"""IP, H, R, ER, BB, SO, with innings held as outs."""
 
 SLOT_REFERENCE = re.compile(r"^[1-9][a-z]?$")
 """`9` where a lineup slot holds one row, `9a`/`9b` where it is shared — the string the board draws and

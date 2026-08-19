@@ -16,7 +16,7 @@ The four families (§3):
   1. **Column sums** — individuals add to the totals row, in every column; the line score's R and H
      for the offense equal the batting totals for the same
   2. **Row identity** — `PA = AB + BB + HBP + SF + SH + CI`, per batter and again for the totals
-  3. **Cross-team** — the offense's H, R, BB and K equal what the opposing pitchers allowed, and the
+  3. **Cross-team** — the offense's H, R, BB and SO equal what the opposing pitchers allowed, and the
      outs the offense made equal the outs those pitchers recorded
   4. **Global identity** — `PA = Outs + R + LOB`
 

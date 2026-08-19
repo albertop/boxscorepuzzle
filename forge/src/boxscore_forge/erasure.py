@@ -24,6 +24,7 @@ throwing one away costs nothing and bending the rule costs everything.
 import random
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from typing import Final
 
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.constraints import (
@@ -50,12 +51,39 @@ class Puzzle:
     solution: Solution
 
 
+SCOREBOARD_DUPLICATES: Final = (
+    batting_total_cell("runs"),
+    batting_total_cell("hits"),
+    pitching_total_cell("runs"),
+    pitching_total_cell("hits"),
+)
+"""The four totals the line score already prints, verbatim.
+
+⚠️ **Erasing one of these does not make a puzzle harder; it makes it one cell longer.** The relation is
+real — `line_score.offense_hits = batting_totals.hits` is an equation the solver carries, in the
+`column_sum` family — but it has **two terms and one unknown**, so the player reads the number off the
+scoreboard two centimetres above and the solver records a deduction. A lookup counted as a deduction is
+a lookup counted as difficulty, and every difficulty number in this project would carry it.
+
+⚠️ **Excluded here rather than filtered downstream**, which is v03-P1-02's lesson: the erasable set is
+where the board says what may be taken away, and a second place that removes cells afterwards is a
+second definition that drifts. This sits beside the line score and the footnote totals for the same
+reason they do — the board gives them.
+
+It was found by rendering the phone board and reading it: the `H` total sat blank with `AWAY H 15`
+printed directly above it.
+"""
+
+
 def erasable(direction: Direction) -> list[str]:
     """The grid, and the footnote line's per-batter cells.
 
     The line score is the board's anchor and is given complete (§6), and so is the **footnote totals**
     row — the row identity needs those to close, and a puzzle missing a term the player cannot see is
     broken rather than hard.
+
+    ⚠️ **The four totals the line score prints are not here** — see `SCOREBOARD_DUPLICATES`. They are
+    given for the same reason the line score itself is: the board hands them over.
 
     ⚠️ **The per-batter footnote cells are unknowns, and that is a change to §6.** They were given
     because the identity needs the numbers, and the totals row supplies them: HBP, SF, SH and CI are
@@ -71,7 +99,7 @@ def erasable(direction: Direction) -> list[str]:
     cells += [pitching_cell(index, column) for index in range(shape.pitcher_count) for column in PITCHING_COLUMNS]
     cells += [pitching_total_cell(column) for column in PITCHING_COLUMNS]
     cells += [footnote_cell(index, column) for index in range(shape.batter_count) for column in FOOTNOTE_COLUMNS]
-    return sorted(cells)
+    return sorted(set(cells) - set(SCOREBOARD_DUPLICATES))
 
 
 Ordering = Callable[[Sequence[str], Direction, random.Random], list[str]]
