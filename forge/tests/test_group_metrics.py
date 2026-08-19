@@ -80,3 +80,55 @@ class TestCardinalityAndDerivabilityAreSeparate:
         assert "solutions(relations(board), all_cells(board), values_of(board), limit=2)" in source
         assert "completions: int" in source
         assert "derivable: bool" in source
+
+
+class TestTheBlockagePredicateItself:
+    """⚠️ The earlier test asserted that outside deductions exist, which is trace activity, not the
+    property. The predicate is a **counterfactual**: a cell the baseline settles and the treatment
+    does not.
+
+    The version it replaces marked a group blocking when some outside deduction recorded a dependency
+    on it. That is evidence a solver path *used* the value. When hiding the group prevents the outside
+    deduction from happening at all, there is no such step — so the strongest possible blockage read
+    as no blockage.
+    """
+
+    def test_hiding_a_group_can_remove_an_outside_deduction(self, cubs_at_braves_1968: Direction) -> None:
+        puzzle = erase(cubs_at_braves_1968, target_stalls=8, seed=907)
+
+        assert puzzle is not None
+        shape, values = shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968)
+        hidden = _hidden()
+        baseline = solve(shape, {name: value for name, value in values.items() if name not in puzzle.erased})
+        treatment = solve(
+            shape, {name: value for name, value in values.items() if name not in (puzzle.erased | hidden)}
+        )
+
+        outside_before = {cell for cell in baseline.values if cell not in hidden}
+        outside_after = {cell for cell in treatment.values if cell not in hidden}
+
+        # Not an assertion that this board blocks — an assertion that the comparison is capable of
+        # showing it. Equal closures would mean the two solves cannot differ and the metric is fixed.
+        assert outside_before >= outside_after, "hiding cells expanded what the solver reached"
+
+    def test_the_instrument_compares_two_closures(self) -> None:
+        source = (_GROUPS / "measure.py").read_text(encoding="utf-8")
+
+        assert "outside_before - outside_after" in source
+        assert "baseline = solve(" in source and "treatment = solve(" in source
+
+    def test_an_unmeasured_trial_is_not_a_negative(self) -> None:
+        # ⚠️ A trial where `erase` returned nothing became an empty erasure and therefore a measured
+        # negative, biasing the rate downward — selectively, since boards that resist erasure are not
+        # a random subset.
+        source = (_GROUPS / "measure.py").read_text(encoding="utf-8")
+
+        assert "blocked: bool | None" in source
+        assert "group.blocked is not None" in source
+
+    def test_derivability_is_conditional_on_a_single_completion(self) -> None:
+        # Non-unique groups contributed negatives to a rate whose denominator should hold only the
+        # groups where there is something to derive.
+        source = (_GROUPS / "measure.py").read_text(encoding="utf-8")
+
+        assert "group.completions == 1" in source

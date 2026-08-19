@@ -323,3 +323,41 @@ class TestConstructionAndParsingApplyTheSameRule:
 
         assert restored.slot_references == package.slot_references
         assert restored.written_as == 2
+
+
+class TestBothConstructionPathsRefuseTheSameThings:
+    """⚠️ The type check lived in the parser only, so the same malformed field produced a different
+    error depending on which supported path built it: `PackageError` through JSON, a bare `TypeError`
+    through the constructor, from the regex it was handed a non-string.
+
+    An internal producer or a migration would terminate with an implementation exception instead of a
+    validation diagnostic — and the two paths are both supported, so neither is the exception.
+    """
+
+    @pytest.mark.parametrize("bad", [1, None, object()])
+    def test_a_non_string_reference_is_a_package_error(self, board: Board, bad: object) -> None:
+        references = [str(index + 1) for index in range(len(board.batting))]
+        references[0] = bad  # type: ignore[call-overload]
+
+        with pytest.raises(PackageError, match="expected a string"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references))
+
+    def test_the_message_names_which_one(self, board: Board) -> None:
+        # Position matters when there are thirteen of them and one is wrong.
+        references = [str(index + 1) for index in range(len(board.batting))]
+        references[2] = 3  # type: ignore[call-overload]
+
+        with pytest.raises(PackageError, match="slot reference 2 is 3"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references))
+
+    def test_json_refuses_it_too(self, board: Board) -> None:
+        # The other path, so the two cannot drift into different contracts again.
+        document = Package(
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+        ).as_json()
+        document["slot_references"] = [1] * len(board.batting)
+
+        with pytest.raises(PackageError):
+            Package.from_json(document)

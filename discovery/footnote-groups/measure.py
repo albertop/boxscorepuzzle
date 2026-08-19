@@ -69,9 +69,25 @@ class Group:
     """Whether the restricted human solver reaches the values. Only meaningful when there is exactly
     one completion — otherwise there is nothing to reach."""
 
-    blocked: bool
-    """Whether the rest of an actually-erased board waited on the assignment. Measured against a real
-    puzzle, because a board with everything else given has nothing that could wait."""
+    blocked: bool | None
+    """Whether hiding the assignment **stops** outside progress. `None` when the trial could not be
+    measured because no erasure reached the target.
+
+    ⚠️ **Counterfactual, not observed dependency.** The first version marked a group blocking when some
+    deduction outside it recorded a dependency on it. That is evidence one solver path *used* the
+    value, not that the board had to wait: when hiding the group prevents an outside deduction
+    entirely, no such step exists and the metric said `False` — a false negative for the strongest
+    possible blockage. It compares two closures now, the same puzzle with the group available and with
+    it additionally hidden, and blockage is an outside cell the baseline reaches and the treatment
+    does not.
+
+    ⚠️ **And `None` is not `False`.** A trial where `erase` returned nothing used to become an empty
+    erasure and therefore a measured negative, which biases the rate downward — selectively, since
+    boards that resist erasure are not a random subset."""
+
+    used: bool
+    """Whether any outside deduction leaned on the group. Kept as its own reading rather than folded
+    into blockage: using a value and needing it are different claims."""
 
 
 def _hidden_cells(indexes: list[int]) -> set[str]:
@@ -106,15 +122,28 @@ def groups_in(loaded: Loaded) -> list[Group]:
         solution = solve(shape, {name: value for name, value in values.items() if name not in hidden})
         derivable = solution.is_complete and all(solution.values.get(cell) == values[cell] for cell in hidden)
 
-        # Axis three, on the erased board: does anything else wait on the assignment?
-        blocked = False
-        if erased:
-            without = {name: value for name, value in values.items() if name not in (erased | hidden)}
-            trace = solve(shape, without)
-            blocked = any(hidden & step.depends_on for step in trace.deductions if step.cell not in hidden)
+        # Axis three: the counterfactual. What the board reaches with the assignment available,
+        # against what it reaches without it. A cell the baseline settles and the treatment does not
+        # is progress the group was gating.
+        blocked: bool | None = None
+        used = False
+        if puzzle is not None:
+            baseline = solve(shape, {name: value for name, value in values.items() if name not in erased})
+            treatment = solve(shape, {name: value for name, value in values.items() if name not in (erased | hidden)})
+            outside_before = {cell for cell in baseline.values if cell not in hidden}
+            outside_after = {cell for cell in treatment.values if cell not in hidden}
+            blocked = bool(outside_before - outside_after)
+            used = any(hidden & step.depends_on for step in treatment.deductions if step.cell not in hidden)
 
         found.append(
-            Group(rows=len(indexes), terms=terms, completions=completions, derivable=derivable, blocked=blocked)
+            Group(
+                rows=len(indexes),
+                terms=terms,
+                completions=completions,
+                derivable=derivable,
+                blocked=blocked,
+                used=used,
+            )
         )
     return found
 
@@ -129,6 +158,15 @@ def _cohort(cells: dict, rows: int, terms: object) -> list[Group]:
     return cells.get((rows, terms), [])
 
 
+def _eligible(title: str, group: Group) -> bool:
+    """Which groups belong in a question's denominator."""
+    if title.startswith("DERIVABLE"):
+        return group.completions == 1
+    if title.startswith("HIDING"):
+        return group.blocked is not None
+    return True
+
+
 def report(groups: list[Group], boards: int) -> None:
     cells: dict[tuple[int, int], list[Group]] = defaultdict(list)
     for group in groups:
@@ -139,10 +177,13 @@ def report(groups: list[Group], boards: int) -> None:
     for title, note, measure in (
         ("EXACTLY ONE COMPLETION", "the board's own answer: is the assignment ambiguous at all",
          lambda g: g.completions == 1),
-        ("DERIVABLE BY PROPAGATION AND BOUNDING", "of those, whether a person's techniques reach it",
+        ("DERIVABLE, AMONG THOSE WITH ONE COMPLETION",
+         "conditional: the denominator is the unique groups, not every group",
          lambda g: g.derivable),
-        ("THE REST OF AN ERASED BOARD WAITED ON IT", "measured on a real puzzle, where other unknowns exist",
+        ("HIDING IT STOPS OUTSIDE PROGRESS", "counterfactual, and unmeasured trials are excluded",
          lambda g: g.blocked),
+        ("SOME OUTSIDE DEDUCTION USED IT", "a weaker claim than blocking, kept separate on purpose",
+         lambda g: g.used),
     ):
         print("")
         print(f"=== {title} ===")
@@ -151,8 +192,11 @@ def report(groups: list[Group], boards: int) -> None:
         for rows in rows_seen:
             line = f"{rows:>5}"
             for terms in COLUMNS:
-                here = _cohort(cells, rows, terms)
-                line += f"{f'{sum(map(measure, here)) / len(here):.0%} [{len(here)}]' if here else '-':>16}"
+                # ⚠️ Each question keeps only the population it is about: derivability is conditional
+                # on a single completion, and blockage excludes trials that could not be measured.
+                # The old table used every group as the denominator for all three.
+                here = [g for g in _cohort(cells, rows, terms) if _eligible(title, g)]
+                line += f"{f'{sum(1 for g in here if measure(g)) / len(here):.0%} [{len(here)}]' if here else '-':>16}"
             print(line)
 
     print("")

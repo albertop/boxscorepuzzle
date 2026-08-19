@@ -484,9 +484,16 @@ def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
     if len(values) != rows:
         message = f"{len(values)} slot references for {rows} batting rows"
         raise PackageError(message)
-    for value in values:
+    for index, value in enumerate(values):
         # The type says these are strings and `from_json` hands over whatever the file held, so the
         # runtime check lives at the parse boundary and this one asks only about the shape.
+        # ⚠️ The type check lived in the parser only, so a direct `Package(...)` carrying `1` or
+        # `None` reached the regex and raised a bare `TypeError`: the same malformed field with a
+        # different error contract depending on which supported path built it, and neither path is
+        # the exception.
+        if not isinstance(value, str):
+            message = f"slot reference {index} is {value!r}, expected a string"
+            raise PackageError(message)
         if not SLOT_REFERENCE.fullmatch(value):
             message = f"slot reference {value!r} is not a slot with an optional letter"
             raise PackageError(message)
@@ -498,7 +505,7 @@ def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
 
 def _slot_references(raw: object, rows: int) -> tuple[str, ...]:
     """One reference per batting row. Required: schema 1 is gone and there is no version without it."""
-    if not isinstance(raw, list) or not all(isinstance(value, str) for value in raw):
+    if not isinstance(raw, list):
         message = f"slot_references is {raw!r}, expected {rows} strings, one per batting row"
         raise PackageError(message)
     _check_slot_references(tuple(raw), rows)

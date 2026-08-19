@@ -2,13 +2,13 @@
 
 ## Where everything stands
 
-**Nine reviews, 50 findings, none rejected. One is open and it is not waiting on effort.**
+**Ten reviews, 54 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; the drawing waits on the group run, and **the instrument that answers it can finally observe the question** |
 
-**v09 is closed entirely.** Its three findings were all in code written the same day, and one of them
+**v10 is closed entirely**, and so is v09. Its three findings were all in code written the same day, and one of them
 had already produced a wrong statement to the operator before it was caught.
 
 ## What is left
@@ -535,6 +535,47 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
   unordered `TOP 1` subqueries that were not bound to it. The duplicated `EXISTS` is **removed rather
   than kept as a belt** — two places encoding one predicate is the defect this file spent the day
   closing.
+
+## v10 — verified, none rejected. **All four closed.**
+
+| Finding | State | What it was |
+|---|---|---|
+| P2-01 blockage observed a dependency instead of testing one | **closed** | the strongest blockage read as none |
+| P2-02 an unmeasured trial counted as a negative | **closed** | `erase` returning nothing became an empty erasure |
+| P2-03 a conditional rate with an unconditional denominator | **closed** | every group counted against derivability |
+| P3-01 the two construction paths had different error contracts | **closed** | a non-string reference raised `TypeError` |
+
+### v10-P2-01 — using a value and needing it are different claims
+
+Blockage marked a group when some outside deduction *recorded a dependency* on it. That is evidence one
+solver path used the value. **When hiding the group prevents the outside deduction from happening at
+all, no such step exists** — so the strongest possible blockage read as no blockage.
+
+It is a counterfactual now: the same erased puzzle solved with the assignment available and with it
+additionally hidden, and blockage is an outside cell the baseline reaches and the treatment does not.
+*Used* survives as its own reading, because the weaker claim is still worth having and folding it into
+the stronger one is how the two got confused.
+
+### v10-P2-02 and P2-03 — the denominators
+
+An `erase` that reached nothing became an empty erasure and therefore a measured negative, biasing the
+rate downward — **selectively**, since boards that resist erasure are not a random subset. `blocked` is
+three-valued now and unmeasured trials are excluded and counted in a coverage line.
+
+And derivability is conditional on there being one completion. Ambiguous groups were contributing
+negatives to a rate whose denominator should hold only the groups where there is something to derive,
+which conflates *no unique assignment* with *a unique assignment the solver cannot reach* — again, two
+findings with different fixes.
+
+### v10-P3-01 — the same field, two error contracts
+
+The element type check lived in the parser, so `Package(slot_references=(1,))` handed a non-string to
+the regex and raised a bare `TypeError`. Both paths are supported, so neither is the exception. Moved
+into the shared helper, with the offending index in the message.
+
+⚠️ **And the first attempt at that fix silently did nothing** — a `str.replace` whose pattern did not
+match, without an assertion on the count. Caught by the tests, which is the second line of defence and
+not the first.
 
 ## v09 — verified, none rejected
 
