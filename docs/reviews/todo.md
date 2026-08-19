@@ -781,6 +781,26 @@ decision made on a label's formatting, with its own can-it-fire test using the e
   four families; at a mid target the same measure opens into five combinations. Second metric to teach
   it, which is what makes it general rather than a quirk of difficulty.
 
+### The fifty-board pack is not the pack that is wanted
+
+It aborted twice today, and the second abort is the useful one: **0 uncertified boards where it wanted
+about 17.** The diagnosis is not that layer 3b became trivial.
+
+`TARGETS = (5, 7, 9, 11)` are **chain** rungs, and a chain-11 board carries about twenty-five blanks
+where the observed stall maximum is twenty-one stalls at thirty-five. The gap was already measured —
+**91% certified at chain 11 and 71% at chain 13** — so the whole pack sits below where 3b starts
+failing. It is not broken; it is measuring the easy half of the range.
+
+**So it is not migrated, it is replaced.** The pack that is wanted is the stall ladder — **19, 16, 13,
+9 and 6** — which does not exist yet.
+
+⚠️ **And the one-third uncertified quota stops making sense on a ladder.** With fixed rungs the
+uncertified share is a **measured property of each rung** rather than something the pack imposes: the
+19 rung carries boards 3b will not certify — the five at the top demonstrated it, four of five
+uncertified — and the 6 rung will be almost entirely certified. The gap appears distributed by rung,
+which is better evidence than a quota invented in advance. `audit()` must assert the rungs and the
+composition, and **report** the uncertified share per rung rather than requiring a number.
+
 ## Noticed in passing
 
 ### One rule, two sources: the label is the position of *entry*
