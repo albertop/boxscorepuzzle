@@ -171,36 +171,45 @@ class TestCommittingTheBatch:
         assert '{MANIFEST}.pending"' not in source
 
 
-class TestTheWriterWillNotSignWithTheRepositoryKeyByAccident:
-    """⚠️ **It used to fall back silently.** No `BOXSCORE_SIGNING_SECRET` and the writer signed with a
-    key that lives in this repository, wrote into `serve/data/puzzles`, and passed the same
-    certification path as a real batch. A CI job or a developer running it without the variable
-    produced packages indistinguishable from forge output, and nothing executable enforced the comment
-    saying they were not production. Anyone holding the repository could forge one.
+class TestTheWriterWillNotSignWithAKeyAnybodyHas:
+    """⚠️ **The repository key and the fixtures mode are gone, not guarded.**
 
-    A missing secret is an error now, and the repository key is reachable only through a flag that
-    announces itself.
+    Both existed because an HMAC key is symmetric: a convenient one in the tree let the script run, and
+    anything it signed was forgeable by whoever held the tree — so the mode had to be made loud instead
+    of removed. With a key pair the problem dissolves. A *generated* key signs a throwaway batch
+    perfectly well and is worth nothing to an attacker, because the public half that would verify it
+    goes nowhere, and `serve` holds a different one and **refuses the batch itself**.
+
+    Removing code beats hardening it, and these assert that the code is gone rather than behaving.
     """
 
     def _source(self) -> str:
         return (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
 
-    def test_a_missing_secret_is_an_error_rather_than_a_quieter_mode(self) -> None:
+    def test_no_key_material_lives_in_the_script(self) -> None:
         source = self._source()
 
-        assert "there is no fallback" in source
+        assert "FIXTURE_SECRET" not in source
+        assert "--fixtures" not in source
+        assert "BOXSCORE_SIGNING_SECRET" not in source
+
+    def test_a_missing_key_is_an_error_rather_than_a_quieter_mode(self) -> None:
+        source = self._source()
+
         assert "raise SystemExit(message)" in source
+        assert "BOXSCORE_SIGNING_KEY" in source
 
-    def test_the_repository_key_is_only_reachable_behind_the_flag(self) -> None:
-        # The check that would have caught the original: the fixture key must not be assigned on any
-        # path that does not first test for the flag.
+    def test_the_throwaway_key_is_generated_and_never_stored(self) -> None:
+        # The distinction that makes --ephemeral safe: the key exists for one run. A constant here
+        # would be the old defect wearing the new name.
         source = self._source()
-        assignment = source.index("secret = FIXTURE_SECRET")
-        guard = source.index('fixtures = "--fixtures" in sys.argv')
+        generated = source.index("Ed25519PrivateKey.generate()")
+        guard = source.index('ephemeral = "--ephemeral" in sys.argv')
 
-        assert guard < assignment
-        assert "if not fixtures:" in source[guard:assignment]
+        assert guard < generated
+        assert "EPHEMERAL KEY" in source
 
-    def test_fixtures_mode_says_so_where_a_person_will_see_it(self) -> None:
-        # A trust profile nobody is told about is the same defect one step quieter.
-        assert "FIXTURES MODE" in self._source()
+    def test_it_says_serve_will_refuse_the_batch(self) -> None:
+        # A mode that announces itself is not the same as one that cannot be mistaken for the real
+        # thing. This says which it is.
+        assert "refuse" in self._source()

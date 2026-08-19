@@ -5,15 +5,21 @@ without them a client cannot resolve `SH: 9b` to a row, so the package **means**
 rather than something more. That is a new version.
 
 ⚠️ **Cutting it now is the point.** Nothing is published, `serve` does not exist and there is nothing
-to migrate — a version scheme first exercised under pressure is one that gets skipped. **Both versions
-parse**; `READABLE` lists them and the reader dispatches on the field.
+to migrate — a version scheme first exercised under pressure is one that gets skipped.
+
+⚠️ **Version 1 is not readable, and that is deliberate.** It was, briefly, and the promise was false:
+a version 1 signature is 64 hex characters of HMAC and the parser only accepts the 128 of Ed25519, so
+an authentic v1 file failed at the boundary. The choice was to write a legacy HMAC verifier nobody
+would ever run, or to drop a compatibility promise **no consumer needs** — nothing has been published,
+`serve` does not exist, and the six reference packages are regenerated. Keeping it would be a mechanism
+preserved past its problem, which is a pattern this project has spent a week removing.
 
 **The version follows the payload.** A package carrying slot references *is* version 2 and one without
 them *is* version 1, so the two cannot disagree and no caller stamps a number on a document whose
 content says otherwise.
 
-Everything below is version 1's table with one row added, and version 1 stays valid as written in
-`package-format-v1.md`.
+Everything below is version 1's table with one row added. **Version 1 is no longer readable** — see
+below.
 
 The only contract between the forge and `serve`. They are separate systems with separate deployment
 cycles (§33), and this file is what `serve` is built against — **not** the forge's source.
@@ -39,7 +45,7 @@ really does, so the two cannot drift.
 | `puzzle_id` | string | no | kept | Opaque, 16 hex characters. Derived from the game and the batting team, **never** the Retrosheet id, and it encodes neither team nor date (§7, §21). |
 | `puzzle` | board | no | kept | What the player is handed. `null` in a grid cell is a blank to fill. |
 | `solution` | board | yes | **kept** | The completed board. Ships deliberately — see below. |
-| `labels` | list of strings | no | kept | One per batting row: the position, suffixed by order of appearance where it repeats (`LF-1`, `LF-2`). The pitcher who batted is `P-1`, never `SP` (§5, §7). |
+| `labels` | list of strings | no | kept | One per batting row: the **bare** fielding position the man entered at — `CF`, `SS`, `P`. **Never suffixed.** Two rows may read `CF`; `slot_references` is what identifies a row, and a suffix would number by position while the indentation groups by slot, which are different partitions (§7). |
 | `pitcher_labels` | list of strings | no | kept | `SP`, then `RP-1` onwards in order of appearance from the substitution record. Never a bare `P`, which the batting section already uses. |
 | `slot_references` | list of strings | **no** | kept | One per batting row, in row order: `9` where a lineup slot holds one row, `9a`/`9b` where it is shared. **The string the board draws and the footnote line prints** — the client never derives it. Pitching rows carry none: those are the opposing team's pitchers and have no place in this batting order. |
 | `reveal` | object | yes | kept | The answer to the mystery: names, teams, date, card (§7, §29). |

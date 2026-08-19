@@ -335,7 +335,13 @@ def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
 
     # Givens that already disagree are caught here rather than later by bounding, so the complaint
     # names the identity that broke instead of whichever cell happened to run out of room first.
-    _reject_contradictions(system, values)
+    # ⚠️ **Every relation, including the global one.** Holding `PA = Outs + R + LOB` back is about
+    # which move a *player* would find next; it has nothing to do with whether the board is
+    # consistent. Validating with the same restricted system let a complete board with only LOB wrong
+    # return a finished solution: the global equation has no unknowns, so it offers no move, and
+    # nothing ever checked that it balanced. The reason was sound for selection and travelled to
+    # validation, where it is not.
+    _reject_contradictions(system + global_equations, values)
 
     while True:
         deduction = _next_step(shape, system, global_equations, values, depths)
@@ -345,7 +351,13 @@ def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
         depths[deduction.cell] = deduction.depth
         deductions.append(deduction)
 
-    _reject_contradictions(system, values)
+    # ⚠️ **Every relation, including the global one.** Holding `PA = Outs + R + LOB` back is about
+    # which move a *player* would find next; it has nothing to do with whether the board is
+    # consistent. Validating with the same restricted system let a complete board with only LOB wrong
+    # return a finished solution: the global equation has no unknowns, so it offers no move, and
+    # nothing ever checked that it balanced. The reason was sound for selection and travelled to
+    # validation, where it is not.
+    _reject_contradictions(system + global_equations, values)
     return Solution(
         values=values,
         deductions=tuple(deductions),

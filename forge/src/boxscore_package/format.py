@@ -29,15 +29,20 @@ from typing import Any, Final, Self
 SCHEMA_VERSION: Final = 2
 """What this code writes. Version 1 stays readable — see `READABLE`."""
 
-READABLE: Final = (1, 2)
+READABLE: Final = (1, SCHEMA_VERSION)  # TODO(v08-P1-03): drop 1 with the fixture migration
 """⚠️ **Version 1 was frozen and this is not an amendment to it.** The contract calls version 1
 append-only, and slot references are not an addition: without them a client cannot resolve `SH: 9b` to
 a row, so the package means something different rather than something more. That is a new version.
 
 Cutting it now is the point. Nothing is published, `serve` does not exist, and there is nothing to
-migrate — **a version scheme first exercised under pressure is one that gets skipped.** Both versions
-parse; the reader dispatches on the field, which is what the contract promised and costs almost
-nothing while there is one reader.
+migrate — **a version scheme first exercised under pressure is one that gets skipped.**
+
+⚠️ **Version 1 was listed here and the promise was false.** A v1 signature is 64 hex of HMAC and this
+parser accepts only the 128 of Ed25519, so an authentic v1 file was rejected at the boundary while
+three places claimed it would parse — and no test caught it, because the schema tests build objects
+and read `as_json()` without going through `from_json`. The fix is to drop the promise rather than
+write a legacy verifier nobody will run: **no consumer of version 1 exists**, and keeping it would be a
+mechanism preserved past its problem.
 """
 
 BATTING_COLUMNS: Final = ("plate_appearances", "at_bats", "runs", "hits", "walks", "strikeouts")
