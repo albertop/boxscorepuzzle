@@ -37,7 +37,14 @@
    because they have full pages; this has 375 pixels, and two families on that width compete. The
    difference comes from weight and colour. */
 :root {
-  --face: "Roboto Condensed";
+  /* ⚠️ **Plex for the board, Roboto for two glyphs.** Plex gives `1` a foot serif and this board renders
+     `1` constantly; Roboto's is a bare stem. Plex's `⅓` and `⅔` are cramped to illegibility at keypad
+     size and Roboto's are clean. Those two characters are borrowed by `unicode-range`, scoped to
+     U+2153-2154, rather than letting two keys decide the whole board.
+
+     This is not the *two families* §6's reasoning rules out — that is about a display face competing
+     with a body face for 375 pixels, and a fallback that can set no word competes with nothing. */
+  --face: "IBM Plex Sans Condensed";
   --cell: 44px;
   --slot-column: 24px;
   --label-column: 66px;
@@ -148,7 +155,21 @@ html, body {
   overscroll-behavior: none;
 }
 
-#app { display: flex; flex-direction: column; height: 100dvh; }
+/* ⚠️ **The board never gets wider than the phone it was measured for.**
+   Every number in this file comes from 375px: six data columns at 44.8px, a 66px label, a 24px slot.
+   With `width: 100%` and no cap, a wider window stretched those columns to whatever it liked and the
+   board stopped being the thing that was measured — §6 says the board is identical on all screens and
+   that desktop gets more whitespace, not more content.
+
+   This is the phone layer. Tablet and desktop are different layers with their own layouts; until they
+   exist, a wide window shows the phone board centred, which is honest about what is built. */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  max-width: 375px;
+  margin: 0 auto;
+}
 
 /* ---- line score: the anchor, read-only, never erased ------------------------------------------ */
 
@@ -383,6 +404,17 @@ td.label.substitute { padding-left: 14px; }
 }
 .keypad button:active { background: var(--selected); }
 .keypad button.wide { grid-column: span 2; font-size: 14px; }
-/* Larger than the digits: Plex draws the fractions tightly and the numerator closes up at 16px. */
-.keypad button.thirds { font-size: 22px; }
+/* ⚠️ **The fraction is built from Plex's own digits, not from a `⅓` glyph.**
+   Plex draws `U+2153` with the numerator crushed onto the slash — unreadable at key size. Borrowing the
+   two glyphs from Roboto by `unicode-range` was tried and removed: the subset Google returns for a
+   three-character request **rendered nothing**, and the clean fractions in that comparison turned out to
+   be the operating system's fallback, not Roboto. Measured, after the widths had already fooled me once.
+
+   Composing needs no glyph, so it cannot fall back, and it is identical on every device — which is the
+   whole reason the faces are self-hosted (§23). */
+.keypad button.thirds { font-size: 15px; }
+.keypad .frac { display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+.keypad .frac .num { font-size: 15px; align-self: flex-start; }
+.keypad .frac .bar { font-size: 20px; margin: 0 1px; }
+.keypad .frac .den { font-size: 15px; align-self: flex-end; }
 .keypad button:disabled { opacity: .35; }

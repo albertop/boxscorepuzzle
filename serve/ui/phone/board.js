@@ -242,8 +242,13 @@ export function renderKeypad(onKey) {
     key.addEventListener("click", () => onKey({ digit }));
     pad.append(key);
   }
-  for (const [label, thirds] of [[text("keypad.third"), 1], [text("keypad.two_thirds"), 2]]) {
-    const key = el("button", "thirds", label);
+  for (const thirds of [1, 2]) {
+    // ⚠️ Composed from digits rather than printed as `⅓`: see the note in board.css. The catalogue
+    // still owns the pieces, so a language that writes a third differently changes them there.
+    const key = el("button", "thirds");
+    const frac = el("span", "frac");
+    frac.append(el("span", "num", String(thirds)), el("span", "bar", text("keypad.fraction_bar")), el("span", "den", text("keypad.fraction_denominator")));
+    key.append(frac);
     key.addEventListener("click", () => onKey({ thirds }));
     pad.append(key);
   }

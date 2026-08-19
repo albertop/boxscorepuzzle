@@ -59,8 +59,11 @@ const en = {
   "side.away": "AWAY",
 
   "keypad.clear": "Clear",
-  "keypad.third": "⅓",
-  "keypad.two_thirds": "⅔",
+  // The fraction is composed from these rather than printed as `⅓`, because the face draws that glyph
+  // badly at key size and a borrowed one rendered nothing. A language that writes thirds differently
+  // changes them here.
+  "keypad.fraction_bar": "⁄",
+  "keypad.fraction_denominator": "3",
 
   "package.unreadable": "This puzzle could not be read.",
 };

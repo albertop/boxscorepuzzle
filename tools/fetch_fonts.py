@@ -27,13 +27,15 @@ FAMILIES = {
     # turns the `+` into `%2B`, so the request asks for a family literally called "Roboto+Condensed"
     # and Google answers 400. One encoding, in one place.
     #
-    # ⚠️ **Roboto Condensed, and the round trip is worth recording.** IBM Plex was the other
-    # candidate and it draws the better `1` — a foot serif, against Roboto's bare stem. It shipped
-    # briefly, because the instruction said a bare `1` was grounds to take the other candidate and I
-    # read a conditional as binding. **The operator prefers Roboto, having seen both on the board**,
-    # and that is the judgement the brief says a real device makes. The tradeoff stays on the record:
-    # Roboto's `1` has no foot, and this board renders `1` constantly.
-    "roboto-condensed": "Roboto Condensed",
+    # ⚠️ **IBM Plex Sans Condensed.** It gives `1` a foot serif, which Roboto Condensed does not, and
+    # this board renders `1` constantly.
+    #
+    # Its `⅓` and `⅔` are cramped to illegibility at key size. Borrowing those two glyphs from Roboto
+    # by `unicode-range` was tried and **removed**: the subset Google returns for a three-character
+    # request rendered nothing at all, and what looked like clean Roboto fractions in the comparison
+    # was the operating system's fallback. The keypad composes its fractions from Plex's own digits
+    # instead — see `board.css` — which needs no glyph and is identical on every device.
+    "plex-condensed": "IBM Plex Sans Condensed",
 }
 WEIGHTS = (400, 600, 700)
 
