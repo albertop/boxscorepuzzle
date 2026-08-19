@@ -412,23 +412,24 @@ that failed to arrive.
 with the board's content. A glyph specimen is not the board, and choosing from one imported a
 consideration the board does not have while burying the one it does.
 
-## Open — waiting on the operator
+## Still open, and what would close each
 
-**The section header's ground.** Three are in `board.css`, switchable by `data-header` on the root, which
-is a parameter of the real renderer rather than a copy of it:
+**Nothing here is waiting on effort.** Each needs a judgement or a piece that does not exist yet.
 
-| | | |
-|---|---|---|
-| default | `rgb(22, 36, 31)` | very dark green, near black |
-| `grey` | `rgb(34, 38, 43)` | neutral dark |
-| `kin` | `rgb(31, 54, 46)` | dark, and green enough to read as green |
+**The three empty states, on a real device.** Plain, cream on the active row or column, amber on the
+active cell. That is correct and close to the limit of what separates at a glance, and device mode
+cannot answer it — the question is about a thumb's distance from a screen, not about pixels. **Check
+before adding a fourth.**
 
-⚠️ **Rendering the first two answered a different question than the one asked.** At near-black the hue
-does not read: side by side on the board those two are indistinguishable, so *take it from the
-scoreboard's family* bought nothing — the first option is a neutral that happens to be spelled in green.
-The third is the one that actually ties the header to the scoreboard. **The losers get deleted once one
-is chosen**, because three live options in a stylesheet is three things a future change has to keep
-working.
+**Whether the share grid is per-cell**, and therefore whether the engine must emit a derived
+first-outcome vector. Until that design exists the engine emits the C7 record and nothing else; adding
+the vector later is additive, taking a leaked value back is not. See §7.
+
+**⚠️ The six reference packages predate the scoreboard-duplicate exclusion** and still carry an erased
+`H` total. Regenerating needs the database.
+
+**Tablet and desktop do not exist.** Phone first was the decision and the other two are additive from
+it. Neither should start before the phone has been used on a phone.
 
 ## Decisions taken
 
@@ -458,6 +459,13 @@ one section and `HOME PITCHING` over the other, because the board is one team's 
 other's staff and a player could not tell whose batting order they were reconstructing. This forced
 schema 3: the client cannot infer which side batted last and must not guess. The line score also swaps
 its rows so the visiting side prints on top, which is where a line score puts the team that bats first.
+
+**2026-08-19 — the section header's ground is the dark green `rgb(31, 54, 46)`.** Chosen by rendering
+three candidates as a parameter of the real renderer, and the two losers were **deleted** rather than
+left live — three options in a stylesheet is three things every future change has to keep working. The
+finding worth keeping: the first two candidates were a near-black green and a near-black grey, and *at
+near-black the hue does not read*. They were indistinguishable in situ, so "take it from the
+scoreboard's family" bought nothing until the green was allowed to be green.
 
 **2026-08-19 — the solution ships in the package and stays visible.** Hiding it means a network
 dependency in the play path, which §23 forbids, and it buys nothing §9 has not already accepted.
