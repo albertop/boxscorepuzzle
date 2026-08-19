@@ -493,6 +493,14 @@ in the same session.
 | P2-03 the comparator can null over a changed cohort | real | open | intersection compared, duplicates collapsed silently |
 | P2-04 `families_used` and `family_counts` contradict each other | real | open | `family_counts` reads only `from_identity` |
 
+### ⛔ The ceiling pack built tonight is unusable
+
+Not because of the search — nine paths, a 21 lower bound and a 27% convergence figure all stand. Because
+of **v05-P1-02**: its printed footnote line comes from the complete source while its grid draws the
+erased puzzle, so the page is easier than the board its key describes. **The 21 is a valid number from
+an invalid artifact.** Nothing about perceived difficulty, tedium or layer 3b can be read from it, and
+no pack is printed until P1-02 is closed.
+
 ### v04-P2-02 — closed
 
 Every ordering against three seeds, nine paths per board, keeping the best per board, and the prose

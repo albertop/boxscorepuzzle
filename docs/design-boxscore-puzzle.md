@@ -721,6 +721,8 @@ iPhone SE: ~667px, minus browser chrome, minus the custom numeric keypad (250–
 - Pitching for the **opposing team**: rows × IP, H, R, ER, BB, K + totals
 - **Footnote line: LOB, HBP, SF, SH** — given, read-only, never erased *(decided; see below)*
 
+⚠️ **Superseded: the per-batter footnote cells ARE erasable.** Measured twice, the second time paired per board on the canonical list: with the line given, the median board reaches **5** stalls and only half the pool reaches five at all; with the per-batter cells open it is **16**, and **47 of 47 boards are higher**. The footnote line is not a source of marginal difficulty — it is what makes a pool exist above five stalls. The **totals row and LOB stay given** (§6): they are what closes the row identity.
+
 **What is actually decided:** six data columns maximum (derived from the width budget above), the
 column sets, one team's offense against the other team's pitching, the line score as anchor, and
 the footnote line.
