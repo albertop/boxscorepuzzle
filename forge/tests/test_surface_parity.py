@@ -42,47 +42,77 @@ def _erased_board(direction: Direction) -> tuple[Board, Board, frozenset[str]]:
     return to_board(direction, puzzle.erased), to_board(direction, None), puzzle.erased
 
 
+def _parsed(line: str) -> dict[str, set[str]]:
+    """`SF: 3   SH: 2, 9b   LOB: 9` into `{"SF": {"3"}, "SH": {"2", "9b"}}`.
+
+    ⚠️ **The assertions here used to be substring tests**, which rejected `LABEL: reference` and passed
+    `LABEL: other, reference` — a leak in any position but the first survived. And the positive check
+    asserted only that a label appeared, so any reference under it satisfied it. Parsing into an exact
+    mapping is what makes both directions checkable.
+    """
+    parsed: dict[str, set[str]] = {}
+    for part in line.split("   "):
+        if ":" not in part:
+            continue
+        label, _, rest = part.partition(":")
+        if label.strip() == "LOB":
+            continue
+        parsed[label.strip()] = {token.strip() for token in rest.split(",") if token.strip()}
+    return parsed
+
+
+def _expected(board: Board, slots: "list[int]", pack: object) -> dict[str, set[str]]:
+    """What the line must say, derived from the puzzle rather than from the line."""
+    references = pack.slot_references(slots)
+    wanted: dict[str, set[str]] = {}
+    for column, name in enumerate(FOOTNOTE_COLUMNS):
+        label = dict(pack.FOOTNOTE_LABELS)[name]
+        carriers = {
+            references[index] if value else "?"
+            for index, row in enumerate(board.footnotes)
+            for c, value in enumerate(row)
+            if c == column and (value is None or value)
+        }
+        if carriers:
+            wanted[label] = carriers
+    return wanted
+
+
 class TestTheFootnoteLineShowsTheErasedBoard:
-    def test_an_erased_footnote_is_not_printed_and_leaves_a_placeholder(self, cubs_at_braves_1968: Direction) -> None:
+    def test_the_line_says_exactly_what_the_puzzle_says(self, cubs_at_braves_1968: Direction) -> None:
         pack = _pack()
         board, source, erased = _erased_board(cubs_at_braves_1968)
         slots = list(range(1, len(board.batting) + 1))
-        erased_footnotes = [cell for cell in erased if cell.startswith("footnotes[")]
-        # Non-vacuous: the fixture has to have lost footnote cells for this to test anything.
-        assert erased_footnotes
+        # Non-vacuous: footnote cells have to have been erased for this to test anything.
+        assert [cell for cell in erased if cell.startswith("footnotes[")]
 
-        line = pack.footnote_line(board, slots)
-        complete = pack.footnote_line(source, slots)
+        assert _parsed(pack.footnote_line(board, slots)) == _expected(board, slots, pack)
 
-        assert line != complete, "the erased board printed the same footnote line as the source"
+    def test_no_erased_carrier_leaks_in_any_position(self, cubs_at_braves_1968: Direction) -> None:
+        # The case the substring check passed: a leaked reference after another carrier.
+        pack = _pack()
+        board, source, _ = _erased_board(cubs_at_braves_1968)
+        slots = list(range(1, len(board.batting) + 1))
+        references = pack.slot_references(slots)
+
+        printed = _parsed(pack.footnote_line(board, slots))
+
         for index, row in enumerate(board.footnotes):
             for column, value in enumerate(row):
                 if value is None and source.footnotes[index][column]:
-                    reference = pack.slot_references(slots)[index]
                     label = dict(pack.FOOTNOTE_LABELS)[FOOTNOTE_COLUMNS[column]]
-                    assert f"{label}: {reference}" not in line, f"{label} for row {index} was handed back"
-        assert "?" in line
+                    assert references[index] not in printed.get(label, set())
 
-    def test_a_given_footnote_is_still_printed(self, cubs_at_braves_1968: Direction) -> None:
-        # The other direction. A line that printed nothing would pass the test above.
+    def test_the_complete_board_says_something_different(self, cubs_at_braves_1968: Direction) -> None:
+        # The can-it-fire case: the defect itself is the line built from the source.
         pack = _pack()
-        board, _, _ = _erased_board(cubs_at_braves_1968)
+        board, source, _ = _erased_board(cubs_at_braves_1968)
         slots = list(range(1, len(board.batting) + 1))
 
-        line = pack.footnote_line(board, slots)
+        assert _parsed(pack.footnote_line(source, slots)) != _parsed(pack.footnote_line(board, slots))
 
-        carried = [
-            (index, column)
-            for index, row in enumerate(board.footnotes)
-            for column, value in enumerate(row)
-            if value
-        ]
-        for index, column in carried:
-            label = dict(pack.FOOTNOTE_LABELS)[FOOTNOTE_COLUMNS[column]]
-            assert label in line, f"{label} was carried on row {index} and is not on the page"
-
-    def test_left_on_base_and_the_totals_stay_visible(self, cubs_at_braves_1968: Direction) -> None:
-        # §6: the footnote *totals* row and LOB are given, and they are what close the row identity.
+    def test_left_on_base_stays_visible(self, cubs_at_braves_1968: Direction) -> None:
+        # §6: the footnote totals row and LOB are given, and they close the row identity.
         pack = _pack()
         board, _, _ = _erased_board(cubs_at_braves_1968)
 
@@ -117,6 +147,18 @@ class TestTheGridShowsTheErasedBoard:
             for column, v in enumerate(row)
             if v is None
         ]
+        # ⚠️ The docstring claimed every erased cell and the test read only the batting rows. The
+        # pitching section is erasable too, and an erased value revealed there is the same defect.
+        # header, section, the batting rows, the batting totals, the pitching section, its header.
+        pitching_first = 2 + len(board.batting) + 3
+        pitching_blanks = [
+            (index, column)
+            for index, row in enumerate(board.pitching)
+            for column, v in enumerate(row)
+            if v is None
+        ]
+        for index, column in pitching_blanks:
+            assert drawn[pitching_first + index][2 + column] == "", f"pitching[{index}][{column}] drew a value"
 
         assert blanks, "nothing was erased in the batting grid; the test would pass vacuously"
         # The batting rows start after the column header and the section band, and carry the slot

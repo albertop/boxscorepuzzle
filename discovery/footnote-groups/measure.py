@@ -22,7 +22,6 @@ how often it must be **resolved before the rest proceeds**, and **which techniqu
 Read-only against DGL. Run from `forge/`.
 """
 
-import statistics
 import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
@@ -82,43 +81,68 @@ def groups_in(loaded: Loaded) -> list[Group]:
     return found
 
 
+_COLUMNS = (0, 1, 2, 3, "4+")
+"""Exact term counts, and one honest tail bucket rather than a fourth column pretending to be four."""
+
+
+def _label(terms: object) -> str:
+    return f"{terms} terms" if terms != 1 else "1 term"
+
+
+def _header() -> str:
+    return f"{'rows':>5}" + "".join(f"{_label(terms):>16}" for terms in _COLUMNS)
+
+
+def _cohort(cells: dict, rows: int, terms: object) -> list:
+    if terms == "4+":
+        return [g for key, here in cells.items() if key[0] == rows and key[1] >= 4 for g in here]
+    return cells.get((rows, terms), [])
+
+
 def report(groups: list[Group]) -> None:
     cells: dict[tuple[int, int], list[Group]] = defaultdict(list)
     for group in groups:
-        cells[(group.rows, min(group.terms, 4))].append(group)
+        # ⚠️ **`min(group.terms, 4)` filed every group of four or more under *four*.** The contract for
+        # this run is explicit that group size and term count stay separate, because an aggregate can
+        # look reassuring while one (rows, terms) cohort fails — which is the threshold the run exists
+        # to find. Exact counts, with a `4+` column that says what it is.
+        cells[(group.rows, group.terms)].append(group)
 
     print("")
     print("=== UNIQUELY SOLVABLE WITH THE ASSIGNMENT UNKNOWN, PER CELL ===")
     print("Rows down, terms across. n in brackets. The one-term column of row 2 is the old measurement.")
-    print(f"{'rows':>5}" + "".join(f"{f'{terms} term' + ('s' if terms > 1 else ''):>16}" for terms in range(0, 5)))
+    print(_header())
     for rows in sorted({group.rows for group in groups}):
         line = f"{rows:>5}"
-        for terms in range(0, 5):
-            here = cells.get((rows, terms), [])
+        for terms in _COLUMNS:
+            here = _cohort(cells, rows, terms)
             share = f"{sum(g.unique for g in here) / len(here):.0%} [{len(here)}]" if here else "-"
             line += f"{share:>16}"
         print(line)
 
     print("")
     print("=== OF THE SOLVABLE ONES, HOW OFTEN THE REST WAITED ON IT ===")
-    print(f"{'rows':>5}" + "".join(f"{f'{terms} term' + ('s' if terms > 1 else ''):>16}" for terms in range(0, 5)))
+    print(_header())
     for rows in sorted({group.rows for group in groups}):
         line = f"{rows:>5}"
-        for terms in range(0, 5):
-            here = [g for g in cells.get((rows, terms), []) if g.unique]
+        for terms in _COLUMNS:
+            here = [g for g in _cohort(cells, rows, terms) if g.unique]
             share = f"{sum(g.had_to_resolve for g in here) / len(here):.0%} [{len(here)}]" if here else "-"
             line += f"{share:>16}"
         print(line)
 
     print("")
-    print("=== WHICH TECHNIQUE RESOLVED IT ===")
+    print("=== WHICH TECHNIQUE RESOLVED IT, PER CELL ===")
+    print("Keyed the same way as everything above. Aggregating over terms would hide the cell where")
+    print("bounding starts being needed, which is the point the run is looking for.")
     for rows in sorted({group.rows for group in groups}):
-        here = [g for g in groups if g.rows == rows and g.unique]
-        if not here:
-            continue
-        counted = Counter(g.technique for g in here)
-        total = sum(counted.values())
-        print(f"  {rows} row(s): " + ", ".join(f"{name} {n / total:.0%}" for name, n in counted.most_common()))
+        for terms in _COLUMNS:
+            here = [g for g in _cohort(cells, rows, terms) if g.unique]
+            if not here:
+                continue
+            counted = Counter(g.technique for g in here)
+            shown = ", ".join(f"{name} {n / len(here):.0%}" for name, n in counted.most_common())
+            print(f"  {rows} row(s), {_label(terms):<8} [{len(here):>4}]  {shown}")
 
     print("")
     print("=== THE CONTROL ===")
