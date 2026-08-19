@@ -97,6 +97,30 @@ export function createGame(puzzle, now = () => Date.now()) {
     /** The blanks — what the player is actually being asked for. */
     blanks: () => [...cells.values()].filter((cell) => cell.given === null).map((cell) => cell.name),
 
+    /**
+     * The blanks in the order a player moves through them: **the footnotes last, after both totals
+     * rows.** They are a separate block and a player deals with them at the end.
+     *
+     * ⚠️ **This is not the same as the order they are drawn in**, and that is deliberate. The footnote
+     * line sits under the batting rows because that is what it describes — a term belongs to a batter —
+     * while moving through it belongs at the end. Two orders for two questions, and the reason they
+     * differ is written here rather than discovered later when they disagree.
+     *
+     * ⚠️ **The order lives in the core, not in a layer.** Three presentation layers each deciding what
+     * comes next is three answers to one product question, and they would drift on the first change.
+     * The phone has no keyboard traversal yet — that arrives with desktop, where a tab key exists — so
+     * today this is a contract with a test and no consumer, which is the cheap half of building it now.
+     */
+    traversal() {
+      const rank = (cell) =>
+        cell.section.startsWith("footnote") ? 3 : cell.section.endsWith("_totals") ? 2 : 1;
+      return [...cells.values()]
+        .filter((cell) => cell.given === null)
+        .map((cell, index) => ({ cell, index }))
+        .sort((a, b) => rank(a.cell) - rank(b.cell) || a.index - b.index)
+        .map(({ cell }) => cell.name);
+    },
+
     isBlank: (name) => require(name).given === null,
     value: valueOf,
 

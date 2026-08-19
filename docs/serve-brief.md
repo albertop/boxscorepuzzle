@@ -427,11 +427,22 @@ Four colours already carry meaning and a fifth would have to displace one.
 **The reference is black.** It was blue, and blue means *the player typed this*; the reference is given.
 Two meanings on one colour is why it did not read right.
 
-**The touch target is the label and the box together.** Tapping `SH:` selects that term's first unknown,
-so the box can stay 26px in a line of text while the thing a thumb aims at stays wide enough.
+**The touch target is the label and the box together, and it is 44px in both directions — measured, not
+assumed.** Tapping `SH:` selects that term's first unknown.
 
-**Where it sits in the traversal: last, after the totals.** The footnotes are a separate block and a
-player deals with them at the end. On the phone that is DOM order, which is what the selection walks.
+⚠️ **The label solved the width and did not solve the height.** A term runs 103–222px wide, so the box
+can stay 26px in a line of text and a thumb still has somewhere to land. At a text line-height the terms
+were **29px tall**, under the minimum §6 measured — exactly the kind of number that looks fine in device
+mode and misses on a phone. The rows are 44px now, and the cost is stated rather than hidden: on a board
+with ten erased terms the line is **150px, 18% of the viewport**, where it was 110px.
+
+**Where it sits in the traversal: last, after both totals rows** — `game.traversal()`, in the core rather
+than in a layer, because three layers each deciding what comes next is three answers to one product
+question. ⚠️ **That is deliberately not the order it is drawn in.** The line sits under the batting rows
+because a term belongs to a batter; moving through it belongs at the end. Two orders for two questions,
+with the reason written down rather than discovered when they disagree. The phone has no keyboard
+traversal yet — that arrives with desktop, where a tab key exists — so today it is a contract with a
+test and no consumer.
 
 ⚠️ **The drawing was not cosmetic: without it the board could not be finished.** Columns whose total is
 zero were skipped entirely, so their erased cells were rendered nowhere — **18 of one board's 39 blanks

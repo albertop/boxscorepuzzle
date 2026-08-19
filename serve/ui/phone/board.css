@@ -327,10 +327,23 @@ td.label.substitute { padding-left: 14px; }
    ⚠️ **And it was not optional.** Columns whose total is zero were skipped entirely, so their erased
    cells were drawn nowhere — 18 of this board's 39 blanks had no element to tap and the board could not
    be finished. Asked of the engine, not eyeballed. */
-.footnotes { padding: 10px 0 14px; font-size: 13px; line-height: 2.2; }
-/* The touch target is the label *and* the box together, so the box can stay small in a line of text
-   while the thing a thumb aims at stays 44px wide. Tapping `SH:` selects its cell. */
-.footnotes .term { display: inline-flex; align-items: center; gap: 4px; margin-right: 14px; white-space: nowrap; }
+.footnotes { padding: 6px 0 12px; font-size: 13px; }
+/* ⚠️ **The touch target is the label *and* the box, and it is 44px in both directions — measured.**
+   The label solves the width: a term runs 103–222px, so the box can stay 26px in a line of text and
+   the thumb still has somewhere to land. It did **not** solve the height. At a text line-height the
+   terms were 29px tall, under the minimum §6 measured, and that is exactly the kind of number that
+   looks fine on a desktop and misses on a phone.
+
+   The cost is stated rather than hidden: 44px rows make this line 44px per wrapped row instead of 29.
+   On a board with ten erased terms that is four rows where there were three. */
+.footnotes .term {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: var(--cell);
+  margin-right: 14px;
+  white-space: nowrap;
+}
 .footnotes .term .cell {
   display: inline-block;
   min-width: 26px;

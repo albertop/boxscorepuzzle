@@ -241,6 +241,31 @@ suite("The game: state, entries and the C7 record", () => {
     equal(record.puzzle_id, puzzle.id);
   });
 
+  test("⚠️ the traversal puts the footnotes last, after both totals rows", () => {
+    // The product decision, in the core rather than in a layer: three presentation layers each deciding
+    // what comes next is three answers to one question. Stated as what it forbids — a footnote before
+    // any grid or totals cell fails, which is what a naive board-order walk would produce.
+    const game = createGame(puzzle);
+    const order = game.traversal();
+    const isFootnote = (name) => name.startsWith("footnotes");
+
+    equal(new Set(order), new Set(game.blanks()), "the traversal lost or invented a blank");
+    const firstFootnote = order.findIndex(isFootnote);
+    assert(firstFootnote > 0, "no footnote blank on this board, so this test proves nothing");
+    assert(order.slice(firstFootnote).every(isFootnote), "a grid or totals cell comes after a footnote");
+  });
+
+  test("the totals rows come after their grid and before the footnotes", () => {
+    // A traversal that put everything in one bucket would satisfy the test above.
+    const game = createGame(puzzle);
+    const order = game.traversal();
+    const rank = (name) => (name.startsWith("footnote") ? 3 : name.includes("_totals.") ? 2 : 1);
+
+    const ranks = order.map(rank);
+    equal(ranks, [...ranks].sort((a, b) => a - b), "the three blocks are interleaved");
+    assert(new Set(ranks).size === 3, `only ${new Set(ranks).size} of the three blocks are present`);
+  });
+
   test("a snapshot restores exactly what it saved and ignores cells that no longer exist", () => {
     const game = createGame(puzzle);
     const name = game.blanks()[0];
