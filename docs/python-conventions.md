@@ -125,6 +125,85 @@ These are the ways Python breaks that silently.
 
 ---
 
+## Constants
+
+### No magic numbers outside a constants module
+
+A value that encodes a **domain decision** or a **presentation budget** lives in one place. Anywhere
+else it is a literal, and literals drift. This project has already paid for three definitions of the
+erasable set, two copies of the accepted-sources list, and a roster cap written as a call argument in
+twenty-five places — so when the measurement behind that cap turned out to be invalid, the number was
+in twenty-six places and the reason was in none of them.
+
+**Two modules, and they are never shared:**
+
+| Module | Holds |
+|---|---|
+| `forge/src/boxscore_domain/` | Roster caps, pool gates, stall targets, era quotas, forward inventory |
+| `serve/ui/phone/tokens.css` | Design width, touch target, column widths, colours, keypad height |
+
+§33 keeps them apart: the forge knows nothing about screens and the service knows nothing about
+generating. **A single shared constants module would be imported by both sides for the convenience of
+one**, and that boundary is the thing being protected. When the client genuinely needs a domain value —
+a test asserting published packages respect the caps — it crosses as **data**, in the shared JSON both
+readers already load, with a forge test asserting the two still agree.
+
+**Local values with no meaning outside their function are not constants** and do not belong there. A
+loop bound, a buffer size, a retry count used once — leave them where they are. The test is whether
+someone could reasonably want to change the value *as a decision*.
+
+### Every constant records why, not only what
+
+**The value is the smallest part of what needs recording.** Each one carries:
+
+- **The reason it holds that value.**
+- **The measurement that set it**, where one exists — **with the figures**, not a reference to a
+  conversation or a commit. `22% -> 33% coverage at 8 stalls`, not "measured in the pitcher-cap run".
+- **Whether it is provisional**, explicitly and in the same place, when it was chosen rather than
+  measured.
+
+A file presenting a measured cap and an eyeballed threshold in the same typeface hides which are safe
+to touch. Six months on, *which of these can I change* has to be answerable from the file alone.
+
+⚠️ Write the note as a **string literal directly below the assignment**, never as an f-string. An
+f-string there is a discarded expression rather than an attributed docstring: it renders as
+documentation to a reader and no tool ever sees it — the same shape as a check that looks like a check.
+
+### Superseded values stay visible
+
+When a constant changes, **the previous value and why it was wrong stay in the comment.** Not a
+changelog entry, not a commit message: the file.
+
+**A regeneration that overturns a decision and one that confirms it are equally worth recording.** What
+gets reused is the reasoning, not the number — and the failure modes repeat. The pitcher cap says it
+was `4`, that the screen-cost argument had been retired for the batter cap and never re-derived for
+pitchers, and that the comparison favouring `4` ran on a scale counting zero-fills that biased it
+against pitcher-heavy boards. Anyone proposing to move it again meets both traps before they step in
+one.
+
+### A guard, because one definition is not self-enforcing
+
+Giving the erasable set a single definition did not remove its copies — nothing stopped them existing,
+so they went on existing. **A convention nobody can violate by accident is worth more than one everybody
+agrees with.**
+
+So: a check that domain constants do not appear as literals outside their module, in the same family as
+the AST guard rejecting decisions made by inspecting a label's formatting
+(`forge/tests/test_no_label_formatting_decisions.py`), **with its own test proving it fires on a
+re-introduced literal.**
+
+Two things such a guard must get right, both learned by getting them wrong:
+
+- **It must not fire on the same digit doing another job.** A check firing on every `6` in the tree
+  carries no information and gets ignored — the same outcome as one that never fires. Match the *shape*
+  that means the constant: a keyword argument named for it, an **ordering** comparison against a length.
+  A width is asked with `==`; a bound is asked with `<=`.
+- **Exemptions are listed by path, never by basename.** Exempting `__init__.py` exempts every package
+  in the tree. And an instrument whose *published results* were measured at the old value keeps its
+  literal — rewriting it would make a recorded number unreproducible and silently reattribute it.
+
+---
+
 ## Error Handling & Logging
 
 - Catch specific exceptions only. No bare `except:`. No `except Exception: pass`.

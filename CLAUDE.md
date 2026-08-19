@@ -87,6 +87,15 @@ and write the missing tests before continuing. Close the gap with real tests or 
 
 Full Python style, typing, testing, and tooling rules: `docs/python-conventions.md`.
 
+**Read its *Constants* section before writing a number that encodes a decision.** A value that carries
+a domain decision or a presentation budget lives in one module and is never spelled anywhere else —
+domain constants in `forge/src/boxscore_domain/`, presentation constants in `serve/ui/phone/tokens.css`,
+**never one module shared**, because §33 is exactly the boundary a shared one would break. Each records
+the reason it holds that value, the measurement that set it with the figures, and whether it is
+**provisional**; a superseded value and why it was wrong stay in the comment rather than in a commit
+message. A guard enforces it — the convention is not left to memory, because giving the erasable set
+one definition did not stop its copies existing.
+
 ---
 
 ## Repository layout
