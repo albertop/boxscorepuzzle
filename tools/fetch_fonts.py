@@ -76,7 +76,12 @@ for slug, family in FAMILIES.items():
         # pattern that required the suffix matched nothing and blew up on `None`. The format is in the
         # `format('woff2')` that follows, which is what to assert on.
         found = re.search(r"url\((https://[^)]+)\)\s*format\('woff2'\)", css)
-        assert found is not None, f"no woff2 in the response for {family} {weight}: {css[:200]}"
+        # ⚠️ Not an `assert`: this is a response from a third party, not an internal invariant, and
+        # `python -O` removes assertions — after which the next line calls `.group()` on `None` and the
+        # explanation is replaced by an `AttributeError`. Runtime input is validated in every mode.
+        if found is None:
+            message = f"no woff2 in the response for {family} {weight}: {css[:200]}"
+            raise SystemExit(message)
         url = found.group(1)
         name = f"{slug}-{weight}.woff2"
         (OUT / name).write_bytes(get(url))

@@ -208,7 +208,11 @@ export function renderFootnotes(puzzle, game, onSelect) {
     // labels is how that habit is taught.
     if (total === 0 && unknown.length === 0) continue;
 
-    const term = el("span", "term");
+    // ⚠️ **`live` and `zero` were declared in the stylesheet and never applied.** Both rules were
+    // dead, so a real hit batsman had exactly the hierarchy of a term that never happened. §6 warns
+    // that nine boards in ten carry nothing here and that players therefore learn to stop looking —
+    // the prominence *is* the mechanism, and it went missing when this function was rewritten.
+    const term = el("span", `term ${total > 0 ? "live" : "zero"}`);
     const label = el("span", "term-label", `${text(`column.${column}`)}: ${total}`);
     term.append(label);
     if (known.length) term.append(el("span", "who", known.join(", ")));

@@ -80,7 +80,7 @@ EXAMPLES = 6
 ARMS = ("all", "non_zero", "given")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Row:
     game: str
     seed: int

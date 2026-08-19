@@ -305,6 +305,32 @@ suite("Innings are thirds, and the two directions are inverses", () => {
   });
 });
 
+suite("The footnote line marks a live term, because that is the whole mechanism", () => {
+  test("⚠️ a term with a live total gets `live`, and one without gets `zero`", async () => {
+    // ⚠️ The defect: `.term.live` and `.term.zero` were declared in the stylesheet and never applied by
+    // the renderer, so both rules were dead and a real hit batsman had exactly the hierarchy of a
+    // category that never happened. §6 warns that nine boards in ten carry nothing here and that
+    // players therefore learn to stop looking — the prominence *is* the mechanism. A CSS rule with no
+    // class to attach to is a check that never fires, in type.
+    const { renderFootnotes } = await import("../ui/phone/board.js");
+    const puzzle = readPackage(packages.find((p) => p.id === "1dc57470b44caded").raw);
+    const game = createGame(puzzle);
+
+    const line = renderFootnotes(puzzle, game, () => {});
+    const marked = [...line.querySelectorAll(".term")].filter((n) => !n.classList.contains("lob"));
+
+    assert(marked.length > 0, "this package renders no footnote term, so the test proves nothing");
+    for (const node of marked) {
+      const total = Number(node.querySelector(".term-label").textContent.split(": ")[1]);
+      const expected = total > 0 ? "live" : "zero";
+      assert(node.classList.contains(expected), `a term with total ${total} is not marked ${expected}`);
+    }
+    // Both states have to occur, or the test is only checking one of them.
+    const states = new Set(marked.map((n) => (n.classList.contains("live") ? "live" : "zero")));
+    equal([...states].sort(), ["live", "zero"], "this board does not exercise both states");
+  });
+});
+
 suite("C11: no user-facing string is in code", () => {
   test("every column has a heading and an unknown key throws", () => {
     for (const column of [...BATTING_COLUMNS, ...PITCHING_COLUMNS, ...FOOTNOTE_COLUMNS]) {

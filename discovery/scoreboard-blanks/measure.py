@@ -39,7 +39,7 @@ import statistics
 import subprocess
 import sys
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 NL = chr(10)
@@ -64,14 +64,25 @@ answerable rather than assumed."""
 RESULT_SCHEMA = 1
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Arm:
-    """One board, one seed, one target, one treatment."""
+    """One board, one seed, one target, one treatment.
+
+    ⚠️ **`reached` exists because failing to reach a target is the finding, not its absence.** This
+    instrument used to return an empty list the moment either arm's `erase()` came back `None`, so a
+    pair where the `before` arm reached a target *only because a scoreboard duplicate was erasable*
+    vanished from the comparison entirely — the single strongest piece of evidence, converted into
+    silence. The report would then have shown unchanged medians over the survivors and called it a null.
+
+    That is the false-null failure this project has already built an instrument to prevent, arriving
+    through the door that instrument left open. A null must stay data.
+    """
 
     game: str
     seed: int
     target: int
     treatment: str
+    reached: bool
     blanks: int
     chain: int
     stalls: int
@@ -101,18 +112,17 @@ def _measure(direction: object, game: str, seed: int, target: int) -> list[Arm]:
             puzzle = erase(direction, target_stalls=target, seed=seed)
         finally:
             erasure.erasable, erasure.ORDERINGS = original_erasable, original_orderings
-        if puzzle is None:
-            return []
         rows.append(
             Arm(
                 game=game,
                 seed=seed,
                 target=target,
                 treatment=treatment,
-                blanks=len(puzzle.erased),
-                chain=puzzle.solution.chain_length,
-                stalls=puzzle.solution.stalls,
-                duplicates_erased=len(puzzle.erased & set(SCOREBOARD_DUPLICATES)),
+                reached=puzzle is not None,
+                blanks=len(puzzle.erased) if puzzle else 0,
+                chain=puzzle.solution.chain_length if puzzle else 0,
+                stalls=puzzle.solution.stalls if puzzle else 0,
+                duplicates_erased=len(puzzle.erased & set(SCOREBOARD_DUPLICATES)) if puzzle else 0,
             )
         )
     return rows
@@ -138,11 +148,26 @@ def report(rows: list[Arm]) -> None:
             f"{target:>8}{len(at):>9}{with_one:>11}{with_one / len(at):>9.0%}{blanks:>9}{erased / blanks:>17.1%}"
         )
 
+    # ⚠️ Reachability first, and unconditionally. If the exclusion costs coverage, that is the answer
+    # — and it would be invisible in any table that summarises only the pairs where both arms produced a
+    # board.
+    print("")
+    print("=== ⚠️ REACHABILITY, BEFORE ANY SUMMARY OF WHAT REACHED ===")
+    for target in TARGETS:
+        keys = [key for key in shared if key[2] == target]
+        was = sum(before[key].reached for key in keys)
+        now = sum(after[key].reached for key in keys)
+        lost = [key for key in keys if before[key].reached and not after[key].reached]
+        gained = [key for key in keys if after[key].reached and not before[key].reached]
+        print(f"  target {target:>3}: before {was}/{len(keys)}, after {now}/{len(keys)}, lost {len(lost)}, gained {len(gained)}")
+
     print("")
     print("=== WHAT THE FIX MOVES, SAME BOARDS AND SAME WALK ===")
     print(f"{'target':>8}{'pairs':>7}{'chain':>16}{'stalls':>16}{'blanks':>16}{'boards changed':>16}")
     for target in TARGETS:
-        keys = [key for key in shared if key[2] == target]
+        # Only pairs where both arms produced a board can have their chain and stalls compared; the
+        # ones that could not are counted above rather than dropped here.
+        keys = [key for key in shared if key[2] == target and before[key].reached and after[key].reached]
         if not keys:
             continue
         moved = sum(
@@ -253,7 +278,7 @@ def main() -> None:
     # should not share a failure.
     raw = _HERE / "rows.json"
     raw.write_text(
-        json.dumps([row.__dict__ for row in rows], indent=1, sort_keys=True), encoding="utf-8", newline=NL
+        json.dumps([asdict(row) for row in rows], indent=1, sort_keys=True), encoding="utf-8", newline=NL
     )
     print(f"{len(rows)} rows saved to {raw}", flush=True)
 

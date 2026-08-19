@@ -2078,6 +2078,54 @@ packages showed it carries blanks.
 the scoreboard prints, or the solver not counting the move. Recorded before continuing rather than
 mentioned in passing.
 
+## v19 — verified, none rejected. **Four fixed; five open and named**
+
+### v19-P2-04 — the CSS rule with no class to attach to
+
+`.term.live` and `.term.zero` were declared in the stylesheet and **never applied by the renderer**. Both
+rules were dead, so a real hit batsman had exactly the hierarchy of a category that never happened.
+
+⚠️ **This is a check that never fires, in type rather than in code**, and it lands on the one thing §6
+calls out by name: nine boards in ten carry nothing on that line, players learn to stop looking, and *the
+prominence is the mechanism*. It went missing when `renderFootnotes` was rewritten to stop printing false
+question marks — a fix that removed a defect and a feature in the same edit.
+
+Guarded now by a DOM test that reads the total out of the rendered label and requires the matching class,
+and that requires **both** states to occur on the board it uses. Checked by reverting: the guard goes red.
+
+### v19-P1-01 — the instrument deleted its own strongest evidence
+
+`scoreboard-blanks` returned an empty list the moment either arm's `erase()` came back `None`. A pair
+where the `before` arm reached a target *only because a scoreboard duplicate was erasable* vanished
+entirely — and that pair is the finding. The report would then have summarised the survivors and called
+it a null.
+
+**The false-null failure this project built an instrument to prevent, arriving through the door that
+instrument left open.** Each arm now records `reached`, reachability is reported before any summary of
+what reached, and the chain and stall comparison is restricted to pairs where both arms produced a board
+rather than silently losing the rest. ⚠️ The zero-footnote instrument, written the same week, already did
+this correctly — so the rule was known and applied unevenly.
+
+### v19-P3-01, P3-02 — an assertion on third-party input, and missing `slots=True`
+
+`assert found is not None` validated a Google Fonts response. `python -O` removes it and the next line
+raises `AttributeError` instead of explaining. Now an explicit refusal. And both result dataclasses gain
+`slots=True`, with `asdict` replacing a `__dict__` read that the flag would have broken.
+
+### Open, named rather than quietly deferred
+
+| | |
+|---|---|
+| `v19-P2-01` | the zero-footnote instrument has **no tests**, and it is deciding whether a board feature survives |
+| `v19-P2-02` | grid and footnote cells are touch-only: no focus, no role, no keyboard, no accessible name |
+| `v19-P2-03` | the Python and JavaScript readers enforce **different v3 contracts** — Python defaults labels it never counts, JavaScript accepts a null footnote total it then renders nowhere |
+| `v19-P3-03` | the catalogue-completeness test swaps in a *complete* catalogue and compares it with itself |
+| `v19-P3-04` | active docstrings still describe the retired footnote and label rules |
+
+⚠️ **`v19-P2-03` is the one to take next.** A null `footnote_totals` entry passes the client boundary,
+`createGame` counts it as a blank, and `renderFootnotes` skips the term — so the board cannot be
+finished. That is the unsolvable-board defect again, reached from the other side.
+
 ## ⚠️⚠️ Every stall figure in this project counted zeros — the correction
 
 **Priority A1, and it invalidates numbers rather than adding one.**
