@@ -799,6 +799,7 @@ class TestBlockageCanStillBeObserved:
     healthier would be relaxing a rule to reach a number, which §22 forbids for puzzles and which is no
     better here.
     """
+
     def test_an_erased_board_deduces_something_outside_the_group(self, cubs_at_braves_1968: Direction) -> None:
         # Not a claim that this board blocks — a claim that the comparison is capable of showing it.
         from boxscore_forge.solver import solve  # noqa: PLC0415

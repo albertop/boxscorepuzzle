@@ -208,7 +208,9 @@ def main() -> None:
         ("max", ordered[-1]),
     ):
         print(f"  {label:>4}: {value:5.1f}%")
-    print(f"  mean cells erased: {statistics.fmean([row[1] for row in rows]):.1f} of {statistics.fmean(erasable_counts):.0f}")
+    print(
+        f"  mean cells erased: {statistics.fmean([row[1] for row in rows]):.1f} of {statistics.fmean(erasable_counts):.0f}"
+    )
 
     print("\n=== BY DECADE ===")
     by_decade: dict[int, list[float]] = {}

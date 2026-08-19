@@ -118,22 +118,34 @@ def _candidates(direction: object, arm: str) -> set[str]:
     return cells
 
 
-def _measure(direction: object, game: str, seed: int) -> list[Row]:
-    # The union is the widest arm, so one walk over it covers every arm's candidates.
+def walks(direction: object, seed: int) -> dict[str, list[str]]:
+    """One canonical order over the union, filtered per arm.
+
+    ⚠️ **Extracted so a test can call it.** It lived inside `_measure`, tangled with `erase`, so the only
+    way to check it was to re-implement the filtering in the test — which then passed while the
+    instrument reordered each arm separately. A guard that rebuilds what it is guarding is testing
+    itself, and this project has produced that nine times now.
+    """
     union = sorted(set(_grid(direction)) | set(_footnotes(direction)))
     order = erasure.ORDERINGS[erasure.DEFAULT_ORDERING](union, direction, random.Random(seed))  # noqa: S311
+    return {arm: [cell for cell in order if cell in _candidates(direction, arm)] for arm in ARMS}
+
+
+def _measure(direction: object, game: str, seed: int, erase: object = None) -> list[Row]:
+    """`erase` is injectable so a test can drive the row-building without a real board."""
+    erase = erase or erasure.erase
+    by_arm = walks(direction, seed)
 
     rows: list[Row] = []
     for arm in ARMS:
-        allowed = _candidates(direction, arm)
-        walk = [cell for cell in order if cell in allowed]
+        walk = by_arm[arm]
         original_erasable, original_orderings = erasure.erasable, dict(erasure.ORDERINGS)
         erasure.erasable = lambda _direction, _cells=walk: list(_cells)
         erasure.ORDERINGS = dict(original_orderings)
         erasure.ORDERINGS[erasure.DEFAULT_ORDERING] = lambda cells, _direction, _rng: list(cells)
         try:
             for target in TARGETS:
-                puzzle = erasure.erase(direction, target_stalls=target, seed=seed)
+                puzzle = erase(direction, target_stalls=target, seed=seed)
                 rows.append(
                     Row(
                         game=game,

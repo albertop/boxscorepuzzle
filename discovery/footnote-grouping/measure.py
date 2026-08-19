@@ -90,9 +90,7 @@ def _categories(loaded: Loaded) -> int:
     whether category count tracks stall count in the boards as they stand.
     """
     return sum(
-        1
-        for column in FOOTNOTE_COLUMNS
-        if any(getattr(note, column) for note in loaded.direction.batter_footnotes)
+        1 for column in FOOTNOTE_COLUMNS if any(getattr(note, column) for note in loaded.direction.batter_footnotes)
     )
 
 
@@ -186,7 +184,9 @@ def _mean_position(solution: object) -> float:
 def report(points: list[Point], runs: int) -> None:
     print("")
     print("=== CEILING AND COVERAGE, BY CONFIGURATION ===")
-    heads = f"{'configuration':>14}{'columns':>9}{'ceiling p50':>13}{'max':>6}{'blanks':>8}{'reach 5':>9}{'stall pos':>11}"
+    heads = (
+        f"{'configuration':>14}{'columns':>9}{'ceiling p50':>13}{'max':>6}{'blanks':>8}{'reach 5':>9}{'stall pos':>11}"
+    )
     print(heads)
     for configuration in CONFIGURATIONS:
         ceilings = [p for p in points if p.configuration == configuration and p.target is None]

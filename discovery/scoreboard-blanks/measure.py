@@ -144,9 +144,7 @@ def report(rows: list[Arm]) -> None:
         with_one = sum(1 for row in at if row.duplicates_erased)
         blanks = sum(row.blanks for row in at)
         erased = sum(row.duplicates_erased for row in at)
-        print(
-            f"{target:>8}{len(at):>9}{with_one:>11}{with_one / len(at):>9.0%}{blanks:>9}{erased / blanks:>17.1%}"
-        )
+        print(f"{target:>8}{len(at):>9}{with_one:>11}{with_one / len(at):>9.0%}{blanks:>9}{erased / blanks:>17.1%}")
 
     # ⚠️ Reachability first, and unconditionally. If the exclusion costs coverage, that is the answer
     # — and it would be invisible in any table that summarises only the pairs where both arms produced a
@@ -159,7 +157,9 @@ def report(rows: list[Arm]) -> None:
         now = sum(after[key].reached for key in keys)
         lost = [key for key in keys if before[key].reached and not after[key].reached]
         gained = [key for key in keys if after[key].reached and not before[key].reached]
-        print(f"  target {target:>3}: before {was}/{len(keys)}, after {now}/{len(keys)}, lost {len(lost)}, gained {len(gained)}")
+        print(
+            f"  target {target:>3}: before {was}/{len(keys)}, after {now}/{len(keys)}, lost {len(lost)}, gained {len(gained)}"
+        )
 
     print("")
     print("=== WHAT THE FIX MOVES, SAME BOARDS AND SAME WALK ===")
@@ -277,9 +277,7 @@ def main() -> None:
     # had not been written yet. Compute is the expensive part and formatting is the fragile part; they
     # should not share a failure.
     raw = _HERE / "rows.json"
-    raw.write_text(
-        json.dumps([asdict(row) for row in rows], indent=1, sort_keys=True), encoding="utf-8", newline=NL
-    )
+    raw.write_text(json.dumps([asdict(row) for row in rows], indent=1, sort_keys=True), encoding="utf-8", newline=NL)
     print(f"{len(rows)} rows saved to {raw}", flush=True)
 
     captured = io.StringIO()

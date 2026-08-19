@@ -94,11 +94,7 @@ def dead_end_cells(solution: Solution) -> set[str]:
     leaned_on: set[str] = set()
     for step in solution.deductions:
         leaned_on |= step.depends_on & recovered
-    return {
-        step.cell
-        for step in solution.deductions
-        if (step.depends_on & recovered) and step.cell not in leaned_on
-    }
+    return {step.cell for step in solution.deductions if (step.depends_on & recovered) and step.cell not in leaned_on}
 
 
 def prune(shape: object, values: dict[str, int], erased: set[str], target: int) -> set[str]:
@@ -207,7 +203,9 @@ def report(results: list[Result]) -> None:
 
 def report_pruning(results: list[Result]) -> None:
     print("=== WHAT PRUNING REMOVES ===")
-    print(f"{'target':>8}{'before':>9}{'after':>8}{'removed':>10}{'share before':>15}{'share after':>14}{'still reaches':>15}")
+    print(
+        f"{'target':>8}{'before':>9}{'after':>8}{'removed':>10}{'share before':>15}{'share after':>14}{'still reaches':>15}"
+    )
     for target in TARGETS:
         group = [r for r in results if r.target == target]
         if not group:

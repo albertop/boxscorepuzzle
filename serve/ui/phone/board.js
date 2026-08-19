@@ -116,11 +116,15 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
   for (const _ of columns) group.append(el("col"));
   table.append(group);
 
-  const cellNode = (name) => {
+  const cellNode = (name, rowLabel) => {
     const cell = el("td", "cell");
     cell.dataset.cell = name;
     paint(cell, game);
     cell.addEventListener("click", () => onSelect(name));
+    if (game.isBlank(name)) {
+      const column = text(`column.${name.split(".")[1]}`);
+      reachable(cell, { label: `${rowLabel}, ${column}`, selected: false });
+    }
     return cell;
   };
 
@@ -149,17 +153,42 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
     const shared = slots && reference.length > 1;
     const firstOfSlot = !slots || index === 0 || slots[index][0] !== slots[index - 1][0];
     row.append(el("td", `label${shared && !firstOfSlot ? " substitute" : ""}`, labels[index]));
-    for (const column of columns) row.append(cellNode(cellName(index, column)));
+    for (const column of columns) row.append(cellNode(cellName(index, column), labels[index]));
     body.append(row);
   });
   table.append(body);
 
   const foot = el("tfoot");
-  foot.append(totalsRow(columns, totalName, game, cellNode));
+  foot.append(totalsRow(columns, totalName, game, (name) => cellNode(name, text("board.totals"))));
   table.append(foot);
 
   wrapper.append(table);
   return wrapper;
+}
+
+/**
+ * Make a cell reachable by something other than a finger.
+ *
+ * ⚠️ **Editable cells were `td` and `span` elements with click handlers and nothing else** — no focus,
+ * no role, no keyboard activation, no accessible name, no selected state. A player using VoiceOver,
+ * TalkBack, switch control or an attached keyboard could not *find* a blank, let alone fill one: the
+ * keypad was focusable and useless, because it does nothing until a cell is selected. The board was
+ * unusable before the first digit, and that needs no unusual setup — a phone and its own screen reader.
+ *
+ * The name is built from what the row and column already say, so a screen reader announces `SS, hits,
+ * blank` rather than `blank`. It is assembled from the catalogue, not written here (C11).
+ */
+function reachable(node, { label, selected }) {
+  node.tabIndex = 0;
+  node.setAttribute("role", "button");
+  node.setAttribute("aria-label", label);
+  node.setAttribute("aria-pressed", selected ? "true" : "false");
+  node.addEventListener("keydown", (event) => {
+    // Enter and Space are what `role="button"` promises. Anything else belongs to the page.
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    node.click();
+  });
 }
 
 /** A cell's appearance, derived from the game. The layer asks; it does not decide. */
@@ -223,6 +252,7 @@ export function renderFootnotes(puzzle, game, onSelect) {
       cell.dataset.cell = name;
       paint(cell, game);
       cell.addEventListener("click", () => onSelect(name));
+      reachable(cell, { label: `${text(`column.${column}`)}, ${text("board.slot")}${slot}`, selected: false });
       term.append(cell, el("span", "who", `#${slot}`));
     }
     // Tapping the label selects the term's first unknown, so the target is the label and the box

@@ -44,7 +44,13 @@ def refs(board: object) -> tuple[str, ...]:
 
 def package(puzzle: Board, source: Board) -> Package:
     return Package(
-        puzzle_id="plausibility", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+        labels=("C",) * len(puzzle.batting),
+        pitcher_labels=("C",) * len(puzzle.pitching),
+        puzzle_id="plausibility",
+        puzzle=puzzle,
+        solution=source,
+        slot_references=refs(puzzle),
+        offense_is_home=True,
     )
 
 

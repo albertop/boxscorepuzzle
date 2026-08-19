@@ -33,9 +33,28 @@ from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
 from boxscore_forge.solver import Solution, Technique, solve
 
-BATTING_HEADERS = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "SO"))
-PITCHING_HEADERS = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "SO"))
-FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
+BATTING_HEADERS = (
+    ("plate_appearances", "PA"),
+    ("at_bats", "AB"),
+    ("runs", "R"),
+    ("hits", "H"),
+    ("walks", "BB"),
+    ("strikeouts", "SO"),
+)
+PITCHING_HEADERS = (
+    ("outs", "IP"),
+    ("hits", "H"),
+    ("runs", "R"),
+    ("earned_runs", "ER"),
+    ("walks", "BB"),
+    ("strikeouts", "SO"),
+)
+FOOTNOTE_LABELS = (
+    ("hit_by_pitch", "HBP"),
+    ("sacrifice_flies", "SF"),
+    ("sacrifice_hits", "SH"),
+    ("catcher_interference", "CI"),
+)
 BLANK = "  ·"
 SEED = 20260819
 
@@ -191,9 +210,7 @@ def main() -> None:
     solved_text: list[str] = []
     for title, loaded, target in picks:
         given, solution = erase_to_chain(loaded, target, rng)
-        blanks = len(erasable(loaded.direction)) - sum(
-            1 for cell in erasable(loaded.direction) if cell in given
-        )
+        blanks = len(erasable(loaded.direction)) - sum(1 for cell in erasable(loaded.direction) if cell in given)
         block = [
             "=" * 78,
             render(loaded, given, title=f"{title}   [{blanks} blanks]"),

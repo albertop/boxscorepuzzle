@@ -87,8 +87,27 @@ export function keys() {
   return Object.keys(table);
 }
 
-/** For tests and, later, a language chosen at boot. */
+/**
+ * Swap the active catalogue. **A partial one is refused, so the active catalogue is always complete.**
+ *
+ * ⚠️ **This accepted any object at all**, and the test named for it swapped in a complete copy of
+ * English and compared its keys with the same complete English. It exercised nothing: there was no
+ * refusal to trigger. The first partial translation would have installed successfully and failed
+ * mid-render, at whichever key `text()` reached first — the swap advertised a boundary the code did not
+ * have.
+ *
+ * Missing *and* unexpected keys are both refused. An extra key is a translation that thinks it is
+ * providing something the product does not ask for, which means the two have drifted whichever way it
+ * happened.
+ */
 export function useCatalog(replacement) {
+  const wanted = new Set(Object.keys(CATALOGS.en));
+  const given = new Set(Object.keys(replacement ?? {}));
+  const missing = [...wanted].filter((key) => !given.has(key));
+  const extra = [...given].filter((key) => !wanted.has(key));
+  if (missing.length || extra.length) {
+    throw new Error(`catalogue is incomplete: ${missing.length} missing, ${extra.length} unexpected`);
+  }
   table = replacement;
 }
 

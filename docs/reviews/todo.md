@@ -2078,7 +2078,7 @@ packages showed it carries blanks.
 the scoreboard prints, or the solver not counting the move. Recorded before continuing rather than
 mentioned in passing.
 
-## v19 — verified, none rejected. **Four fixed; five open and named**
+## v19 — verified, none rejected. **All nine closed.**
 
 ### v19-P2-04 — the CSS rule with no class to attach to
 
@@ -2112,19 +2112,57 @@ this correctly — so the rule was known and applied unevenly.
 raises `AttributeError` instead of explaining. Now an explicit refusal. And both result dataclasses gain
 `slots=True`, with `asdict` replacing a `__dict__` read that the flag would have broken.
 
-### Open, named rather than quietly deferred
+### v19-P2-03 — two readers of one schema, and the shared vectors that stop it recurring
 
-| | |
-|---|---|
-| `v19-P2-01` | the zero-footnote instrument has **no tests**, and it is deciding whether a board feature survives |
-| `v19-P2-02` | grid and footnote cells are touch-only: no focus, no role, no keyboard, no accessible name |
-| `v19-P2-03` | the Python and JavaScript readers enforce **different v3 contracts** — Python defaults labels it never counts, JavaScript accepts a null footnote total it then renders nowhere |
-| `v19-P3-03` | the catalogue-completeness test swaps in a *complete* catalogue and compares it with itself |
-| `v19-P3-04` | active docstrings still describe the retired footnote and label rules |
+The Python reader and the client enforced **different v3 contracts while both claiming to read v3**.
+Python defaulted `labels`, `pitcher_labels` and `metadata` and never counted the labels; the client
+required label counts but accepted a **null footnote total**, and slot references whose grammar and
+uniqueness it never checked.
 
-⚠️ **`v19-P2-03` is the one to take next.** A null `footnote_totals` entry passes the client boundary,
-`createGame` counts it as a blank, and `renderFootnotes` skips the term — so the board cannot be
-finished. That is the unsolvable-board defect again, reached from the other side.
+⚠️ **The null total is the unsolvable board again, reached from the schema side**: the client counted it
+among the blanks and `renderFootnotes` skips a term whose total is unknown, so the cell existed, had to
+be filled, and had nowhere to be filled from.
+
+**The durable half is `serve/tests/package-vectors.json` — shared data, not shared code.** Sixteen
+mutations of a real package, each with the reason it is accepted or refused, run by the Python suite and
+by the browser suite. `forge/` and `serve/` still import nothing from each other, which §33 requires; the
+file is what makes two implementations answerable to one contract without becoming one implementation.
+
+⚠️ **It found a divergence on its first run** — Python still accepted a package with no `metadata` — which
+is the strongest thing that could be said for it. A vector both sides agree on proves nothing; **what the
+file forbids is the two disagreeing.**
+
+### v19-P2-02 — the board could not be used before the first digit
+
+Editable cells were elements with click handlers and nothing else: no focus, no role, no keyboard, no
+accessible name, no selected state. The keypad *was* focusable and useless, because it does nothing until
+a cell is selected. A player using VoiceOver, TalkBack or a switch could not find a blank at all — and
+that needs no unusual setup, just a phone and its own screen reader.
+
+Blanks are now buttons: focusable, Enter and Space, `aria-pressed` tracking the selection, and a name
+built from the row label and the column heading out of the catalogue, so a reader announces `SS, hits`
+rather than `blank`. **Given cells are deliberately not focusable** — forty stops that lead nowhere is
+its own defect.
+
+### v19-P2-01 — the instrument deciding a board feature had no tests
+
+⚠️ **And writing them found the ninth tautological guard, mine, in the same hour.** Two of the four new
+tests rebuilt the instrument's own filtering inside the test and passed while a revert reordered every
+arm. A guard that reconstructs what it guards is testing itself.
+
+Fixed by extracting `walks()` and injecting the eraser, so the tests **call** the instrument. All four
+reverts now go red: inverting the non-zero predicate, ordering each arm separately, recording a failure
+as reached, and dropping a failed row.
+
+### v19-P3-03, P3-04 — a swap that could not refuse, and docstrings describing retired rules
+
+`useCatalog()` accepted any object, and the test named for it swapped in a *complete* copy of English and
+compared it with the same complete English — it could not fail, because there was no refusal in the code
+to trigger. Missing and unexpected keys are both refused now, and the refusal is atomic.
+
+And the format module still said the per-batter footnote cells were "given complete and never erased" and
+that labels carried suffixes. Both were reversed weeks ago; the real packages disagreed with the
+docstrings in silence.
 
 ## ⚠️⚠️ Every stall figure in this project counted zeros — the correction
 

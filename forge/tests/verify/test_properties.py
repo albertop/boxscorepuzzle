@@ -117,7 +117,13 @@ def boards(draw: st.DrawFn) -> Board:
 
 def _package(puzzle: Board, source: Board) -> Package:
     return Package(
-        puzzle_id="property", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+        labels=("C",) * len(puzzle.batting),
+        pitcher_labels=("C",) * len(puzzle.pitching),
+        puzzle_id="property",
+        puzzle=puzzle,
+        solution=source,
+        slot_references=refs(puzzle),
+        offense_is_home=True,
     )
 
 
@@ -205,6 +211,8 @@ class TestTheSignatureTracksTheContent:
             line_score=board.line_score,
         )
         tampered = Package(
+            labels=("C",) * len(altered.batting),
+            pitcher_labels=("C",) * len(altered.pitching),
             puzzle_id=signed.puzzle_id,
             puzzle=altered,
             solution=signed.solution,
@@ -235,6 +243,8 @@ class TestTheSignatureTracksTheContent:
         rows = [list(row) for row in board.batting]
         rows[0][3] = (rows[0][3] or 0) + 1
         altered = Package(
+            labels=("C",) * len(signed.puzzle.batting),
+            pitcher_labels=("C",) * len(signed.puzzle.pitching),
             puzzle_id=signed.puzzle_id,
             puzzle=signed.puzzle,
             solution=Board(

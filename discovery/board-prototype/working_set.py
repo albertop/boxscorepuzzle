@@ -62,8 +62,11 @@ def main() -> None:
                 if step.from_identity is None:
                     continue
                 equation = next(
-                    (e for e in equations(shape_of(loaded.direction)) if e.origin == step.from_identity
-                     and any(t.cell == step.cell for t in e.terms)),
+                    (
+                        e
+                        for e in equations(shape_of(loaded.direction))
+                        if e.origin == step.from_identity and any(t.cell == step.cell for t in e.terms)
+                    ),
                     None,
                 )
                 if equation is None:

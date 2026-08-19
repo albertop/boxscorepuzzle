@@ -28,9 +28,21 @@ from measure import Loaded, load
 
 from boxscore_forge.identities import find_violations
 
-BATTING = (("plate_appearances", "PA"), ("at_bats", "AB"), ("runs", "R"), ("hits", "H"), ("walks", "BB"), ("strikeouts", "K"))
+BATTING = (
+    ("plate_appearances", "PA"),
+    ("at_bats", "AB"),
+    ("runs", "R"),
+    ("hits", "H"),
+    ("walks", "BB"),
+    ("strikeouts", "K"),
+)
 PITCHING = (("outs", "IP"), ("hits", "H"), ("runs", "R"), ("earned_runs", "ER"), ("walks", "BB"), ("strikeouts", "K"))
-FOOTNOTES = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
+FOOTNOTES = (
+    ("hit_by_pitch", "HBP"),
+    ("sacrifice_flies", "SF"),
+    ("sacrifice_hits", "SH"),
+    ("catcher_interference", "CI"),
+)
 
 # Real surnames from the register, chosen to span the measured length distribution: 98.7% of
 # batter appearances have a surname of ten characters or fewer, and these include the tail.
@@ -126,9 +138,7 @@ def main() -> None:
 
     out = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
     template = (out / "template.html").read_text(encoding="utf-8")
-    (out / "board.html").write_text(
-        template.replace("/*BOARDS*/", json.dumps(boards, indent=1)), encoding="utf-8"
-    )
+    (out / "board.html").write_text(template.replace("/*BOARDS*/", json.dumps(boards, indent=1)), encoding="utf-8")
     for board in boards:
         print(f"  {board['id']} {board['season']}: {board['note']}, {len(board['labels'])} batting rows")
     print(f"wrote {out / 'board.html'}")

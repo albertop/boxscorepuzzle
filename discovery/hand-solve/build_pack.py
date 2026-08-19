@@ -73,7 +73,12 @@ SAMPLE_PER_DECADE = 8
 
 BATTING_HEADS = ("PA", "AB", "R", "H", "BB", "SO")
 PITCHING_HEADS = ("IP", "H", "R", "ER", "BB", "SO")
-FOOTNOTE_LABELS = (("hit_by_pitch", "HBP"), ("sacrifice_flies", "SF"), ("sacrifice_hits", "SH"), ("catcher_interference", "CI"))
+FOOTNOTE_LABELS = (
+    ("hit_by_pitch", "HBP"),
+    ("sacrifice_flies", "SF"),
+    ("sacrifice_hits", "SH"),
+    ("catcher_interference", "CI"),
+)
 
 
 @dataclass(frozen=True)
@@ -125,7 +130,14 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
             if produced is None:
                 continue
             board = to_board(loaded.direction, produced.erased)
-            package = PuzzlePackage(offense_is_home=True, puzzle_id="pack", puzzle=board, solution=source)
+            package = PuzzlePackage(
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
+                offense_is_home=True,
+                puzzle_id="pack",
+                puzzle=board,
+                solution=source,
+            )
             if not verify(package, secret=UNSIGNED).accepted:
                 continue
             found.append(
@@ -136,10 +148,10 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                     solution=source,
                     certified=derivable_in_view(package),
                     # ⚠️ A substitution is two rows sharing a lineup slot, not a hyphen in a label. This
-            # read `"-" in label` and broke silently the moment the suffix was removed — the pool
-            # reported that no board carries a substitution, which is false of 12% of them. Third
-            # instance today of something derived from the label's formatting instead of the slot.
-            has_substitution=len(set(loaded.slots)) < len(loaded.slots),
+                    # read `"-" in label` and broke silently the moment the suffix was removed — the pool
+                    # reported that no board carries a substitution, which is false of 12% of them. Third
+                    # instance today of something derived from the label's formatting instead of the slot.
+                    has_substitution=len(set(loaded.slots)) < len(loaded.slots),
                     has_live_footnote=any(
                         note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
                         for note in loaded.direction.batter_footnotes
@@ -362,8 +374,6 @@ def audit(chosen: list[Candidate]) -> None:
         raise SystemExit("the pack does not satisfy its own constraints: " + "; ".join(problems))
 
 
-
-
 def indented(label: str, *, substitute: bool) -> str:
     """A row that shares its slot with an earlier one is indented, the way a printed boxscore sets it.
 
@@ -448,8 +458,12 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
         ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("LEFTPADDING", (0, 0), (1, -1), 3),
         ("ALIGN", (0, 0), (0, -1), "CENTER"),
-        ("BACKGROUND", (0, first_batting_row), (0, first_batting_row + len(board.batting) - 1),
-         colors.HexColor("#eeeeee")),
+        (
+            "BACKGROUND",
+            (0, first_batting_row),
+            (0, first_batting_row + len(board.batting) - 1),
+            colors.HexColor("#eeeeee"),
+        ),
     ]
     for row in head_rows:
         style += [
@@ -484,9 +498,15 @@ def line_score_table(loaded: Loaded) -> Table:
         else (score.offense_by_inning, score.defense_by_inning)
     )
     away_rhe, home_rhe = (
-        ((score.defense_runs, score.defense_hits, score.defense_errors), (score.offense_runs, score.offense_hits, score.offense_errors))
+        (
+            (score.defense_runs, score.defense_hits, score.defense_errors),
+            (score.offense_runs, score.offense_hits, score.offense_errors),
+        )
         if loaded.offense_is_home
-        else ((score.offense_runs, score.offense_hits, score.offense_errors), (score.defense_runs, score.defense_hits, score.defense_errors))
+        else (
+            (score.offense_runs, score.offense_hits, score.offense_errors),
+            (score.defense_runs, score.defense_hits, score.defense_errors),
+        )
     )
     header = ["", *(str(index + 1) for index in range(innings)), "R", "H", "E"]
     rows = [header]
@@ -516,7 +536,11 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
     reference = ParagraphStyle("reference", fontName="Helvetica-Bold", fontSize=11)
     footnotes = ParagraphStyle("footnotes", fontName="Helvetica", fontSize=8.5, spaceBefore=3)
     formulas = ParagraphStyle(
-        "formulas", fontName="Helvetica", fontSize=7.0, leading=9, spaceBefore=2,
+        "formulas",
+        fontName="Helvetica",
+        fontSize=7.0,
+        leading=9,
+        spaceBefore=2,
         textColor=colors.HexColor("#333333"),
     )
     story: list[object] = []
@@ -534,9 +558,7 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
             )
         )
         story.append(Spacer(1, 2 * mm))
-        story.append(
-            board_table(candidate.solution if answers else candidate.puzzle, candidate.loaded, solved=answers)
-        )
+        story.append(board_table(candidate.solution if answers else candidate.puzzle, candidate.loaded, solved=answers))
         if not answers:
             story.append(Spacer(1, 3 * mm))
             story.append(survey_box())
@@ -548,7 +570,9 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
 def write_key(path: Path, chosen: list[Candidate]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["board", "game_id", "season", "chain_target", "certified_by_3b", "substitution", "live_footnote"])
+        writer.writerow(
+            ["board", "game_id", "season", "chain_target", "certified_by_3b", "substitution", "live_footnote"]
+        )
         for index, candidate in enumerate(chosen, start=1):
             writer.writerow(
                 [

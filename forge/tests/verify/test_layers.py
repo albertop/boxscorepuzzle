@@ -45,7 +45,13 @@ def refs(board: object) -> tuple[str, ...]:
 
 def package(puzzle: Board, source: Board) -> Package:
     return Package(
-        puzzle_id="000000000000001f", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+        labels=("C",) * len(puzzle.batting),
+        pitcher_labels=("C",) * len(puzzle.pitching),
+        puzzle_id="000000000000001f",
+        puzzle=puzzle,
+        solution=source,
+        slot_references=refs(puzzle),
+        offense_is_home=True,
     )
 
 
@@ -213,6 +219,8 @@ class TestTheSignatureCatchesCorruptionInTransit:
     def test_a_package_changed_after_signing(self, board: Board, blank: Blank) -> None:
         signed = sign(package(board, board), SECRET)
         tampered = Package(
+            labels=("C",) * len(blank(board, {"batting": [(0, 3)]}).batting),
+            pitcher_labels=("C",) * len(blank(board, {"batting": [(0, 3)]}).pitching),
             puzzle_id=signed.puzzle_id,
             puzzle=blank(board, {"batting": [(0, 3)]}),
             solution=signed.solution,

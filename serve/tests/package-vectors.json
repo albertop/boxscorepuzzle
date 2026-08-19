@@ -1,0 +1,117 @@
+{
+  "note": [
+    "Conformance vectors for package schema 3, read by BOTH the Python reader and the browser reader.",
+    "",
+    "They exist because the two readers enforced different contracts while both claiming to read v3.",
+    "Python defaulted labels it never counted; the client accepted a null footnote total it then",
+    "rendered nowhere, and slot references whose grammar and uniqueness it never checked. A package",
+    "could be built, signed and certified on the forge and refused by the browser, and a document the",
+    "browser accepted could produce a board that cannot be finished.",
+    "",
+    "Shared DATA, not shared code: forge/ and serve/ still import nothing from each other. Each side",
+    "applies these mutations to a real reference package with its own reader, which is what makes the",
+    "two implementations answerable to one contract without becoming one implementation.",
+    "",
+    "A vector that both sides accept, or both reject, says nothing on its own. What it forbids is the",
+    "two disagreeing."
+  ],
+  "package": "9f42acb60c536afd",
+  "vectors": [
+    {
+      "name": "the reference package itself",
+      "mutate": [],
+      "expect": "accept",
+      "because": "a guard that rejected everything would satisfy every rejection case below"
+    },
+    {
+      "name": "labels absent",
+      "mutate": [["labels", null]],
+      "expect": "reject",
+      "because": "the forge could build, sign and certify a package the browser refused for exactly this"
+    },
+    {
+      "name": "one label too few",
+      "mutate": [["labels", ["CF", "SS"]]],
+      "expect": "reject",
+      "because": "a label per batting row, or a row has no name"
+    },
+    {
+      "name": "pitcher labels absent",
+      "mutate": [["pitcher_labels", null]],
+      "expect": "reject",
+      "because": "same rule, other grid"
+    },
+    {
+      "name": "an empty label",
+      "mutate": [["labels[0]", ""]],
+      "expect": "reject",
+      "because": "an empty string is not a position; it renders as a row with no name"
+    },
+    {
+      "name": "a null footnote total",
+      "mutate": [["puzzle.footnote_totals[0]", null]],
+      "expect": "reject",
+      "because": "the client counted it as a blank and rendered no term for it, so the board could not be finished"
+    },
+    {
+      "name": "a null batting total",
+      "mutate": [["puzzle.batting_totals[0]", null]],
+      "expect": "accept",
+      "because": "that row IS erasable — the six reference packages all erase from it, which is why the two rows are not one rule"
+    },
+    {
+      "name": "a malformed slot reference",
+      "mutate": [["slot_references[0]", "10"]],
+      "expect": "reject",
+      "because": "the grammar is a slot with an optional letter; the client never checked it"
+    },
+    {
+      "name": "a repeated slot reference",
+      "mutate": [["slot_references[1]", "1"]],
+      "expect": "reject",
+      "because": "two rows answering to #1 makes a footnote attribution ambiguous, which is the field's whole purpose"
+    },
+    {
+      "name": "metadata absent",
+      "mutate": [["metadata", null]],
+      "expect": "reject",
+      "because": "seam C3 makes it loose in content, which is not the same as optional"
+    },
+    {
+      "name": "metadata as an array",
+      "mutate": [["metadata", []]],
+      "expect": "reject",
+      "because": "a list here breaks every reader that asks it for a key"
+    },
+    {
+      "name": "offense_is_home absent",
+      "mutate": [["offense_is_home", null]],
+      "expect": "reject",
+      "because": "a board that cannot name its sides renders a false statement"
+    },
+    {
+      "name": "offense_is_home as a number",
+      "mutate": [["offense_is_home", 1]],
+      "expect": "reject",
+      "because": "0 and 1 are the shape a producer in another language reaches for and they mean nothing here"
+    },
+    {
+      "name": "schema 2",
+      "mutate": [["schema", 2]],
+      "expect": "reject",
+      "because": "a v2 document has no offense_is_home and there is no honest default"
+    },
+    {
+      "name": "a short batting row",
+      "mutate": [["puzzle.batting[0]", [1, 2, 3, 4, 5]]],
+      "expect": "reject",
+      "because": "a short row reads the next column's value into this one and every total still balances"
+    },
+    {
+      "name": "a boolean cell",
+      "mutate": [["puzzle.batting[0][0]", true]],
+      "expect": "reject",
+      "because": "true is not a whole number, however truthy it is"
+    }
+  ]
+}

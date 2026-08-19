@@ -105,8 +105,10 @@ def bands(runs: list[list[Snapshot]]) -> None:
     end, rather than at a number chosen for looking hard.
     """
     print("\n=== BANDS AND WHERE THEY CLOSE ===")
-    print(f"{'target':>7}{'reached':>9}{'erased':>8}{'search p10-p90':>18}{'width':>8}"
-          f"{'resolution p10-p90':>21}{'width':>8}{'trivial':>9}")
+    print(
+        f"{'target':>7}{'reached':>9}{'erased':>8}{'search p10-p90':>18}{'width':>8}"
+        f"{'resolution p10-p90':>21}{'width':>8}{'trivial':>9}"
+    )
     for target in TARGETS:
         found = [hit for run in runs if (hit := first_reaching(run, target))]
         if not found:
@@ -265,9 +267,7 @@ def resolution_ceiling(sample: list[Loaded], per_direction: dict[int, list[list[
             decade: 100.0 * sum(1 for resolution, rows in entries if resolution > k * rows) / len(entries)
             for decade, entries in by_decade.items()
         }
-        overall = 100.0 * sum(
-            1 for resolution, rows, _ in at_target.values() if resolution > k * rows
-        ) / len(at_target)
+        overall = 100.0 * sum(1 for resolution, rows, _ in at_target.values() if resolution > k * rows) / len(at_target)
         worst = sorted(cut_by_decade.items(), key=lambda pair: -pair[1])[:3]
         print(f"{k:>8.1f}{overall:>19.0f}%   " + ", ".join(f"{decade}s {share:.0f}%" for decade, share in worst))
     print("  A ceiling that discards evenly across decades is not a batter cap in disguise.")
@@ -286,7 +286,6 @@ def _pearson(xs: list[float], ys: list[float]) -> float:
     mean_x, mean_y = statistics.fmean(xs), statistics.fmean(ys)
     covariance = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, ys, strict=True)) / len(xs)
     return covariance / (statistics.pstdev(xs) * statistics.pstdev(ys))
-
 
 
 def _render(sample: list, folder: str) -> None:

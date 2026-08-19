@@ -53,6 +53,8 @@ class TestTheFormatSurvivesDisk:
     def test_a_package_round_trips(self, tmp_path: Path, board: Board) -> None:
         original = sign(
             Package(
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000002f",
                 puzzle=board,
                 solution=board,
@@ -77,6 +79,8 @@ class TestTheFormatSurvivesDisk:
         # §9 accepts that devtools can read it. What travels loses instead the metadata that would
         # hand over the mystery — an opaque puzzle id beside a `game_id` protects nothing.
         full = Package(
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",
             puzzle=board,
             solution=board,
@@ -96,6 +100,8 @@ class TestTheFormatSurvivesDisk:
     ) -> None:
         signed = sign(
             Package(
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=board,
                 solution=board,
@@ -115,7 +121,12 @@ class TestTheFormatSurvivesDisk:
         # the whole point of seam C2's versioning.
         path = tmp_path / "future.json"
         document = Package(
-            puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), offense_is_home=True
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("C",) * len(board.pitching),
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            slot_references=refs(board),
+            offense_is_home=True,
         ).as_json()
         document["schema"] = package_format.SCHEMA_VERSION + 1
         path.write_text(json.dumps(document), encoding="utf-8")
@@ -170,6 +181,8 @@ class TestItSaysWhenItCannotAnswer:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(puzzle.batting),
+                pitcher_labels=("C",) * len(puzzle.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=puzzle,
                 solution=board,
@@ -196,7 +209,14 @@ class TestItSaysWhenItCannotAnswer:
 class TestMalformedPackages:
     def test_a_package_with_no_source_cannot_be_verified(self, board: Board) -> None:
         verdict = verify(
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), offense_is_home=True),
+            Package(
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
+                puzzle_id="000000000000000f",
+                puzzle=board,
+                slot_references=refs(board),
+                offense_is_home=True,
+            ),
             secret=UNSIGNED,
         )
 
@@ -211,6 +231,8 @@ class TestMalformedPackages:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=board,
                 solution=holed,
@@ -237,6 +259,8 @@ class TestMalformedPackages:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(shorter.batting),
+                pitcher_labels=("C",) * len(shorter.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=shorter,
                 solution=board,
@@ -266,6 +290,8 @@ class TestMalformedPackages:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(without.batting),
+                pitcher_labels=("C",) * len(without.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=without,
                 solution=board,
@@ -303,6 +329,8 @@ class TestMalformedPackages:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(elsewhere.batting),
+                pitcher_labels=("C",) * len(elsewhere.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=elsewhere,
                 solution=board,
@@ -340,6 +368,8 @@ class TestMalformedPackages:
 
         verdict = verify(
             Package(
+                labels=("C",) * len(broken.batting),
+                pitcher_labels=("C",) * len(broken.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=broken,
                 solution=broken,
@@ -361,6 +391,8 @@ class TestTheTally:
         verdicts = [
             verify(
                 Package(
+                    labels=("C",) * len(board.batting),
+                    pitcher_labels=("C",) * len(board.pitching),
                     puzzle_id="000000000000000a",
                     puzzle=board,
                     solution=board,
@@ -371,6 +403,8 @@ class TestTheTally:
             ),
             verify(
                 Package(
+                    labels=("C",) * len(blank(board, {"batting": [(0, 3), (1, 3)]}).batting),
+                    pitcher_labels=("C",) * len(blank(board, {"batting": [(0, 3), (1, 3)]}).pitching),
                     puzzle_id="000000000000000b",
                     puzzle=blank(board, {"batting": [(0, 3), (1, 3)]}),
                     solution=board,
@@ -380,7 +414,14 @@ class TestTheTally:
                 secret=UNSIGNED,
             ),
             verify(
-                Package(puzzle_id="000000000000000c", puzzle=board, slot_references=refs(board), offense_is_home=True),
+                Package(
+                    labels=("C",) * len(board.batting),
+                    pitcher_labels=("C",) * len(board.pitching),
+                    puzzle_id="000000000000000c",
+                    puzzle=board,
+                    slot_references=refs(board),
+                    offense_is_home=True,
+                ),
                 secret=UNSIGNED,
             ),
         ]

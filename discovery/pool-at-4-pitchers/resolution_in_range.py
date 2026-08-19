@@ -86,12 +86,9 @@ def first_reaching(snapshots: list[Snapshot], target: int) -> Snapshot | None:
 
 def distribution(runs: list[list[Snapshot]]) -> None:
     print("\n=== RESOLUTION p90 INSIDE THE PUBLISHABLE RANGE ===")
-    print(f"{'target':>7}{'n':>6}{'p10':>6}{'p50':>6}{'p90':>6}{'max':>6}"
-          f"{'>= 9':>8}{'>= 10':>8}{'>= 11':>8}")
+    print(f"{'target':>7}{'n':>6}{'p10':>6}{'p50':>6}{'p90':>6}{'max':>6}{'>= 9':>8}{'>= 10':>8}{'>= 11':>8}")
     for target in TARGETS:
-        found = [
-            hit.resolution for run in runs if (hit := first_reaching(run, target)) and hit.resolution is not None
-        ]
+        found = [hit.resolution for run in runs if (hit := first_reaching(run, target)) and hit.resolution is not None]
         if not found:
             continue
         print(

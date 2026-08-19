@@ -333,9 +333,7 @@ def _assert_the_instrument_changed(variant: Variant, shape: C.BoardShape) -> dic
             raise AssertionError(message)
 
     paired = 2
-    hr_bounds = [
-        r for r in rules if len(r.terms) == paired and any(t.cell.endswith(".home_runs") for t in r.terms)
-    ]
+    hr_bounds = [r for r in rules if len(r.terms) == paired and any(t.cell.endswith(".home_runs") for t in r.terms)]
     per_row = 0 if not variant.has_home_runs else (2 if "runs_batted_in" in variant.batting else 1)
     expected_bounds = per_row * (shape.batter_count + 1)
     if len(hr_bounds) != expected_bounds:
@@ -605,10 +603,7 @@ def report(results: list[Trajectory], boards: int) -> None:
         touched = sum(r.home_run_deductions for r in group)
         crossed = sum(r.home_run_cross_deductions for r in group)
         share = f"{crossed} ({crossed / touched:.0%})" if touched else "0"
-        print(
-            f"{variant.name:<40}{touched:>18}{share:>16}"
-            f"{sum(r.home_run_restarts for r in group):>18}"
-        )
+        print(f"{variant.name:<40}{touched:>18}{share:>16}{sum(r.home_run_restarts for r in group):>18}")
 
     print("")
     print("=== WHAT RESTARTS A STALL ===")
@@ -658,8 +653,11 @@ def main() -> None:
         # headers written out by hand, so a seven-column board rendered as six and looked right. The
         # numbers survived that - the instrument assertions are what proved the columns changed - but
         # the page did not, and re-running the whole measurement to redraw it would take an hour.
-        sample = [item for item in load(1, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
-                  if not I.find_violations(item.direction)][:RENDERED]
+        sample = [
+            item
+            for item in load(1, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+            if not I.find_violations(item.direction)
+        ][:RENDERED]
         if not sample:
             message = "no gated direction to render"
             raise SystemExit(message)
@@ -683,8 +681,9 @@ def main() -> None:
         # Before any board: a patch that did not take effect must stop the run rather than produce a
         # sixth identical column of numbers.
         structures[variant.name] = _assert_the_instrument_changed(variant, widest)
-        print(f"  [{number}/{len(VARIANTS)}] {variant.name}: instrument checked, walking {len(sample)} boards",
-              flush=True)
+        print(
+            f"  [{number}/{len(VARIANTS)}] {variant.name}: instrument checked, walking {len(sample)} boards", flush=True
+        )
         for loaded in sample:
             walked = walk_the_board(loaded, variant, SEED)
             if walked is not None:

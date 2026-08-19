@@ -77,7 +77,10 @@ def run(sample: list[Loaded]) -> list[Outcome]:
             if produced is None:
                 continue
             package = sign(
-                Package(offense_is_home=loaded.offense_is_home, 
+                Package(
+                    labels=("C",) * len(to_board(loaded, produced.erased).batting),
+                    pitcher_labels=("C",) * len(to_board(loaded, produced.erased).pitching),
+                    offense_is_home=loaded.offense_is_home,
                     puzzle_id=puzzle_id(loaded.game_id, f"offense{target}"),
                     puzzle=to_board(loaded, produced.erased),
                     solution=source,
@@ -154,7 +157,6 @@ def report(outcomes: list[Outcome]) -> None:
     everything = [value for values in by_target.values() for value in values]
     if everything:
         print(f"\n  overall: {100.0 * sum(everything) / len(everything):.0f}% of published boards survive both")
-
 
 
 def _render(sample: list, folder: str) -> None:

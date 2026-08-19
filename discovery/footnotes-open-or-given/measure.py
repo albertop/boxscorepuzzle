@@ -117,8 +117,10 @@ def report(pairs: list[tuple[str, Walk, Walk]]) -> None:
         print(f"{name:<14}{get(opened):>8.1f}{get(given):>8.1f}")
     deltas = [a - b for a, b in zip(opened, given, strict=True)]
     print(f"{'median delta':<14}{statistics.median(deltas):>8.1f}  (per board, not a difference of medians)")
-    print(f"boards where open is higher: {sum(d > 0 for d in deltas)}/{len(deltas)}, "
-          f"equal: {sum(d == 0 for d in deltas)}, lower: {sum(d < 0 for d in deltas)}")
+    print(
+        f"boards where open is higher: {sum(d > 0 for d in deltas)}/{len(deltas)}, "
+        f"equal: {sum(d == 0 for d in deltas)}, lower: {sum(d < 0 for d in deltas)}"
+    )
     print(f"erasable cells: open {pairs[0][1].erasable}, given {pairs[0][2].erasable} on the first board")
 
     print("")
@@ -127,21 +129,28 @@ def report(pairs: list[tuple[str, Walk, Walk]]) -> None:
     for target in TARGETS:
         o = [pair[1].blanks_at[target] for pair in pairs if target in pair[1].blanks_at]
         g = [pair[2].blanks_at[target] for pair in pairs if target in pair[2].blanks_at]
-        print(f"{target:>7}{len(o) / len(pairs):>9.0%}{len(g) / len(pairs):>9.0%}"
-              f"{statistics.median(o) if o else float('nan'):>10.0f}"
-              f"{statistics.median(g) if g else float('nan'):>11.0f}")
+        print(
+            f"{target:>7}{len(o) / len(pairs):>9.0%}{len(g) / len(pairs):>9.0%}"
+            f"{statistics.median(o) if o else float('nan'):>10.0f}"
+            f"{statistics.median(g) if g else float('nan'):>11.0f}"
+        )
 
     print("")
     print("=== DOES 5-AGAINST-15 REPRODUCE? ===")
     print("  the claim: median ceiling 5 with footnotes given, 15 with them open")
     print(f"  measured:  median ceiling {statistics.median(given):.0f} given, {statistics.median(opened):.0f} open")
-    print(f"  coverage at 5 stalls: {sum(1 for p in pairs if 5 in p[2].blanks_at) / len(pairs):.0%} given "
-          f"(the claim said 56%), {sum(1 for p in pairs if 5 in p[1].blanks_at) / len(pairs):.0%} open")
+    print(
+        f"  coverage at 5 stalls: {sum(1 for p in pairs if 5 in p[2].blanks_at) / len(pairs):.0%} given "
+        f"(the claim said 56%), {sum(1 for p in pairs if 5 in p[1].blanks_at) / len(pairs):.0%} open"
+    )
 
 
 def main() -> None:
-    sample = [item for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
-              if not find_violations(item.direction)]
+    sample = [
+        item
+        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+        if not find_violations(item.direction)
+    ]
     if not sample:
         raise SystemExit(f"no directions survived the {GATE:.0%} gate")
     print(f"{len(sample)} gated directions, each walked twice on the same ordering and seed", flush=True)

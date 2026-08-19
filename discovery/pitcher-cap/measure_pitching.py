@@ -142,8 +142,10 @@ def structure(sample: dict[int, list[Loaded]]) -> None:
 
 def quality(sample: dict[int, list[Loaded]], runs: dict[int, list[list[Snapshot]]], label: str) -> None:
     print(f"\n=== SOLUTION QUALITY BY PITCHER COUNT — {label} ===")
-    print(f"{'pitchers':>9}{'runs':>6}{'ceiling p50':>13}{'target':>8}{'reached':>9}"
-          f"{'erased':>8}{'search':>8}{'res':>6}{'trivial':>9}{'pitching steps':>16}")
+    print(
+        f"{'pitchers':>9}{'runs':>6}{'ceiling p50':>13}{'target':>8}{'reached':>9}"
+        f"{'erased':>8}{'search':>8}{'res':>6}{'trivial':>9}{'pitching steps':>16}"
+    )
     for count in PITCHER_COUNTS:
         trajectories = runs[count]
         if not trajectories:
@@ -168,7 +170,7 @@ def quality(sample: dict[int, list[Loaded]], runs: dict[int, list[list[Snapshot]
                 f"{statistics.fmean([hit.pitching_share for hit in found]):>15.1%}"
             )
         print()
-    print(f"  sample sizes: {({count: len(sample[count]) for count in PITCHER_COUNTS})}")
+    print(f"  sample sizes: { ({count: len(sample[count]) for count in PITCHER_COUNTS}) }")
 
 
 def families(runs: dict[int, list[list[Snapshot]]], label: str) -> None:
@@ -201,7 +203,6 @@ def _median[T: (int, float)](values: list[T]) -> float:
     return float(statistics.median(values)) if values else float("nan")
 
 
-
 def _render(sample: list, folder: str) -> None:
     """Six boards to look at, written before the numbers are printed (see `discovery/render_step`)."""
     sys.path.insert(0, str(_ROOT / "discovery"))
@@ -224,9 +225,7 @@ def main() -> None:
     _render([item for group in sample.values() for item in group], "pitcher-cap")
     structure(sample)
 
-    runs = {
-        count: [trajectory(loaded, seed) for loaded in sample[count] for seed in SEEDS] for count in PITCHER_COUNTS
-    }
+    runs = {count: [trajectory(loaded, seed) for loaded in sample[count] for seed in SEEDS] for count in PITCHER_COUNTS}
     quality(sample, runs, "all eras")
     families(runs, "all eras")
 

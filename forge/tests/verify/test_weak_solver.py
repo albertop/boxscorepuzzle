@@ -98,6 +98,8 @@ class TestTheReportedProperty:
 
         assert derivable_in_view(
             Package(
+                labels=("C",) * len(puzzle.batting),
+                pitcher_labels=("C",) * len(puzzle.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=puzzle,
                 solution=board,
@@ -111,6 +113,8 @@ class TestTheReportedProperty:
 
         assert not derivable_in_view(
             Package(
+                labels=("C",) * len(puzzle.batting),
+                pitcher_labels=("C",) * len(puzzle.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=puzzle,
                 solution=board,

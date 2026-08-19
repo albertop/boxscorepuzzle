@@ -61,7 +61,10 @@ def pages(path: Path) -> list[str]:
 
 def shown(page: str) -> str:
     """The text a reader sees, pulled out of the PDF drawing operators."""
-    return " ".join(match.decode("latin-1") if isinstance(match, bytes) else match for match in re.findall(r"\((?:[^()\\]|\\.)*\)", page))
+    return " ".join(
+        match.decode("latin-1") if isinstance(match, bytes) else match
+        for match in re.findall(r"\((?:[^()\\]|\\.)*\)", page)
+    )
 
 
 def check(pdf: Path, key: Path | None) -> None:

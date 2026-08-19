@@ -90,8 +90,7 @@ def measure() -> list[dict[str, object]]:
                     "chain": solution.chain_length,
                     "families": sorted(family.value for family in solution.families_used),
                     "family_count": len(solution.families_used),
-                    "used_global": Family.GLOBAL_IDENTITY.value
-                    in {family.value for family in solution.families_used},
+                    "used_global": Family.GLOBAL_IDENTITY.value in {family.value for family in solution.families_used},
                     "stall_position": _stall_position(solution),
                     "steps": len(solution.deductions),
                     "hardest_search": solution.hardest_search,
@@ -154,8 +153,10 @@ def compare(before: Path, after: Path) -> None:
                 f"diagnostic and not an experiment."
             )
             raise SystemExit(message)
-        print(f"⚠️ PARTIAL — {len(only_left)} boards only before, {len(only_right)} only after. "
-              f"Not an experimental result.")
+        print(
+            f"⚠️ PARTIAL — {len(only_left)} boards only before, {len(only_right)} only after. "
+            f"Not an experimental result."
+        )
 
     print(f"\n=== {before.name} AGAINST {after.name} ===")
     print(f"{len(shared)} boards in both, {len(left) - len(shared)} only before, {len(right) - len(shared)} only after")

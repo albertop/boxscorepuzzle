@@ -34,7 +34,6 @@ TARGET_CHAIN = 11
 SEED = 7
 
 
-
 def esc(value: object) -> str:
     """Everything interpolated into generated HTML goes through here.
 
@@ -216,7 +215,12 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     batting_columns: tuple[str, ...] = board.get("battingColumns", BATTING_COLUMNS)  # type: ignore[assignment]
     pitching_columns: tuple[str, ...] = board.get("pitchingColumns", PITCHING_COLUMNS)  # type: ignore[assignment]
     columns = max(len(batting_columns), len(pitching_columns))
-    grid = f"<colgroup style='--columns:{columns}'></colgroup>" + "<thead><tr><th class='label'></th>" + _headers(batting_columns) + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
+    grid = (
+        f"<colgroup style='--columns:{columns}'></colgroup>"
+        + "<thead><tr><th class='label'></th>"
+        + _headers(batting_columns)
+        + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
+    )
     for index, row in enumerate(board["batting"]):  # type: ignore[arg-type]
         sub = substitutes(board.get("slots"))
         label = indented(
@@ -317,15 +321,15 @@ def main() -> None:
 
     # The resolution question. Same chain, opposite ends of the resolution distribution.
     with_resolution = [
-        (loaded, puzzle)
-        for loaded, puzzle in solved
-        if puzzle.solution.ninetieth_percentile_resolution is not None
+        (loaded, puzzle) for loaded, puzzle in solved if puzzle.solution.ninetieth_percentile_resolution is not None
     ]
     with_resolution.sort(key=lambda pair: pair[1].solution.ninetieth_percentile_resolution or 0)
     if len(with_resolution) >= 2:
         resolutions = [pair[1].solution.ninetieth_percentile_resolution or 0 for pair in with_resolution]
-        print(f"resolution p90 across the sample: {min(resolutions)} to {max(resolutions)}, "
-              f"median {statistics.median(resolutions):.0f}")
+        print(
+            f"resolution p90 across the sample: {min(resolutions)} to {max(resolutions)}, "
+            f"median {statistics.median(resolutions):.0f}"
+        )
         low_loaded, low_puzzle = with_resolution[0]
         high_loaded, high_puzzle = with_resolution[-1]
         boards.append(

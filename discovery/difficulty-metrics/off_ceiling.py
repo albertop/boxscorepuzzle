@@ -72,18 +72,24 @@ def main() -> None:
         chains = [float(row[1].chain_length) for row in rows]
         zeros = [row[2]["zero_density"] for row in rows]
 
-        print(f"=== CHAIN TARGET {target}  (n={len(rows)}, chain actually reached: "
-              f"p50 {statistics.median(chains):.0f}, range {min(chains):.0f}-{max(chains):.0f}) ===")
+        print(
+            f"=== CHAIN TARGET {target}  (n={len(rows)}, chain actually reached: "
+            f"p50 {statistics.median(chains):.0f}, range {min(chains):.0f}-{max(chains):.0f}) ==="
+        )
         print(_spread("search max", search))
         print(_spread("search p90", search_p90))
         print(_spread("resolution max", resolution))
         print(_spread("resolution p90", resolution_p90))
         print("  the spread column is the separation: chain is fixed here, so anything left is real")
-        print(f"\n  vs zero density   search {_pearson(search, zeros):+.3f}   "
-              f"search p90 {_pearson(search_p90, zeros):+.3f}   "
-              f"resolution p90 {_pearson(resolution_p90, zeros):+.3f}")
-        print(f"  vs chain length   search {_pearson(search, chains):+.3f}   "
-              f"resolution p90 {_pearson(resolution_p90, chains):+.3f}")
+        print(
+            f"\n  vs zero density   search {_pearson(search, zeros):+.3f}   "
+            f"search p90 {_pearson(search_p90, zeros):+.3f}   "
+            f"resolution p90 {_pearson(resolution_p90, zeros):+.3f}"
+        )
+        print(
+            f"  vs chain length   search {_pearson(search, chains):+.3f}   "
+            f"resolution p90 {_pearson(resolution_p90, chains):+.3f}"
+        )
         print(f"  the two components against each other   r = {_pearson(search, resolution_p90):+.3f}")
 
         families: Counter[str] = Counter(families_of(row[1]) for row in rows)

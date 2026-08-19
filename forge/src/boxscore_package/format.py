@@ -63,7 +63,14 @@ BATTING_COLUMNS: Final = ("plate_appearances", "at_bats", "runs", "hits", "walks
 """PA, AB, R, H, BB, SO — the six the board shows (§6). Order is part of the format."""
 
 FOOTNOTE_COLUMNS: Final = ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
-"""HBP, SF, SH, CI — the footnote line, given complete and never erased (§6)."""
+"""HBP, SF, SH, CI — the footnote line.
+
+⚠️ **The per-batter cells ARE erasable and this said the opposite for weeks.** §6 changed when the
+measurement showed the row identity closes on them; the docstring did not, and the real packages
+disagreed with it in silence. What is never erased is the *totals* row below — and, since the zero
+correction, a per-batter cell whose value is zero, because there is nothing to deduce in a term that
+did not happen.
+"""
 
 PITCHING_COLUMNS: Final = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")
 """IP, H, R, ER, BB, SO, with innings held as outs."""
@@ -205,10 +212,10 @@ class LineScore:
 class Board:
     """A board, whole or partly erased.
 
-    `None` in a grid cell means the player has to work it out. The footnote line, the footnote
-    totals, the team footnote and the line score are never `None` in a well-formed puzzle — §6 gives
-    them complete — but the format does not enforce that, because a verifier that trusts the format
-    to reject malformed input is a verifier that checks nothing.
+    `None` in a grid cell means the player has to work it out. The **footnote totals**, the team
+    footnote and the line score are never `None` in a well-formed puzzle; the per-batter footnote cells
+    are, which is a change from what this said before. The format does not enforce the rest, because a
+    verifier that trusts the format to reject malformed input is a verifier that checks nothing.
     """
 
     batting: tuple[tuple[int | None, ...], ...]
@@ -247,7 +254,8 @@ class Board:
             batting=batting,
             batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals"),
             footnotes=footnotes,
-            # The footnote line is given complete and never erased (§6), so a null in it is
+            # The footnote TOTALS row is never erased — the row identity does not close without it —
+            # so a null in it is
             # malformed rather than difficult.
             footnote_totals=_cells(raw.get("footnote_totals"), len(FOOTNOTE_COLUMNS), "footnote_totals", complete=True),
             left_on_base=None if left_on_base is None else _whole_number(left_on_base, "left_on_base"),
@@ -341,7 +349,12 @@ class Package:
     """The completed board. Ships with the puzzle — see `Reveal` for why, and §9 for the trade."""
 
     labels: tuple[str, ...] = ()
-    """One per batting row: the position, suffixed by order of appearance where it repeats (§5, §7)."""
+    """One per batting row: the **bare** position the man entered at — `CF`, `SS`, `P`.
+
+    ⚠️ **Never suffixed, and this said the opposite.** The suffix was removed when it turned out three
+    separate decisions were reading it as a lineup-slot marker; `slot_references` carries that now, and
+    two rows may both read `CF`.
+    """
 
     pitcher_labels: tuple[str, ...] = ()
     """`SP`, then `RP-1` onwards in order of appearance. Never a bare `P` (§5)."""
@@ -399,6 +412,12 @@ class Package:
             message = f"offense_is_home is {self.offense_is_home!r}; a package must say which side batted last"
             raise PackageError(message)
         _check_slot_references(self.slot_references, len(self.puzzle.batting))
+        # ⚠️ **The labels were defaulted and never counted.** A package could be built, signed and
+        # certified on the forge with no labels at all, and the browser then refused it for exactly that
+        # — two readers of one schema disagreeing about what the schema requires, which is the failure
+        # shape this project is named for. The document says one label per row; so does this now.
+        _check_labels(self.labels, len(self.puzzle.batting), "labels")
+        _check_labels(self.pitcher_labels, len(self.puzzle.pitching), "pitcher_labels")
         if self.schema is not None:
             _check_schema(self.schema, "a package cannot be schema")
 
@@ -480,12 +499,16 @@ class Package:
                 puzzle_id=_matching(raw.get("puzzle_id"), PUZZLE_ID, "puzzle_id"),
                 puzzle=puzzle,
                 solution=Board.from_json(raw["solution"]) if raw.get("solution") is not None else None,
-                labels=tuple(_strings(raw.get("labels", []), "labels")),
-                pitcher_labels=tuple(_strings(raw.get("pitcher_labels", []), "pitcher_labels")),
+                # Required, not defaulted: a document without them is not a v3 document.
+                labels=tuple(_strings(raw.get("labels"), "labels")),
+                pitcher_labels=tuple(_strings(raw.get("pitcher_labels"), "pitcher_labels")),
                 reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
                 slot_references=_slot_references(raw.get("slot_references"), len(puzzle.batting)),
                 offense_is_home=_side(raw.get("offense_is_home")),
-                metadata=_metadata(raw.get("metadata", {})),
+                # ⚠️ Required, not defaulted to `{}`. The document says the key is present; defaulting
+                # meant a package with no metadata parsed here and was refused by the client, which is
+                # the divergence the shared vectors exist to catch — and did, on their first run.
+                metadata=_metadata(raw.get("metadata")),
                 # Not stored. `written_as` derives the version from the payload, and a document
                 # whose declared version disagreed with its content was rejected above — so keeping
                 # the parsed number would only let a round trip differ from its original.
@@ -495,6 +518,20 @@ class Package:
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _check_labels(values: object, rows: int, where: str) -> None:
+    """One label per row, and a tuple of strings — the same rule the client applies."""
+    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+        message = f"{where} is {type(values).__name__}, expected a tuple of strings"
+        raise PackageError(message)
+    if len(values) != rows:
+        message = f"{len(values)} {where} for {rows} rows"
+        raise PackageError(message)
+    for index, value in enumerate(values):
+        if not isinstance(value, str) or not value:
+            message = f"{where}[{index}] is {value!r}, expected a non-empty string"
+            raise PackageError(message)
 
 
 def _check_schema(value: object, where: str) -> None:

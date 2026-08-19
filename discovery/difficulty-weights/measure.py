@@ -242,7 +242,8 @@ def report_floors(boards: list[Scored]) -> None:
             caught = {
                 index
                 for index, board in enumerate(easy)
-                if board.trivial >= trivial_floor and (board.search if board.search is not None else 1.0) <= search_floor
+                if board.trivial >= trivial_floor
+                and (board.search if board.search is not None else 1.0) <= search_floor
             }
             print(f"{trivial_floor:>12.2f}{search_floor:>11.2f}{len(caught):>9}{len(caught) / len(easy):>9.1%}")
             if (trivial_floor, search_floor) == (0.35, 0.50):

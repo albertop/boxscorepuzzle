@@ -103,8 +103,10 @@ def main() -> None:
     kept = [item for item in sample if density[id(item)] < 0.30]
     if kept:
         runs = [item.direction.batting_totals.runs for item in kept]
-        print(f"  kept below 30%: median {statistics.median(runs):.0f} runs, "
-              f"{sum(1 for value in runs if value == 0)} shutouts")
+        print(
+            f"  kept below 30%: median {statistics.median(runs):.0f} runs, "
+            f"{sum(1 for value in runs if value == 0)} shutouts"
+        )
 
 
 if __name__ == "__main__":

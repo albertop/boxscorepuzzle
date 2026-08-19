@@ -54,11 +54,19 @@ function rows(raw, width, where) {
   });
 }
 
-function totals(raw, width, where) {
+function totals(raw, width, where, { complete = false } = {}) {
   if (!Array.isArray(raw) || raw.length !== width) {
     fail(`${where} has ${Array.isArray(raw) ? raw.length : typeof raw} cells, expected ${width}`);
   }
-  return raw.map((value, column) => cell(value, `${where}[${column}]`));
+  return raw.map((value, column) => {
+    // ⚠️ **`complete` exists because a null footnote total made the board unfinishable.** The reader
+    // accepted it as a blank, `createGame` counted it among the blanks, and the footnote line skips a
+    // term whose total is unknown — so the cell existed, had to be filled, and had nowhere to be filled
+    // from. The unsolvable-board defect again, reached from the schema side. §6 says that row is never
+    // erased; the client now says so too.
+    if (complete && value === null) fail(`${where}[${column}] is null; this row is never erased`);
+    return cell(value, `${where}[${column}]`);
+  });
 }
 
 function lineScore(raw) {
@@ -100,7 +108,9 @@ function board(raw, where) {
     pitching,
     pitchingTotals: totals(raw.pitching_totals, PITCHING_COLUMNS.length, `${where}.pitching_totals`),
     footnotes,
-    footnoteTotals: totals(raw.footnote_totals, FOOTNOTE_COLUMNS.length, `${where}.footnote_totals`),
+    footnoteTotals: totals(raw.footnote_totals, FOOTNOTE_COLUMNS.length, `${where}.footnote_totals`, {
+      complete: true,
+    }),
     // ⚠️ LOB is a team scalar and is never erased: without it the board cannot express the global
     // identity at all (§6). `null` here is a malformed package, not a blank cell.
     leftOnBase: isWholeNumber(raw.left_on_base) ? raw.left_on_base : fail(`${where}.left_on_base is not a whole number`),
@@ -112,7 +122,26 @@ const strings = (raw, length, where) => {
   if (!Array.isArray(raw) || raw.length !== length) {
     fail(`${where} has ${Array.isArray(raw) ? raw.length : typeof raw} entries, expected ${length}`);
   }
-  return raw.map((value, index) => (typeof value === "string" ? value : fail(`${where}[${index}] is not a string`)));
+  return raw.map((value, index) =>
+    typeof value === "string" && value.length > 0 ? value : fail(`${where}[${index}] is ${JSON.stringify(value)}`),
+  );
+};
+
+/**
+ * One slot reference per batting row: `9` where a lineup slot holds one row, `9a`/`9b` where shared.
+ *
+ * ⚠️ **The grammar and the uniqueness were checked on the forge and not here.** A document with a
+ * malformed or repeated reference passed the client boundary, and a repeat is the one thing this field
+ * exists to prevent: two rows answering to `#5` makes a footnote attribution ambiguous, which is the
+ * whole reason the field was added in schema 2. Two readers of one schema, disagreeing about it.
+ */
+const slotReferences = (raw, rows) => {
+  const values = strings(raw, rows, "slot_references");
+  for (const [index, value] of values.entries()) {
+    if (!/^[1-9][a-z]?$/.test(value)) fail(`slot_references[${index}] is ${JSON.stringify(value)}, expected a slot with an optional letter`);
+  }
+  if (new Set(values).size !== values.length) fail(`slot_references repeats a value: ${JSON.stringify(values)}`);
+  return values;
 };
 
 /**
@@ -134,8 +163,10 @@ export function readPackage(raw) {
   if (solution.batting.length !== puzzle.batting.length || solution.pitching.length !== puzzle.pitching.length) {
     fail("the solution does not have the same shape as the puzzle");
   }
-  if (raw.metadata !== undefined && (raw.metadata === null || typeof raw.metadata !== "object" || Array.isArray(raw.metadata))) {
-    fail("metadata is present and is not an object");
+  // Required and object-shaped, as the document states — not defaulted. Seam C3 makes it deliberately
+  // loose in *content*; that is not the same as optional.
+  if (raw.metadata === null || typeof raw.metadata !== "object" || Array.isArray(raw.metadata)) {
+    fail(`metadata is ${Array.isArray(raw.metadata) ? "an array" : typeof raw.metadata}, expected an object`);
   }
   // ⚠️ **The client cannot work this out and must not try.** Which club batted last is determined by
   // a ragged line score — the home side leading after the top of the ninth never bats again — and
@@ -156,8 +187,8 @@ export function readPackage(raw) {
     pitcherLabels: strings(raw.pitcher_labels, puzzle.pitching.length, "pitcher_labels"),
     // ⚠️ **Produced once on the forge, never derived here.** Which rows share a lineup slot is a fact
     // about the game, and a client that recomputed it would be the second place encoding one rule.
-    slotReferences: strings(raw.slot_references, puzzle.batting.length, "slot_references"),
-    metadata: raw.metadata ?? {},
+    slotReferences: slotReferences(raw.slot_references, puzzle.batting.length),
+    metadata: raw.metadata,
     reveal: raw.reveal ?? null,
   };
 }

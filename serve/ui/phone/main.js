@@ -65,7 +65,11 @@ function boot({ puzzle }) {
     if (!game.isBlank(name)) return;
     selected = name;
     for (const node of scroller.querySelectorAll(".cell")) {
-      node.classList.toggle("selected", node.dataset.cell === name);
+      const isSelected = node.dataset.cell === name;
+      node.classList.toggle("selected", isSelected);
+      // The amber says *this one* to the eye; `aria-pressed` says it to everything else. A state that
+      // only one of them can read is a state half the players cannot see.
+      if (node.hasAttribute("aria-pressed")) node.setAttribute("aria-pressed", isSelected ? "true" : "false");
       // The row and column a selected cell shares an equation with. Shown because a deduction is
       // always about a line, and finding it by eye on a 44px grid is the tedious part.
       const other = node.dataset.cell !== name;

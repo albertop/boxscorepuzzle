@@ -53,7 +53,7 @@ def characters() -> str:
         for value in raw["labels"] + raw["pitcher_labels"] + raw["slot_references"]:
             used.update(value)
     # The grammar, not just today's instances: any position abbreviation is upper case, a shared slot
-    # takes a lower-case suffix, and the footnote line multiplies with ×.
+    # takes a lower-case suffix, and the footnote line uses a multiplication sign.
     used.update(string.ascii_uppercase + string.ascii_lowercase + " :,.#?×+-()")
     return "".join(sorted(used))
 

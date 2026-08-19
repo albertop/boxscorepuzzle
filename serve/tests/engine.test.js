@@ -37,6 +37,10 @@ async function loadAll() {
 
 const packages = await loadAll();
 
+// Loaded here rather than inside the suite: `suite()` takes a synchronous callback, and top-level await
+// is what this module already uses for the packages themselves.
+const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
+
 suite("The six real packages parse, and their shape is the contract", () => {
   test("there are six of them and each carries a distinct id", () => {
     assert(packages.length === 6, `manifest lists ${packages.length} puzzles`);
@@ -312,6 +316,56 @@ suite("Innings are thirds, and the two directions are inverses", () => {
   });
 });
 
+suite("The shared conformance vectors — the same file the Python reader runs", () => {
+  /**
+   * ⚠️ **They exist because the two readers enforced different contracts while both claiming v3.**
+   * Python defaulted labels it never counted; this reader accepted a null footnote total it then
+   * rendered nowhere, and slot references whose grammar and uniqueness it never checked.
+   *
+   * **Shared data, not shared code**: forge/ and serve/ import nothing from each other. A vector both
+   * sides accept, or both reject, proves nothing by itself — what the file forbids is the two
+   * disagreeing, so a change made to one reader and not the other turns one of them red.
+   */
+  const apply = (document, path, value) => {
+    const parts = [];
+    for (const chunk of path.split(".")) {
+      const [name, ...rest] = chunk.split("[");
+      parts.push(name, ...rest.map((index) => Number(index.replace("]", ""))));
+    }
+    let target = document;
+    for (const part of parts.slice(0, -1)) target = target[part];
+    const last = parts.at(-1);
+    // `null` in a vector means *absent*, not a JSON null: absence and an explicit null are different
+    // documents and both readers have to answer both.
+    if (value === null && typeof last === "string") delete target[last];
+    else target[last] = value;
+  };
+
+  const reference = packages.find((p) => p.id === vectors.package);
+
+  test("the reference package the vectors mutate is in the manifest", () => {
+    assert(reference !== undefined, `${vectors.package} is not among the published packages`);
+  });
+
+  for (const vector of vectors.vectors) {
+    test(`${vector.expect}: ${vector.name}`, () => {
+      const document = structuredClone(reference.raw);
+      for (const [path, value] of vector.mutate) apply(document, path, value);
+      if (vector.expect === "accept") {
+        readPackage(document);
+        return;
+      }
+      throws(() => readPackage(document), undefined, `accepted: ${vector.because}`);
+    });
+  }
+
+  test("the vectors exercise both answers", () => {
+    // A file of nothing but rejections would pass a reader that refuses everything.
+    const answers = new Set(vectors.vectors.map((v) => v.expect));
+    equal([...answers].sort(), ["accept", "reject"], "the vectors only ever expect one answer");
+  });
+});
+
 suite("A cell's block, because a column name alone does not identify a column", () => {
   test("⚠️ `hits` in batting and `hits` in pitching are different columns", () => {
     // The defect this exists for: selecting a batting cell tinted the pitching grid's column, because
@@ -366,6 +420,76 @@ suite("The footnote line marks a live term, because that is the whole mechanism"
   });
 });
 
+suite("Every blank is reachable without a finger", () => {
+  /**
+   * ⚠️ Editable cells were elements with click handlers and nothing else — no focus, no role, no
+   * keyboard, no name, no selected state. The keypad was focusable and useless, because it does nothing
+   * until a cell is selected, so the board was unusable before the first digit. That needs no unusual
+   * setup: a phone and its own screen reader.
+   */
+  const board = async () => {
+    const { renderSection, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell } = await import("../engine/columns.js");
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const chosen = [];
+    const node = renderSection({
+      title: "T",
+      columns: columnsFor.batting,
+      rows: puzzle.puzzle.batting,
+      labels: puzzle.labels,
+      slots: puzzle.slotReferences,
+      cellName: battingCell,
+      totalName: totalNameFor.batting,
+      game,
+      onSelect: (name) => chosen.push(name),
+    });
+    return { node, game, chosen };
+  };
+
+  test("every blank is focusable and carries a button role", async () => {
+    const { node, game } = await board();
+    const blanks = [...node.querySelectorAll(".cell")].filter((n) => game.isBlank(n.dataset.cell));
+
+    assert(blanks.length > 0, "this section has no blanks, so the test proves nothing");
+    for (const cell of blanks) {
+      equal(cell.getAttribute("role"), "button", `${cell.dataset.cell} has no role`);
+      equal(cell.tabIndex, 0, `${cell.dataset.cell} is not focusable`);
+    }
+  });
+
+  test("a given cell is not focusable, because there is nothing to do there", async () => {
+    // A fix that made every cell a button would satisfy the test above and add forty stops to the
+    // traversal that lead nowhere.
+    const { node, game } = await board();
+    const given = [...node.querySelectorAll(".cell")].filter((n) => !game.isBlank(n.dataset.cell));
+
+    assert(given.length > 0, "every cell on this board is blank");
+    for (const cell of given) assert(!cell.hasAttribute("role"), `${cell.dataset.cell} is a button and should not be`);
+  });
+
+  test("the name says which row and which column, not just 'blank'", async () => {
+    const { node, game } = await board();
+    const cell = [...node.querySelectorAll(".cell")].find((n) => game.isBlank(n.dataset.cell));
+
+    const label = cell.getAttribute("aria-label");
+    const column = cell.dataset.cell.split(".")[1];
+
+    assert(label.includes(text(`column.${column}`)), `${label} does not name its column`);
+    assert(label.split(",").length >= 2, `${label} names only one thing`);
+  });
+
+  test("Enter and Space select, and other keys do not", async () => {
+    const { node, game, chosen } = await board();
+    const cell = [...node.querySelectorAll(".cell")].find((n) => game.isBlank(n.dataset.cell));
+
+    for (const key of ["Enter", " "]) cell.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true }));
+    equal(chosen.length, 2, "Enter and Space did not both select");
+    cell.dispatchEvent(new KeyboardEvent("keydown", { key: "a", bubbles: true }));
+    equal(chosen.length, 2, "an unrelated key selected a cell");
+  });
+});
+
 suite("C11: no user-facing string is in code", () => {
   test("every column has a heading and an unknown key throws", () => {
     for (const column of [...BATTING_COLUMNS, ...PITCHING_COLUMNS, ...FOOTNOTE_COLUMNS]) {
@@ -376,10 +500,22 @@ suite("C11: no user-facing string is in code", () => {
     throws(() => text("board.nothing_here"), "no string for");
   });
 
-  test("a replacement catalog is complete or the swap is refused", () => {
+  test("a replacement catalogue is complete, or the swap is refused", () => {
+    // ⚠️ The version this replaces swapped in a *complete* copy and compared it with the same complete
+    // catalogue — it could not fail, because there was no refusal in the code to trigger. Stated now as
+    // what it forbids: a partial catalogue installs, and the failure surfaces mid-render at whichever
+    // key `text()` reaches first.
     const before = keys();
     useCatalog({ ...CATALOGS.en });
-    equal(keys().sort(), before.sort(), "the catalog lost keys on a swap");
+    equal(keys().sort(), before.sort(), "the catalogue lost keys on a swap");
+
+    const { "board.totals": _dropped, ...partial } = CATALOGS.en;
+    throws(() => useCatalog(partial), "incomplete", "a catalogue missing a key was installed");
+    throws(() => useCatalog({ ...CATALOGS.en, "board.nothing": "x" }), "incomplete", "an unexpected key was installed");
+    throws(() => useCatalog({}), "incomplete");
+
+    // And the refusal is atomic: a rejected swap leaves the previous catalogue in place.
+    equal(keys().sort(), before.sort(), "a refused swap still changed the active catalogue");
     useCatalog(CATALOGS.en);
   });
 });

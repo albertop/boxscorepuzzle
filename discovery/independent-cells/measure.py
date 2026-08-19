@@ -160,9 +160,7 @@ def overlap(boards: list[Shape]) -> None:
     print("\n=== IS IT A THIRD DEFECT, OR THE OTHER TWO AGAIN ===")
     diluted = {i for i, b in enumerate(easy) if b.independent_share >= 0.70}
     floor_a = {
-        i
-        for i, b in enumerate(easy)
-        if b.trivial >= 0.35 and (b.search if b.search is not None else 1.0) <= 0.50
+        i for i, b in enumerate(easy) if b.trivial >= 0.35 and (b.search if b.search is not None else 1.0) <= 0.50
     }
     floor_b = {i for i, b in enumerate(easy) if Family.ROW_IDENTITY.value not in b.families}
     print(f"  mostly free filling (>= 70% independent): {len(diluted)} of {len(easy)}")

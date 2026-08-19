@@ -150,8 +150,9 @@ FIELDING_CODE: Final = {1: "P", 2: "C", 3: "1B", 4: "2B", 5: "3B", 6: "SS", 7: "
 _NOT_A_FIELDING_POSITION: Final = frozenset({"", "?", "DH", "PH", "PR"})
 
 
-def _position(appeared_at: str, entered_fielding: int | None, entered_as: int | None,
-              started_at: int | None = None) -> str:
+def _position(
+    appeared_at: str, entered_fielding: int | None, entered_as: int | None, started_at: int | None = None
+) -> str:
     """Where the man played, not how he arrived.
 
     **The label has a deductive function rather than a biographical one.** It is what tells the player
@@ -504,7 +505,9 @@ def load(
                 for r in batting_rows
             )
             footnotes = tuple(
-                BatterFootnotes(hit_by_pitch=r[7], sacrifice_flies=r[8], sacrifice_hits=r[9], catcher_interference=r[10])
+                BatterFootnotes(
+                    hit_by_pitch=r[7], sacrifice_flies=r[8], sacrifice_hits=r[9], catcher_interference=r[10]
+                )
                 for r in batting_rows
             )
             pitching = tuple(
@@ -644,18 +647,14 @@ def survey(sample: list[Loaded]) -> None:
                 if len(solution.deductions) > TAIL_TRIM:
                     # How often the board pinched, not just whether it ever did. One width-one step
                     # and six of them are very different solves and the minimum calls both "one".
-                    bottlenecks[
-                        sum(1 for d in solution.deductions[:-TAIL_TRIM] if d.frontier == 1)
-                    ] += 1
+                    bottlenecks[sum(1 for d in solution.deductions[:-TAIL_TRIM] if d.frontier == 1)] += 1
                 family_sets[tuple(sorted(f.value for f in solution.families_used))] += 1
                 if leaned_on_a_footnote(loaded.direction, solution):
                     footnote_needed += 1
                 # Only boards long enough to have a frontier at all. Substituting a zero for the
                 # ones that do not would put a fabricated value into the correlation.
                 if solution.narrowest_frontier is not None:
-                    rows_for_correlation.append(
-                        (count, solution.chain_length, solution.narrowest_frontier)
-                    )
+                    rows_for_correlation.append((count, solution.chain_length, solution.narrowest_frontier))
 
         if not chains:
             print(f"{count:>6}  {0.0:>6.1f}%  no complete solutions")
@@ -772,6 +771,7 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
     del sample, rng
     message = "ambiguity() grouped by position label and no longer measures ambiguity; see discovery/footnote-groups"
     raise RuntimeError(message)
+
 
 def main() -> None:
     sample = load(35)

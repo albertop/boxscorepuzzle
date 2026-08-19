@@ -121,8 +121,10 @@ def by_ordering(sample: list[Loaded]) -> dict[str, list[list[Snapshot]]]:
 def ordering_table(runs: dict[str, list[list[Snapshot]]]) -> None:
     print("\n=== EACH ORDERING AGAINST EACH TARGET ===")
     print("A run that never reaches the target is a discard, not a failure (§22).")
-    print(f"{'ordering':<13}{'target':>7}{'reached':>9}{'erased p50':>12}{'chain p50':>11}"
-          f"{'search p50':>12}{'resolution p50':>16}{'trivial p50':>13}")
+    print(
+        f"{'ordering':<13}{'target':>7}{'reached':>9}{'erased p50':>12}{'chain p50':>11}"
+        f"{'search p50':>12}{'resolution p50':>16}{'trivial p50':>13}"
+    )
     for ordering in sorted(ORDERINGS):
         for target in TARGETS:
             hits = [first_reaching(run, target) for run in runs[ordering]]
@@ -195,8 +197,10 @@ def targeting(runs: dict[str, list[list[Snapshot]]]) -> None:
     stopping condition can actually reach a joint target and what it costs the pool.
     """
     print("\n=== WITH CHAIN FIXED, HOW MUCH ROOM IS LEFT IN THE OTHER TWO ===")
-    print(f"{'target':>7}{'n':>7}{'search p10-p90':>18}{'resolution p10-p90':>22}{'r(chain,search)':>18}"
-          f"{'r(chain,res)':>15}")
+    print(
+        f"{'target':>7}{'n':>7}{'search p10-p90':>18}{'resolution p10-p90':>22}{'r(chain,search)':>18}"
+        f"{'r(chain,res)':>15}"
+    )
     for target in TARGETS:
         found = [hit for ordering in runs for run in runs[ordering] if (hit := first_reaching(run, target))]
         searches = [(hit.chain, hit.search) for hit in found if hit.search is not None]
@@ -237,7 +241,9 @@ def targeting(runs: dict[str, list[list[Snapshot]]]) -> None:
                 joint += 1
                 break
     print(f"  runs reaching chain 11                     : {len(single)}/{len(all_runs)}")
-    print(f"  runs also reaching search >= {search_floor:.2f} and res >= {resolution_floor:.0f}: {joint}/{len(all_runs)}")
+    print(
+        f"  runs also reaching search >= {search_floor:.2f} and res >= {resolution_floor:.0f}: {joint}/{len(all_runs)}"
+    )
     print(f"  pool cost multiplier of the joint target   : {len(single) / max(joint, 1):.2f}x")
 
 

@@ -159,7 +159,14 @@ def to_candidate(found: Reached) -> Candidate | None:
     """
     source = to_board(found.loaded.direction, None)
     board = to_board(found.loaded.direction, found.erased)
-    package = PuzzlePackage(offense_is_home=True, puzzle_id="0000000000000fff", puzzle=board, solution=source)
+    package = PuzzlePackage(
+        labels=("C",) * len(board.batting),
+        pitcher_labels=("C",) * len(board.pitching),
+        offense_is_home=True,
+        puzzle_id="0000000000000fff",
+        puzzle=board,
+        solution=source,
+    )
     if not verify(package, secret=UNSIGNED).accepted:
         return None
     notes = found.loaded.direction.batter_footnotes
