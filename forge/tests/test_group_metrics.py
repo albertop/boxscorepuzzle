@@ -20,6 +20,7 @@ from collections.abc import Callable
 from contextlib import redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -87,9 +88,7 @@ class TestTheBaselineRestoresTheGroup:
         values = {"batting[0].hits": 1, "batting[1].hits": 2, "footnotes[0].hit_by_pitch": 0}
         return metrics, hidden, erased, values
 
-    def test_it_is_true_when_restoring_the_group_unlocks_an_outside_cell(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_it_is_true_when_restoring_the_group_unlocks_an_outside_cell(self, monkeypatch: pytest.MonkeyPatch) -> None:
         metrics, hidden, erased, values = self._setup()
         monkeypatch.setattr(metrics, "solve", _fake_solve("batting[1].hits", hidden))
 
@@ -202,25 +201,145 @@ class TestTheDenominatorsAreDeclaredNotInferred:
 
 
 class TestTheArtifactDeclaresItself:
+    def _identity(self, module: object, **overrides: object) -> object:
+        fields = {
+            "revision": "abc1234",
+            "tracked_changes": "clean",
+            "untracked": "clean",
+            "instrument": "0" * 12,
+        }
+        return module.RunIdentity(**{**fields, **overrides})
+
+    def _stamp(self, module: object, identity: object) -> str:
+        return module.provenance(identity, module.Coverage(directions=1, attempted=3, reached=3), groups=2, trials=3)
+
     def test_the_stamp_carries_the_schema_and_a_completion_marker(self) -> None:
         module = _module("measure")
 
-        stamp = module.provenance(module.Coverage(directions=1, attempted=3, reached=3), groups=2, trials=3)
+        stamp = self._stamp(module, self._identity(module))
 
         assert f"result schema      {module.RESULT_SCHEMA}" in stamp
         assert stamp.strip().endswith("COMPLETE"), "an interrupted run must not look finished"
 
-    def test_the_revision_reports_uncommitted_work(self) -> None:
-        # ⚠️ A commit alone does not identify the code that ran: the version this replaces read a loose
-        # ref and said nothing about edits, so an edited instrument was labelled with the last commit.
+    def test_the_stamp_renders_what_it_was_handed_rather_than_asking_git(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """⚠️ The defect: the stamp was assembled *after* every board had been measured.
+
+        Hours of solving separate the code that ran from the tree `git` is asked about, so an edit
+        landing mid-run was recorded as the state the run began in — the exact change the stamp exists
+        to expose. Capture is `identify()`, before measurement; `provenance` only formats.
+
+        The guard is stated as what it forbids: `_git` is made to fail, and the stamp must be
+        unaffected. A version that called `git` itself would print `unknown` here.
+        """
+        module = _module("measure")
+        monkeypatch.setattr(module, "_git", lambda *_: pytest.fail("provenance asked the repository"))
+
+        stamp = self._stamp(module, self._identity(module, revision="deadbee"))
+
+        assert "deadbee" in stamp
+        assert "unknown" not in stamp
+
+    def test_the_stamp_separates_tracked_edits_from_untracked_files(self) -> None:
+        # ⚠️ `--dirty` does not see untracked files, and counting both together made an ordinary edit
+        # read as an unknown file. Two questions, two lines.
         module = _module("measure")
 
-        stamp = module.provenance(module.Coverage(directions=1, attempted=1, reached=1), groups=1, trials=1)
+        stamp = self._stamp(module, self._identity(module, tracked_changes="2 files, aa11bb22", untracked="clean"))
 
-        assert "revision" in stamp
-        # ⚠️ `--dirty` does not see untracked files, so the stamp asks for them separately: an
-        # untracked helper changes the result while the revision reads clean.
+        assert "tracked changes    2 files, aa11bb22" in stamp
+        assert "untracked files    clean" in stamp
         assert "instrument         sha256" in stamp, "the instrument is not identified by content"
+
+    def test_the_stamp_names_the_inputs_and_not_only_their_count(self) -> None:
+        """⚠️ A direction count is not the data. The database can change between runs while the
+        revision and the source digest are identical, so two different samples carried one provenance.
+        """
+        module = _module("measure")
+        boards = [SimpleNamespace(game_id="ATL196805110", offense_team="CHN")]
+
+        identity = self._identity(module).with_inputs(boards)
+        other = self._identity(module).with_inputs([*boards, SimpleNamespace(game_id="X", offense_team="Y")])
+
+        assert identity.directions == ("ATL196805110:CHN",)
+        assert identity.inputs != other.inputs, "the digest did not follow the sample"
+        assert f"inputs             sha256 {identity.inputs} over 1 directions" in self._stamp(module, identity)
+
+    def test_the_digest_does_not_depend_on_the_order_the_loader_returned(self) -> None:
+        # Sorted before hashing, so a reordered sample is recognised as the same inputs rather than
+        # reported as different ones.
+        module = _module("measure")
+        one = SimpleNamespace(game_id="A", offense_team="X")
+        two = SimpleNamespace(game_id="B", offense_team="Y")
+
+        first = self._identity(module).with_inputs([one, two])
+        reversed_order = self._identity(module).with_inputs([two, one])
+
+        assert first.inputs == reversed_order.inputs
+
+    @pytest.mark.parametrize(
+        ("field", "publishable"),
+        [("revision", False), ("tracked_changes", False), ("untracked", False), ("instrument", True)],
+    )
+    def test_either_repository_question_failing_refuses_publication(self, field: str, *, publishable: bool) -> None:
+        """⚠️ Only `revision unknown` used to block. A failed `git status` published a result that
+        could not say whether an untracked file had shadowed an imported dependency — the absence of a
+        check reading as the presence of a passing one.
+        """
+        module = _module("measure")
+
+        assert self._identity(module, **{field: "unknown"}).publishable is publishable
+        assert self._identity(module).publishable is True, "a clean identity must publish"
+
+
+class TestPublicationCannotCollideOrLeaveDebris:
+    """⚠️ An atomic final rename protects the destination, not the preparation.
+
+    Two overlapping runs sharing one staging name can truncate each other or move the other's bytes
+    into the canonical path. The guard has to force the collision: a test that greps for `getpid`
+    proves a fragment exists, not that the name is what keeps the runs apart.
+    """
+
+    def test_two_publications_to_one_destination_stage_different_paths(self, tmp_path: Path) -> None:
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+
+        first = module.publish(out, "first", pid=101, nonce=lambda: "aaaa")
+        second = module.publish(out, "second", pid=102, nonce=lambda: "bbbb")
+
+        assert first != second
+        assert out.read_text(encoding="utf-8") == "second"
+
+    def test_the_nonce_separates_runs_that_share_a_pid(self, tmp_path: Path) -> None:
+        # A pid is reused by the operating system, so it is not by itself a distinguisher.
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+
+        first = module.publish(out, "first", pid=101, nonce=lambda: "aaaa")
+        second = module.publish(out, "second", pid=101, nonce=lambda: "bbbb")
+
+        assert first != second
+
+    def test_the_staging_file_shares_the_destination_directory(self, tmp_path: Path) -> None:
+        # `replace` is atomic only within a filesystem; a staging path elsewhere is a copy that can
+        # half-arrive.
+        module = _module("measure")
+        out = tmp_path / "nested" / "results.txt"
+        out.parent.mkdir()
+
+        assert module.publish(out, "text", pid=1, nonce=lambda: "cc").parent == out.parent
+
+    def test_nothing_is_left_behind_when_the_replace_fails(self, tmp_path: Path) -> None:
+        """The failing case, not the passing one: a partial file beside the real one is what the
+        staging name exists to prevent, and `finally` is the only thing removing it."""
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+        out.mkdir()  # a directory where the file should be, so `replace` cannot succeed
+
+        with pytest.raises(OSError):
+            module.publish(out, "text", pid=1, nonce=lambda: "dd")
+
+        assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"]
+        assert not list(out.iterdir()), "the staging file survived a failed replace"
 
 
 class TestBlockageCanStillBeObserved:

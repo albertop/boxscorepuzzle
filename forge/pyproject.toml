@@ -69,6 +69,10 @@ select = [
 # Runnable scripts print: that is their interface. And the name of an environment variable is not a
 # secret, whatever it looks like to a pattern matcher.
 "scripts/*.py" = ["T201", "S105"]
+# ⚠️ `extend-include` pulls `../discovery` into ruff's scope and nothing here exempted it, so every
+# discovery script reported 25 unfixable findings for printing — its interface. A check that fires on
+# everything carries no information, exactly like one that never fires.
+"../discovery/**/*.py" = ["T201", "S105"]
 "tests/**" = ["S101", "PLR2004"]   # asserts and magic numbers are fine in tests
 
 [tool.pytest.ini_options]

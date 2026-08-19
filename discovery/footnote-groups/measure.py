@@ -36,7 +36,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
@@ -214,8 +214,10 @@ def report(groups: list[Group], coverage: "Coverage") -> None:
 
     print("")
     print("=== COVERAGE, SO THE DENOMINATORS CAN BE READ ===")
-    print(f"  erasures: {coverage.attempted} attempted over {coverage.directions} directions, "
-          f"{coverage.reached} reached {TARGET_STALLS} stalls")
+    print(
+        f"  erasures: {coverage.attempted} attempted over {coverage.directions} directions, "
+        f"{coverage.reached} reached {TARGET_STALLS} stalls"
+    )
     print(f"  group-erasure trials: {sum(g.trials for g in groups)} — the blockage denominator, which")
     print("    repeats each successful erasure once per group on its board and is not an eraser count")
     print(f"  groups with no successful erasure: {sum(1 for g in groups if g.trials == 0)} — excluded")
@@ -237,12 +239,77 @@ def report(groups: list[Group], coverage: "Coverage") -> None:
             print(f"  {terms} terms: one row [{len(one)}], two rows [{len(two)}] — too few to compare")
 
 
+@dataclass(frozen=True)
+class RunIdentity:
+    """What produced a run, captured **before** it and frozen.
+
+    ⚠️ **The stamp used to be assembled after every board had been measured**, from whatever was on
+    disk by then. A long database experiment gives ample time for `measure.py`, the branch or the
+    working tree to change, so the artifact recorded the end-of-run state rather than the code that
+    had already been loaded and executed — the exact mid-run change this mechanism exists to expose.
+
+    ⚠️ **And it named no input.** A direction count is not the data: the database can change while the
+    revision and the source hash stay identical, producing a different sample under the same
+    provenance. `inputs` digests the boards as loaded, with the identifiers beside it so the digest can
+    be checked rather than trusted.
+    """
+
+    revision: str
+    tracked_changes: str
+    untracked: str
+    instrument: str
+    inputs: str = "not yet loaded"
+    directions: tuple[str, ...] = ()
+
+    @property
+    def publishable(self) -> bool:
+        """⚠️ **Either repository question failing is a refusal.** Only `revision unknown` used to
+        block, so a failed `git status` published a result that could not say whether an untracked
+        file had shadowed an imported dependency."""
+        return "unknown" not in (self.revision, self.tracked_changes, self.untracked)
+
+    def with_inputs(self, sample: list[Loaded]) -> "RunIdentity":
+        identifiers = tuple(sorted(f"{item.game_id}:{item.offense_team}" for item in sample))
+        digest = hashlib.sha256("".join(identifiers).encode()).hexdigest()[:12]
+        return replace(self, inputs=digest, directions=identifiers)
+
+
+def identify() -> RunIdentity:
+    """Read the world once, at the top of the run, before anything is measured."""
+    porcelain = _git("status", "--porcelain", "--untracked-files=all")
+    if porcelain == "unknown":
+        tracked = untracked = "unknown"
+    else:
+        entries = porcelain.splitlines()
+        # ⚠️ Untracked and modified were counted together and both labelled `+untracked`, so an
+        # ordinary edit read as an unknown file — and two different dirty trees with the same count
+        # were indistinguishable. Separated, each with a digest of its own contents.
+        tracked = _describe([line for line in entries if not line.startswith("??")])
+        untracked = _describe([line for line in entries if line.startswith("??")])
+    return RunIdentity(
+        revision=_git("rev-parse", "--short", "HEAD"),
+        tracked_changes=tracked,
+        untracked=untracked,
+        instrument=source_hashes(),
+    )
+
+
+def _describe(entries: list[str]) -> str:
+    """`clean`, or a count with a digest — so two different dirty trees do not look alike."""
+    if not entries:
+        return "clean"
+    return f"{len(entries)} files, {hashlib.sha256(''.join(sorted(entries)).encode()).hexdigest()[:8]}"
+
+
 def _git(*arguments: str) -> str:
     """Git output, or `unknown`. `unknown` is not publishable — see `main`."""
     try:
         return subprocess.run(  # noqa: S603
             ["git", "-C", str(_ROOT), *arguments],  # noqa: S607
-            capture_output=True, text=True, check=True, timeout=10,
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
         ).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return "unknown"
@@ -260,30 +327,29 @@ def source_hashes() -> str:
     return digest.hexdigest()[:12]
 
 
-def provenance(coverage: "Coverage", groups: int, trials: int) -> str:
-    """What produced this file, including whether the tree was clean.
+def provenance(identity: "RunIdentity", coverage: "Coverage", groups: int, trials: int) -> str:
+    """Render a `RunIdentity` and the run's coverage.
 
-    ⚠️ **A commit alone does not identify the code that ran.** The version this replaces read
-    `.git/HEAD` and a loose ref, which is wrong for a packed ref or a worktree, and said nothing about
-    uncommitted edits — so an edited instrument was labelled with the previous commit. `git describe`
-    through the repository answers all three, and `--dirty` is the part that matters.
+    ⚠️ **This function reads an identity; it no longer takes one.** It used to call `git` itself, at
+    the end of a run that had already been going for hours — so the stamp described the tree as it
+    stood when the last board finished, not the code that had been loaded and executed. Capturing is
+    `identify()`, called first thing in `main`; this only formats what was captured.
     """
-    described = _git("describe", "--always", "--dirty=+uncommitted")
-    # ⚠️ **`--dirty` does not see untracked files.** An untracked `metrics.py` or query helper changes
-    # the result while the revision reads clean, which is the failure this stamp exists to prevent.
-    untracked = _git("status", "--porcelain", "--untracked-files=all")
-    if untracked and untracked != "unknown":
-        described = f"{described} +untracked({len(untracked.splitlines())} files)"
     return "\n".join(
         [
             "=== WHAT PRODUCED THIS ===",
             f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire where it mattered)",
-            f"  revision           {described}",
-            f"  instrument         sha256 {source_hashes()}   (measure.py and metrics.py as they ran)",
+            f"  revision           {identity.revision}",
+            f"  tracked changes    {identity.tracked_changes}",
+            f"  untracked files    {identity.untracked}",
+            f"  instrument         sha256 {identity.instrument}   (hashed before the run)",
+            f"  inputs             sha256 {identity.inputs} over {len(identity.directions)} directions",
             f"  sample             {coverage.directions} directions, {SAMPLE_PER_DECADE} per decade, gate {GATE:.0%}",
-            f"  erasures           {SEEDS} per direction; {coverage.reached} of {coverage.attempted} reached "
-        f"{TARGET_STALLS} stalls",
-        f"  group trials       {trials}   (each successful erasure once per group on its board)",
+            (
+                f"  erasures           {SEEDS} per direction; {coverage.reached} of "
+                f"{coverage.attempted} reached {TARGET_STALLS} stalls"
+            ),
+            f"  group trials       {trials}   (each successful erasure once per group on its board)",
             f"  groups             {groups}",
             "  blockage           counterfactual, per trial; the baseline restores the group whatever",
             "                     the erasure did to it, so the only difference is the assignment",
@@ -293,15 +359,50 @@ def provenance(coverage: "Coverage", groups: int, trials: int) -> str:
     )
 
 
+def publish(
+    out: Path,
+    text: str,
+    pid: int | None = None,
+    nonce: Callable[[], str] = lambda: secrets.token_hex(4),
+) -> Path:
+    """Write `text` to `out` through a staging file of its own, and return the path that was staged.
+
+    ⚠️ **A fixed staging name is not a single-writer contract.** An atomic final rename protects the
+    destination and not the preparation: two overlapping runs sharing `results.txt.pending` can
+    truncate each other, or one can move the other's bytes into the canonical path. This is the same
+    class already removed from the reference publisher, and a long run makes a duplicate launch
+    operationally plausible rather than a timing curiosity.
+
+    ⚠️ **Extracted so the claim can be tested rather than read.** Inline in `main`, behind a database
+    sample and an hour of solving, neither the uniqueness of the staging name nor the cleanup on
+    failure was reachable from a test — the only guard available was a grep for `getpid`, which is the
+    shape of check this project has recorded failing five times. `pid` and `nonce` are parameters for
+    the same reason: a test that cannot force a collision cannot show the name is what prevents one.
+
+    Staged in `out`'s own directory, because `replace` is atomic only within a filesystem, and removed
+    on either failure so an aborted publish leaves nothing partial beside the real file.
+    """
+    pending = out.with_name(f"{out.name}.pending-{os.getpid() if pid is None else pid}-{nonce()}")
+    try:
+        pending.write_text(text, encoding="utf-8")
+        pending.replace(out)
+    finally:
+        pending.unlink(missing_ok=True)
+    return pending
+
+
 def main() -> None:
     out = Path(sys.argv[sys.argv.index("--output") + 1]) if "--output" in sys.argv else _HERE / "results.txt"
+    identity = identify()
     sample = [
         item
         for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
         if not find_violations(item.direction)
     ]
     if not sample:
-        raise SystemExit(f"no directions survived the {GATE:.0%} gate")
+        message = f"no directions survived the {GATE:.0%} gate"
+        raise SystemExit(message)
+    identity = identity.with_inputs(sample)
     print(f"{len(sample)} gated directions", flush=True)
 
     groups: list[Group] = []
@@ -313,7 +414,8 @@ def main() -> None:
         if number % 20 == 0:
             print(f"  {number}/{len(sample)} boards, {len(groups)} groups", flush=True)
     if not groups:
-        raise SystemExit("no slot groups were produced; the sample carried no lineups")
+        message = "no slot groups were produced; the sample carried no lineups"
+        raise SystemExit(message)
 
     # ⚠️ The instrument owns its artifact. Shell redirection leaves a partial file at the canonical
     # path when a run is interrupted, and a partial file with no completion marker still occupies the
@@ -322,25 +424,16 @@ def main() -> None:
     with contextlib.redirect_stdout(captured):
         report(groups, coverage)
         print("")
-        print(provenance(coverage, len(groups), sum(group.trials for group in groups)))
+        print(provenance(identity, coverage, len(groups), sum(group.trials for group in groups)))
     text = captured.getvalue()
-    if "revision           unknown" in text:
+    if not identity.publishable:
         # Fail closed. A result that cannot say what produced it is worse than no result, because it
-        # occupies the name a decision gets read from.
-        message = "git could not identify the revision; refusing to publish a result with no provenance"
+        # occupies the name a decision gets read from — and *either* repository question failing is
+        # enough, since an untracked file can shadow an imported dependency without touching a commit.
+        message = f"provenance is incomplete ({identity}); refusing to publish"
         raise SystemExit(message)
     print(text)
-    # ⚠️ **A fixed staging name is not a single-writer contract.** An atomic final rename protects the
-    # destination and not the preparation: two overlapping runs sharing `results.txt.pending` can
-    # truncate each other, or one can move the other's bytes into the canonical path. This is the same
-    # class already removed from the reference publisher, and a long run makes a duplicate launch
-    # operationally plausible rather than a timing curiosity.
-    pending = out.with_name(f"{out.name}.pending-{os.getpid()}-{secrets.token_hex(4)}")
-    try:
-        pending.write_text(text, encoding="utf-8")
-        pending.replace(out)
-    finally:
-        pending.unlink(missing_ok=True)
+    publish(out, text)
     print(f"written to {out}")
 
 

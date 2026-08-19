@@ -2,18 +2,24 @@
 
 ## Where everything stands
 
-**Twelve reviews, 62 findings, none rejected. One is open and it is not waiting on effort.**
+**Thirteen reviews, 65 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v12 is closed except that one — sixty-one of sixty-two.**
+**Everything from v01 to v13 is closed except that one — sixty-four of sixty-five.**
 
-⚠️ **The last four reviews were almost entirely about one instrument.** That is worth reading as a
+⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
 plausible value**, and no amount of care in the reading catches it — only a guard that fails when the
 measurement is blind.
+
+⚠️ **And v13 found the same shape one layer out.** The instrument's own *stamp* was blind: it named the
+code but not the data, it read the tree hours after the run it describes, and it refused to publish on
+one of the two questions it asks. A provenance block that cannot distinguish two runs is an instrument
+that cannot distinguish, reporting as though it had — the identical defect, in the part of the file that
+exists to certify the rest.
 
 ## What is left
 
@@ -50,11 +56,21 @@ every id left in the list still verifies.
 noticed the column had one possible value. The other three were caught before a run completed — which
 is the difference between a review that costs an afternoon and one that costs a decision.
 
+| v13-P1-01 | the **stamp did not identify the run**: gathered at the end, naming no input, refusing on one question of two |
+
+**Only the first produced a reported number.** The other four were caught before a run completed — which
+is the difference between a review that costs an afternoon and one that costs a decision.
+
 The instrument now: measurements as pure functions in `metrics.py` that the tests **call**; report rows
 carrying their own eligibility and denominators as callables; three erasure seeds with per-trial rates;
-run-level coverage kept separate from group trials; an output stamped with a hash of the code that ran
-and an explicit untracked-file check; a per-writer staging path; and a refusal to publish a result whose
-provenance is unknown.
+run-level coverage kept separate from group trials; **an immutable `RunIdentity` captured before the
+first board and rendered afterwards**, carrying the code digest, the tracked and untracked tree states
+separately, and a digest of the sampled directions with the identifiers beside it; a per-writer staging
+path extracted into `publish()` so a collision can be forced in a test; and a refusal to publish when
+**either** repository question is unknown.
+
+⚠️ **Every one of those five is now guarded by a test that fails when the fix is reverted**, checked by
+reverting them rather than by rereading the assertions.
 
 
 ### Then, in order
@@ -622,6 +638,60 @@ decision gets read from.
 Every run staged through `results.txt.pending`. An atomic final rename protects the destination and not
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
+
+## v13 — verified, none rejected. **All three closed.**
+
+Three findings, all in the group instrument, all about the part of it that certifies the rest.
+
+### v13-P1-01 — the stamp described a different run from the one it stamped
+
+Three faults in one block, and they compound:
+
+**Gathered at the end.** `provenance()` called `git` itself, after every board had been measured. A run
+of this instrument takes hours, which is ample time for `measure.py`, the branch or the working tree to
+change — so an edit landing mid-run was recorded as the state the run *finished* in, which is precisely
+the change the stamp exists to expose. Capture is now `identify()`, called first thing in `main` and
+frozen; `provenance()` only formats what it is handed. **The guard is stated as what it forbids**: `_git`
+is monkeypatched to fail the test if it is called at all, so a version that asks the repository again
+cannot pass.
+
+**It named no input.** The stamp carried a direction *count*. The database can change between runs while
+the revision and the source digest are byte-identical, so two different samples arrived under one
+provenance and nothing in the artifact could tell them apart. `with_inputs()` now digests the sampled
+directions immediately after `load()` and **records the sorted identifiers beside the digest**, so the
+digest can be checked rather than trusted. Sorted before hashing, so a reordered sample reads as the
+same inputs.
+
+**It refused on one question of two.** Only `revision unknown` blocked publication. A failed `git status`
+published a result that could not say whether an untracked file had shadowed an imported dependency —
+the absence of a check reading as the presence of a passing one, which is the failure mode CLAUDE.md
+names first. `publishable` now requires all three, parameterised over each field. And tracked edits are
+separated from untracked files, each with a digest of its own contents: counting them together made an
+ordinary edit read as an unknown file, and two different dirty trees with the same count identical.
+
+### v13-P2-01 — the container was never checked, only its contents
+
+`_check_slot_references` took a `Sequence[str]` and validated length, per-item grammar and uniqueness. A
+`str` **is** a `Sequence`, so a nine-row package given `"123456789"` passed all three — nine characters,
+each matching `^[1-9][a-z]?$`, all distinct. A `list` passed too, which defeats the frozen dataclass: the
+caller keeps a reference and can mutate the package after construction.
+
+It now takes `object`, rejects `str` and anything that is not a tuple or list by name, and
+`__post_init__` canonicalises to a tuple through `object.__setattr__`. Verified both ways: a `str` is
+refused with the type in the message, and a caller mutating the list it passed cannot change the package.
+
+### v13-P2-02 — a staging name that could not be tested
+
+The per-writer staging path was correct and unreachable. Inline in `main`, behind a database sample and
+an hour of solving, neither the uniqueness of the name nor the cleanup on failure could be exercised —
+the only guard available was a grep for `getpid`, which is the shape of check this project has recorded
+failing five times.
+
+Extracted into `publish(out, text, pid, nonce)`, with `pid` and `nonce` as parameters for exactly that
+reason: **a test that cannot force a collision cannot show the name is what prevents one.** Four guards
+now hold it — two publications to one destination stage different paths, the nonce separates runs that
+share a pid, the staging file lives in the destination's own directory because `replace` is atomic only
+within a filesystem, and a failed `replace` leaves nothing behind.
 
 ## v11 — verified, none rejected. **All four closed.**
 
@@ -1554,9 +1624,14 @@ So the config reads as a guarantee and is not one, which is this project's own f
 that should agree, and nothing checking. **`F811` genuinely does fire** — that was proved against a
 deliberate duplicate — but it fires only when someone remembers to point ruff at the directory.
 
-**Not fixed here.** The fix is a `per-file-ignores` entry for `../discovery/**` covering `T201`, `E402`
-(the `sys.path` preamble every script needs) and `S311`, and then a lint command that names both trees —
-which belongs with the CI workflow, and CI does not exist yet. Recorded so it is not rediscovered.
+**Half fixed.** `per-file-ignores` now carries `"../discovery/**/*.py" = ["T201", "S105"]`, and
+`discovery/footnote-groups/` lints and formats clean — which is what made the five real findings in it
+visible at all, since they had been sitting under twenty-five reports of a script printing.
+
+**Still open:** the rest of the tree reports **209** findings, led by `PLR2004`, `E402` (the `sys.path`
+preamble every script needs) and `E501`. Those are real style debt rather than noise, so they are not
+being ignored away; they need a pass. And **nothing still runs ruff over `../discovery` automatically** —
+that belongs with the CI workflow, and CI does not exist yet.
 
 ## What is actually left
 
