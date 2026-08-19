@@ -116,9 +116,7 @@ class TestAFootnoteBelongsToARowAndNotToAPosition:
 
         assert carriers == ["9b"]
 
-    def _board(
-        self, footnotes: tuple[BatterFootnotes, ...], rows: tuple[BattingLine, ...]
-    ) -> Direction:
+    def _board(self, footnotes: tuple[BatterFootnotes, ...], rows: tuple[BattingLine, ...]) -> Direction:
         """Only the row identity is under test, so the rest of the board is the smallest thing that
         lets `find_violations` run. Every other fault is filtered out by the caller."""
         totals = BattingLine(plate_appearances=4, at_bats=3, runs=0, hits=1, walks=0, strikeouts=0)

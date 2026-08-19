@@ -142,20 +142,14 @@ class TestTheGridShowsTheErasedBoard:
         drawn = self._drawn(board, cubs_at_braves_1968)
         flat = " ".join(cell for row in drawn for cell in row)
         blanks = [
-            (index, column)
-            for index, row in enumerate(board.batting)
-            for column, v in enumerate(row)
-            if v is None
+            (index, column) for index, row in enumerate(board.batting) for column, v in enumerate(row) if v is None
         ]
         # ⚠️ The docstring claimed every erased cell and the test read only the batting rows. The
         # pitching section is erasable too, and an erased value revealed there is the same defect.
         # header, section, the batting rows, the batting totals, the pitching section, its header.
         pitching_first = 2 + len(board.batting) + 3
         pitching_blanks = [
-            (index, column)
-            for index, row in enumerate(board.pitching)
-            for column, v in enumerate(row)
-            if v is None
+            (index, column) for index, row in enumerate(board.pitching) for column, v in enumerate(row) if v is None
         ]
         for index, column in pitching_blanks:
             assert drawn[pitching_first + index][2 + column] == "", f"pitching[{index}][{column}] drew a value"
@@ -176,10 +170,7 @@ class TestTheGridShowsTheErasedBoard:
         # the board's: the same renderer on the complete board fills the same cells.
         board, source, _ = _erased_board(cubs_at_braves_1968)
         blanks = [
-            (index, column)
-            for index, row in enumerate(board.batting)
-            for column, v in enumerate(row)
-            if v is None
+            (index, column) for index, row in enumerate(board.batting) for column, v in enumerate(row) if v is None
         ]
 
         drawn = self._drawn(source, cubs_at_braves_1968)

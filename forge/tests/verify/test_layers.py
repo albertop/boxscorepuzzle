@@ -27,7 +27,6 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
-
 def refs(board: object) -> tuple[str, ...]:
     """One slot reference per batting row, in the shape the format actually allows.
 
@@ -45,7 +44,9 @@ def refs(board: object) -> tuple[str, ...]:
 
 
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="000000000000001f", puzzle=puzzle, solution=source, slot_references=refs(puzzle))
+    return Package(
+        puzzle_id="000000000000001f", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+    )
 
 
 def replacing(board: Board, **changes: object) -> Board:
@@ -216,7 +217,9 @@ class TestTheSignatureCatchesCorruptionInTransit:
             puzzle=blank(board, {"batting": [(0, 3)]}),
             solution=signed.solution,
             metadata=signed.metadata,
-            signature=signed.signature, slot_references=refs(blank(board, {'batting': [(0, 3)]})),
+            signature=signed.signature,
+            slot_references=refs(blank(board, {"batting": [(0, 3)]})),
+            offense_is_home=True,
         )
 
         verdict = verify(tampered, secret=PUBLIC)

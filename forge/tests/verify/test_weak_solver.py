@@ -18,7 +18,6 @@ from boxscore_verify.verify import derivable_in_view
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 
 
-
 def refs(board: object) -> tuple[str, ...]:
     """One slot reference per batting row, in the shape the format actually allows.
 
@@ -97,11 +96,25 @@ class TestTheReportedProperty:
     def test_a_derivable_board_certifies(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(3, 3)]})
 
-        assert derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board,
-            slot_references=refs(puzzle)))
+        assert derivable_in_view(
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=puzzle,
+                solution=board,
+                slot_references=refs(puzzle),
+                offense_is_home=True,
+            )
+        )
 
     def test_an_ambiguous_board_does_not(self, board: Board, blank: Blank) -> None:
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        assert not derivable_in_view(Package(puzzle_id="000000000000000f", puzzle=puzzle, solution=board,
-            slot_references=refs(puzzle)))
+        assert not derivable_in_view(
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=puzzle,
+                solution=board,
+                slot_references=refs(puzzle),
+                offense_is_home=True,
+            )
+        )

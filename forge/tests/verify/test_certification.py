@@ -29,7 +29,6 @@ GAME = "SLN19680808"
 OFFENSE = "CHN"
 
 
-
 def refs(board: object) -> tuple[str, ...]:
     """One slot reference per batting row, in the shape the format actually allows.
 
@@ -83,6 +82,7 @@ def package_for(board: Board) -> Package:
             defense_team="BBB",
             played_on="1968-08-08",
         ),
+        offense_is_home=True,
     )
 
 

@@ -83,9 +83,7 @@ class Certification:
         return not self.refusals
 
 
-def check_mathematics(
-    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
-) -> list[str]:
+def check_mathematics(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """§22's four layers plus the signature. Necessary, and on its own not sufficient."""
     del evidence
     verdict: Verdict = verify(package, secret=secret)
@@ -94,18 +92,14 @@ def check_mathematics(
     return [f"{verdict.rejection.layer}: {verdict.rejection.detail}"]
 
 
-def check_board_is_possible(
-    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
-) -> list[str]:
+def check_board_is_possible(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """Could this have been a baseball game — the class of check `verify()` cannot make."""
     del evidence, secret
     board = package.solution or package.puzzle
     return [f"implausible board: {fault.what}" for fault in faults(board)]
 
 
-def check_reveal_is_complete(
-    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
-) -> list[str]:
+def check_reveal_is_complete(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """The payoff screen, which no layer of §22 looks at and which named the wrong club four times."""
     del evidence, secret
     return [f"broken reveal: {fault.what}" for fault in reveal_faults(package)]
@@ -128,9 +122,7 @@ def check_evidence_is_about_this_package(
     return []
 
 
-def check_provenance(
-    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
-) -> list[str]:
+def check_provenance(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """An accepted source, named rather than merely not excluded."""
     del package, secret
     refusals: list[str] = []

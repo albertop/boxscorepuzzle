@@ -16,23 +16,17 @@ import pytest
 from boxscore_package.format import Board, Package, Reveal
 
 _DOCS = Path(__file__).resolve().parents[3] / "docs"
-DOCUMENTS = {2: _DOCS / "package-format-v2.md"}
-"""⚠️ **Version 1 is gone from here because it is gone from the code.** Its signatures are HMAC and the
-parser accepts only Ed25519, so the compatibility promise was false and no consumer needed it —
-nothing was ever published. `package-format-v1.md` stays as history and is deliberately *not* checked:
-a document tested against code that no longer produces it would have to be edited to stay green, which
-is how history gets rewritten to match the present."""
-"""⚠️ **Both versions, checked separately.** Version 1 stays valid and `serve` may meet either, so a
-document that drifts from the code is a broken contract whichever version it describes. Testing only
-the current one would leave the older document describing a package nobody can produce, which is worse
-than no document — it reads as current.
-"""
-
-DOCUMENT = DOCUMENTS[2]
+DOCUMENTS = {3: _DOCS / "package-format-v3.md"}
+"""⚠️ **Only the version the code writes is checked.** v1 and v2 stay as history and are deliberately
+not tested: a document checked against code that no longer produces it has to be edited to stay green,
+which is how history gets rewritten to match the present. v1's signatures are HMAC; v2 cannot say which
+side batted last, and there is no honest default for that — `true` and `false` are both claims about a
+real game."""
+DOCUMENT = DOCUMENTS[3]
 STRIPPED_KEYS = {"game_id", "retrosheet_id", "season", "date", "teams"}
 
 
-def documented_fields(version: int = 2) -> dict[str, str]:
+def documented_fields(version: int = 3) -> dict[str, str]:
     """Field name to its Published column, read out of the table rather than restated here."""
     text = DOCUMENTS[version].read_text(encoding="utf-8")
     table = text[text.index("| Field | Type | Null? | Published |") : text.index("### board")]
@@ -44,11 +38,11 @@ def documented_fields(version: int = 2) -> dict[str, str]:
     return found
 
 
-def a_package(board: Board, *, version: int = 2) -> Package:
+def a_package(board: Board, *, version: int = 3) -> Package:
     """A package of the asked-for version. Version is a property of the payload, so version 2 is the
     same package carrying slot references rather than the same package with a different number."""
     return Package(
-        slot_references=tuple(str(index + 1) for index in range(len(board.batting))) if version == 2 else None,
+        slot_references=tuple(str(index + 1) for index in range(len(board.batting))) if version >= 2 else None,
         puzzle_id="0123456789abcdef",
         puzzle=board,
         solution=board,
@@ -63,6 +57,7 @@ def a_package(board: Board, *, version: int = 2) -> Package:
         ),
         metadata={"chain_target": 9, "game_id": "ATL196808080", "season": 1968},
         signature="deadbeef",
+        offense_is_home=True,
     )
 
 

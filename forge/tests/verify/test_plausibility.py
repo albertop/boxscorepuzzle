@@ -26,7 +26,6 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
-
 def refs(board: object) -> tuple[str, ...]:
     """One slot reference per batting row, in the shape the format actually allows.
 
@@ -44,7 +43,9 @@ def refs(board: object) -> tuple[str, ...]:
 
 
 def package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="plausibility", puzzle=puzzle, solution=source, slot_references=refs(puzzle))
+    return Package(
+        puzzle_id="plausibility", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+    )
 
 
 def with_phantom_row(board: Board, replace: Replace) -> Board:

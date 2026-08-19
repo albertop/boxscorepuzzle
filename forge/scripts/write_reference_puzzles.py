@@ -96,6 +96,10 @@ def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None
             solution=to_board(loaded.direction, None),
             labels=loaded.labels,
             slot_references=slot_references(loaded.slots),
+            # From the loader, which reads it from the game rather than inferring it. A client cannot
+            # know which club batted last, and one that guessed would be right only when the line
+            # score happens to be ragged.
+            offense_is_home=loaded.offense_is_home,
             pitcher_labels=loaded.pitcher_labels,
             reveal=reveal_for(loaded),
             metadata={

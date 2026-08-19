@@ -149,6 +149,7 @@ class TestOrderings:
         assert named is not None
         assert default.erased == named.erased
 
+
 class TestItRefusesADuplicatedCandidateList:
     """The failure that ran for a whole round of measurements, made to fail on its own.
 
@@ -162,9 +163,7 @@ class TestItRefusesADuplicatedCandidateList:
     """
 
     @pytest.mark.parametrize("ordering", sorted(ORDERINGS))
-    def test_every_ordering_rejects_a_repeated_cell(
-        self, ordering: str, cubs_at_braves_1968: Direction
-    ) -> None:
+    def test_every_ordering_rejects_a_repeated_cell(self, ordering: str, cubs_at_braves_1968: Direction) -> None:
         cells = erasable(cubs_at_braves_1968)
         doubled = [*cells, *(cell for cell in cells if cell.startswith("footnotes["))]
 

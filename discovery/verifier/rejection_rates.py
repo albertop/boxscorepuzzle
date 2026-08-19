@@ -77,7 +77,7 @@ def run(sample: list[Loaded]) -> list[Outcome]:
             if produced is None:
                 continue
             package = sign(
-                Package(
+                Package(offense_is_home=loaded.offense_is_home, 
                     puzzle_id=puzzle_id(loaded.game_id, f"offense{target}"),
                     puzzle=to_board(loaded, produced.erased),
                     solution=source,

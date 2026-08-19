@@ -17,6 +17,7 @@ from boxscore_package.format import (
     BATTING_COLUMNS,
     FOOTNOTE_COLUMNS,
     PITCHING_COLUMNS,
+    SCHEMA_VERSION,
     Board,
     Package,
     PackageError,
@@ -43,7 +44,11 @@ def refs(board: object) -> tuple[str, ...]:
 
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
     document = Package(
-        puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)
+        puzzle_id="000000000000000f",
+        puzzle=board,
+        solution=board,
+        slot_references=refs(board),
+        offense_is_home=True,
     ).as_json()
     for key, value in changes.items():
         section, _, field = key.partition("__")
@@ -121,7 +126,13 @@ class TestTheSignatureCannotBeSkippedByAccident:
         # report a pass — misconfiguration reading as success.
         with pytest.raises(ValueError, match="pass UNSIGNED"):
             verify(
-                Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)),
+                Package(
+                    puzzle_id="000000000000000f",
+                    puzzle=board,
+                    solution=board,
+                    slot_references=refs(board),
+                    offense_is_home=True,
+                ),
                 secret=None,
             )
 
@@ -133,7 +144,13 @@ class TestTheSignatureCannotBeSkippedByAccident:
 
     def test_skipping_it_deliberately_is_allowed(self, board: Board) -> None:
         assert verify(
-            Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)),
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=board,
+                solution=board,
+                slot_references=refs(board),
+                offense_is_home=True,
+            ),
             secret=UNSIGNED,
         ).accepted
 
@@ -195,7 +212,11 @@ class TestTheEnvelopeIsCheckedToo:
 
     def _document(self, board: Board) -> dict[str, object]:
         return Package(
-            puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board)
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            solution=board,
+            slot_references=refs(board),
+            offense_is_home=True,
         ).as_json()
 
     @pytest.mark.parametrize("root", [[], "a package", 7, None, True])
@@ -265,27 +286,28 @@ class TestAPackageCannotContradictItself:
 
     def test_a_package_without_references_is_refused(self, board: Board) -> None:
         with pytest.raises(PackageError, match="needs one slot reference"):
-            Package(puzzle_id="000000000000000f", puzzle=board)
+            Package(puzzle_id="000000000000000f", puzzle=board, offense_is_home=True)
 
     def test_a_version_this_code_cannot_read_is_refused(self, board: Board) -> None:
-        with pytest.raises(PackageError, match="cannot be schema 1"):
+        with pytest.raises(PackageError, match="cannot be schema"):
             Package(
                 puzzle_id="000000000000000f",
                 puzzle=board,
                 slot_references=tuple(str(i + 1) for i in range(len(board.batting))),
                 schema=1,
+                offense_is_home=True,
             )
 
     def test_the_references_must_match_the_batting_rows(self, board: Board) -> None:
         # The property the field exists for. One per row, or a footnote names a row that is not there.
         with pytest.raises(PackageError, match="slot references for"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=("1",))
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=("1",), offense_is_home=True)
 
     def test_an_empty_tuple_is_a_value_and_not_an_absence(self, board: Board) -> None:
         # `written_as` used truthiness, so an empty tuple read as absent and downgraded the version.
         # Here it is simply the wrong length, which is what it is.
         with pytest.raises(PackageError, match="slot references for"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=())
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=(), offense_is_home=True)
 
     def test_a_matching_package_is_accepted(self, board: Board) -> None:
         # A guard that refuses everything would satisfy all four tests above.
@@ -293,16 +315,17 @@ class TestAPackageCannotContradictItself:
             puzzle_id="000000000000000f",
             puzzle=board,
             slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+            offense_is_home=True,
         )
 
-        assert package.written_as == 2
+        assert package.written_as == SCHEMA_VERSION
 
-    @pytest.mark.parametrize("schema", [2.0, "2", True, 1, None])
+    @pytest.mark.parametrize("schema", [3.0, "3", True, 1, 2, None])
     def test_a_schema_the_parser_would_refuse_cannot_be_constructed(self, board: Board, schema: object) -> None:
         """⚠️ **The constructor asked only `not in READABLE`, and Python makes `2.0 == 2`.**
 
-        So `schema=2.0` passed, `written_as` returned the float, and `as_json()` emitted
-        `"schema": 2.0` — a document `from_json` correctly refuses. The type could build output outside
+        So `schema=3.0` passed, `written_as` returned the float, and `as_json()` emitted
+        `"schema": 3.0` — a document `from_json` correctly refuses. The type could build output outside
         the language its own parser accepts, which is the sentence already written above this class
         about slot references, arriving one field over because the rule had two copies and not one home.
 
@@ -310,19 +333,36 @@ class TestAPackageCannotContradictItself:
         and it must not be confused with a version the parser would reject.
         """
         if schema is None:
-            assert Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)).written_as == 2
+            assert (
+                Package(
+                    puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), offense_is_home=True
+                ).written_as
+                == SCHEMA_VERSION
+            )
             return
 
         with pytest.raises(PackageError, match="a package cannot be schema"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), schema=schema)
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=board,
+                slot_references=refs(board),
+                schema=schema,
+                offense_is_home=True,
+            )
 
     def test_the_one_schema_this_code_writes_round_trips(self, board: Board) -> None:
         # A guard that refuses every schema would satisfy the test above.
-        document = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), schema=2).as_json()
+        document = Package(
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            slot_references=refs(board),
+            schema=SCHEMA_VERSION,
+            offense_is_home=True,
+        ).as_json()
 
-        assert document["schema"] == 2
+        assert document["schema"] == SCHEMA_VERSION
         assert isinstance(document["schema"], int) and not isinstance(document["schema"], bool)
-        assert Package.from_json(document).written_as == 2
+        assert Package.from_json(document).written_as == SCHEMA_VERSION
 
     def test_a_bare_string_is_not_a_sequence_of_references(self, board: Board) -> None:
         """⚠️ **The container was never checked, only its contents.**
@@ -340,6 +380,7 @@ class TestAPackageCannotContradictItself:
                 puzzle_id="000000000000000f",
                 puzzle=board,
                 slot_references="".join(str(index + 1) for index in range(rows)),
+                offense_is_home=True,
             )
 
     def test_a_list_is_refused_rather_than_converted(self, board: Board) -> None:
@@ -354,13 +395,15 @@ class TestAPackageCannotContradictItself:
         references = [str(index + 1) for index in range(len(board.batting))]
 
         with pytest.raises(PackageError, match="slot_references is list"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=references)
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=references, offense_is_home=True)
 
     def test_the_parse_boundary_still_accepts_the_json_list(self, board: Board) -> None:
         # The consequence that must *not* follow: JSON has no tuples, so refusing lists at the
         # constructor while `from_json` converts is one contract, and refusing them everywhere would
         # be a package this code can write and not read.
-        document = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)).as_json()
+        document = Package(
+            puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), offense_is_home=True
+        ).as_json()
 
         assert isinstance(document["slot_references"], list)
         assert Package.from_json(document).slot_references == refs(board)
@@ -386,17 +429,23 @@ class TestConstructionAndParsingApplyTheSameRule:
         values = bad + tuple(str(index + 2) for index in range(rows - 2))
 
         with pytest.raises(PackageError):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=values)
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=values, offense_is_home=True)
 
     def test_what_the_constructor_accepts_round_trips(self, board: Board) -> None:
         # The direction that proves the rule is a language and not a wall: a valid package survives
         # construction, serialisation and parsing unchanged.
-        package = Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board))
+        package = Package(
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            solution=board,
+            slot_references=refs(board),
+            offense_is_home=True,
+        )
 
         restored = Package.from_json(package.as_json())
 
         assert restored.slot_references == package.slot_references
-        assert restored.written_as == 2
+        assert restored.written_as == SCHEMA_VERSION
 
 
 class TestBothConstructionPathsRefuseTheSameThings:
@@ -414,7 +463,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
         references[0] = bad  # type: ignore[call-overload]
 
         with pytest.raises(PackageError, match="expected a string"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references))
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references), offense_is_home=True)
 
     def test_the_message_names_which_one(self, board: Board) -> None:
         # Position matters when there are thirteen of them and one is wrong.
@@ -422,7 +471,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
         references[2] = 3  # type: ignore[call-overload]
 
         with pytest.raises(PackageError, match="slot reference 2 is 3"):
-            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references))
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=tuple(references), offense_is_home=True)
 
     def test_json_refuses_it_too(self, board: Board) -> None:
         # The other path, so the two cannot drift into different contracts again.
@@ -430,6 +479,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
             puzzle_id="000000000000000f",
             puzzle=board,
             slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+            offense_is_home=True,
         ).as_json()
         document["slot_references"] = [1] * len(board.batting)
 

@@ -35,6 +35,7 @@ the signature is 128 hex characters. The manifest is signed as well as the packa
 """
 
 import json
+from dataclasses import replace
 from typing import Final
 
 from cryptography.exceptions import InvalidSignature
@@ -91,18 +92,12 @@ def _key_bytes(raw: str | bytes, which: str) -> bytes:
 def sign(package: Package, key: Ed25519PrivateKey) -> Package:
     """Return the package carrying its signature. The original is left alone."""
     signature = key.sign(canonical_bytes(package)).hex()
-    return type(package)(
-        puzzle_id=package.puzzle_id,
-        puzzle=package.puzzle,
-        solution=package.solution,
-        labels=package.labels,
-        pitcher_labels=package.pitcher_labels,
-        reveal=package.reveal,
-        slot_references=package.slot_references,
-        metadata=package.metadata,
-        schema=package.schema,
-        signature=signature,
-    )
+    # ⚠️ **`replace`, not a hand-written field list.** This rebuilt the package field by field, so
+    # `offense_is_home` was added to the dataclass and **silently dropped by the signer** — the package
+    # that got signed was not the package that was handed in. That is the removed-mechanism defect
+    # inverted: when a field is added, look for who *rebuilds* the object, not only who reads it.
+    # `replace` carries every field there is, including the ones that do not exist yet.
+    return replace(package, signature=signature)
 
 
 def verify(package: Package, key: Ed25519PublicKey) -> None:

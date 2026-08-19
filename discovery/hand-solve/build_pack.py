@@ -125,7 +125,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
             if produced is None:
                 continue
             board = to_board(loaded.direction, produced.erased)
-            package = PuzzlePackage(puzzle_id="pack", puzzle=board, solution=source)
+            package = PuzzlePackage(offense_is_home=True, puzzle_id="pack", puzzle=board, solution=source)
             if not verify(package, secret=UNSIGNED).accepted:
                 continue
             found.append(

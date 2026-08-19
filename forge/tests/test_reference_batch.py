@@ -201,9 +201,7 @@ class TestTheTrustDomainDecidesTheDestination:
         assert out == writer.EPHEMERAL_OUT
         assert "serve" not in out.parts
 
-    def test_a_key_that_serve_does_not_pin_is_refused_before_anything_is_written(
-        self, monkeypatch: object
-    ) -> None:
+    def test_a_key_that_serve_does_not_pin_is_refused_before_anything_is_written(self, monkeypatch: object) -> None:
         # A valid Ed25519 key that is not *the* key used to self-verify and publish, because the check
         # derived the public half from the key that had just signed. That proves internal consistency
         # and nothing about the deployed reader.

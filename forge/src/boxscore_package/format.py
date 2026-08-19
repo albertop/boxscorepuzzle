@@ -22,17 +22,31 @@ offense equal the outs recorded by the opposing pitchers.
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final, Self
 
-SCHEMA_VERSION: Final = 2
-"""What this code writes. Version 1 stays readable — see `READABLE`."""
+SCHEMA_VERSION: Final = 3
+"""What this code writes.
+
+⚠️ **Version 3 exists because the package could not say which club batted last.** The line score has an
+offensive half and a defensive half, and nothing in the file said which of the two was at home — so a
+client rendering `Away` over the offensive row was **stating a fact it had never been told**, and on the
+reference set it was wrong. *A label sits outside the arithmetic*, which is exactly why every total
+still balanced while the board said something false.
+
+The ragged line score determines it where the halves differ — the home side leading after the top of the
+ninth never bats again — but four of the six reference packages are nine and nine. A client inferring it
+*where it could* would be right sometimes and silently wrong the rest of the time, which is worse than
+not knowing. So the forge, which has the fact, writes it down.
+"""
 
 READABLE: Final = (SCHEMA_VERSION,)
-"""⚠️ **Version 1 was frozen and this is not an amendment to it.** The contract calls version 1
-append-only, and slot references are not an addition: without them a client cannot resolve `SH: 9b` to
-a row, so the package means something different rather than something more. That is a new version.
+"""⚠️ **A version is not amended, it is replaced.** Slot references were not an addition to version 1 —
+without them a client cannot resolve `SH: 9b` to a row, so the package meant something *different*
+rather than something *more*. `offense_is_home` is the same kind of change against version 2: a board
+that cannot name its sides is not a board with one field missing, it is a board that renders a false
+statement.
 
 Cutting it now is the point. Nothing is published, `serve` does not exist, and there is nothing to
 migrate — **a version scheme first exercised under pressure is one that gets skipped.**
@@ -343,6 +357,14 @@ class Package:
     place in this batting order, so a slot there would name a row that does not exist.
     """
 
+    offense_is_home: bool | None = None
+    """Which half of the line score batted last. **Required from schema 3.**
+
+    Top-level rather than inside `Board`, because a board is stored twice — once as the puzzle and once
+    as the solution — and one fact stored in two places is this project's named failure shape. `None`
+    is the absence the constructor refuses, not a third state.
+    """
+
     schema: int | None = None
     """The version this package *is*, checked against the payload rather than trusted.
 
@@ -370,6 +392,12 @@ class Package:
         # version that accepted a list and converted it made the annotation and the constructor
         # disagree; refusing is the shorter way to have one contract, and it keeps a mutable container
         # out of a frozen object whose point is that a signed package cannot change afterwards.
+        # ⚠️ `is not True and is not False`, never truthiness. `offense_is_home=0` is a caller saying
+        # *the visitors are batting* in a language the field does not speak, and truthiness would read
+        # it as the absence this branch exists to catch.
+        if self.offense_is_home is not True and self.offense_is_home is not False:
+            message = f"offense_is_home is {self.offense_is_home!r}; a package must say which side batted last"
+            raise PackageError(message)
         _check_slot_references(self.slot_references, len(self.puzzle.batting))
         if self.schema is not None:
             _check_schema(self.schema, "a package cannot be schema")
@@ -398,20 +426,13 @@ class Package:
         file. What travels instead loses the metadata keys that would give the game away, because a
         deliberately opaque id beside a `game_id` in the metadata protects nothing.
         """
-        return type(self)(
-            puzzle_id=self.puzzle_id,
-            puzzle=self.puzzle,
-            solution=self.solution,
-            labels=self.labels,
-            pitcher_labels=self.pitcher_labels,
-            reveal=self.reveal,
-            # ⚠️ Carried through. Dropping it here would publish a version 1 package from a version 2
-            # one silently — the client would lose the only thing that resolves a footnote, and the
-            # version field would follow the payload down without complaining.
-            slot_references=self.slot_references,
+        # ⚠️ **`replace`, for the reason the signer now uses it too.** A hand-written field list is a
+        # copy of the dataclass that nobody updates: `offense_is_home` was added and both rebuilders
+        # dropped it without a word. Naming only what changes is the only version of this that cannot
+        # go stale.
+        return replace(
+            self,
             metadata={key: value for key, value in self.metadata.items() if key not in LEAKING_METADATA},
-            schema=self.schema,
-            signature=self.signature,
         )
 
     def as_json(self) -> dict[str, Any]:
@@ -425,6 +446,9 @@ class Package:
         document["pitcher_labels"] = list(self.pitcher_labels)
         if self.slot_references is not None:
             document["slot_references"] = list(self.slot_references)
+        # Unconditional: `__post_init__` refuses a package without it, so a document missing the field
+        # is one this code did not write.
+        document["offense_is_home"] = self.offense_is_home
         if self.solution is not None:
             document["solution"] = self.solution.as_json()
         if self.reveal is not None:
@@ -460,6 +484,7 @@ class Package:
                 pitcher_labels=tuple(_strings(raw.get("pitcher_labels", []), "pitcher_labels")),
                 reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
                 slot_references=_slot_references(raw.get("slot_references"), len(puzzle.batting)),
+                offense_is_home=_side(raw.get("offense_is_home")),
                 metadata=_metadata(raw.get("metadata", {})),
                 # Not stored. `written_as` derives the version from the payload, and a document
                 # whose declared version disagreed with its content was rejected above — so keeping
@@ -538,6 +563,20 @@ def _check_slot_references(values: object, rows: int) -> None:
         # A duplicate makes a footnote unresolvable, which is the one thing the field exists to do.
         message = f"slot_references repeats a value: {list(values)}"
         raise PackageError(message)
+
+
+def _side(raw: object) -> bool:
+    """Which half batted last, as a boolean and nothing else.
+
+    ⚠️ **`isinstance(raw, bool)`, not truthiness.** JSON's `0` and `1` are the shape a producer in
+    another language reaches for, and accepting them would let a document say *the visitors batted*
+    while meaning nothing of the kind. The constructor applies the same rule; this is the parse side of
+    one predicate, not a second one.
+    """
+    if not isinstance(raw, bool):
+        message = f"offense_is_home is {raw!r}, expected true or false"
+        raise PackageError(message)
+    return raw
 
 
 def _slot_references(raw: object, rows: int) -> tuple[str, ...]:

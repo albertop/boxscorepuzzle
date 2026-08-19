@@ -31,7 +31,6 @@ test key checked into the repository is a key anybody can sign with."""
 PUBLIC = _KEY.public_key()
 
 
-
 def refs(board: object) -> tuple[str, ...]:
     """One slot reference per batting row, in the shape the format actually allows.
 
@@ -117,7 +116,9 @@ def boards(draw: st.DrawFn) -> Board:
 
 
 def _package(puzzle: Board, source: Board) -> Package:
-    return Package(puzzle_id="property", puzzle=puzzle, solution=source, slot_references=refs(puzzle))
+    return Package(
+        puzzle_id="property", puzzle=puzzle, solution=source, slot_references=refs(puzzle), offense_is_home=True
+    )
 
 
 class TestABoardBuiltFromTheIdentitiesSatisfiesThem:
@@ -210,6 +211,7 @@ class TestTheSignatureTracksTheContent:
             metadata=signed.metadata,
             signature=signed.signature,
             slot_references=refs(altered),
+            offense_is_home=True,
         )
 
         with pytest.raises(SignatureError):
@@ -245,7 +247,9 @@ class TestTheSignatureTracksTheContent:
                 pitching_totals=board.pitching_totals,
                 line_score=board.line_score,
             ),
-            signature=signed.signature, slot_references=refs(signed.puzzle),
+            signature=signed.signature,
+            slot_references=refs(signed.puzzle),
+            offense_is_home=True,
         )
 
         with pytest.raises(SignatureError):
