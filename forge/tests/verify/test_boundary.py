@@ -26,12 +26,19 @@ from boxscore_verify.verify import UNSIGNED, verify
 
 
 def refs(board: object) -> tuple[str, ...]:
-    """One slot reference per batting row — the shape a package must carry since schema 2.
+    """One slot reference per batting row, in the shape the format actually allows.
 
-    A helper rather than the expression inline: it appears in every fixture, and the property being
-    fixed is *one per row*, which a name states and a comprehension buries.
+    ⚠️ **This produced `"10"`, `"11"`… and those are not references.** A lineup has nine slots; a
+    thirteen-row board carries thirteen references drawn from those nine, and what distinguishes rows
+    inside a slot is the letter. The helper invented a tenth slot, and only the stricter constructor
+    noticed — the fixtures had been carrying impossible values.
     """
-    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+    from string import ascii_lowercase  # noqa: PLC0415
+
+    return tuple(
+        str(index + 1) if index < 9 else f"9{ascii_lowercase[index - 9]}"
+        for index in range(len(board.batting))  # type: ignore[attr-defined]
+    )
 
 
 def written(tmp_path: Path, board: Board, **changes: object) -> Path:
@@ -250,9 +257,9 @@ class TestAPackageCannotContradictItself:
     keeps. The parser rejecting it on the way *in* is not the same guarantee.
     """
 
-    def test_a_version_without_references_is_refused(self, board: Board) -> None:
-        with pytest.raises(PackageError, match="requires slot references"):
-            Package(puzzle_id="000000000000000f", puzzle=board, schema=2)
+    def test_a_package_without_references_is_refused(self, board: Board) -> None:
+        with pytest.raises(PackageError, match="needs one slot reference"):
+            Package(puzzle_id="000000000000000f", puzzle=board)
 
     def test_a_version_this_code_cannot_read_is_refused(self, board: Board) -> None:
         with pytest.raises(PackageError, match="cannot be schema 1"):
@@ -283,3 +290,36 @@ class TestAPackageCannotContradictItself:
         )
 
         assert package.written_as == 2
+
+
+class TestConstructionAndParsingApplyTheSameRule:
+    """⚠️ **They applied different subsets of it.** Construction checked the count; parsing checked the
+    count, the syntax and the duplicates. So a producer could build a package with a repeated or
+    malformed reference, serialise it, and hand `serve` a document the shared reader refuses.
+
+    The reference writer's read-back caught that for one caller. The shared type must be unable to
+    produce output outside the language its own parser accepts, or every producer rediscovers the
+    guard — and the one that forgets ships the file.
+    """
+
+    @pytest.mark.parametrize(
+        "bad",
+        [("1", "1"), ("1", "10"), ("1", "A"), ("1", ""), ("1", "0"), ("1", "9ab")],
+        ids=["duplicate", "two digits", "capital", "empty", "zero", "two letters"],
+    )
+    def test_the_constructor_refuses_what_the_parser_refuses(self, board: Board, bad: tuple[str, ...]) -> None:
+        rows = len(board.batting)
+        values = bad + tuple(str(index + 2) for index in range(rows - 2))
+
+        with pytest.raises(PackageError):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=values)
+
+    def test_what_the_constructor_accepts_round_trips(self, board: Board) -> None:
+        # The direction that proves the rule is a language and not a wall: a valid package survives
+        # construction, serialisation and parsing unchanged.
+        package = Package(puzzle_id="000000000000000f", puzzle=board, solution=board, slot_references=refs(board))
+
+        restored = Package.from_json(package.as_json())
+
+        assert restored.slot_references == package.slot_references
+        assert restored.written_as == 2

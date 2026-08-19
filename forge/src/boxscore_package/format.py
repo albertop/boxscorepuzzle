@@ -335,6 +335,8 @@ class Package:
     reveal: Reveal | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     slot_references: tuple[str, ...] | None = None
+    """Required. Typed optional only so the field can carry a default position in the dataclass; a
+    package without it raises at construction."""
     """One per batting row, in row order. Required from schema 2; absent in version 1 packages.
 
     **Pitching rows carry none, deliberately.** Those are the *opposing* team's pitchers and have no
@@ -351,26 +353,22 @@ class Package:
     """
 
     def __post_init__(self) -> None:
-        """⚠️ **The comment said a version cannot disagree with its payload, and nothing enforced it.**
+        """⚠️ **This returned early when `schema` was `None`, which is the normal path.**
 
-        `schema` was publicly settable and `written_as` returned it unexamined, so a caller could
-        serialise version 2 without references, or a version this code cannot read. The parser refused
-        such documents on the way *in*, which meant the writer API could produce a file another process
-        would reject — an invariant each caller had to remember instead of one the type keeps.
+        So the ordinary constructor produced a package with no references, `written_as` labelled it
+        schema 2, `as_json()` omitted the field, and `from_json()` refused the result. The type could
+        build a document its own reader rejects — an asymmetric contract every producer would have to
+        rediscover.
 
-        Frozen dataclasses need `object.__setattr__` for this; the alternative was a factory nobody is
-        obliged to use.
+        Frozen dataclasses need `object.__setattr__` for defaulting; the alternative was a factory
+        nobody is obliged to use.
         """
-        if self.slot_references is not None and len(self.slot_references) != len(self.puzzle.batting):
-            message = f"{len(self.slot_references)} slot references for {len(self.puzzle.batting)} batting rows"
-            raise PackageError(message)
-        if self.schema is None:
-            return
-        if self.schema not in READABLE:
-            message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
-            raise PackageError(message)
         if self.slot_references is None:
-            message = f"schema {self.schema} requires slot references and none were given"
+            message = "a package needs one slot reference per batting row; schema 1 is gone"
+            raise PackageError(message)
+        _check_slot_references(self.slot_references, len(self.puzzle.batting))
+        if self.schema is not None and self.schema not in READABLE:
+            message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
             raise PackageError(message)
 
     @property
@@ -460,7 +458,7 @@ class Package:
                 labels=tuple(_strings(raw.get("labels", []), "labels")),
                 pitcher_labels=tuple(_strings(raw.get("pitcher_labels", []), "pitcher_labels")),
                 reveal=Reveal.from_json(raw["reveal"]) if raw.get("reveal") is not None else None,
-                slot_references=_slot_references(raw.get("slot_references"), schema, len(puzzle.batting)),
+                slot_references=_slot_references(raw.get("slot_references"), len(puzzle.batting)),
                 metadata=_metadata(raw.get("metadata", {})),
                 # Not stored. `written_as` derives the version from the payload, and a document
                 # whose declared version disagreed with its content was rejected above — so keeping
@@ -473,28 +471,35 @@ class Package:
             raise PackageError(message) from error
 
 
-def _slot_references(raw: object, schema: int, rows: int) -> tuple[str, ...] | None:
-    """One reference per batting row, validated at the boundary like every other field.
+def _check_slot_references(values: "tuple[str, ...]", rows: int) -> None:
+    """The complete rule, in one place, used by construction **and** by parsing.
 
-    Absent is correct in a version 1 package and an error from version 2: the field is what the client
-    resolves a footnote against, so a version 2 package without it is malformed rather than sparse.
+    ⚠️ **These applied different subsets.** `__post_init__` checked the count and `from_json` checked
+    the count, the syntax and the duplicates — so a producer could build a package with a malformed or
+    repeated reference, serialise it happily, and hand `serve` a document the shared reader refuses.
+    The reference writer's read-back caught that for one caller; the shared type has to be unable to
+    produce output outside the language its own parser accepts, or every producer rediscovers the
+    guard independently.
     """
-    if schema < SCHEMA_VERSION:
-        if raw is not None:
-            message = f"slot_references is present on a schema {schema} package, which has no such field"
-            raise PackageError(message)
-        return None
-    if not isinstance(raw, list) or len(raw) != rows:
-        message = f"slot_references is {raw!r}, expected {rows} strings, one per batting row"
+    if len(values) != rows:
+        message = f"{len(values)} slot references for {rows} batting rows"
         raise PackageError(message)
-    for value in raw:
+    for value in values:
         if not isinstance(value, str) or not SLOT_REFERENCE.fullmatch(value):
             message = f"slot reference {value!r} is not a slot with an optional letter"
             raise PackageError(message)
-    if len(set(raw)) != len(raw):
+    if len(set(values)) != len(values):
         # A duplicate makes a footnote unresolvable, which is the one thing the field exists to do.
-        message = f"slot_references repeats a value: {raw}"
+        message = f"slot_references repeats a value: {list(values)}"
         raise PackageError(message)
+
+
+def _slot_references(raw: object, rows: int) -> tuple[str, ...]:
+    """One reference per batting row. Required: schema 1 is gone and there is no version without it."""
+    if not isinstance(raw, list):
+        message = f"slot_references is {raw!r}, expected {rows} strings, one per batting row"
+        raise PackageError(message)
+    _check_slot_references(tuple(raw), rows)
     return tuple(raw)
 
 

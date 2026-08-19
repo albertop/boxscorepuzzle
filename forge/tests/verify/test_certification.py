@@ -31,12 +31,19 @@ OFFENSE = "CHN"
 
 
 def refs(board: object) -> tuple[str, ...]:
-    """One slot reference per batting row — the shape a package must carry since schema 2.
+    """One slot reference per batting row, in the shape the format actually allows.
 
-    A helper rather than the expression inline: it appears in every fixture, and the property being
-    fixed is *one per row*, which a name states and a comprehension buries.
+    ⚠️ **This produced `"10"`, `"11"`… and those are not references.** A lineup has nine slots; a
+    thirteen-row board carries thirteen references drawn from those nine, and what distinguishes rows
+    inside a slot is the letter. The helper invented a tenth slot, and only the stricter constructor
+    noticed — the fixtures had been carrying impossible values.
     """
-    return tuple(str(index + 1) for index in range(len(board.batting)))  # type: ignore[attr-defined]
+    from string import ascii_lowercase  # noqa: PLC0415
+
+    return tuple(
+        str(index + 1) if index < 9 else f"9{ascii_lowercase[index - 9]}"
+        for index in range(len(board.batting))  # type: ignore[attr-defined]
+    )
 
 
 def good_evidence(board: Board) -> Evidence:
