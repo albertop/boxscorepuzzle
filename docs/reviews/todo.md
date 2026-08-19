@@ -530,6 +530,39 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
   than kept as a belt** — two places encoding one predicate is the defect this file spent the day
   closing.
 
+## v08 — verified, none rejected. **Six of seven closed.**
+
+| Finding | State | What it was |
+|---|---|---|
+| P2-01 the v2 contract described what the producer stopped emitting | **closed** | suffixed labels and a nullable LOB, in the document `serve` builds against |
+| P1-02 contradictions skipped the global identity | **closed** | the phase split for *choosing* moves was applied to *validating* |
+| P1-01 the writer committed an unsigned manifest | **closed** | `sign_manifest` existed and was never called |
+| P1-04 `--ephemeral` could sign with the production key | **closed** | the environment key won whenever it was set |
+| P1-03 version 1 is not readable despite the promise | **decided, migration owed** | dropping it makes `slot_references` required, which 32 fixtures do not supply |
+| P2-02, P2-03 | open, small | |
+
+**All seven are in code written the same day.** Three are the project's own named patterns turned on
+itself: *a justification travels* (the phase split), *a check that exists and is never invoked*
+(`sign_manifest`), and *a mechanism kept past its problem* (version 1 compatibility).
+
+### v08-P1-01 — the level where nothing else would notice
+
+`sign_manifest()` was written, with a docstring explaining why package signatures do not authenticate
+the selected set, and the writer committed a plain dictionary. The signature is one level **above** the
+code it protects, which is where an omission has nothing beneath it to fail.
+
+Tests now tamper with the generation and with the puzzle list separately, because the second is the
+attack the packages cannot see: every id left in the list still verifies.
+
+### v08-P1-03 — decided, and the consequence is larger than the line
+
+Dropping version 1 is right: no consumer exists, and the alternative is a legacy HMAC verifier nobody
+would run. But **the version follows the payload**, so a package without slot references *is* a version
+1 package — and dropping the version makes the field required, which 32 fixtures do not supply.
+
+Left behind a `TODO` naming the finding rather than 32 red tests or a blind pattern across fixtures at
+the end of a session. The migration is mechanical and wants to be watched.
+
 ## v07 — verified, none rejected, both closed
 
 | Finding | Verdict | What was confirmed |

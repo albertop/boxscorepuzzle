@@ -10,6 +10,11 @@ import sys
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+_KEY = Ed25519PrivateKey.generate()
+"""The manifest is signed now, so publishing needs a key. Generated per run: a test key in the
+repository is a key anybody can sign with."""
 
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 
@@ -77,14 +82,14 @@ class TestCommittingTheBatch:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
 
         with pytest.raises(SystemExit, match="staged files, wanted 3"):
-            writer._publish(staging, 3)
+            writer._publish(staging, 3, _KEY)
 
         assert not (tmp_path / "manifest.json").exists()
 
     def test_a_complete_batch_publishes_a_manifest_naming_every_puzzle(self, tmp_path: Path) -> None:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
 
-        generation = writer._publish(staging, 2)
+        generation = writer._publish(staging, 2, _KEY)
 
         manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
         assert manifest["generation"] == generation
@@ -95,22 +100,22 @@ class TestCommittingTheBatch:
         # §21: regenerating produces the same thing rather than a new thing. The generation is derived
         # from the contents, so an unchanged batch republishes as a no-op instead of accumulating.
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2)
+        first = writer._publish(staging, 2, _KEY)
         _, again = self._stage(tmp_path, ["aaa.json", "bbb.json"])
         writer.OUT = tmp_path
 
-        second = writer._publish(again, 2)
+        second = writer._publish(again, 2, _KEY)
 
         assert first == second
         assert [path.name for path in tmp_path.iterdir() if path.is_dir()] == [first]
 
     def test_changed_contents_take_a_new_generation(self, tmp_path: Path) -> None:
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2)
+        first = writer._publish(staging, 2, _KEY)
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
         writer.OUT = tmp_path
 
-        second = writer._publish(changed, 2)
+        second = writer._publish(changed, 2, _KEY)
 
         assert second != first
         assert json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))["generation"] == second
@@ -125,13 +130,13 @@ class TestCommittingTheBatch:
         404 for everyone holding the old pointer.
         """
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2)
+        first = writer._publish(staging, 2, _KEY)
         # What a reader captured before the next publish.
         held = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
         _, changed = self._stage(tmp_path, ["aaa.json", "ccc.json"])
         writer.OUT = tmp_path
 
-        writer._publish(changed, 2)
+        writer._publish(changed, 2, _KEY)
 
         assert held["generation"] == first
         for puzzle in held["puzzles"]:
@@ -141,11 +146,11 @@ class TestCommittingTheBatch:
         # Retention is not accumulation. The commit path collects nothing; the run after next sweeps
         # what no live manifest can name.
         writer, staging = self._stage(tmp_path, ["aaa.json", "bbb.json"])
-        first = writer._publish(staging, 2)
+        first = writer._publish(staging, 2, _KEY)
         for names in (["aaa.json", "ccc.json"], ["aaa.json", "ddd.json"]):
             _, more = self._stage(tmp_path, names)
             writer.OUT = tmp_path
-            writer._publish(more, 2)
+            writer._publish(more, 2, _KEY)
 
         assert not (tmp_path / first).exists()
         assert len([path for path in tmp_path.iterdir() if path.is_dir()]) == 2
@@ -158,7 +163,7 @@ class TestCommittingTheBatch:
         other.mkdir()
         (other / "work.json").write_text("{}", encoding="utf-8")
 
-        writer._publish(staging, 2)
+        writer._publish(staging, 2, _KEY)
 
         assert (other / "work.json").exists()
 
@@ -213,3 +218,61 @@ class TestTheWriterWillNotSignWithAKeyAnybodyHas:
         # A mode that announces itself is not the same as one that cannot be mistaken for the real
         # thing. This says which it is.
         assert "refuse" in self._source()
+
+
+class TestTheManifestIsSigned:
+    """⚠️ **`sign_manifest` existed and the writer never called it** — a check that exists and is never
+    invoked, one level above the code it protects, and the level where nothing else would notice.
+
+    A signature per puzzle says each puzzle is genuine. Only the manifest signature says the *set* is:
+    swapping it for one that points at a retained generation, omits ids, or names a generation that
+    does not exist breaks no package signature at all, so every puzzle the client does receive still
+    verifies while the release it was given is not the release that was published.
+    """
+
+    def _published(self, tmp_path: Path) -> dict:
+        writer = _writer()
+        writer.OUT = tmp_path
+        staging = tmp_path / ".staging"
+        staging.mkdir(parents=True)
+        for name in ("aaa.json", "bbb.json"):
+            (staging / name).write_text('{"puzzle_id": "x"}', encoding="utf-8")
+        writer._publish(staging, 2, _KEY)
+        return json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+
+    def test_it_carries_a_signature(self, tmp_path: Path) -> None:
+        from boxscore_package.signing import verify_manifest  # noqa: PLC0415
+
+        manifest = self._published(tmp_path)
+
+        assert "signature" in manifest
+        verify_manifest(manifest, _KEY.public_key())
+
+    def test_altering_the_generation_is_refused(self, tmp_path: Path) -> None:
+        from boxscore_package.signing import SignatureError, verify_manifest  # noqa: PLC0415
+
+        manifest = self._published(tmp_path)
+        manifest["generation"] = "0000deadbeef"
+
+        with pytest.raises(SignatureError):
+            verify_manifest(manifest, _KEY.public_key())
+
+    def test_omitting_a_puzzle_is_refused(self, tmp_path: Path) -> None:
+        # The attack the packages cannot see: every id left in the list still has a valid signature.
+        from boxscore_package.signing import SignatureError, verify_manifest  # noqa: PLC0415
+
+        manifest = self._published(tmp_path)
+        manifest["puzzles"] = manifest["puzzles"][:1]
+
+        with pytest.raises(SignatureError):
+            verify_manifest(manifest, _KEY.public_key())
+
+
+class TestTheTwoKeyModesAreExclusive:
+    def test_ephemeral_with_a_configured_key_is_refused(self) -> None:
+        # ⚠️ The environment key used to win whenever it was set, so --ephemeral on a machine with the
+        # production key configured asked for a throwaway trust domain and got the real one.
+        source = (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
+
+        assert "if ephemeral and material:" in source
+        assert "Refusing to guess which trust" in source

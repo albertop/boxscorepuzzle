@@ -32,7 +32,7 @@ from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
-from boxscore_package.signing import sign, signing_key  # noqa: E402
+from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 
 TARGETS = (5, 6, 7, 8, 9, 10)
@@ -215,7 +215,7 @@ def _current_generation(manifest: Path) -> str:
         return ""
 
 
-def _publish(staging: Path, expected: int) -> str:
+def _publish(staging: Path, expected: int, key: Ed25519PrivateKey) -> str:
     """Swap the whole batch in with one atomic rename, or leave the published set untouched.
 
     ⚠️ **Per-file renames cannot make a *batch* atomic, and the previous version claimed they could.**
@@ -257,14 +257,14 @@ def _publish(staging: Path, expected: int) -> str:
     # publishers, and nothing here makes the single-writer assumption true.
     pending = OUT / f"{MANIFEST}.pending-{os.getpid()}"
     superseded = _current_generation(manifest)
-    pending.write_text(
-        json.dumps(
-            {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)},
-            indent=1,
-            sort_keys=True,
-        ),
-        encoding="utf-8",
+    # ⚠️ **Signed.** `sign_manifest` existed and this wrote a plain dictionary — a check that exists
+    # and is never invoked, one level above the code it protects. A signature per puzzle says each
+    # puzzle is genuine; only this says the *set* is, and swapping the manifest for one that points at
+    # a retained generation, omits ids or names nothing at all breaks no package signature.
+    document = sign_manifest(
+        {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)}, key
     )
+    pending.write_text(json.dumps(document, indent=1, sort_keys=True), encoding="utf-8")
     # The commit. Everything above this line can fail without changing what is published.
     pending.replace(manifest)
 
@@ -286,9 +286,21 @@ def _publish(staging: Path, expected: int) -> str:
     return generation
 
 
-def main() -> None:
+def signing_key_for_this_run() -> Ed25519PrivateKey:
+    """The key this batch is signed with, or a refusal. Extracted so `main` stays readable."""
     ephemeral = "--ephemeral" in sys.argv
     material = os.environ.get(KEY_VARIABLE, "")
+    # ⚠️ **Mutually exclusive, not a fallback order.** The environment key used to win whenever it
+    # was set, so `--ephemeral` on a machine with the production key configured asked for a
+    # throwaway trust domain and got the real one — a routine development command turned into a
+    # limited signing oracle, and what it produced was cryptographically indistinguishable from
+    # approved inventory.
+    if ephemeral and material:
+        message = (
+            f"--ephemeral was given and {KEY_VARIABLE} is set. Refusing to guess which trust "
+            "domain was meant: unset the variable for a throwaway batch, or drop the flag to publish."
+        )
+        raise SystemExit(message)
     if not material and not ephemeral:
         message = (
             f"{KEY_VARIABLE} is unset. Publishing needs the forge's private key, 64 hex characters. "
@@ -306,6 +318,11 @@ def main() -> None:
         print("FIXTURES MODE — signed with the key that lives in this repository.")
         print("These packages prove the format parses. They prove nothing about where they came from.")
         print("=" * 78)
+    return key
+
+
+def main() -> None:
+    key = signing_key_for_this_run()
     sample = load(4, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
 
     with_substitution = [item for item in sample if len(set(item.slots)) < len(item.slots)]
@@ -374,7 +391,7 @@ def main() -> None:
     # ⚠️ `written` counts successful builds and `_publish` counts files. They used to be the same
     # number by assumption, and the assumption is exactly what a collision breaks: two builds, one
     # file, and a counter that says six.
-    generation = _publish(staging, len(TARGETS))
+    generation = _publish(staging, len(TARGETS), key)
     print(f"{written} puzzles in {OUT / generation}, committed by replacing {MANIFEST}")
 
 
