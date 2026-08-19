@@ -170,6 +170,13 @@ them. **It can only be prevented while the instrument is being designed** — by
 what else changes when the variable changes. Looking harder afterwards is not a weaker version of this
 check; it is not the same check at all.
 
+**A chain of measurements has to end at a decision, not at the next question.** Several runs in a row
+each opened the one after it, and every one was justified on its own — which is exactly why the chain
+is hard to see from inside it. The discipline is not doubting any single measurement. It is asking,
+**before starting one, what would be built differently depending on the result**. If the answer is
+"nothing", it does not run. Some open questions will keep imperfect numbers, and that is the correct
+state to build in.
+
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
 could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*

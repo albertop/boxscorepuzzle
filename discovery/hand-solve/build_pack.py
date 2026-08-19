@@ -41,7 +41,7 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
-from boxscore_package.format import Board  # noqa: E402
+from boxscore_package.format import FOOTNOTE_COLUMNS, Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
@@ -87,21 +87,32 @@ class Candidate:
     has_live_footnote: bool
 
 
-def footnote_line(loaded: Loaded) -> str:
-    """`SF: 3   SH: 2, 9b   LOB: 9` — attributed by lineup slot, never by name (§7).
+def footnote_line(board: Board, slots: "Sequence[int]") -> str:
+    """`SF: 3   SH: 2, 9b   LOB: 9` — read from the **puzzle**, never from the source direction.
 
-    ⚠️ **The reference comes from `slot_references`, the same call the slot cell prints.** Two places
-    applying one condition — *is this slot shared* — is the defect this project spent a day closing,
-    and here it would be one the player can see: a cell reading `9b` beside a footnote saying `9c`.
+    ⚠️ **This took its values from `Loaded.direction` and the grid beside it drew the erased board.**
+    The per-batter footnote cells are erasable, so a value removed for grading was handed straight back
+    on the page: the printed board was easier than the puzzle whose stalls and layer-3b status its key
+    recorded. That is not the `Direction → Board` defect fixed earlier — it is `Board → the artifact a
+    human reads`, one boundary further out, and the same shape.
+
+    ⚠️ **The placeholder is provisional.** An erased attribution has to be *resolvable* rather than
+    merely absent — a blank in a sparse prose line does not read like an empty cell in a grid — and how
+    many candidates it must separate depends on the group measurement. `?` holds the position until
+    that lands; it is not the design.
     """
-    direction = loaded.direction
-    references = slot_references(loaded.slots)
     parts = []
     for field, short in FOOTNOTE_LABELS:
-        carriers = [references[index] for index, note in enumerate(direction.batter_footnotes) if getattr(note, field)]
+        column = FOOTNOTE_COLUMNS.index(field)
+        references = slot_references(slots)
+        carriers = [
+            references[index] if row[column] else "?"
+            for index, row in enumerate(board.footnotes)
+            if row[column] is None or row[column]
+        ]
         if carriers:
             parts.append(f"{short}: {', '.join(carriers)}")
-    parts.append(f"LOB: {direction.team_footnotes.left_on_base}")
+    parts.append(f"LOB: {board.left_on_base}")
     return "   ".join(parts)
 
 
@@ -516,7 +527,12 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
         story.append(Paragraph(FORMULAS, formulas))
         story.append(Spacer(1, 2 * mm))
         story.append(line_score_table(candidate.loaded))
-        story.append(Paragraph(footnote_line(candidate.loaded), footnotes))
+        story.append(
+            Paragraph(
+                footnote_line(candidate.solution if answers else candidate.puzzle, candidate.loaded.slots),
+                footnotes,
+            )
+        )
         story.append(Spacer(1, 2 * mm))
         story.append(
             board_table(candidate.solution if answers else candidate.puzzle, candidate.loaded, solved=answers)
