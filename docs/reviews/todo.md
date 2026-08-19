@@ -2,13 +2,15 @@
 
 ## Where everything stands
 
-**Fifteen reviews, 71 findings, none rejected. One is open and it is not waiting on effort.**
+**Sixteen reviews, 75 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**Everything from v01 to v15 is closed except that one — seventy of seventy-one.**
+**Everything from v01 to v16 is closed except that one — seventy-four of seventy-five.** One of the
+seventy-four, `v16-P1-01`, is closed **as far as it goes without a launcher**, and what remains open in
+it is written down in its own entry rather than folded into the count.
 
 ⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
@@ -31,6 +33,14 @@ reading of absence.* An empty path list read as a clean tree, an unreadable file
 contents were the string `<unreadable>`, and `out.parent.is_dir()` read as writability. This is the
 fail-closed rule CLAUDE.md names first, and it keeps arriving in the code written to satisfy the
 previous review — which is the useful part of the observation, not the rule itself.
+
+⚠️ **v16 adds the third, and it is the one no amount of care in the reading catches**: *a digest is only
+as strong as its encoding.* Paths and file bytes were concatenated with no lengths and no separators, so
+two entirely different untracked trees produced one identity — and **the code looks right**. There is no
+missing check to spot, no branch that fails open, nothing to notice while rereading. It was found by
+constructing the collision, which is the only way this class can be found. ⚠️ **The review's own example
+did not collide**; the finding was right and its demonstration was wrong, which is its own small lesson
+about accepting a worked example instead of running it.
 
 ## What is left
 
@@ -65,6 +75,7 @@ every id left in the list still verifies.
 | v13-P1-01 | the **stamp could not identify the run**: gathered at the end, naming no input, refusing on one question of two |
 | v14-P1-01 | the **stamp digested labels, not values**: the same identifier over a different boxscore was the same digest |
 | v15-P1-01 | the **stamp could report `clean` on a contradiction**: an empty path list outvoted a non-empty diff |
+| v16-P1-01 | the **stamp mixed two snapshots**: status and diff were separate observations of a tree that can change between them |
 
 **Only the first produced a reported number**, and it reached the operator as a finding before anyone
 noticed the column had one possible value. The other four were caught before a run completed — which is
@@ -75,10 +86,12 @@ carrying their own eligibility and denominators as callables; three erasure seed
 run-level coverage kept separate from group trials; **an immutable `RunIdentity` captured before the
 first board**, carrying a code digest that includes the loader, the tracked and untracked tree states
 digested from the diff and from file bytes, and **a per-board content digest listed in the artifact** so
-the aggregate can be recomputed; **any disagreement between the two git snapshots reported as unknown
-rather than clean**; a refusal that fires **before** the sample is loaded rather than after every solve,
-with the destination proved writable by writing; a per-writer staging path extracted into `publish()` so
-a collision can be forced in a test; and a refusal to publish when any repository question is unknown or
+the aggregate can be recomputed; **the tracked paths taken from the binary diff itself**, so the two
+halves of that digest are one observation and cannot disagree; **length-prefixed records and sixteen hex
+characters**, so two different trees cannot share an identity; a refusal that fires **before** the sample
+is loaded rather than after every solve, with the destination proved writable by writing and an existing
+destination proved replaceable by renaming it; a per-writer staging path extracted into `publish()` so a
+collision can be forced in a test; and a refusal to publish when any repository question is unknown or
 the identity names no inputs.
 
 Result schema is **4**. Schema 3 artifacts digested labels, so they cannot be compared with these and
@@ -111,13 +124,21 @@ first ten minutes: `load()` gates every candidate direction on zero density befo
 measured. An empty log early is the expected state, not a stall — the first line is the gated-direction
 count.
 
-**v15 landed mid-run and the run was left alone**, which is the opposite of the v14 call and rests on a
-different fact. v14 changed what the stamp *would say about this run*. v15 closes **failure windows** —
+**v15 and v16 landed mid-run and the run was left alone both times**, which is the opposite of the v14
+call and rests on a different fact. v14 changed what the stamp *would say about this run*. v15 closes **failure windows** —
 a disagreement between two git snapshots, an unreadable file, an unwritable destination — and none of
 them is open here: the tree was clean at capture, the destination is fine, and `format.py` is not on the
 run's path. Its `instrument 4f894c5391eb` identifies the v14 file **by content**, which is recoverable
 from `44d9582`, so the artifact stays checkable. Restarting would have cost twenty minutes and corrected
 nothing.
+
+The same reasoning holds for v16, with one addition worth stating: **its digest fix changes what future
+stamps mean, not what this one says.** A collision between two untracked trees is a property of the
+encoding, and this run's untracked set is one file whose identity nobody needs to distinguish from
+another. **And the result schema moves to 5 because of it.** Two files claiming schema 4 with
+eight-hex and sixteen-hex tree digests would be two contracts under one number, which is exactly what
+the version exists to prevent — the improvement v14 took, applied to a change that is about identity
+rather than about a metric. This run will produce a schema 4 artifact, correctly labelled as one.
 
 **What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
 often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
@@ -691,6 +712,89 @@ decision gets read from.
 Every run staged through `results.txt.pending`. An atomic final rename protects the destination and not
 the preparation, which is exactly the finding closed in the reference publisher two days ago. Staging
 is per process with a nonce, cleaned in `finally`.
+
+## v16 — verified, none rejected. **Three closed; the fourth closed as far as it goes.**
+
+Four findings. **v15 fixed what the digests refused; v16 found what they could not distinguish** — and
+one of the four is the first finding in this run of reviews that no amount of rereading would have
+caught.
+
+### v16-P2-01 — two different untracked trees, one identity. **Verified by building the collision.**
+
+Path bytes and file bytes were concatenated with no lengths and no separators, and `_describe` then
+prepended another delimiter-free join of the same paths. The encoding is not injective before SHA-256
+ever runs:
+
+| tree | digest |
+|---|---|
+| `{a: b"b", bc: b""}` | `2 files, 591a8d49` |
+| `{ab: b"b", c: b""}` | `2 files, 591a8d49` |
+
+Same count, same label, same digest. **No adversary is required** — two innocent trees suffice, which is
+why this is a correctness defect and not only a security one. Every field is now length-prefixed, and
+the digest keeps **sixteen** hex characters rather than eight, because 32 bits is small enough to search
+by varying a disposable file until the displayed identity matches an approved one.
+
+⚠️ **The review's example did not collide.** `aa`+`X` gives `aaX` and `a`+`aaX` gives `aaaX`. The finding
+was correct and its demonstration was not, and the difference only appeared because it was run. A worked
+example in a review is a claim like any other.
+
+### v16-P1-01 — two snapshots of a tree that can change between them. **Closed for tracked, residue recorded**
+
+`git status` and `git diff` are two observations. v15 refused the one contradiction it could see — no
+paths with a non-empty diff — and accepted every other mixed pair without proving the paths and the
+bytes described one state.
+
+**The tracked half is now structurally impossible to get wrong:** the paths come out of the binary diff
+itself, so there is one snapshot and it cannot contradict itself. The v15 guard stays, because it still
+covers untracked.
+
+⚠️ **What is not fixed, and will not be without a launcher.** Untracked files are invisible to `diff` by
+definition, so the listing and the bytes remain two observations. And Python imports the instrument
+before `identify()` runs, so the bytes that execute are read a moment before the bytes that are hashed.
+Closing either means running the worker from an immutable snapshot — a launcher that captures a
+manifest, starts the process from a clean worktree matching it, and publishes only from there.
+
+**Recorded as residual risk rather than built**, on the same footing as §22's note that the verifier's
+independence has a limit: the exposure is a millisecond window on the operator's own laptop with no
+concurrent editor, and the mechanism to close it is larger than the instrument it would protect. It is
+written here so it is a known limit and not an assumption.
+
+### v16-P2-02 — the preflight proved the directory, not the destination
+
+Creating a fresh sibling and renaming it proves the parent permits creation. `publish` ends in
+`pending.replace(out)`, and on Windows an existing `out` can be read-only, held open by another process
+without delete sharing, or carry an ACL of its own while the sibling probe succeeds happily. **A results
+file left open in an editor is the realistic case**, and it failed only inside `publish`, hours later.
+
+An existing destination is now renamed away and back — the same right `replace` needs — and restored in
+`finally` so an interruption leaves the file where it was.
+
+### v16-P2-03 — `2.0 == 2`, so the constructor accepted a schema its parser refuses
+
+`__post_init__` asked only `self.schema not in READABLE`. Python makes `2.0 == 2`, so `schema=2.0`
+passed, `written_as` returned the float, and `as_json()` emitted `"schema": 2.0` — a document
+`from_json` correctly rejects, because *it* checks `isinstance(schema, int)` and excludes `bool`.
+
+**The type could build output outside the language its own parser accepts.** That sentence is already
+written in this file, about slot references, three months of reviews ago. It arrived one field over for
+the same reason it arrived the first time: **the rule had two copies and not one home.** There is now a
+`_check_schema` called by construction and by parsing, and the test parameterises `2.0`, `"2"`, `True`,
+`1` and `None`, with `None` separated out because absence is the one legitimate value.
+
+### ⚠️ The seventh guard that did not guard — and the second bad mutation
+
+| Mutation | What it turned out to be |
+|---|---|
+| tracked paths from status again | **a real hole.** `test_the_tracked_paths_come_out_of_the_diff` exercised `_diff_paths` **alone**, so it would have stayed green while `identify` went on asking `git status`. A helper that exists and is never called is indistinguishable from one that is broken |
+| the rename source not consumed | **a bad mutation.** With `-z`, an unconsumed source path yields a status of `ol`, which is not `??`, so it is dropped either way. The input could not distinguish the two implementations — which made the guard tautological, not the fix wrong |
+
+The first is closed by making the two observations **disagree**: status names `stale.py`, the diff names
+`fresh.py`, and the tracked digest must be the diff's. The second by feeding a source path that begins
+with `?? `, which is the only input where consuming the record changes the answer.
+
+**Both were found by reverting, and neither would have been found by reading.** That is now the third
+review in a row where the revert found something the assertions did not.
 
 ## v15 — verified, none rejected. **All three closed, plus two of three further improvements.**
 

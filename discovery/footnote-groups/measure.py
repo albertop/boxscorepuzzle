@@ -67,8 +67,14 @@ group hidden, so they cannot move with the seed."""
 
 TARGET_STALLS = 8
 COLUMNS = (0, 1, 2, 3, "4+")
-RESULT_SCHEMA = 4
-"""1 could not vary, 2 could not fire where it mattered. A reader of an old file needs to know which."""
+RESULT_SCHEMA = 5
+"""Which contract an artifact was written under. A reader of an old file needs to know.
+
+⚠️ **This has to move when the *identity* contract moves, not only when a metric does.** Schema 4
+digested the tracked paths from a second command and wrote eight-hex tree digests; schema 5 takes them
+from the diff itself and writes sixteen. Two files claiming schema 4 with different field widths would
+be two contracts under one number, which is what the version exists to prevent.
+"""
 
 
 @dataclass(frozen=True)
@@ -495,7 +501,10 @@ def provenance(identity: "RunIdentity", coverage: "Coverage", groups: int, trial
     return "\n".join(
         [
             "=== WHAT PRODUCED THIS ===",
-            f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire; 3 digested labels)",
+            (
+                f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire; "
+                f"3 digested labels; 4 mixed two git snapshots)"
+            ),
             f"  revision           {identity.revision}",
             f"  tracked changes    {identity.tracked_changes}",
             f"  untracked files    {identity.untracked}",
