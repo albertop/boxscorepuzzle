@@ -43,7 +43,7 @@ every id left in the list still verifies.
 
 **`serve` has a base to build against, and it is the format that exists.**
 
-### The group run — stopped four times, and what each stop was
+### The group run — stopped five times, and what each stop was
 
 | | What the instrument could not do |
 |---|---|
@@ -51,15 +51,11 @@ every id left in the list still verifies.
 | v11-P1-01 | blockage could not **fire where it mattered**: the baseline removed the group along with the erasure |
 | v10-P2-01/03, v11-P2-01/02 | the **denominators did not match the questions**, and one was chosen by a heading string |
 | v12-P1-01 | the **guard for the second fix accepted the implementation it replaced** |
+| v13-P1-01 | the **stamp could not identify the run**: gathered at the end, naming no input, refusing on one question of two |
 
 **Only the first produced a reported number**, and it reached the operator as a finding before anyone
-noticed the column had one possible value. The other three were caught before a run completed — which
-is the difference between a review that costs an afternoon and one that costs a decision.
-
-| v13-P1-01 | the **stamp did not identify the run**: gathered at the end, naming no input, refusing on one question of two |
-
-**Only the first produced a reported number.** The other four were caught before a run completed — which
-is the difference between a review that costs an afternoon and one that costs a decision.
+noticed the column had one possible value. The other four were caught before a run completed — which is
+the difference between a review that costs an afternoon and one that costs a decision.
 
 The instrument now: measurements as pure functions in `metrics.py` that the tests **call**; report rows
 carrying their own eligibility and denominators as callables; three erasure seeds with per-trial rates;
@@ -72,6 +68,19 @@ path extracted into `publish()` so a collision can be forced in a test; and a re
 ⚠️ **Every one of those five is now guarded by a test that fails when the fix is reverted**, checked by
 reverting them rather than by rereading the assertions.
 
+### ▶ The run is going, at `20e6e1f` on a clean tree
+
+Launched 2026-08-19 09:22 with `revision 20e6e1f`, `tracked clean`, `untracked clean`,
+`instrument 3bd046853118` — the identity captured before the first board, which is the condition the
+stamp now enforces rather than reports. Three seeds, eight directions per decade, the 25% gate,
+`≤13` batters and `≤4` pitchers, target 8 stalls.
+
+**What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
+often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
+from progressing. The first decides whether a **generator constraint** is needed, the third decides the
+erased-attribution drawing.
+
+**No further measurement after this one unless something is broken.**
 
 ### Then, in order
 
@@ -80,7 +89,7 @@ reverting them rather than by rereading the assertions.
    line, and the end-of-game reveal drawing the real boxscore. No accounts, no payments, no PWA shell:
    C5 says the engine carries no chrome, so it can be built in isolation, and it holds the most
    unknowns.
-2. **The group run**, with the stable-ordering discipline.
+2. **The group run** — *running*.
 3. **The generator constraint**, if the data calls for one.
 4. **The erased-attribution drawing**, once the group run says how many candidates a blank separates.
 5. **The ladder pack**, and the operator solves it.
