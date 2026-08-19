@@ -2,16 +2,14 @@
 
 ## Where everything stands
 
-**Eight reviews, 47 findings, none rejected. One is open and it is not waiting on effort.**
+**Nine reviews, 50 findings, none rejected. One is open and it is not waiting on effort.**
 
 | | Open | Why |
 |---|---|---|
-| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; the drawing waits on the group run, which says how many candidates a blank must ever separate |
+| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; the drawing waits on the group run, and **the instrument that answers it can finally observe the question** |
 
-**v08 is closed entirely** — all seven, and all seven were in code written the same day. Three were the
-project's own named patterns turned on itself: *a justification travels* (the phase split applied to
-validation), *a check that exists and is never invoked* (`sign_manifest` written and never called), and
-*a mechanism kept past its problem* (version 1 compatibility, whose promise was false anyway).
+**v09 is closed entirely.** Its three findings were all in code written the same day, and one of them
+had already produced a wrong statement to the operator before it was caught.
 
 ## What is left
 
@@ -588,6 +586,47 @@ turns on.
 references serialises as schema 2 and `from_json` refuses it. Duplicates and malformed values pass
 construction too. The reference writer's read-back catches it for that one caller; the shared type
 still lets any other producer build a file the shared reader rejects.
+
+## v09 — verified, none rejected. **All three closed.**
+
+| Finding | State | What it was |
+|---|---|---|
+| P1-01 an untrusted key could replace production inventory | **closed** | both modes published through `serve/`, and the key was never compared with the pinned one |
+| P2-01 the constructor emitted documents its own reader refuses | **closed** | `__post_init__` returned early on the normal path |
+| P2-02 the group instrument could not observe what it reported | **closed** | `had_to_resolve` was structurally impossible |
+
+### v09-P1-01 — refusing at read time preserves integrity, not availability
+
+Both modes wrote to `serve/data/puzzles`, so an `--ephemeral` run — no key needed, and anyone who can
+execute the writer can start one — replaced the live manifest with one signed by a key `serve` does not
+hold. **`serve` refusing it correctly is the outage**: the inventory goes dark while the publisher
+reports a certified commit. Ephemeral batches now write outside `serve/` entirely, which is stronger
+than a reader that rejects them.
+
+And a production key is compared with `serve/data/signing-public-key.hex` **before the first filesystem
+mutation**. Self-verification used the public half of the key that had just signed, which proves the
+batch is internally consistent and nothing about the deployed reader — a valid Ed25519 key that is not
+*the* key produced the same outage by accident.
+
+The stale fixtures banner was the smallest fault and the most revealing: replacing that block left its
+`print` lines behind, so an ephemeral run announced itself correctly **and then said it was signed with
+a key living in the repository**. One of those was false and an operator classifying artifacts read both.
+
+### v09-P2-02 — a check that never fires, in the output
+
+`had_to_resolve` hid one slot group's footnote cells and left every other cell given, so every deduction
+was a hidden cell and no later one could depend on them. **It read `0%` on every board and was reported
+as a finding** — *the assignment never blocks the rest of the board* — before anyone noticed the column
+had one possible value.
+
+⚠️ **This is the project's named defect in the place hardest to see it.** A guard that never fires looks
+like a guard; a *number* that cannot vary looks like data, and data is what decisions are made from.
+`tests/test_group_metrics.py` asserts both directions: a complete board deduces nothing outside the
+group, and an erased one does.
+
+And `unique` conflated cardinality with derivability. Several completions is a **generator constraint**;
+one completion the solver misses is a **technique question**. Two axes now — the verifier's enumerator
+at `limit=2`, and the restricted solver.
 
 ## v08 — verified, none rejected. **Six of seven closed.**
 
