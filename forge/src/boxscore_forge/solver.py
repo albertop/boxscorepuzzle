@@ -187,10 +187,24 @@ class Solution:
 
     @property
     def family_counts(self) -> dict[Family, int]:
+        """How many steps each kind of reasoning supplied. Consistent with `families_used` by
+        construction.
+
+        ⚠️ **These two used to disagree.** `families_used` counts a bounding step that needed the
+        global relation; this counted only `from_identity`, which is `None` for every bounding step. So
+        one immutable result could say the global family was required and return a count of zero for
+        it, and two plausible consumers would reach opposite conclusions from the same solve.
+
+        The contract is *participation*: a step counts for a family if that family is why it was
+        available. A global-assisted bound is one such step. `test_solver.py` asserts the two
+        properties agree rather than trusting that they do.
+        """
         counts = dict.fromkeys(Family, 0)
         for deduction in self.deductions:
             if deduction.from_identity is not None and deduction.from_identity in FAMILY_OF:
                 counts[FAMILY_OF[deduction.from_identity]] += 1
+            elif deduction.needed_global_identity:
+                counts[Family.GLOBAL_IDENTITY] += 1
         return counts
 
     @property

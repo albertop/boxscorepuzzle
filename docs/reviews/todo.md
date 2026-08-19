@@ -6,15 +6,36 @@
 
 | | Open | Why |
 |---|---|---|
-| **v03-P2-04** + **v04-P1-02** | HMAC lets the server forge, and the manifest is unsigned | **one piece of work, blocked on a dependency.** Ed25519 is not in the standard library and `cryptography` cannot be added from this environment; `uv add cryptography` is the step it waits on. Signing the manifest with the existing secret would put a second shared secret in `serve`, which is worse than the gap. **Date: before `serve` exists** — the day the VPS verifies packages is the day the verification key leaves the laptop |
-| **v05-P1-01** | lineup slots do not cross the package boundary | needs a decision about a schema the format document calls **frozen**. The board design depends on it and the client cannot reconstruct it |
-| **v05-P1-02** | the erased-attribution representation | half closed. The mechanical half is done and tested; the drawing waits on the group measurement, which says how many candidates a blank must separate |
-| **v06-P1-01** | open-versus-given | **fixed and rerunning.** Until it lands, *footnotes are erasable* has no support |
-| **v04-P2-01, P2-03, P2-04** | provenance projection, cohort comparator, family-count semantics | open, small, and none blocks anything |
+| **v03-P2-04** + **v04-P1-02** | HMAC lets the server forge, and the manifest is unsigned | **one piece of work, blocked on a dependency.** Ed25519 is not in the standard library and `cryptography` cannot be added from this environment; `uv add cryptography` is the step it waits on. Signing the manifest with the existing secret would put a second shared secret in `serve`, which is worse than the gap. **Date: before `serve` exists** |
+| **v05-P1-01** | lineup slots do not cross the package boundary | needs a decision about a schema the format document calls **frozen** |
+| **v05-P1-02** | the erased-attribution drawing | half closed — and **now unblocked**, see below |
 
-⚠️ **Three things are blocked on the rerun, not on effort:** the generator constraint, the
-erased-attribution drawing, and the ladder pack. All three assume an answer that is currently
-unsupported, and one of them determines what the other two look like.
+## ✅ The footnote question is settled, on a comparison that isolates the treatment
+
+The rerun landed. One canonical order over the union with *given* obtained by filtering it, so the
+shared cells keep their relative order **by construction**; zero-ceiling boards kept; the cohort
+asserted complete.
+
+| | given | open |
+|---|---|---|
+| median ceiling | **4.5** | **15.5** |
+| minimum | **0** | 11 |
+| coverage at 5 stalls | **50%** | **100%** |
+| coverage at 11 | 4% | 100% |
+
+**48 of 48 boards higher with the footnotes open**, and this time unanimity means something: with the
+ordering identical for every shared cell, it is no longer compatible with a trajectory bias.
+
+**Both repairs are visible in the numbers.** A board with a ceiling of **0** appears — the case where
+the given treatment can erase nothing that produces a single stall, the most informative one for the
+question, previously discarded as a failure. 48 pairs from 48 directions rather than 47. And the given
+medians fall slightly, which is the upward bias correcting.
+
+**So the per-batter footnote cells are erasable**, and what follows from it stands: v05-P1-02 is real
+work, the erased attribution needs a drawing, and the design document was the wrong one.
+
+**Unblocked by this:** the generator constraint if the group run calls for one, the erased-attribution
+drawing, and the ladder pack.
 
 **What is not a review finding and blocks publication:** the ladder pack — 19, 16, 13, 9 and 6 stalls,
 rungs filled from boards of similar reach so the ladder varies stalls and not headroom, `audit()`
@@ -451,6 +472,22 @@ the published set untouched.
 and then moved files in, leaving a window with nothing published — the same defect one step smaller.
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
+
+### v04-P2-01, P2-03 and P2-04 — closed
+
+- **`family_counts` and `families_used` can no longer disagree.** One counted `from_identity` and the
+  other counted a global-assisted bound, so the same immutable result said a family was required and
+  returned zero for it. The contract is *participation*, and a test asserts the two agree on a real
+  board — named if and only if counted.
+- **The comparator requires the same cohort.** It compared the intersection and asked only that it be
+  non-empty, so a change that removed exactly the boards it affects would have reported a clean null
+  over the survivors — the false null the instrument exists to prevent, through the door it left open.
+  Duplicate keys are refused rather than silently overwritten, and `--allow-partial` is labelled a
+  diagnostic.
+- **Provenance is projected from the row that qualified**, through a `CROSS APPLY`, instead of two
+  unordered `TOP 1` subqueries that were not bound to it. The duplicated `EXISTS` is **removed rather
+  than kept as a belt** — two places encoding one predicate is the defect this file spent the day
+  closing.
 
 ## v07 — verified, none rejected, both closed
 

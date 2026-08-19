@@ -353,12 +353,16 @@ def load(
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.VisRunsScored ELSE l.HomeRunsScore END AS defense_runs,
            -- Evidence for the publication gate. It has no database and must not grow one (§22), so
            -- the producer carries what it knows and the gate refuses when it is missing.
-           (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS source_type,
-           -- ⚠️ The provenance row's own flag, not a guess from the source name. The writer used to
-           -- rebuild it as source_type LIKE 'ED%', which is a second copy of a rule the schema
-           -- already states, and a deduced record filed under an accepted source type would have
-           -- passed the publication gate.
-           (SELECT TOP 1 p.is_deduced FROM dbo.retroGameProvenance p WHERE p.GAME_ID = g.GAME_ID) AS is_deduced,
+           -- ⚠️ **One row, chosen once, and both fields come from it.** These were two independent
+           -- `TOP 1` subqueries with no `ORDER BY` and no acceptance predicate, while eligibility used
+           -- `EXISTS` over the accepted sources — three places, one rule, and the projection was not
+           -- bound to the row that qualified. Every game has exactly one provenance row today (0 of
+           -- 203,908 with more), so it cannot fire, which is the reason to fix it rather than close
+           -- it: a check that cannot fire is indistinguishable from one that is broken, and "one row
+           -- per game" is an invariant nobody asserts.
+           prov.source_type,
+           -- The provenance row's own flag, not a guess from the source name.
+           prov.is_deduced,
            -- ⚠️ retroGameLogs is a different table from both retroDailyReg and retroGamesReg, which
            -- is the whole point: at-bats and runners left on base can be compared against the board
            -- without the comparison being a value checked against itself.
@@ -367,6 +371,9 @@ def load(
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
     FROM dbo.retroGamesReg g
+    CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
+                 WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
+                 ORDER BY p.source_type) AS prov
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
@@ -384,9 +391,9 @@ def load(
       -- form admitted a game with **no provenance row at all**: absence satisfied "not excluded", so
       -- a partial import, a new season or an identifier mismatch silently turned "source unknown"
       -- into "source approved". Completeness of the provenance table was an unstated precondition.
-      AND EXISTS (SELECT 1 FROM dbo.retroGameProvenance p
-                  WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0
-                    AND p.source_type IN ({accepted}))
+      -- The acceptance rule lives in the CROSS APPLY above: a game with no accepted, non-deduced
+      -- provenance row produces no row at all. Stating it twice is the defect this file spent the day
+      -- closing, so the EXISTS that used to sit here is gone rather than kept as a belt.
       {gate_clause if gated else ""}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """

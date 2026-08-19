@@ -115,14 +115,39 @@ def summarise(rows: list[dict[str, object]]) -> dict[str, float]:
     }
 
 
+def _keyed(path: Path) -> dict[tuple[str, int], dict]:
+    """Rows by (game, seed), refusing duplicates rather than silently keeping the last one."""
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    keyed: dict[tuple[str, int], dict] = {}
+    for row in rows:
+        key = (row["game_id"], row["seed"])
+        if key in keyed:
+            message = f"{path.name} holds {key} twice; a dict would have kept whichever came last"
+            raise SystemExit(message)
+        keyed[key] = row
+    return keyed
+
+
 def compare(before: Path, after: Path) -> None:
     """Two files, board by board. A median that holds can still hide every board moving."""
-    left = {(row["game_id"], row["seed"]): row for row in json.loads(before.read_text(encoding="utf-8"))}
-    right = {(row["game_id"], row["seed"]): row for row in json.loads(after.read_text(encoding="utf-8"))}
+    left, right = _keyed(before), _keyed(after)
     shared = sorted(left.keys() & right.keys())
-    if not shared:
-        message = f"{before.name} and {after.name} share no board; they were not run on the same sample"
-        raise SystemExit(message)
+    # ⚠️ **This compared the intersection and asked only that it be non-empty.** A database change, a
+    # partial run or a solver failure can remove exactly the boards a change affects, and the
+    # comparison would then report a clean null over the survivors — which is the false null this
+    # instrument exists to prevent, arriving through the door it left open.
+    if left.keys() != right.keys():
+        only_left = sorted(left.keys() - right.keys())
+        only_right = sorted(right.keys() - left.keys())
+        if "--allow-partial" not in sys.argv:
+            message = (
+                f"the cohorts differ: {len(only_left)} only in {before.name}, {len(only_right)} only in "
+                f"{after.name}. Pass --allow-partial to compare the intersection anyway, which is a "
+                f"diagnostic and not an experiment."
+            )
+            raise SystemExit(message)
+        print(f"⚠️ PARTIAL — {len(only_left)} boards only before, {len(only_right)} only after. "
+              f"Not an experimental result.")
 
     print(f"\n=== {before.name} AGAINST {after.name} ===")
     print(f"{len(shared)} boards in both, {len(left) - len(shared)} only before, {len(right) - len(shared)} only after")

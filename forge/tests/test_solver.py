@@ -540,3 +540,61 @@ class TestTheGlobalIdentityStaysInItsPhase:
         solution = Solution(values={}, deductions=(bounded,), unsolved=frozenset())
 
         assert solution.families_used == frozenset()
+
+
+class TestTheTwoFamilyReportsAgree:
+    """One solve must not give two answers about which reasoning it needed.
+
+    ⚠️ `families_used` counted a bounding step that needed the global relation and `family_counts`
+    counted only `from_identity`, which is `None` for every bounding step. The same immutable result
+    said the family was required and returned zero for it, and there is no consumer yet — which is
+    exactly when to fix it, because the two would have been read by different code.
+    """
+
+    def test_a_global_assisted_bound_is_counted_as_well_as_named(self) -> None:
+        bounded = Deduction(
+            cell="team_footnotes.left_on_base",
+            value=7,
+            technique=Technique.BOUNDING,
+            from_identity=None,
+            depth=1,
+            frontier=1,
+            depends_on=frozenset(),
+            equations_live=1,
+            equations_solvable=0,
+            known_terms_combined=None,
+            needed_global_identity=True,
+        )
+        solution = Solution(values={}, deductions=(bounded,), unsolved=frozenset())
+
+        assert Family.GLOBAL_IDENTITY in solution.families_used
+        assert solution.family_counts[Family.GLOBAL_IDENTITY] == 1
+
+    def test_a_bound_that_did_not_need_it_counts_for_nothing(self) -> None:
+        # The other direction: a property that always counted the global family would pass the first.
+        bounded = Deduction(
+            cell="batting[0].hits",
+            value=2,
+            technique=Technique.BOUNDING,
+            from_identity=None,
+            depth=1,
+            frontier=1,
+            depends_on=frozenset(),
+            equations_live=1,
+            equations_solvable=0,
+            known_terms_combined=None,
+        )
+        solution = Solution(values={}, deductions=(bounded,), unsolved=frozenset())
+
+        assert solution.families_used == frozenset()
+        assert sum(solution.family_counts.values()) == 0
+
+    def test_they_agree_on_a_real_board(self, cubs_at_braves_1968: Direction) -> None:
+        # The invariant stated once, over whatever a real solve produces: a family is named if and
+        # only if it is counted.
+        puzzle = erase(cubs_at_braves_1968, target_stalls=7, seed=5)
+
+        assert puzzle is not None
+        counts = puzzle.solution.family_counts
+
+        assert {family for family, n in counts.items() if n} == puzzle.solution.families_used
