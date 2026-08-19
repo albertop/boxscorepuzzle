@@ -280,6 +280,24 @@ Rolling back would mean rolling back the client too. Recorded rather than resolv
 problem once inventory exists, and the honest fix is that a schema change invalidates retained
 generations rather than pretending they are usable.
 
+## Open — waiting on the operator
+
+**The section header's ground.** Three are in `board.css`, switchable by `data-header` on the root, which
+is a parameter of the real renderer rather than a copy of it:
+
+| | | |
+|---|---|---|
+| default | `rgb(22, 36, 31)` | very dark green, near black |
+| `grey` | `rgb(34, 38, 43)` | neutral dark |
+| `kin` | `rgb(31, 54, 46)` | dark, and green enough to read as green |
+
+⚠️ **Rendering the first two answered a different question than the one asked.** At near-black the hue
+does not read: side by side on the board those two are indistinguishable, so *take it from the
+scoreboard's family* bought nothing — the first option is a neutral that happens to be spelled in green.
+The third is the one that actually ties the header to the scoreboard. **The losers get deleted once one
+is chosen**, because three live options in a stylesheet is three things a future change has to keep
+working.
+
 ## Decisions taken
 
 Recorded here as they are made, with the date and the reason.

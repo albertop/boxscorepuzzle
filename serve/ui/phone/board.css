@@ -30,6 +30,36 @@
   --muted: #6b7280;
   --keypad: #e8ebf0;
   --key: #ffffff;
+
+  /* The scoreboard. One colour, named for where it comes from, so a future change is a decision about
+     the object rather than about a hex value nobody can place. */
+  --fenway: rgb(83, 120, 108);
+  --scoreboard-ink: #f2f6f4;
+  --scoreboard-dim: #b9cdc5;
+  --scoreboard-rule: rgba(242, 246, 244, 0.35);
+
+  /* Two candidates for the section header block, both live so they can be rendered side by side
+     against the scoreboard rather than argued about. `data-header="grey"` on the root picks the
+     second. The loser gets deleted once it has been looked at. */
+  --header-ground: #16241f;
+  --header-ink: #eef3f1;
+  --header-dim: #9fb5ac;
+}
+
+:root[data-header="grey"] {
+  --header-ground: #22262b;
+  --header-ink: #eef0f3;
+  --header-dim: #a7adb6;
+}
+
+/* ⚠️ A third, because rendering the first two answered a different question than the one asked. At
+   near-black the hue does not read: rgb(22,36,31) and rgb(34,38,43) are indistinguishable on the board,
+   so "take it from the scoreboard's family" bought nothing. This one is dark enough to be a header and
+   green enough to be the same object as the scoreboard. */
+:root[data-header="kin"] {
+  --header-ground: #1f362e;
+  --header-ink: #eef5f2;
+  --header-dim: #a3bcb2;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -47,7 +77,11 @@
     --muted: #9aa1ad;
     --keypad: #0e1013;
     --key: #1b1e24;
+    /* The scoreboard keeps its colour in the dark: it is a physical object, and a physical object does
+       not change paint when the room does. Only the surround moves. */
+    --header-ground: #101a16;
   }
+  :root[data-header="grey"] { --header-ground: #1a1d21; }
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -66,20 +100,53 @@ html, body {
 
 /* ---- line score: the anchor, read-only, never erased ------------------------------------------ */
 
+/* ⚠️ **A scoreboard, not the first rows of a spreadsheet.** It is the one part of the board that is
+   given, read-only and never erased — §6 calls it the puzzle's anchor — and reading as a physical
+   object is what says so before any explanation does. */
 .linescore {
   flex: none;
-  padding: 6px var(--board-margin) 4px;
-  overflow-x: auto;
+  padding: 8px var(--board-margin) 10px;
+  /* Centred rather than left-hung when it cannot fill the width at a legible size: a scoreboard
+     floating against the left margin reads as a fragment of something wider. */
+  display: flex;
+  justify-content: center;
 }
-.linescore table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }
-.linescore th, .linescore td { min-width: 17px; padding: 2px 3px; text-align: center; color: var(--muted); }
-.linescore td.side { text-align: left; color: var(--ink); font-weight: 600; padding-right: 6px; }
-.linescore td.value { color: var(--ink); }
-.linescore .rhe { font-weight: 700; }
-.linescore .rhe-rule { border-left: 1px solid var(--rule-strong); }
+.linescore table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  background: var(--fenway);
+  color: var(--scoreboard-ink);
+  border-radius: 6px;
+  overflow: hidden;
+  table-layout: fixed;
+}
+/* Centred on both axes. `vertical-align` matters here because the row heights are set by the tallest
+   cell and a number sitting on the baseline of a coloured panel reads as printed on it, not in it. */
+.linescore th,
+.linescore td {
+  padding: 5px 1px;
+  text-align: center;
+  vertical-align: middle;
+  color: var(--scoreboard-dim);
+  font-weight: 500;
+}
+.linescore th:first-child, .linescore td.side { width: 52px; }
+.linescore td.side {
+  text-align: left;
+  color: var(--scoreboard-ink);
+  font-weight: 700;
+  letter-spacing: .04em;
+  padding-left: 8px;
+}
+.linescore td.value { color: var(--scoreboard-ink); }
+.linescore .rhe { font-weight: 700; color: var(--scoreboard-ink); }
+/* The separator between the last inning and R, which is where a printed line score puts one. */
+.linescore .rhe-rule { border-left: 1px solid var(--scoreboard-rule); }
 /* ⚠️ A half-inning that was never played. Not a zero — the home side leading after the top of the
    ninth does not bat, and printing 0 there states a fact that did not happen. */
-.linescore td.unplayed { color: var(--rule-strong); }
+.linescore td.unplayed { color: var(--scoreboard-dim); opacity: .7; }
 
 /* ---- the board ------------------------------------------------------------------------------- */
 
@@ -113,16 +180,29 @@ table.grid {
 /* ⚠️ Pinned, because in a deduction puzzle the totals are consulted constantly (§6) — and, as the
    real packages showed, **the totals row holds blanks the player must fill**, so it is an input
    surface that happens to be pinned rather than a read-only anchor. */
+/* ⚠️ **The section label and its column row are one header block**, on one ground, so the board reads
+   as one object rather than as a caption stuck above a table. Both rows are sticky at the same edge and
+   share a background, which is also what stopped the label covering the column names. */
 .grid thead th {
   position: sticky;
-  top: 0;
   z-index: 3;
-  background: var(--paper);
+  background: var(--header-ground);
+  color: var(--header-dim);
   font-size: 11px;
   height: 26px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--rule-strong);
+  font-weight: 600;
 }
+.grid thead th.section-title {
+  top: 0;
+  height: 28px;
+  color: var(--header-ink);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-align: left;
+  padding-left: 8px;
+}
+.grid thead tr:last-child th { top: 28px; }
 .grid tfoot td {
   position: sticky;
   bottom: 0;
@@ -132,18 +212,11 @@ table.grid {
   font-weight: 700;
 }
 
-/* ⚠️ **Not sticky.** It was, at `top: 0` with a higher z-index than the column headings — so the
-   moment you scrolled, `BATTING` covered `PA AB R H BB K` and the board lost the only thing that says
-   what a column is. §6 pins the header row; the section name is not the header row. Found by scrolling
-   and looking, not by reading the rule. */
-.section-title {
-  background: var(--paper);
-  color: var(--muted);
-  font-size: 11px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  padding: 10px 0 2px;
-}
+/* ⚠️ **The section title was a sibling of the table and sticky at `top: 0`**, so it competed with the
+   column headings for the same edge and covered them the moment you scrolled. It is now a row inside
+   the head — see `.grid thead` above — which fixes the collision by making the question impossible
+   rather than by tuning two offsets against each other. */
+.grid + .grid, .scroller > div + div { margin-top: 14px; }
 
 td.slot { color: var(--muted); font-size: 11px; border-right: 1px solid var(--rule); }
 td.label { text-align: left; padding-left: 6px; font-size: 13px; white-space: nowrap; overflow: hidden; }
@@ -152,8 +225,25 @@ td.label.substitute { padding-left: 14px; }
 
 td.cell { cursor: pointer; }
 td.cell.given { color: var(--given); }
-/* A blank has to read as an invitation across a room, not as a slightly paler cell. */
-td.cell.blank { background: var(--blank); color: var(--entered); font-weight: 600; box-shadow: inset 0 -2px 0 var(--rule-strong); }
+/* ⚠️ **A full border, not an underline.** An underline is what a printed form puts under a blank; this
+   is a grid, and an editable cell should read as a cell.
+   `outline` rather than `border`, and that is the whole point: an outline is drawn outside the border
+   box and **takes part in no layout**, so the 44px touch target keeps all 44 of its pixels. A 1.5px
+   border inside the cell would have quietly made it 41px, which is under the minimum §6 measured. */
+td.cell.blank {
+  background: var(--blank);
+  color: var(--entered);
+  font-weight: 600;
+  outline: 1.5px solid var(--rule-strong);
+  /* ⚠️ **Drawn just inside the box, and the instruction said outside.** Worth the note, because the
+     reason the instruction gave still holds: *the border must not shrink the usable area*. An outline
+     takes part in no layout whatever its offset, so the cell stays 45×44 and every pixel of it is
+     tappable — measured, not assumed.
+     At offset zero the line lands outside the box and **overlaps the neighbour**, so two adjacent
+     blanks drew a doubled, staggered edge that read as a rendering fault rather than as a grid. One
+     pixel in costs nothing the instruction was protecting and removes the collision. */
+  outline-offset: -1px;
+}
 td.cell.blank:empty::after { content: ""; }
 td.cell.peer { background: var(--peer); }
 td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }

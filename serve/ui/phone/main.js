@@ -78,7 +78,8 @@ function boot({ puzzle }) {
     scroller.replaceChildren();
     scroller.append(
       renderSection({
-        title: text(puzzle.offenseIsHome ? "board.batting_home" : "board.batting_away"),
+        // The same two keys the scoreboard uses, so one name cannot be spelled two ways on one screen.
+        title: `${text(puzzle.offenseIsHome ? "side.home" : "side.away")} ${text("board.batting")}`,
         columns: columnsFor.batting,
         rows: puzzle.puzzle.batting,
         labels: puzzle.labels,
@@ -93,7 +94,7 @@ function boot({ puzzle }) {
     scroller.append(
       renderSection({
         // The other side, always: the board is one team batting against the other's staff.
-        title: text(puzzle.offenseIsHome ? "board.pitching_away" : "board.pitching_home"),
+        title: `${text(puzzle.offenseIsHome ? "side.away" : "side.home")} ${text("board.pitching")}`,
         columns: columnsFor.pitching,
         rows: puzzle.puzzle.pitching,
         labels: puzzle.pitcherLabels,

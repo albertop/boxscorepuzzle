@@ -32,6 +32,8 @@ export function renderLineScore(score, offenseIsHome) {
   const table = el("table");
   const head = el("tr");
   head.append(el("th", "side", ""));
+  // Whatever the game actually had. Nine is the usual number and not a rule: extra innings exist, and a
+  // scoreboard hard-coded to nine would silently drop the innings that decided the game.
   for (let i = 1; i <= innings; i += 1) head.append(el("th", null, String(i)));
   for (const key of ["runs", "hits", "errors"]) {
     const cell = el("th", key === "runs" ? "rhe rhe-rule" : "rhe", text(`linescore.${key}`));
@@ -57,7 +59,7 @@ export function renderLineScore(score, offenseIsHome) {
 
   const offense = () =>
     side(
-      text(offenseIsHome ? "linescore.home" : "linescore.away"),
+      text(offenseIsHome ? "side.home" : "side.away"),
       score.offense_by_inning,
       score.offense_runs,
       score.offense_hits,
@@ -65,7 +67,7 @@ export function renderLineScore(score, offenseIsHome) {
     );
   const defense = () =>
     side(
-      text(offenseIsHome ? "linescore.away" : "linescore.home"),
+      text(offenseIsHome ? "side.away" : "side.home"),
       score.defense_by_inning,
       score.defense_runs,
       score.defense_hits,
@@ -106,8 +108,6 @@ function totalsRow(columns, nameOf, game, cellNode) {
  */
 export function renderSection({ title, columns, rows, labels, slots, cellName, totalName, game, onSelect }) {
   const wrapper = el("div");
-  wrapper.append(el("div", "section-title", title));
-
   const table = el("table", "grid");
   const group = el("colgroup");
   const slotCol = el("col", "slot");
@@ -123,7 +123,16 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
     return cell;
   };
 
+  // ⚠️ **The label and the column row are one header, not two things.** Kept as separate elements they
+  // scrolled independently, competed for `top: 0`, and the section name covered the column names — and
+  // even fixed, a title floating above a table reads as a caption for the page rather than as part of
+  // the board. Inside the head they are a single sticky block with one background.
   const head = el("thead");
+  const titleRow = el("tr");
+  const titleCell = el("th", "section-title", title);
+  titleCell.colSpan = columns.length + 2;
+  titleRow.append(titleCell);
+  head.append(titleRow);
   head.append(headerRow(columns, true));
   table.append(head);
 

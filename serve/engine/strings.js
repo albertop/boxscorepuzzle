@@ -30,22 +30,26 @@ const en = {
   // a player cannot tell whose batting order they are reconstructing, and the board is one team's
   // offence against the other's pitching. Four keys rather than an interpolation, because a language
   // that puts the side after the noun cannot be produced by gluing two strings together.
-  "board.batting_home": "HOME BATTING",
-  "board.batting_away": "AWAY BATTING",
-  "board.pitching_home": "HOME PITCHING",
-  "board.pitching_away": "AWAY PITCHING",
+  "board.batting": "BATTING",
+  "board.pitching": "PITCHING",
   "board.totals": "Totals",
   "board.left_on_base": "LOB",
-  "board.inning_not_played": "—",
+  // The mark a printed boxscore puts where a half-inning was never played. Not a zero — that states a
+  // fact that did not happen — and not a dash, which reads as *nothing here* rather than *not played*.
+  "board.inning_not_played": "x",
 
   "linescore.runs": "R",
   "linescore.hits": "H",
   "linescore.errors": "E",
-  // ⚠️ These used to be `offense` → "Away" and `defense` → "Home", which was a **fabricated label**:
-  // nothing in the package said which side batted last, and on the reference set the guess was wrong.
-  // Now they name a side and the caller decides which row gets which, from `offense_is_home`.
-  "linescore.home": "Home",
-  "linescore.away": "Away",
+  // ⚠️ **One spelling for one name.** The scoreboard said `Away` and the section header said
+  // `AWAY BATTING`, which is two names for one thing on one screen — the same defect as `CI` against
+  // `reached_on_interference`, in type instead of in code. The scoreboard and the header now share
+  // these two keys, so they cannot drift.
+  //
+  // These also replaced `offense`/`defense` → "Away"/"Home", which was a **fabricated label**: nothing
+  // in the package said which side batted last, and on the reference set the guess was wrong.
+  "side.home": "HOME",
+  "side.away": "AWAY",
 
   "keypad.clear": "Clear",
   "keypad.third": "⅓",
