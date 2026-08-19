@@ -42,3 +42,8 @@ desktop.ini
 discovery/hand-solve/key.csv
 discovery/hand-solve/ceiling-key.csv
 discovery/**/run.log
+
+# The forge private key, if it is ever written inside the tree by accident. It belongs in the home
+# directory and never in Git: a leaked signing key means anyone can sign inventory serve accepts.
+*.signing-key
+.boxscorepuzzle-signing-key

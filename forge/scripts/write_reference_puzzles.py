@@ -25,13 +25,14 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 from measure import Loaded, load, slot_references  # noqa: E402
 
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
-from boxscore_package.signing import sign  # noqa: E402
+from boxscore_package.signing import sign, signing_key  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 
 TARGETS = (5, 6, 7, 8, 9, 10)
@@ -47,23 +48,18 @@ SEED = 6
 OUT = _ROOT / "serve" / "data" / "puzzles"
 MANIFEST = "manifest.json"
 
-SECRET_VARIABLE = "BOXSCORE_SIGNING_SECRET"
-FIXTURE_SECRET = b"reference-puzzles-only, replace before anything is published"
-"""⚠️ **This key is in the repository, so anything signed with it is forged as easily as it is made.**
+KEY_VARIABLE = "BOXSCORE_SIGNING_KEY"
+"""The forge's Ed25519 private key, 64 hex characters, from the environment and never from here.
 
-It used to be a silent fallback: no `BOXSCORE_SIGNING_SECRET` in the environment and the writer signed
-with this anyway, into `serve/data/puzzles`, through the same certification path as a real batch. A CI
-job or a developer running the script without the variable produced packages indistinguishable from
-forge output, and nothing executable enforced the comment saying they were not production.
+⚠️ **The fallback and the fixtures mode are gone rather than migrated.** Both existed because an
+HMAC key is symmetric: a convenient one in the repository let the script run, and anything it
+signed was forgeable by anyone holding the repository — so the mode had to be made loud and
+guarded instead of removed.
 
-It is now reachable only through `--fixtures`, which is loud, and the environment secret is required
-otherwise. A missing secret is an error, never a quieter mode.
-"""
-"""A stand-in so this script runs without a configured environment.
-
-It is **not** the publishing secret and must never become one. The real one arrives through the
-environment; section 33's protection is worth nothing if the key that signs the inventory sits in the
-repository. These six files are reference data for the client, not inventory.
+With a key pair the problem dissolves. A **generated** key signs a throwaway batch perfectly well
+and is worth nothing to an attacker, because the public half that would verify it goes nowhere.
+`--ephemeral` does that and prints the public half; `serve` holds a different public key and
+**refuses the batch itself**, instead of a comment asking to be believed.
 """
 
 
@@ -83,7 +79,7 @@ def reveal_for(loaded: Loaded) -> Reveal:
     )
 
 
-def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
+def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None:
     """Generate one puzzle and put it through the publication gate, not a subset of the checks."""
     produced = erase(loaded.direction, target_stalls=target, seed=SEED)
     if produced is None:
@@ -114,11 +110,11 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
                 "season": loaded.season,
             },
         ),
-        secret,
+        key,
     )
     # ⚠️ The gate, not `verify()`. Assembling a subset of the checks at each call site is the defect
     # this boundary exists to remove, and this writer was one of the sites doing it.
-    certified = certify_for_publication(package, evidence=evidence_for(loaded), secret=secret)
+    certified = certify_for_publication(package, evidence=evidence_for(loaded), secret=key.public_key())
     if not certified.publishable:
         print(f"  refused {loaded.game_id} at {target} stalls: {'; '.join(certified.refusals)}")
         return None
@@ -291,17 +287,21 @@ def _publish(staging: Path, expected: int) -> str:
 
 
 def main() -> None:
-    fixtures = "--fixtures" in sys.argv
-    secret = os.environ.get(SECRET_VARIABLE, "").encode()
-    if not secret:
-        if not fixtures:
-            message = (
-                f"{SECRET_VARIABLE} is unset. Publishing needs the real key; there is no fallback. "
-                "Pass --fixtures to sign with the repository key instead, which produces packages "
-                "nobody may trust and everybody can forge."
-            )
-            raise SystemExit(message)
-        secret = FIXTURE_SECRET
+    ephemeral = "--ephemeral" in sys.argv
+    material = os.environ.get(KEY_VARIABLE, "")
+    if not material and not ephemeral:
+        message = (
+            f"{KEY_VARIABLE} is unset. Publishing needs the forge's private key, 64 hex characters. "
+            "Pass --ephemeral to generate a throwaway pair, which produces packages serve cannot "
+            "verify because it holds a different public key."
+        )
+        raise SystemExit(message)
+    key = signing_key(material) if material else Ed25519PrivateKey.generate()
+    if not material:
+        print("=" * 78)
+        print("EPHEMERAL KEY — this batch is signed by a pair that exists only for this run.")
+        print(f"public half: {key.public_key().public_bytes_raw().hex()}")
+        print("serve holds a different public key, so it will refuse these. That is the point.")
         print("=" * 78)
         print("FIXTURES MODE — signed with the key that lives in this repository.")
         print("These packages prove the format parses. They prove nothing about where they came from.")
@@ -337,7 +337,7 @@ def main() -> None:
 
     written = 0
     for loaded, target in zip(wanted, TARGETS, strict=True):
-        package = build(loaded, target, secret)
+        package = build(loaded, target, key)
         if package is None:
             print(f"  discarded {loaded.game_id} at chain {target}")
             continue
@@ -350,7 +350,7 @@ def main() -> None:
         # equation. Checked here, on the file, for the same reason the round trip is.
         # The same gate on the way back in. A package that certifies in the process that made it and
         # fails when read from disk is the class of defect this project keeps finding.
-        again = certify_for_publication(restored, evidence=evidence_for(loaded), secret=secret)
+        again = certify_for_publication(restored, evidence=evidence_for(loaded), secret=key.public_key())
         if not again.publishable:
             message = f"{path.name} certified in memory and failed from disk: {'; '.join(again.refusals)}"
             raise SystemExit(message)
