@@ -1,0 +1,304 @@
+
+=== EXACTLY ONE COMPLETION ===
+  is the assignment ambiguous at all — a property of the board, not of a technique
+ rows           0 terms            1 term           2 terms           3 terms          4+ terms
+    1  100% [1775/1775]    100% [249/249]      100% [14/14]                 -                 -
+    2    100% [101/101]      100% [10/10]          0% [0/1]                 -                 -
+    3        100% [7/7]        100% [2/2]                 -                 -                 -
+    5                 -        100% [1/1]                 -                 -                 -
+
+=== DERIVABLE, AMONG THOSE WITH ONE COMPLETION ===
+  conditional: ambiguous groups are not failures of the solver and are not counted as such
+ rows           0 terms            1 term           2 terms           3 terms          4+ terms
+    1  100% [1775/1775]    100% [249/249]      100% [14/14]                 -                 -
+    2    100% [101/101]      100% [10/10]                 -                 -                 -
+    3        100% [7/7]        100% [2/2]                 -                 -                 -
+    5                 -        100% [1/1]                 -                 -                 -
+
+=== TRIALS WHERE HIDING IT STOPPED OUTSIDE PROGRESS ===
+  per trial, not per group: exposure varies because not every seed reaches the target
+ rows           0 terms            1 term           2 terms           3 terms          4+ terms
+    1     6% [329/5325]     57% [428/747]       74% [31/42]                 -                 -
+    2       6% [19/303]       60% [18/30]        100% [3/3]                 -                 -
+    3        10% [2/21]         67% [4/6]                 -                 -                 -
+    5                 -          0% [0/3]                 -                 -                 -
+
+=== TRIALS WHERE SOME OUTSIDE DEDUCTION USED IT ===
+  a weaker claim than blocking, on the same denominator so the two can be compared
+ rows           0 terms            1 term           2 terms           3 terms          4+ terms
+    1  100% [5325/5325]     99% [742/747]       95% [40/42]                 -                 -
+    2     59% [180/303]       73% [22/30]          0% [0/3]                 -                 -
+    3       76% [16/21]         50% [3/6]                 -                 -                 -
+    5                 -         67% [2/3]                 -                 -                 -
+
+=== COVERAGE, SO THE DENOMINATORS CAN BE READ ===
+  erasures: 720 attempted over 240 directions, 720 reached 8 stalls
+  group-erasure trials: 6480 — the blockage denominator, which
+    repeats each successful erasure once per group on its board and is not an eraser count
+  groups with no successful erasure: 0 — excluded
+  ambiguous groups (more than one completion): 1
+  2160 slot groups from 240 directions
+
+=== THE CONTROL, AT A FIXED TERM COUNT ===
+  One row with two terms is not ambiguous at all. Comparing `>= 2` against `>= 2` mixed
+  populations of different composition, so a difference could be volume or assignment.
+  2 terms: one row 100% unique [14], two rows 0% [1]
+  3 terms: one row [0], two rows [0] — too few to compare
+
+=== WHAT PRODUCED THIS ===
+  result schema      4   (1 could not vary; 2 could not fire; 3 digested labels)
+  revision           44d9582
+  tracked changes    clean
+  untracked files    clean
+  instrument         sha256 4f894c5391eb   (hashed before the run)
+  inputs             sha256 d2cc2f475368 over 240 directions, listed below
+  sample             240 directions, 20 per decade, gate 25%
+  erasures           (907, 908, 909) per direction; 720 of 720 reached 8 stalls
+  group trials       6480   (each successful erasure once per group on its board)
+  groups             2160
+  blockage           counterfactual, per trial; the baseline restores the group whatever
+                     the erasure did to it, so the only difference is the assignment
+  derivability       conditional on exactly one completion
+
+=== THE BOARDS THIS DIGEST COVERS ===
+  ATL197408180:PHI     0d6e89c796b1
+  ATL197409090:LAN     2c1f72fdb232
+  ATL197409282:ATL     2b8e1f78014e
+  ATL198409200:ATL     b505fd7b76fe
+  ATL199404200:SLN     1cb7dab8b623
+  ATL199405240:HOU     7f5f6744de8f
+  ATL199406180:CIN     2bd0d333c2f2
+  BAL195406180:WS1     c38b8c48a1ba
+  BAL195407270:BAL     0a667b93283a
+  BAL195407300:BAL     4982c03d1829
+  BAL195408020:BAL     514d85b0e2b6
+  BAL195408040:PHA     393d5bac826a
+  BAL195409080:NYA     eaf754a7cf85
+  BAL195409250:CHA     eaa54a42bf14
+  BAL196406200:BAL     54e2f287a869
+  BAL196406210:BOS     a7be21ff0e6f
+  BAL196407020:BAL     4a6fd925af7f
+  BAL196407181:BAL     8e27f4486b14
+  BAL196408120:BAL     93ed17a61b3b
+  BAL196408282:BAL     445ca0560a6e
+  BAL196409180:BAL     10f0d048c4c8
+  BAL196409301:BAL     a7abe4eccbc1
+  BAL197407290:BAL     24dc8f8f47fb
+  BAL197407310:BAL     65597a0baa70
+  BAL197408130:BAL     5b8cca11d796
+  BAL197408240:BAL     e192d8a1bcfd
+  BAL197408240:MIN     c96bca3f0d59
+  BAL197408250:MIN     7da97669e7cf
+  BAL197409280:BAL     8a64939701dc
+  BAL197409290:BAL     851e9e53ccc8
+  BAL198407280:CLE     3d12445da7f4
+  BAL198408010:BAL     6b343aeb9eba
+  BAL198408170:BAL     507bc748d21a
+  BAL198409200:BAL     5f4c0701d778
+  BAL198409220:BOS     42f9ff42afed
+  BAL198409250:NYA     3bc3ae88cb67
+  BAL199405090:BAL     0547a0b6e892
+  BAL199405100:BAL     d7aa94ca35d1
+  BAL199406020:BAL     0ede4776d0a2
+  BAL199406020:DET     72ff6524117f
+  BAL199406170:BAL     a8eb112b05be
+  BAL199407040:BAL     6fc0e82d367f
+  BAL199407070:OAK     c24966ae71c5
+  BAL199407080:BAL     ee4b5f1033d9
+  BAL199407300:BAL     5f1b8ab8e10a
+  BOS194407010:SLA     158b68453cc5
+  BOS194408041:WS1     0a3104b61cb4
+  BOS194408090:BOS     0a240656f4e6
+  BOS194408131:SLA     6fb2a5e306d9
+  BOS194409020:BOS     b69cecf2f9b5
+  BOS194409080:NYA     5dc2b8be4778
+  BOS195406030:CHA     768a70931dea
+  BOS195406080:BAL     f3763fbb72b3
+  BOS195406290:NYA     cb1e1c9cbc08
+  BOS195408111:BOS     967f4e7634e9
+  BOS195408121:WS1     aff0982e888a
+  BOS195408291:CLE     a3d995dc07e6
+  BOS195409011:BOS     090eaba2a0ef
+  BOS195409260:BOS     7f3cd6b7cdc0
+  BOS196406120:BOS     1832783b3e3b
+  BOS196407010:MIN     3b23b83f501a
+  BOS196407020:MIN     5f6304f14da1
+  BOS196407040:BOS     4d5d59965eb8
+  BOS196407180:BOS     95e0556de5b7
+  BOS196407191:BOS     8137581448cf
+  BOS196407210:BOS     d06e6568c36f
+  BOS196407220:DET     eb3bfb250d5b
+  BOS196408210:BOS     99caa0572307
+  BOS196408250:DET     db72beb6a196
+  BOS196409150:BOS     99bccc1c2ce9
+  BOS196409160:BOS     547946245bab
+  BOS197406010:BOS     119f664aef54
+  BOS197406222:BOS     47b2a4bf9072
+  BOS197406230:BOS     d36ac6ef00e9
+  BOS197406240:BOS     61104c9d0b45
+  BOS197408010:BOS     2ef498b6b460
+  BOS197408180:BOS     a9a44da3afcd
+  BOS197408200:BOS     38aa052462d5
+  BOS197409180:BOS     6391e49b13d9
+  BOS197409220:BAL     9c7ecae73575
+  BOS198406090:BOS     0d8489017433
+  BOS198406120:BOS     6858154fb086
+  BOS198406220:BOS     fa013b09ca5f
+  BOS198408061:DET     02abbacef5bb
+  BOS198408071:BOS     0b9dcbbe313a
+  BOS198408190:BOS     3f327aaf2e0e
+  BOS198408220:KCA     1f713d5fc0ca
+  BOS198409080:NYA     8883c4468ff4
+  BOS198409090:BOS     9895b4ad74a7
+  BOS198409100:MIL     58cb972bf58d
+  BOS198409110:MIL     6eac61df9282
+  BOS198409240:BOS     50c8389c5f31
+  BOS198409250:BOS     1ba01ef3ad50
+  BOS199404180:CHA     14bd1450efb2
+  BOS199404190:BOS     a903a96e75ca
+  BOS199406030:TEX     92889ac66946
+  BOS199406050:TEX     a01c94bbe4e1
+  BOS199407020:BOS     60da61245a17
+  BOS199407050:CAL     94eda60274a3
+  BOS199407060:CAL     212088f95e77
+  BOS199407310:MIL     385b9bdd2021
+  BRO194406090:BRO     e5fa81ab527c
+  BRO194406190:NY1     3d80daa20692
+  BRO194406210:NY1     a821843aea5a
+  BRO194407250:CHN     d4db940d2e51
+  BRO194408040:BRO     54fccae99a59
+  BRO194408062:BSN     6b5f46f11345
+  BRO194409032:NY1     4f3b40e1cd18
+  BRO194409230:BRO     b5fce04bca52
+  BRO194409241:BRO     2a228ffd7f0e
+  BRO194409260:SLN     4701f68532d4
+  BRO194409290:CIN     7b5aa77c158f
+  BRO195406220:CIN     9340f78d9e09
+  BRO195407260:BRO     937ced77fb6d
+  BRO195408160:PHI     20ef0d6ef239
+  BRO195408222:PHI     dcef17f8e2ca
+  BRO195409061:BRO     5b663866ddbc
+  BSN194405240:PIT     6c3caa19eea8
+  BSN194405282:BSN     d50d476f20e4
+  BSN194405302:SLN     0a60ec5f12f1
+  SDN200308240:MON     7cff8ba97759
+  SDN201308020:SDN     b1f44f3dd084
+  SDN202308060:LAN     735db484d8e4
+  SDN202308191:ARI     5f1256a10383
+  SDN202308210:SDN     5a33e8389bd5
+  SEA200308010:CHA     01739f84eaf4
+  SEA200308030:SEA     597ca2b484da
+  SEA200308150:SEA     f1fc83d9228a
+  SEA200308260:SEA     d4c86eb4799a
+  SEA200309110:SEA     6dba8c9b072d
+  SEA200309270:SEA     a130b1ec62cc
+  SEA201308060:TOR     ecd98d39300c
+  SEA201308070:SEA     b6c64b166aa5
+  SEA201308090:MIL     63363d76f73d
+  SEA201308100:MIL     d79baa756bc6
+  SEA201308250:ANA     20e6a58ed529
+  SEA201308280:TEX     d35f3d1fcb9e
+  SEA201309250:SEA     6da642763f56
+  SEA202308250:SEA     e56667164f9f
+  SEA202308280:SEA     cf25cd86dffb
+  SFN200309180:SDN     1f9d2cee03dc
+  SFN202308120:TEX     727807ebd05e
+  SLA191307200:PHA     3e759c2456cf
+  SLA191308170:SLA     5f282c7e74d7
+  SLA191308240:PHA     6eeb48bcf978
+  SLA192307070:SLA     a710b981cfa5
+  SLA192307142:SLA     09527c1afcae
+  SLA192307170:SLA     68a3c71d70fc
+  SLA192310010:CLE     c30f9b93a3c8
+  SLA192310030:CLE     be95a66b4936
+  SLA193306231:NYA     35cc16c7e455
+  SLA193306260:BOS     fe9d0a8c98de
+  SLA193308030:CLE     f690577e416a
+  SLA193308062:SLA     dcc0c2952a1a
+  SLA193308160:SLA     58ee5ddde7b7
+  SLA193308242:PHA     cfde9593d0e7
+  SLN191306090:SLN     945350021860
+  SLN191308010:BSN     6ff415a90d53
+  SLN191308060:PHI     248687cf3bb1
+  SLN191309030:CHN     018b87690e19
+  SLN192306270:PIT     459e30ddfad0
+  SLN192309082:SLN     4cb974cd9b4e
+  SLN192310072:SLN     d2f7f4821b0a
+  SLN193306090:SLN     03160f246a4f
+  SLN193309150:BRO     1002c26a76a9
+  SLN193309160:SLN     c32910e72f36
+  SLN193309190:SLN     f701a4a1194b
+  SLN193309230:PIT     2102ff6a938e
+  SLN193309300:CHN     99b87298c519
+  SLN202308040:COL     c72c83d62482
+  SLN202308050:SLN     e0bb087ac8aa
+  SLN202308150:SLN     3326154aa029
+  SLN202308190:NYN     a38f4ee5f8d6
+  TBA200308060:TOR     de2cce2fa6cb
+  TBA200308090:KCA     f7688fe2d8b3
+  TBA200308120:TBA     08bd0b2ad192
+  TBA201308160:TBA     1f7720cbeb1b
+  TBA201308270:ANA     cb439a442013
+  TBA201309190:TEX     a43cd36f9dc1
+  TEX200308110:TEX     ae39acff6ae3
+  TEX200308140:TEX     286051362c09
+  TEX200308160:TEX     95c9971fd501
+  TEX200309020:TEX     1f968bade273
+  TEX200309200:TEX     417b2240f51e
+  TEX201307020:SEA     e7c54a8ff417
+  TEX201308180:SEA     950646022ec9
+  TEX202309100:TEX     f9eed955dfb8
+  TOR200309010:TOR     8c0ddec7ae7f
+  TOR200309220:TBA     94cb6c73b87b
+  TOR200309250:TBA     f304a4d990b3
+  TOR200309250:TOR     554c234ace80
+  TOR201308140:BOS     d78b6e8b9989
+  TOR201308270:NYA     be3b9049a4b7
+  TOR201309290:TOR     f035a6f595b6
+  TOR202310010:TOR     4a0bbdc461e9
+  WAS201305260:WAS     68df5a4614b4
+  WAS201306220:COL     ac5cfbacf106
+  WAS201307070:WAS     bd0cbf52590c
+  WAS201307261:NYN     b4c169669d5e
+  WAS202306040:PHI     5116c507f3a3
+  WAS202306060:ARI     5c89b5f92dfc
+  WAS202306170:MIA     5e62570dc2b2
+  WAS202306200:SLN     108d1a876722
+  WAS202307050:CIN     82d635ef7f61
+  WAS202307070:TEX     b64cb922b641
+  WAS202307220:WAS     10f629482899
+  WAS202307240:COL     ba21e2ab20b8
+  WS1191306040:WS1     0f6949afc396
+  WS1191306050:SLA     1ffd5db753c8
+  WS1191306070:DET     6f69ee7f9da4
+  WS1191306140:WS1     329d4e574745
+  WS1191306190:WS1     59dc72b01bab
+  WS1191306212:WS1     f718a03633b2
+  WS1191306250:PHA     125b8af2c6a4
+  WS1191306261:PHA     17500f068a9f
+  WS1191308010:DET     455d18bea631
+  WS1191308060:WS1     3950b298fd60
+  WS1191308110:CLE     23a8b1793863
+  WS1191309091:WS1     5ca254aad7ee
+  WS1191309092:WS1     cc087908c71d
+  WS1192304300:NYA     579ed80514ab
+  WS1192305010:WS1     0018e89e9d58
+  WS1192305270:NYA     7afe71a0efcc
+  WS1192305301:NYA     23f49c6166d2
+  WS1192305302:NYA     3e0724f94f40
+  WS1192306012:PHA     5dfb41446c09
+  WS1192306070:WS1     67e3a3a0facb
+  WS1192306200:CLE     f6e3481a042b
+  WS1192307010:WS1     ace65138cec2
+  WS1192308070:CLE     28a9bbc0f879
+  WS1192309020:WS1     162eb42e4f3d
+  WS1192309190:WS1     08bb49008614
+  WS1193304130:WS1     7d95cf2dcb07
+  WS1193304140:PHA     4edfc968b80e
+  WS1193304250:NYA     4f3cc75ab61e
+  WS1193306040:WS1     a932160a3f6b
+  WS1193307110:CHA     c3f3f6390512
+  WS1193309161:WS1     51f1be46fd2f
+  WS1193309200:WS1     cf1fe2012335
+  WS1193309240:PHA     795f91bf7ae0
+COMPLETE

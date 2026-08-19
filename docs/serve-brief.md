@@ -111,7 +111,86 @@ accident.
 signature checked in the browser proves nothing, because the code doing the checking arrived from the
 same place as the thing being checked.
 
-## 6. Not in the engine
+## 6. How this gets tested
+
+**Devtools to iterate. A real phone to judge.** Those are different activities and only one of them
+settles anything.
+
+| | |
+|---|---|
+| **Chrome device mode** | the daily work — viewport width, column fit, scroll behaviour, whether the totals stay pinned, whether the keypad leaves enough board above it |
+| **The operator's own phone**, against the dev server on the local IP | **anything being judged.** Not a checkpoint at the end; the way a decision is made |
+| **Cloud real-browser services** | only for devices nobody owns, and only once the design is settled. Coverage, not judgement |
+
+⚠️ **Devtools cannot reproduce what the phone decisions are actually about.** It does not give you the
+system keyboard, scroll inertia, or the physical size of a touch target — and **the 44px target is
+physical, not CSS pixels.** A device-mode viewport at 375px shows you the layout and tells you nothing
+about whether a thumb can hit the cell. That is only verified with a finger.
+
+**So: no design decision is taken without seeing it on a real device.** Not "verified afterwards" —
+taken. A decision made in device mode and confirmed on the phone later is a decision made twice, and the
+second one is the one that counts.
+
+⚠️ **This project already paid for the desktop-viewer version of this mistake.** A prototype was reported
+as not rendering; it was the cache. Time went into diagnosing a bug that did not exist, on the strength
+of what one screen showed. The general form is the one CLAUDE.md names first — *look at the output* —
+with the addition that **on which device** is part of the instruction, not an implementation detail of
+it.
+
+## 7. The share grid is not the engine's
+
+§20 calls the share grid the main growth channel. That makes it important, and importance is exactly why
+it will drift into the engine: it feels like part of the game, it is produced at the end of a solve, and
+the engine is where the solve lives.
+
+**It belongs above the engine, with the rest of the shell.** The division:
+
+| | |
+|---|---|
+| **The engine** | produces the event record — seam C7 |
+| **The shell** | reads that record and renders whatever is shareable |
+
+The engine does not know what a share grid looks like, does not know the product exists, and does not
+change when the grid changes. That is the same boundary as §5's environment separation, one level down:
+a piece that only records cannot leak what it does not render, and **the grid must never leak the
+solution or player names** (§7).
+
+⚠️ **One thing is not yet decided, and it is named here rather than discovered in the code.** C7 records
+duration, hints, errors and highest technique — all run-level. **If the grid turns out to be per-cell** —
+a shape showing where the solve went well or badly, which is what makes these grids legible at a glance —
+then the engine must emit **one additional derived value: a per-cell first-outcome vector**, in board
+order, carrying nothing but *right first time / corrected / hinted*.
+
+If that is needed, it is the **only** thing the engine emits for sharing, and three properties are not
+negotiable: it is **derived**, never the solution or a subset of it; it carries **no values**, so a grid
+cannot be read back into a board; and it is produced by the engine but **rendered by the shell**, so the
+engine still does not know what a grid is.
+
+**Until the grid's design exists, the engine emits the C7 record and nothing else.** Adding the vector
+later is additive; taking a leaked value back is not.
+
+## 8. The solution ships in the package, and that is accepted
+
+**The answer is in the client, visible in devtools, by design.**
+
+It follows from §23 with no room left: the day's puzzle is a static file, validation is client-side, and
+the play path has no backend in it. A client that can validate an entry has the information to validate
+it. There is no arrangement where the engine checks answers offline and does not hold them.
+
+**This has been accepted since §9.** The streak is against yourself, nobody else's score is affected by
+your cheating, and Wordle ran for years with the answer one click away in the page source.
+
+⚠️ **The half that has to be written down is the second one.** The natural instinct on finding the answer
+in the payload is to hide it — obfuscate it, hash it, fetch it on demand, check the entry server-side.
+**Every one of those puts a network dependency in the play path, which §23 forbids**, and buys nothing:
+obfuscation is a speed bump for the one player who wanted to look, and a server round-trip breaks the
+game for everyone whenever the backend is down.
+
+So: **do not hide the solution, and do not treat its visibility as a defect to be fixed later.** If a
+future feature genuinely needs an unspoofable result — a competitive tier, a prize — that is a *separate
+verified mode* with its own path, and it does not get to make the daily puzzle depend on a server.
+
+## 9. Not in the engine
 
 No accounts, no payments, no PWA shell, no streaks, no sharing, no archive.
 
@@ -122,7 +201,7 @@ start, something has been added that does not belong to it.
 This is also what keeps §23 true — the day's puzzle is a static file and the game survives backend
 failure — because a play path with no backend in it cannot acquire one by accident.
 
-## 7. What to report while building
+## 10. What to report while building
 
 **What the real packages force that the design did not anticipate.**
 
@@ -149,3 +228,15 @@ additive from it.
 
 **2026-08-19 — the client does not verify signatures.** Verification is a forge property; a browser
 verifying a package it received from the same origin as the verifier is theatre.
+
+**2026-08-19 — a real device decides, devtools iterates.** No design decision is taken without seeing it
+on the operator's phone. Device mode does not reproduce the system keyboard, scroll inertia, or the
+physical size of a 44px target.
+
+**2026-08-19 — the share grid lives in the shell, not the engine.** The engine produces the C7 event
+record; whatever renders a shareable result reads it. Left open, deliberately and in writing: whether the
+grid is per-cell, and therefore whether the engine must emit a derived first-outcome vector. Until that
+design exists the engine emits the C7 record and nothing else.
+
+**2026-08-19 — the solution ships in the package and stays visible.** Hiding it means a network
+dependency in the play path, which §23 forbids, and it buys nothing §9 has not already accepted.
