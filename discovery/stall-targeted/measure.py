@@ -48,7 +48,7 @@ SEEDS = (1, 2)
 SAMPLE_PER_DECADE = 4
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Reached:
     target: int
     blanks: int

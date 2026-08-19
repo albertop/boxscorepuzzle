@@ -26,8 +26,24 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final, Self
 
-SCHEMA_VERSION: Final = 3
+SCHEMA_VERSION: Final = 4
 """What this code writes.
+
+⚠️ **Version 4 exists because version 3 could describe a board nobody can finish.** It allowed a
+per-batter footnote cell to be null, which was right while those cells were erasable. They are given
+now — the pool run found coverage identical either way, because 96% of the pool's footnote terms are
+zero — and the renderer draws the line as read-only text with no editable element in it.
+
+That left three layers disagreeing: the reader accepted the null, `createGame` counted it as a blank the
+player owes, and the UI offered nothing to fill it with. **Reproduced rather than reasoned about**: the
+retained generation's first package is accepted, holds 33 blanks of which 14 are footnotes, and its
+footnote line renders 0 editable elements. Every visible blank can be filled and the board never
+completes.
+
+A nullable field becoming non-nullable is a change in what the document *means*, not a field going
+missing, so it is a new version rather than a tightening of the old one. Tightening 3 in place would
+make `schema: 3` mean one thing in a file written last week and another in a file written today — which
+is this project's named failure shape wearing the version number as a disguise.
 
 ⚠️ **Version 3 exists because the package could not say which club batted last.** The line score has an
 offensive half and a defensive half, and nothing in the file said which of the two was at home — so a
@@ -46,7 +62,8 @@ READABLE: Final = (SCHEMA_VERSION,)
 without them a client cannot resolve `SH: 9b` to a row, so the package meant something *different*
 rather than something *more*. `offense_is_home` is the same kind of change against version 2: a board
 that cannot name its sides is not a board with one field missing, it is a board that renders a false
-statement.
+statement. And a board carrying a blank no interface can reach is not a version-3 board with stricter
+data — it is a board that cannot be played, which is why version 4 replaces 3 rather than narrowing it.
 
 Cutting it now is the point. Nothing is published, `serve` does not exist, and there is nothing to
 migrate — **a version scheme first exercised under pressure is one that gets skipped.**
@@ -131,11 +148,24 @@ def _cells(raw: object, width: int, where: str, *, complete: bool = False) -> tu
     return tuple(raw)
 
 
-def _rows(raw: object, width: int, where: str) -> tuple[tuple[int | None, ...], ...]:
+def _rows(raw: object, width: int, where: str, *, complete: bool = False) -> tuple[tuple[int | None, ...], ...]:
+    """The rows of a grid. `complete` forbids a blank cell anywhere in them.
+
+    ⚠️ **`complete` is the footnote line, and it is the difference between versions 3 and 4.** A null
+    here used to be an erasable cell; it is now a blank the player is asked for and given no way to
+    enter, because the line renders as read-only text. Refused at the boundary rather than discovered
+    when a finished board refuses to be finished.
+    """
     if not isinstance(raw, list):
         message = f"{where} is {type(raw).__name__}, expected a list of rows"
         raise PackageError(message)
-    return tuple(_cells(row, width, f"{where}[{index}]") for index, row in enumerate(raw))
+    rows = tuple(_cells(row, width, f"{where}[{index}]") for index, row in enumerate(raw))
+    if complete:
+        for index, row in enumerate(rows):
+            if any(cell is None for cell in row):
+                message = f"{where}[{index}] has a blank; the footnote line is given in full from schema 4"
+                raise PackageError(message)
+    return rows
 
 
 def _whole_number(raw: object, where: str) -> int:
@@ -216,10 +246,18 @@ class LineScore:
 class Board:
     """A board, whole or partly erased.
 
-    `None` in a grid cell means the player has to work it out. The **footnote totals**, the team
-    footnote and the line score are never `None` in a well-formed puzzle; the per-batter footnote cells
-    are, which is a change from what this said before. The format does not enforce the rest, because a
-    verifier that trusts the format to reject malformed input is a verifier that checks nothing.
+    `None` in a grid cell means the player has to work it out. **Nothing in the footnote line is ever
+    `None`** — not the totals row, not the team footnote, not the per-batter cells — and neither is the
+    line score.
+
+    ⚠️ **This sentence has now been wrong in both directions, which is why it is worth a warning.** It
+    said the per-batter cells were given while §6 had opened them; it was corrected to say they were
+    erasable; the pool run then closed them again and it went on saying the opposite until a review
+    read it. From schema 4 the reader enforces it, so the two cannot disagree again — but a docstring is
+    still not a check, and `erasure.erasable()` is the authority on what may be removed.
+
+    The format does not enforce the rest, because a verifier that trusts the format to reject malformed
+    input is a verifier that checks nothing.
     """
 
     batting: tuple[tuple[int | None, ...], ...]
@@ -249,7 +287,7 @@ class Board:
             message = f"a board is {type(raw).__name__}, expected an object"
             raise PackageError(message)
         batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting")
-        footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes")
+        footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes", complete=True)
         if len(footnotes) != len(batting):
             message = f"{len(footnotes)} footnote rows against {len(batting)} batting rows"
             raise PackageError(message)
@@ -420,6 +458,13 @@ class Package:
         # certified on the forge with no labels at all, and the browser then refused it for exactly that
         # — two readers of one schema disagreeing about what the schema requires, which is the failure
         # shape this project is named for. The document says one label per row; so does this now.
+        # ⚠️ **Here as well as in `from_json`, and for the reason recorded above it.** A check living
+        # only at the parse boundary lets the generator construct, sign and certify a package the
+        # browser then refuses — which is exactly what happened with `labels`, one screen down.
+        for index, row in enumerate(self.puzzle.footnotes):
+            if any(cell is None for cell in row):
+                message = f"puzzle.footnotes[{index}] has a blank; the footnote line is given in full"
+                raise PackageError(message)
         _check_labels(self.labels, len(self.puzzle.batting), "labels")
         _check_labels(self.pitcher_labels, len(self.puzzle.pitching), "pitcher_labels")
         if self.schema is not None:

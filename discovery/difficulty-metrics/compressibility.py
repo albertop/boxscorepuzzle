@@ -233,7 +233,7 @@ def main() -> None:
     resolution_p90 = [float(row[2].ninetieth_percentile_resolution or 0) for row in rows]
     trivial = [row[2].trivial_share or 0.0 for row in rows]
 
-    print("\n=== ⚠️ IS THERE A CHARACTER AXIS AT ALL ===")
+    print("\n=== NOTE: IS THERE A CHARACTER AXIS AT ALL ===")
     print("  Which equation families a solution actually needed. If nearly every board needs the")
     print("  same combination, the calendar cannot vary character and section 31 loses a dimension.")
     at_ceiling: Counter[str] = Counter(families_of(row[2]) for row in rows)

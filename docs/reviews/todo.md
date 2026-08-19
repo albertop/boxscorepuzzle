@@ -2260,27 +2260,258 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## ⚠⚠ The footnote line could not say *two*, and 2.73% of the pool was unsolvable
+
+**Found by a person reading a printed page**, which is the only thing that has ever found this class of
+defect here. The line printed `SH: 2` — a *slot reference* that reads as a count. `9a` and `1, 9b`
+escaped the ambiguity only because a letter or a comma gave them away, so **the format was unambiguous
+by accident rather than by design**.
+
+And the count was absent entirely. `SH: 2` said *a sacrifice in slot 2* and had no way to say *two
+sacrifices in slot 2*.
+
+### Measured before deciding
+
+| term | rows with more than one | of the rows carrying it | max |
+|---|---|---|---|
+| sacrifice_hits | 7,231 | 4.69% | 4 |
+| hit_by_pitch | 1,748 | 1.88% | 3 |
+| sacrifice_flies | 1,431 | 1.56% | 3 |
+| catcher_interference | 11 | 0.61% | 2 |
+
+⚠️ **The denominator that decides is directions, not rows.** One unreadable row breaks the whole board,
+so a per-row rate understates the damage by the number of rows on a board — 0.27% of rows reads like a
+rounding error. **10,207 of 373,917 admissible directions carry at least one: 2.73%.** It clusters where
+the pool is thinnest: **5.25% in the 1910s** against 1.52% in the 2020s, because the sacrifice was a
+dead-ball-era habit.
+
+Those boards cannot be solved. `PA = AB + BB + HBP + SF + SH + CI` has no other route to the value, and
+**every total still balances**, which is why none of the four layers saw it — the arithmetic was right
+and only the presentation was lossy.
+
+### The format
+
+`SH: 1 #2` / `SH: 2 #9a` / `SH: 1 #2, 1 #9b` — count, then `#`, then the slot. **The count prints even
+when it is one**, because a format showing it only sometimes is ambiguous again: the same trap as the
+slot letter that appears only when a slot is shared.
+
+### ⚠️ And the two renderers had drifted in three ways, not one
+
+The operator retracted a claim that they differed, having extracted the PDF and found it consistent. The
+retraction over-corrected: **reading one renderer's output cannot show a divergence between two.** They
+differed in the count, in the `#`, and in whether `LOB` came first or last. A board with `SH` total 2
+across slots 2 and 9b produced `SH: 2, 9b` from the PDF and `SH: 2 #2, #9b` from the phone.
+
+§33 forbids the two sharing a function, so they share **`serve/tests/footnote-line-vectors.json`** — six
+canonical strings, run by both suites, the same arrangement as the package vectors. Plus a **parity
+rule**: every printed term carries a count *and* at least one slot reference, which fails on a term
+rendered with one half and not the other, including shapes the vectors do not contain. Mutation-checked
+by removing the count: 4 parity failures beyond the 4 string comparisons, so it is not riding on them.
+
+**`board.footnote_repeat` (`×`) was deleted an hour after being added.** The old form put the count after
+the slot as a multiplier; there is no multiplier now. A catalogue key nothing asks for is a translation
+obligation nobody can discharge.
+
+### ⚠⚠ A guard for the report that dies on its own decoration — fourth occurrence
+
+`print("⚠ ...")` raises `UnicodeEncodeError` on a redirected Windows stream, **after the compute and
+before the numbers reach anyone.** The first instance cost a run. The second was caught by review in a
+file whose own comment thirty lines above explained the hazard. The third was a new script written an
+hour after that correction. **The fourth was the diagnostic written to find the third**, which died the
+same way while listing the offending characters.
+
+A comment was not stopping it. `forge/tests/test_reports_survive_a_redirected_stream.py` walks the
+runnable trees and fails on a `print` literal cp1252 cannot encode — reaching inside f-strings, where
+most report lines live, and **ignoring docstrings and comments**, which carry these characters
+everywhere and never reach a stream. It found **8 more scripts** with the same latent failure, none of
+which anyone knew about.
+
+⚠️ **And silencing its lint finding re-created the noqa-inside-a-string defect.** `query = f"""  # noqa:
+S608` puts the comment *inside the SQL*. That is the defect that already cost this project an hour of
+compute, repeated by the same hand in the same session. Moved to the closing line and **verified by
+running the script**, not by reading the diff.
+
+## The five-board pack came back — built the production way, at ≤6 pitchers
+
+72 gated directions, 104 board-target pairs, erased by `erase(target_stalls=...)` rather than by
+searching for a maximum. **That change matters more than the numbers below:** every earlier version of
+this pack kept whichever greedy walk stalled most, which is not how any published board is made.
+
+| board | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| target stalls | 5 | 5 | 8 | 5 | 8 |
+| blanks | 32 | 30 | 40 | 31 | 38 |
+| pitchers | 4 | 4 | **6** | 3 | 3 |
+| batters | 9 | 10 | 12 | 9 | 11 |
+
+Composition and the six-pitcher quota asserted in `audit()`, order shuffled, stall count off the page.
+
+### ⚠️ The twelve-blank worry does not arise
+
+**Boards built the production way carry 30 to 40 blanks, not 12.** Twelve came from the maximising
+search, and the maximising search is not a generator. The question was worth asking and it is answered
+by the change of method rather than by the cap.
+
+### ⚠️ Coverage at 8 stalls does not match the cap measurement, and the difference is not explained
+
+The cap comparison reported **33%**. Here 36 of 72 directions reach 8 stalls — **50%** of the sample,
+56% of those reaching any target. Same gate, same caps. The instruments differ and nobody has said how.
+**Recorded as a discrepancy rather than smoothed into agreement**: two numbers for one quantity is this
+project's named shape, and the fact that the newer one is more favourable is a reason to be more
+suspicious of it, not less.
+
+### ⚠⚠ Layer 3b certified none of the five, and difficulty does not explain it
+
+**5 of 5 uncertified.** Checked before treating it as a property of the boards: **3b is not broken** — it
+passes on 4 of the 6 reference packages and on 6 of 6 in the retained generation.
+
+But the obvious explanation fails. Against the reference set, where the stall target is recorded:
+
+| target stalls | 1 | 2 | 3 | 4 | 5 | 7 |
+|---|---|---|---|---|---|---|
+| blanks | 17 | 23 | 30 | 28 | 34 | 34 |
+| layer 3b | pass | pass | **fail** | pass | pass | **fail** |
+
+**Not monotonic.** It fails at 3 and at 7 and passes at 5, so "harder boards exceed the weak solver" is
+not what is happening, and 5-of-5 at targets 5 and 8 is not accounted for. Six boards is not a
+distribution and neither is five.
+
+⚠️ **No further measurement is being run for it**, and that is deliberate. `todo.md` already records
+that a chain of measurements has to end at a decision: the question 3b poses is *should it become a
+gate*, and **the hand-solve answers that better than any distribution could** — if the operator solves
+boards 3b rejects, 3b is too strict to gate on, and that experiment is already set up. A rate would only
+tell us how often to ask the question we are about to answer directly.
+
+### The one board with a human verdict
+
+`WAS201307070` reaches **target 8 with 39 blanks** and **target 5 with 33**.
+
+⚠️ **This is not "the 19 became an 8".** The old figure was a *different erasure of the same direction*
+— 79 blanks, found by maximising — measured on the scale that counted zeros. What can be said is
+narrower and still useful: the direction the operator judged hard carries both of the pack's rungs
+comfortably, and the board he actually solved was **twice as erased as anything the pack now prints**.
+
 ## What is actually left
 
-Not review findings — these are the things the repairs unblocked.
+Not review findings — the things the repairs unblocked, and what each one is waiting on.
 
-1. **The fifty-board hand-solve pack.** Boards spanning a range of stall counts, the count in the key
-   rather than on the page, randomised order, the `stalls` column in `key.csv`, and the PDF check
-   green. **`build_pack.py` still targets chain and its `audit()` still speaks in chain rungs** — that
-   is the last chain-targeted producer.
-2. **What the pack answers**, in order of what it settles: whether the marked 1–6 tracks stall count
-   at all — if it does not, stalls are measuring something the player does not experience, and that is
-   as important as the chain finding was; whether the uncertified third is felt, which decides layer
-   3b; and whether the boards are interesting, which the *tedious* and *boring* ticks answer.
-3. **The RBI and HR columns**, with `SO` for `K` and the canonical order, and a measurement of what
-   they buy — all of it recorded in §6 and none of it built.
-4. **The generator at volume, the calendar builder, and signed packaging in batch.** Nothing in the
-   forge yet produces an inventory; the six reference packages are a format sample.
-5. **`serve` is at zero.** Six real packages exist for it to be built against, and February is the
-   window.
+### Blocked right now
 
-**Nothing is labelled easy, medium or hard until the pack comes back.** Five stalls was an example the
-operator gave, not a standard.
+1. ⚠️ **The six reference packages are still schema 3 and the code reads only schema 4.** Every forge
+   test that reads them and every client test will fail until `write_reference_puzzles.py` runs again.
+   The change is in the boundary, not in the boards — their contents already satisfy 4 — but the
+   `schema` field is signed, so it is a regeneration rather than an edit. **Waiting on the database**,
+   which the five-board pack holds.
+2. **The five-board pack**, running. Two at 8 stalls and three at 5, at least one with six pitchers,
+   blanks reported per board. Erasures now persist before anything is formatted, so a failure below
+   the erasure loop costs a rerun of the cheap half only.
+
+### Waiting on the five boards
+
+3. **The ladder's rungs.** They depend on whether the corrected scale corresponds to felt difficulty.
+   Reporting them will be a **correction, not a change of plan**: the earlier rungs were set against
+   stall counts that included the solver deducing zeros.
+4. **Nothing is labelled easy, medium or hard.** Five stalls was an example the operator gave, not a
+   standard.
+5. **What the pack answers**, in the order it settles them: whether the marked 1–6 tracks stall count
+   at all — if it does not, stalls measure something the player does not experience, which would be as
+   important as the chain finding was; whether the uncertified third is felt, which decides layer 3b;
+   and whether twelve blanks reads as a puzzle or as a sparse board.
+
+### Owed measurements
+
+6. ⚠⚠ **Every recorded discovery result was measured at ≤4 pitchers.** The scoreboard-duplicate
+   question, the erasure orderings, the stall-target coverage, the independent-cell counts — all of them
+   describe a board family with at most four pitching rows. The scripts follow the decided caps now, so
+   a rerun measures the new board; **the conclusions do not carry, and a justification does not travel.**
+   Nothing here is wrong yet. It is unverified at the cap that ships.
+7. **The scoreboard-duplicate question was never re-run.** The instrument was fixed — a failed arm is a
+   row rather than a missing one — and the measurement it was fixed for has not been taken.
+
+### Built but not finished
+
+8. **`build_pack.py` still targets chain and its `audit()` still speaks in chain rungs.** The last
+   chain-targeted producer, and the fifty-board pack it builds is the launch gate §22 cannot replace:
+   layer 3 propagates intervals across forty-odd simultaneous relations, which is stronger than any
+   person, so **solving fifty by hand is the only real verification of human derivability that exists.**
+9. **`serve` has an engine, a phone board and a browser suite** — 58 tests at the last full green,
+   plus two written for v20 that cannot run until the regeneration. What it does not have: the desktop
+   and the third interface, the share grid, the tutorial, `canAccess`, the two-phase boot, or anything
+   behind seam C7 beyond the record shape.
+10. **The RBI and HR columns**, with the canonical order, and a measurement of what they buy — recorded
+    in §6 and not built.
+11. **The generator at volume, the calendar builder, and signed packaging in batch.** Nothing in the
+    forge produces an inventory; the six packages are a format sample, not a pool.
+
+## v20 — verified, none rejected. **All three closed.**
+
+### v20-P1-01 — a schema-3 board the reader accepts and no interface can finish. **Real, and reproduced.**
+
+Loaded the retained generation's first package through the browser reader before touching anything:
+**accepted, 33 blanks, 14 of them footnotes, 0 editable elements in the rendered footnote line.** Every
+visible blank can be filled and the board never completes. `serve/data/puzzles/5dce9f673a0f/` carries 91
+such cells across six packages; the current generation carries none.
+
+⚠️ **Not declined as a development-environment edge case, and the distinction matters.** *How* the file
+gets loaded — a rollback, a mixed deployment — is environmental and would not survive the standing rule.
+The defect is not that. It is that **the reader accepts a document no renderer can satisfy**: the schema
+says the blank is valid, `createGame` says the player owes it, and the UI offers nothing to enter it
+with. Three layers, one contract, three answers.
+
+**Fixed as schema 4, not as a tightening of 3.** A nullable field becoming non-nullable changes what the
+document *means*. Tightening 3 in place would make `schema: 3` mean one thing in a file written last
+week and another in a file written today — this project's named failure shape wearing the version number
+as a disguise. It is also what already happened twice here: v1 was replaced rather than given a legacy
+verifier, and v2 was replaced when `offense_is_home` became required.
+
+⚠️ **The guard already existed one row lower down and was never applied upward.** `totals()` in
+`package.js` has carried a `complete` flag since a null footnote *total* made a board unfinishable —
+with a comment describing this exact defect. The per-batter cells above it acquired the same property
+when the line became read-only, and the fix was not carried up. **A rule applied outward and not
+inward, thirty lines apart in one file.**
+
+Closed at four places, not one: `_rows(..., complete=True)` at the parse boundary, the same rule in
+`Package.__post_init__` so the generator cannot build what its own reader refuses, `rows(..., {complete})`
+on the client, and **a shared conformance vector for a null per-batter footnote cell** — which the
+sixteen existing vectors did not cover, though they covered the total.
+
+**And a test for the rule rather than the instance.** *Every blank the game asks for has an editable
+element on the board*, checked across every reference package by rendering both sections and the
+footnote line and comparing the drawn `data-cell` names against `game.blanks()`. The vector forbids this
+instance; this forbids the next cell the engine counts and no interface draws.
+
+**Both stale docstrings corrected.** `Board`'s and `erasable()`'s. ⚠️ `erasable()`'s *summary line* still
+read "The grid, and the footnote line's per-batter cells" — naming something the function no longer
+returns, which is the worst place for a stale docstring because the body under it was right.
+
+### v20-P3-01 — nineteen discovery records off the data-shape convention. **Fixed.**
+
+Eighteen frozen records gained `slots=True`. ⚠️ **The nineteenth got `slots=True` and deliberately not
+`frozen=True`**: `board-topology`'s `Board` fills `values` and `equations` in place, so its whole purpose
+is to be mutated after construction. `frozen` would have *passed* — it blocks attribute assignment, not
+mutation of a mutable field's contents — which is exactly why it would be the wrong label. A guarantee
+the class does not make.
+
+Checked for what `slots` breaks before applying: the only `vars()` calls in the tree are on forge
+objects that were not touched.
+
+### v20-P3-02 — the footnote attribution bypassed the catalogue. **Fixed.**
+
+`#` and `×` were spelled inline. ⚠️ **`board.slot: "#"` already existed in the catalogue and the slot
+column's heading was reading it** — so one screen carried two spellings of one mark, one translatable
+and one not. That is the defect `side.home` was introduced to close, recurring six keys further down.
+`board.footnote_repeat` is new.
+
+**Tested through a replacement catalogue whose markers differ from English**, because the completeness
+test asserts the catalogue *has* every key and says nothing about whether the renderer asks for them.
+
+### Left standing
+
+**`discovery/` carries 80 ruff findings** under the project's own config — unchanged by this work
+(measured before and after). ⚠️ A first count said 680 and claimed I had added four: that run resolved
+`per-file-ignores` against the wrong root, so `T201` fired on every `print` in a tree that exempts it.
+**The instrument was wrong, not the code.** Recorded because a lint comparison run from the wrong
+directory is the same class as a comparison whose orderings differ.
 
 ## ⚠⚠ The pitcher cap: ≤4 was wrong, and it was wrong for two independent reasons
 

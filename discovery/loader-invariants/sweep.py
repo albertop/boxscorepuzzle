@@ -144,7 +144,7 @@ def report(name: str, broken: Counter[str], total: int) -> None:
         print(f"  clean across {total} directions")
         return
     for what, count in broken.most_common():
-        print(f"  ⚠️ {what:<48} {count:>5}  ({100.0 * count / total:.2f}%)")
+        print(f"  NOTE: {what:<48} {count:>5}  ({100.0 * count / total:.2f}%)")
 
 
 def main() -> None:

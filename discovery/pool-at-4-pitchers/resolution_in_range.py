@@ -42,7 +42,7 @@ SAMPLE_PER_DECADE = 12
 ORDERING = "row_first"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Snapshot:
     chain: int
     resolution: int | None
@@ -137,7 +137,7 @@ def _pc(values: list[int], fraction: float) -> float:
 def main() -> None:
     loaded = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
     sample = [item for item in loaded if not find_violations(item.direction)]
-    print(f"{len(sample)} gated directions at ≤13 batters and ≤4 pitchers, walking only to chain {PUBLISHABLE_TOP}")
+    print(f"{len(sample)} gated directions at <=13 batters and <=4 pitchers, walking only to chain {PUBLISHABLE_TOP}")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
     print(f"batting rows: {dict(sorted(Counter(len(item.direction.batting) for item in sample).items()))}")
 

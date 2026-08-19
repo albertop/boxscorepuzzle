@@ -43,7 +43,7 @@ SEED = 20260817
 SAMPLE_PER_DECADE = 6
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Snapshot:
     """One accepted erasure state: what came out, and what the path looked like afterwards."""
 

@@ -77,7 +77,7 @@ be two contracts under one number, which is what the version exists to prevent.
 """
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Group:
     """One slot group on one board. Every field is a separate question."""
 
@@ -94,7 +94,7 @@ class Group:
     used: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Coverage:
     """Run-level accounting, which is not the same as the group-trial denominator.
 
@@ -143,7 +143,7 @@ def groups_in(loaded: Loaded) -> tuple[list[Group], int]:
     return found, len(erasures)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Row:
     """One question: which groups it is about, and what it counts.
 
@@ -246,7 +246,7 @@ def report(groups: list[Group], coverage: "Coverage") -> None:
             print(f"  {terms} terms: one row [{len(one)}], two rows [{len(two)}] — too few to compare")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RunIdentity:
     """What produced a run, captured **before** it and frozen.
 

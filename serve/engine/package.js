@@ -19,7 +19,13 @@ import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS } from "./columns.j
 
 export class PackageError extends Error {}
 
-const READABLE = [3];
+const READABLE = [4];
+// ⚠️ **4, not 3, because version 3 could describe a board nobody can finish.** A per-batter footnote
+// cell was nullable there, which was right while those cells were erasable; they are given now and the
+// line renders as read-only text. The reader accepted the null, the game counted it as a blank the
+// player owes, and the UI offered nothing to fill it with. A nullable field becoming non-nullable
+// changes what the document means, so it is a new version rather than a stricter reading of the old
+// one — `schema: 3` must not mean two things depending on when the file was written.
 
 const LINE_SCORE_SCALARS = [
   "offense_runs",
@@ -43,14 +49,22 @@ function cell(value, where) {
   return value;
 }
 
-function rows(raw, width, where) {
+function rows(raw, width, where, { complete = false } = {}) {
   if (!Array.isArray(raw)) fail(`${where} is ${typeof raw}, expected an array of rows`);
   return raw.map((row, index) => {
     if (!Array.isArray(row)) fail(`${where}[${index}] is ${typeof row}, expected an array`);
     // ⚠️ Exact width, not minimum. A short row reads the next column's value into this one and every
     // total still balances, which is the class of defect nothing arithmetic can catch.
     if (row.length !== width) fail(`${where}[${index}] has ${row.length} cells, expected ${width}`);
-    return row.map((value, column) => cell(value, `${where}[${index}][${column}]`));
+    return row.map((value, column) => {
+      // ⚠️ **`complete` is the same guard `totals` below already carries, and it belonged here too.**
+      // That one was written when a null footnote *total* made a board unfinishable. The per-batter
+      // cells above it have exactly the same property now that the line is read-only, and the fix was
+      // applied to the row underneath and not to the rows over it — a rule applied outward and not
+      // inward, thirty lines apart. Measured on the retained generation: 14 of 33 blanks unreachable.
+      if (complete && value === null) fail(`${where}[${index}][${column}] is null; the footnote line is given`);
+      return cell(value, `${where}[${index}][${column}]`);
+    });
   });
 }
 
@@ -98,7 +112,7 @@ function board(raw, where) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) fail(`${where} is not an object`);
   const batting = rows(raw.batting, BATTING_COLUMNS.length, `${where}.batting`);
   const pitching = rows(raw.pitching, PITCHING_COLUMNS.length, `${where}.pitching`);
-  const footnotes = rows(raw.footnotes, FOOTNOTE_COLUMNS.length, `${where}.footnotes`);
+  const footnotes = rows(raw.footnotes, FOOTNOTE_COLUMNS.length, `${where}.footnotes`, { complete: true });
   if (footnotes.length !== batting.length) {
     fail(`${where}.footnotes has ${footnotes.length} rows and batting has ${batting.length}`);
   }

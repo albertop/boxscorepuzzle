@@ -226,7 +226,12 @@ class TestTheSlotReferenceHasOneSource:
         printed = pack.footnote_line(board, slots)
 
         assert drawn[0] == "9b", f"the table drew {drawn[0]!r} for the second row of slot 9"
-        assert "SH: 9b" in printed, f"the footnote line printed {printed!r}"
+        # ⚠️ **The reference the table drew, not a spelling of the line.** This asserted the literal
+        # `"SH: 9b"` and broke when the format gained its counts — correctly, but for the wrong reason:
+        # it was testing the sentence rather than the correspondence. What the test exists for is that
+        # the footnote names the row the table names, so it now asks for the drawn string itself.
+        assert f"#{drawn[0]}" in printed, f"the footnote line printed {printed!r}, naming no #{drawn[0]}"
+        assert printed.startswith("SH: "), f"the footnote line printed {printed!r}, with no SH term"
 
     def test_every_reference_carries_its_slot_number(self) -> None:
         # `9b`, never a bare `b`. The footnote prints the same string the cell does, so finding the

@@ -150,7 +150,7 @@ def report(rows: list[Arm]) -> None:
     # — and it would be invisible in any table that summarises only the pairs where both arms produced a
     # board.
     print("")
-    print("=== ⚠️ REACHABILITY, BEFORE ANY SUMMARY OF WHAT REACHED ===")
+    print("=== NOTE: REACHABILITY, BEFORE ANY SUMMARY OF WHAT REACHED ===")
     for target in TARGETS:
         keys = [key for key in shared if key[2] == target]
         was = sum(before[key].reached for key in keys)

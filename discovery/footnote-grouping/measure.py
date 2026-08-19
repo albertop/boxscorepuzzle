@@ -64,7 +64,7 @@ CONFIGURATIONS = ("given", "grouped", "separate")
 COLUMNS = {"given": 6, "grouped": 7, "separate": 10}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Point:
     configuration: str
     target: int | None

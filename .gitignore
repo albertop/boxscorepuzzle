@@ -57,3 +57,6 @@ discovery/ephemeral-puzzles/
 # holds whatever a failed run left behind. It reached a commit once, from a run that discarded four of
 # six boards and left the rest on disk.
 serve/data/puzzles/.staging/
+
+# The ceiling pack's erasure cache. Regenerable and large, and it is keyed to one sample.
+discovery/hand-solve/ceiling-erasures.json

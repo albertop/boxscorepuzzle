@@ -75,10 +75,14 @@ printed directly above it.
 
 
 def erasable(direction: Direction) -> list[str]:
-    """The grid, and the footnote line's per-batter cells.
+    """The grid, and nothing else. **No footnote cell is erasable, per-batter or total.**
 
-    The line score is the board's anchor and is given complete (§6), and so is the **footnote totals**
-    row — the row identity needs those to close, and a puzzle missing a term the player cannot see is
+    ⚠️ The summary line said "and the footnote line's per-batter cells" after those cells were closed
+    again — a docstring naming something the function no longer returns, which is the most misleading
+    place for one to be stale because the body below it is correct.
+
+    The line score is the board's anchor and is given complete (§6), and so is the whole footnote line —
+    the row identity needs those terms to close, and a puzzle missing a term the player cannot see is
     broken rather than hard.
 
     ⚠️ **The four totals the line score prints are not here** — see `SCOREBOARD_DUPLICATES`. They are

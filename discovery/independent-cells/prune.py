@@ -52,7 +52,7 @@ SEEDS = (1, 2)
 SAMPLE_PER_DECADE = 5
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Result:
     ordering: str
     target: int

@@ -45,7 +45,7 @@ SEED = 831
 TARGETS = tuple(range(5, 13))
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Walk:
     ceiling: int
     blanks_at: dict[int, int]

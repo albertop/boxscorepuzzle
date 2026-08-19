@@ -81,7 +81,7 @@ FOOTNOTE_LABELS = (
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Candidate:
     loaded: Loaded
     target: int
@@ -93,27 +93,42 @@ class Candidate:
 
 
 def footnote_line(board: Board, slots: "Sequence[int]") -> str:
-    """`SF: 3   SH: 2, 9b   LOB: 9` — read from the **puzzle**, never from the source direction.
+    """`SH: 1 #2, 1 #9b   LOB: 9` — read from the **puzzle**, never from the source direction.
+
+    Each carrier is `<count> #<slot>`, carriers joined by `, `, terms in `FOOTNOTE_COLUMNS` order, LOB
+    last, all joined by three spaces.
+
+    ⚠️ **The count is what makes the board solvable, and it used to be absent.** The old form printed
+    `SH: 2`, which is a *slot reference* and reads as a count — the two could not be told apart, and a
+    row carrying two of one term could not be expressed at all. Measured over the admissible pool:
+    **10,207 of 373,917 directions carry at least one such row — 2.73%**, and 5.25% in the 1910s where
+    the pool is thinnest. Those boards cannot be solved: `PA = AB + BB + HBP + SF + SH + CI` has no
+    other route to the value, and **every total still balances**, which is why nothing in the four
+    layers saw it.
+
+    ⚠️ **The count prints even when it is one.** A format showing it only sometimes is ambiguous again —
+    the same trap as the slot letter that appears only when a slot is shared, which is what made the old
+    form unambiguous by accident rather than by design.
+
+    ⚠️ **`serve/tests/footnote-line-vectors.json` holds the canonical strings and the browser renderer
+    runs against the same file.** §33 forbids the two sharing a function, so they share the data. They
+    had drifted in three ways at once — no count, no `#`, and LOB at opposite ends of the line — while a
+    reading of the PDF alone suggested they agreed.
 
     ⚠️ **This took its values from `Loaded.direction` and the grid beside it drew the erased board.**
-    The per-batter footnote cells are erasable, so a value removed for grading was handed straight back
-    on the page: the printed board was easier than the puzzle whose stalls and layer-3b status its key
-    recorded. That is not the `Direction → Board` defect fixed earlier — it is `Board → the artifact a
-    human reads`, one boundary further out, and the same shape.
+    The printed board was then easier than the puzzle whose stalls and layer-3b status its key recorded.
+    That is `Board → the artifact a human reads`, one boundary further out than the `Direction → Board`
+    defect fixed before it, and the same shape.
 
-    ⚠️ **The placeholder is provisional.** An erased attribution has to be *resolvable* rather than
-    merely absent — a blank in a sparse prose line does not read like an empty cell in a grid — and how
-    many candidates it must separate depends on the group measurement. `?` holds the position until
-    that lands; it is not the design.
+    *The `?` placeholder for an erased attribution is gone with the cells it stood for: the footnote line
+    is given in full from schema 4, so no value here is ever unknown.*
     """
+    references = slot_references(slots)
     parts = []
     for field, short in FOOTNOTE_LABELS:
         column = FOOTNOTE_COLUMNS.index(field)
-        references = slot_references(slots)
         carriers = [
-            references[index] if row[column] else "?"
-            for index, row in enumerate(board.footnotes)
-            if row[column] is None or row[column]
+            f"{row[column]} #{references[index]}" for index, row in enumerate(board.footnotes) if row[column]
         ]
         if carriers:
             parts.append(f"{short}: {', '.join(carriers)}")

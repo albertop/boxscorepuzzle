@@ -154,7 +154,7 @@ def compare(before: Path, after: Path) -> None:
             )
             raise SystemExit(message)
         print(
-            f"⚠️ PARTIAL — {len(only_left)} boards only before, {len(only_right)} only after. "
+            f"NOTE: PARTIAL — {len(only_left)} boards only before, {len(only_right)} only after. "
             f"Not an experimental result."
         )
 

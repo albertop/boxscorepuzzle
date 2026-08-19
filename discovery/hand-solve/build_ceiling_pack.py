@@ -29,6 +29,7 @@ Read-only against DGL. Run from `forge/`.
 """
 
 import csv
+import json
 import random
 import sys
 from dataclasses import dataclass
@@ -39,12 +40,14 @@ sys.path.insert(0, str(_HERE))
 
 import build_pack  # noqa: E402
 from build_pack import Candidate, build_pdf, write_sheet  # noqa: E402
-from measure import Loaded, load  # noqa: E402
+from measure import Loaded, load, slot_references  # noqa: E402
 
-from boxscore_domain import MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
+from boxscore_domain import BATTER_CAP, MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
+from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import DEFAULT_ORDERING, Puzzle, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
+from boxscore_forge.solver import solve  # noqa: E402
 from boxscore_package.format import Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
@@ -138,26 +141,32 @@ def to_candidate(found: Reached) -> Candidate | None:
     ⚠️ **Verified rather than assumed.** Checking here is not a formality: these go in front of a person
     as publishable boards, and a board that fails a layer is not one.
     """
-    source = to_board(found.loaded.direction, None)
-    board = to_board(found.loaded.direction, found.puzzle.erased)
+    loaded = found.loaded
+    source = to_board(loaded.direction, None)
+    board = to_board(loaded.direction, found.puzzle.erased)
+    # ⚠️ **The loader's own values, not placeholders.** This built the package with `("C",) * n` labels
+    # and `offense_is_home=True`, and omitted `slot_references` entirely — which the schema requires, so
+    # the run died here **after** finishing every erasure. Two costs, not one: the compute, and a
+    # verification that would have been running against a package no generator produces.
     package = PuzzlePackage(
-        labels=("C",) * len(board.batting),
-        pitcher_labels=("C",) * len(board.pitching),
-        offense_is_home=True,
+        labels=loaded.labels,
+        pitcher_labels=loaded.pitcher_labels,
+        slot_references=slot_references(loaded.slots),
+        offense_is_home=loaded.offense_is_home,
         puzzle_id="0000000000000fff",
         puzzle=board,
         solution=source,
     )
     if not verify(package, secret=UNSIGNED).accepted:
         return None
-    notes = found.loaded.direction.batter_footnotes
+    notes = loaded.direction.batter_footnotes
     return Candidate(
-        loaded=found.loaded,
+        loaded=loaded,
         target=found.target,
         puzzle=board,
         solution=source,
         certified=derivable_in_view(package),
-        has_substitution=len(set(found.loaded.slots)) < len(found.loaded.slots),
+        has_substitution=len(set(loaded.slots)) < len(loaded.slots),
         has_live_footnote=any(
             note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
             for note in notes
@@ -261,6 +270,87 @@ def write_key(path: Path, chosen: list[Candidate]) -> None:
             )
 
 
+ERASURES = _HERE / "ceiling-erasures.json"
+"""Where the expensive half is written, **before anything is formatted**.
+
+⚠️ **This exists because the first run at the new cap finished every erasure and then died in
+`to_candidate` over a missing schema field.** Seventy-two directions, a hundred and one board-target
+pairs, and none of it survived — the script held the whole result in memory and wrote nothing until the
+last step. That is the same defect that cost this project three hours of compute once already, and the
+zero-footnote instrument was fixed for exactly it: **persist rows before formatting them.**
+
+A cache is only safe if it refuses to be reused when it no longer applies, so the file carries a stamp
+of everything that decides what is in it. Any difference and it is ignored rather than trusted — a
+stale cache silently answering a different question is worse than no cache.
+"""
+
+
+def _stamp(sample: list[Loaded]) -> dict[str, object]:
+    """What must be identical for a saved erasure to still be the answer to this run's question."""
+    return {
+        "batter_cap": BATTER_CAP,
+        "pitcher_cap": PITCHER_CAP,
+        "gate": GATE,
+        "sample_per_decade": SAMPLE_PER_DECADE,
+        "targets": sorted(COMPOSITION),
+        "seeds": list(SEEDS),
+        "ordering": DEFAULT_ORDERING,
+        "directions": sorted(f"{item.game_id}:{item.offense_team}" for item in sample),
+    }
+
+
+def _save(sample: list[Loaded], found: list["Reached"]) -> None:
+    ERASURES.write_text(
+        json.dumps(
+            {
+                "stamp": _stamp(sample),
+                "erasures": [
+                    {
+                        "game_id": item.loaded.game_id,
+                        "offense_team": item.loaded.offense_team,
+                        "target": item.target,
+                        "seed": item.seed,
+                        "erased": sorted(item.puzzle.erased),
+                    }
+                    for item in found
+                ],
+            },
+            indent=1,
+        ),
+        encoding="utf-8",
+        newline=chr(10),
+    )
+
+
+def _restore(sample: list[Loaded]) -> list["Reached"] | None:
+    """The saved erasures, or nothing if anything about this run differs from the one that saved them."""
+    if not ERASURES.exists():
+        return None
+    saved = json.loads(ERASURES.read_text(encoding="utf-8"))
+    if saved.get("stamp") != _stamp(sample):
+        print("a saved erasure set exists and does not match this run's inputs; erasing again", flush=True)
+        return None
+    by_direction = {(item.game_id, item.offense_team): item for item in sample}
+    restored: list[Reached] = []
+    for row in saved["erasures"]:
+        loaded = by_direction[row["game_id"], row["offense_team"]]
+        # ⚠️ Re-solved rather than trusted. The stall count is what the board is selected on, and a
+        # cache that carried the number instead of the cells would let a solver change go unnoticed —
+        # the erasure is the expensive part, and solving one board is not.
+        shape = shape_of(loaded.direction)
+        values = cell_values(loaded.direction)
+        erased = frozenset(row["erased"])
+        given = {name: value for name, value in values.items() if name not in erased}
+        solution = solve(shape, given)
+        if not solution.is_complete or solution.stalls < row["target"]:
+            print(f"  saved erasure for {row['game_id']} no longer reaches {row['target']}; erasing again")
+            return None
+        puzzle = Puzzle(shape=shape, given=given, erased=erased, solution=solution)
+        restored.append(Reached(loaded=loaded, target=row["target"], puzzle=puzzle, seed=row["seed"]))
+    print(f"restored {len(restored)} board-target pairs from {ERASURES.name}", flush=True)
+    return restored
+
+
 def main() -> None:
     rng = random.Random(SEED)  # noqa: S311
     sample = [
@@ -274,14 +364,20 @@ def main() -> None:
     targets = sorted(COMPOSITION, reverse=True)
     print(f"{len(sample)} gated directions, erasing to targets {targets} with seeds {SEEDS}", flush=True)
 
-    found: list[Reached] = []
-    for number, loaded in enumerate(sample, start=1):
-        for target in targets:
-            reached = reach(loaded, target)
-            if reached is not None:
-                found.append(reached)
-        if number % 10 == 0:
-            print(f"  {number}/{len(sample)} erased, {len(found)} board-target pairs so far", flush=True)
+    found = _restore(sample)
+    if found is None:
+        found = []
+        for number, loaded in enumerate(sample, start=1):
+            for target in targets:
+                reached = reach(loaded, target)
+                if reached is not None:
+                    found.append(reached)
+            if number % 10 == 0:
+                print(f"  {number}/{len(sample)} erased, {len(found)} board-target pairs so far", flush=True)
+        # ⚠️ **Written here, before selection, verification or rendering.** Everything below can fail;
+        # none of it should cost the erasures.
+        _save(sample, found)
+        print(f"wrote {len(found)} board-target pairs to {ERASURES.name} before formatting anything")
     if not found:
         message = "no direction reached any target at all"
         raise SystemExit(message)

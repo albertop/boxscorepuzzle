@@ -56,7 +56,7 @@ SEEDS = (1, 2, 3)
 SAMPLE_PER_DECADE = 4
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Ceiling:
     configuration: str
     blanks: int

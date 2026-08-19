@@ -1,0 +1,195 @@
+{
+  "note": [
+    "The footnote line, as one canonical string, read by BOTH renderers' tests.",
+    "",
+    "The PDF pack renders it in Python and the phone board renders it in JavaScript. \u00a733 forbids",
+    "forge/ and serve/ sharing code, so they cannot share the function \u2014 they share this file, the",
+    "same arrangement as package-vectors.json. What it forbids is the two disagreeing.",
+    "",
+    "\u26a0\ufe0f They already did, in three ways, while a reading of the PDF alone suggested they agreed:",
+    "the PDF printed no count at all and no '#', and it put LOB last while the HTML put it first.",
+    "A board with SH total 2 across slots 2 and 9b came out 'SH: 2, 9b' from one and",
+    "'SH: 2 #2, #9b' from the other.",
+    "",
+    "THE FORMAT: each carrier is '<count> #<slot>', carriers joined by ', ', terms in",
+    "FOOTNOTE_COLUMNS order, LOB last, all joined by three spaces.",
+    "",
+    "\u26a0\ufe0f The count is printed even when it is one. A format that shows it only sometimes is ambiguous",
+    "again \u2014 the same trap as a slot letter that appears only when the slot is shared, which made the",
+    "old format unambiguous by accident rather than by design.",
+    "",
+    "\u26a0\ufe0f The count is not decoration. 'SH: 2' in the old format meant a sacrifice in slot 2 and could",
+    "not say two sacrifices in one slot. Measured over the admissible pool: 10,207 of 373,917",
+    "directions carry at least one row with more than one of the same term \u2014 2.73%, and 5.25% in the",
+    "1910s where the pool is thinnest. Those boards are unsolvable: the row identity",
+    "PA = AB + BB + HBP + SF + SH + CI has no other route to the value, and every total still",
+    "balances, which is why no validation layer sees it."
+  ],
+  "cases": [
+    {
+      "name": "one term, one carrier, one occurrence",
+      "why": "the count prints even at one; without that rule this line and the next are indistinguishable",
+      "slot_references": [
+        "1",
+        "2",
+        "3"
+      ],
+      "footnotes": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "left_on_base": 11,
+      "expected": "SH: 1 #2   LOB: 11"
+    },
+    {
+      "name": "one carrier with two of the same term",
+      "why": "the case the old format could not express at all, and the reason for the change",
+      "slot_references": [
+        "1",
+        "9a",
+        "9b"
+      ],
+      "footnotes": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          2,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "left_on_base": 5,
+      "expected": "SH: 2 #9a   LOB: 5"
+    },
+    {
+      "name": "two carriers, one each",
+      "why": "reads as two ones rather than as a total of two, which the old comma form could not settle",
+      "slot_references": [
+        "2",
+        "9a",
+        "9b"
+      ],
+      "footnotes": [
+        [
+          0,
+          0,
+          1,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          1,
+          0
+        ]
+      ],
+      "left_on_base": 9,
+      "expected": "SH: 1 #2, 1 #9b   LOB: 9"
+    },
+    {
+      "name": "every term at once, in column order",
+      "why": "the order is FOOTNOTE_COLUMNS and not the order they happen to appear on the board",
+      "slot_references": [
+        "1",
+        "2",
+        "3"
+      ],
+      "footnotes": [
+        [
+          1,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          1
+        ],
+        [
+          0,
+          0,
+          3,
+          0
+        ]
+      ],
+      "left_on_base": 7,
+      "expected": "HBP: 1 #1   SF: 1 #2   SH: 3 #3   CI: 1 #2   LOB: 7"
+    },
+    {
+      "name": "nothing happened",
+      "why": "nine boards in ten look like this; a term that did not happen is not printed",
+      "slot_references": [
+        "1",
+        "2"
+      ],
+      "footnotes": [
+        [
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "left_on_base": 4,
+      "expected": "LOB: 4"
+    },
+    {
+      "name": "left on base is zero and still printed",
+      "why": "LOB is a given the global identity needs; absent it reads as unknown rather than as none",
+      "slot_references": [
+        "1"
+      ],
+      "footnotes": [
+        [
+          0,
+          0,
+          0,
+          0
+        ]
+      ],
+      "left_on_base": 0,
+      "expected": "LOB: 0"
+    }
+  ]
+}

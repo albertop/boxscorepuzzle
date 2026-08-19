@@ -48,7 +48,7 @@ SEED = 4
 SECRET = b"a discovery-run secret, not the one that will sign anything published"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Outcome:
     game: str
     target: int
@@ -137,7 +137,7 @@ def report(outcomes: list[Outcome]) -> None:
         and not ({Layer.IDENTITIES, Layer.UNIQUENESS, Layer.DERIVABILITY} & set(outcome.caught_by_each))
     ]
     if late:
-        print(f"  ⚠️ YES — {len(late)}. This is the redundancy paying for itself and belongs in §22.")
+        print(f"  NOTE: YES — {len(late)}. This is the redundancy paying for itself and belongs in §22.")
         for outcome in late[:5]:
             print(f"    {outcome.game} at chain {outcome.target}: {outcome.rejection}")
     else:

@@ -40,6 +40,7 @@ const packages = await loadAll();
 // Loaded here rather than inside the suite: `suite()` takes a synchronous callback, and top-level await
 // is what this module already uses for the packages themselves.
 const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
+const vectors_footnote = await (await fetch("./footnote-line-vectors.json", { cache: "no-store" })).json();
 
 suite("The six real packages parse, and their shape is the contract", () => {
   test("there are six of them and each carries a distinct id", () => {
@@ -418,8 +419,15 @@ suite("The footnote line is given, and says so", () => {
     const line = renderFootnotes(puzzle, game);
     const terms = [...line.querySelectorAll(".term")].filter((n) => !n.classList.contains("lob"));
 
+    assert(terms.length > 0, "the chosen board printed no term at all, so this test proves nothing");
     for (const node of terms) {
-      const total = Number(node.querySelector(".term-label").textContent.split(": ")[1]);
+      // ⚠️ **Read from the carriers, because the total left the label.** This summed nothing and
+      // asserted `Number("") > 0` after the format changed — it failed loudly, which is the only reason
+      // it is a corrected test rather than a silent one. The label is now `SH: ` and the numbers live
+      // beside the slots, so the term's total is what its carriers add up to.
+      const counts = node.querySelector(".who").textContent.split(", ").map((c) => Number(c.split(" ")[0]));
+      const total = counts.reduce((sum, n) => sum + n, 0);
+      assert(counts.every((n) => n > 0), `a carrier with count ${counts} was printed`);
       assert(total > 0, `a term with total ${total} was printed`);
       assert(node.classList.contains("live"), "a printed term is not marked live");
     }
@@ -438,6 +446,110 @@ suite("The footnote line is given, and says so", () => {
   });
 });
 
+suite("⚠️ Every blank the game asks for can be reached on the board", () => {
+  test("no accepted package holds a blank with no editable element to fill it", async () => {
+    // ⚠️ **The seam three layers were disagreeing across, stated once.** The reader said a null
+    // per-batter footnote cell was valid, `createGame` counted it among the blanks the player owes, and
+    // the footnote line renders as read-only text with no editable element in it. Reproduced on the
+    // retained generation before this was written: 33 blanks, 14 of them footnotes, 0 editable elements
+    // in the line. Every visible blank fillable and the board never completes.
+    //
+    // ⚠️ **Written as the rule, not as the instance.** "Reject a footnote blank" is already a
+    // conformance vector. This is the property that vector protects, and it fails for any future cell
+    // the engine counts and no interface draws — which is the shape the defect will take next time.
+    const { renderSection, renderFootnotes, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell, pitchingCell } = await import("../engine/columns.js");
+
+    for (const { id, raw } of packages) {
+      const puzzle = readPackage(raw);
+      const game = createGame(puzzle);
+      const drawn = new Set();
+      const sections = [
+        { columns: columnsFor.batting, rows: puzzle.puzzle.batting, labels: puzzle.labels,
+          slots: puzzle.slotReferences, cellName: battingCell, totalName: totalNameFor.batting },
+        { columns: columnsFor.pitching, rows: puzzle.puzzle.pitching, labels: puzzle.pitcherLabels,
+          slots: null, cellName: pitchingCell, totalName: totalNameFor.pitching },
+      ];
+      for (const section of sections) {
+        const node = renderSection({ title: "t", ...section, game, onSelect: () => {} });
+        for (const el of node.querySelectorAll("[data-cell]")) drawn.add(el.dataset.cell);
+      }
+      for (const el of renderFootnotes(puzzle, game).querySelectorAll("[data-cell]")) drawn.add(el.dataset.cell);
+
+      const blanks = game.blanks();
+      assert(blanks.length > 0, `${id} has no blanks at all, so this test proves nothing about it`);
+      const unreachable = blanks.filter((name) => !drawn.has(name));
+      equal(unreachable, [], `${id} asks for ${unreachable.length} blanks the board cannot draw`);
+    }
+  });
+});
+
+suite("⚠️ The footnote line, against the strings the PDF renderer also runs", () => {
+  // ⚠️ **The two renderers had drifted in three ways at once** and reading either page alone showed
+  // none of them: the PDF printed no count and no `#` and put LOB last, while this one printed the term
+  // *total* then `#`-prefixed slots and put LOB first. A board with SH total 2 across slots 2 and 9b
+  // came out `SH: 2, 9b` from one and `SH: 2 #2, #9b` from the other.
+  //
+  // §33 forbids forge/ and serve/ sharing a function, so they share this file. What it forbids is the
+  // two disagreeing.
+  //
+  // ⚠️ **And the format change is a correctness fix.** `SH: 2` was a slot reference that reads as a
+  // count, so a row carrying two of one term could not be expressed. 10,207 of 373,917 admissible
+  // directions carry such a row — 2.73%, and 5.25% in the 1910s. Those boards cannot be solved, and
+  // every total balances on them.
+  const cases = vectors_footnote.cases;
+
+  const fakePuzzle = (c) => ({
+    slotReferences: c.slot_references,
+    puzzle: {
+      footnotes: c.footnotes,
+      footnoteTotals: [0, 1, 2, 3].map((i) => c.footnotes.reduce((sum, row) => sum + row[i], 0)),
+      leftOnBase: c.left_on_base,
+    },
+  });
+
+  // A game that answers for the cells the renderer asks about, and throws on anything else — so a
+  // renderer reading the source board instead of the puzzle fails here rather than passing quietly.
+  const fakeGame = (c) => ({
+    value: (name) => {
+      const totals = [0, 1, 2, 3].map((i) => c.footnotes.reduce((sum, row) => sum + row[i], 0));
+      const total = name.match(/^footnote_totals\.(.+)$/);
+      if (total) return totals[FOOTNOTE_COLUMNS.indexOf(total[1])];
+      const cell = name.match(/^footnotes\[(\d+)\]\.(.+)$/);
+      if (cell) return c.footnotes[Number(cell[1])][FOOTNOTE_COLUMNS.indexOf(cell[2])];
+      throw new Error(`the renderer asked for ${name}, which is not on the footnote line`);
+    },
+  });
+
+  for (const c of cases) {
+    test(`the browser renderer produces the canonical line: ${c.name}`, async () => {
+      const { renderFootnotes } = await import("../ui/phone/board.js");
+
+      equal(renderFootnotes(fakePuzzle(c), fakeGame(c)).textContent, c.expected, c.why);
+    });
+  }
+
+  test("⚠️ every printed term carries a count and at least one slot reference", async () => {
+    // The parity rule, stated as what it forbids: a term rendered with one half and not the other
+    // fails here even for a shape the cases above do not contain.
+    const { renderFootnotes } = await import("../ui/phone/board.js");
+    let checked = 0;
+
+    for (const c of cases) {
+      const line = renderFootnotes(fakePuzzle(c), fakeGame(c));
+      for (const term of line.querySelectorAll(".term:not(.lob)")) {
+        for (const carrier of term.querySelector(".who").textContent.split(", ")) {
+          const [count, slot] = carrier.split(" ");
+          assert(/^[1-9][0-9]*$/.test(count), `${carrier} has no count`);
+          assert(slot !== undefined && slot.length > 1, `${carrier} has no slot reference`);
+          checked += 1;
+        }
+      }
+    }
+    assert(checked > 0, "no term was printed at all, so this test proves nothing");
+  });
+});
+
 suite("C11: no user-facing string is in code", () => {
   test("every column has a heading and an unknown key throws", () => {
     for (const column of [...BATTING_COLUMNS, ...PITCHING_COLUMNS, ...FOOTNOTE_COLUMNS]) {
@@ -446,6 +558,34 @@ suite("C11: no user-facing string is in code", () => {
     // ⚠️ Stated as what it forbids: a catalog falling back to the key ships an incomplete translation
     // that renders as `board.totals` and nobody notices until a screenshot.
     throws(() => text("board.nothing_here"), "no string for");
+  });
+
+  test("⚠️ a replacement catalogue changes the footnote markers, not only the term names", async () => {
+    // ⚠️ **The completeness test cannot see this.** It asserts the catalogue has every key; it says
+    // nothing about whether the renderer asks for them. `#` was spelled inline here while the slot
+    // column's heading read `board.slot` from the catalogue, and `×` had no key at all — so a catalogue
+    // could translate `HBP` and leave both marks beside it in English, and every key test still passed.
+    //
+    // Driven through a catalogue whose markers differ from English, which is the only way to tell a
+    // rendered string that came from the catalogue from one that happens to match it.
+    const { renderFootnotes } = await import("../ui/phone/board.js");
+    const live = packages
+      .map(({ raw }) => readPackage(raw))
+      .find((p) => p.puzzle.footnoteTotals.some((total) => total > 0));
+    assert(live !== undefined, "no reference package has a live footnote term, so this proves nothing");
+
+    const before = renderFootnotes(live, createGame(live)).textContent;
+    try {
+      useCatalog({ ...CATALOGS.en, "board.slot": "§" });
+      const after = renderFootnotes(live, createGame(live)).textContent;
+
+      assert(before.includes("#"), "the English render carries no slot prefix, so this proves nothing");
+      assert(after.includes("§"), "the slot prefix did not come from the catalogue");
+      assert(!after.includes("#"), "an English slot prefix survived a replacement catalogue");
+    } finally {
+      // Restored whatever happens: a leaked catalogue would silently change every test after this one.
+      useCatalog(CATALOGS.en);
+    }
   });
 
   test("a replacement catalogue is complete, or the swap is refused", () => {

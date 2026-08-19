@@ -26,7 +26,13 @@
     "spelling the numbers in a JS test is the twenty-sixth copy of a value that has already outlived one",
     "justification. The definition is forge/src/boxscore_domain, with the reason and the measurement",
     "beside each value; a forge test asserts these two numbers still equal it, so the pair cannot drift",
-    "in silence. Shared data, not shared code \u2014 the same arrangement as the vectors themselves."
+    "in silence. Shared data, not shared code \u2014 the same arrangement as the vectors themselves.",
+    "",
+    "\u26a0\ufe0f Schema 4. Version 3 allowed a null per-batter footnote cell; the cells are given now and the",
+    "line renders as read-only text, so such a cell is a blank the game demands and the UI cannot",
+    "supply. `totals` already carried a `complete` guard written for exactly this defect one row lower",
+    "down, and it was never applied to the rows above it. The vector below is what stops the two",
+    "readers disagreeing about it again."
   ],
   "vectors": [
     {
@@ -92,6 +98,17 @@
       ],
       "expect": "reject",
       "because": "the client counted it as a blank and rendered no term for it, so the board could not be finished"
+    },
+    {
+      "name": "a null per-batter footnote cell",
+      "mutate": [
+        [
+          "puzzle.footnotes[0][0]",
+          null
+        ]
+      ],
+      "expect": "reject",
+      "because": "the line renders as read-only text, so this blank is one the player is asked for and given no way to enter \u2014 the reader accepted it and 14 of one retained board's 33 blanks were unreachable"
     },
     {
       "name": "a null batting total",
@@ -171,15 +188,15 @@
       "because": "0 and 1 are the shape a producer in another language reaches for and they mean nothing here"
     },
     {
-      "name": "schema 2",
+      "name": "schema 3",
       "mutate": [
         [
           "schema",
-          2
+          3
         ]
       ],
       "expect": "reject",
-      "because": "a v2 document has no offense_is_home and there is no honest default"
+      "because": "a v3 document may carry a nullable per-batter footnote cell, which is a board that cannot be finished"
     },
     {
       "name": "a short batting row",

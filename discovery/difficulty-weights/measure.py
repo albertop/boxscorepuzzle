@@ -65,7 +65,7 @@ TUTORIAL_ORDER = (Family.COLUMN_SUM, Family.ROW_IDENTITY, Family.CROSS_TEAM, Fam
 TUTORIAL_WEIGHTS = {family: position + 1 for position, family in enumerate(TUTORIAL_ORDER)}
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Scored:
     target: int
     chain: int

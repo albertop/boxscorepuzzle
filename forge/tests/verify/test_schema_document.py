@@ -13,20 +13,27 @@ from pathlib import Path
 
 import pytest
 
-from boxscore_package.format import Board, Package, Reveal
+from boxscore_package.format import SCHEMA_VERSION, Board, Package, Reveal
 
 _DOCS = Path(__file__).resolve().parents[3] / "docs"
-DOCUMENTS = {3: _DOCS / "package-format-v3.md"}
-"""⚠️ **Only the version the code writes is checked.** v1 and v2 stay as history and are deliberately
-not tested: a document checked against code that no longer produces it has to be edited to stay green,
-which is how history gets rewritten to match the present. v1's signatures are HMAC; v2 cannot say which
-side batted last, and there is no honest default for that — `true` and `false` are both claims about a
-real game."""
-DOCUMENT = DOCUMENTS[3]
+DOCUMENTS = {SCHEMA_VERSION: _DOCS / f"package-format-v{SCHEMA_VERSION}.md"}
+"""⚠️ **Only the version the code writes is checked**, and it is named from the code rather than typed.
+
+v1, v2 and v3 stay as history and are deliberately not tested: a document checked against code that no
+longer produces it has to be edited to stay green, which is how history gets rewritten to match the
+present. v1's signatures are HMAC; v2 cannot say which side batted last, and there is no honest default
+for that — `true` and `false` are both claims about a real game; v3 may carry a footnote blank the
+player is asked for and no interface can draw.
+
+⚠️ **Keyed off `SCHEMA_VERSION`, because this line was a literal `3` and the document it names is the
+thing it is checking.** A version bump that forgets this file leaves the test asserting the *old*
+document still matches the *new* code, which fails for the right reason by luck rather than by design —
+and would pass silently if the two versions happened to agree on the fields it reads."""
+DOCUMENT = DOCUMENTS[SCHEMA_VERSION]
 STRIPPED_KEYS = {"game_id", "retrosheet_id", "season", "date", "teams"}
 
 
-def documented_fields(version: int = 3) -> dict[str, str]:
+def documented_fields(version: int = SCHEMA_VERSION) -> dict[str, str]:
     """Field name to its Published column, read out of the table rather than restated here."""
     text = DOCUMENTS[version].read_text(encoding="utf-8")
     table = text[text.index("| Field | Type | Null? | Published |") : text.index("### board")]
@@ -38,7 +45,7 @@ def documented_fields(version: int = 3) -> dict[str, str]:
     return found
 
 
-def a_package(board: Board, *, version: int = 3) -> Package:
+def a_package(board: Board, *, version: int = SCHEMA_VERSION) -> Package:
     """A package of the asked-for version. Version is a property of the payload, so version 2 is the
     same package carrying slot references rather than the same package with a different number."""
     return Package(

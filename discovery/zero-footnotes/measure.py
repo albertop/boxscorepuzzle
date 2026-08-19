@@ -181,7 +181,7 @@ def report(rows: list[Row]) -> None:
         print(f"{target:>8}" + "".join(f"{c:>28}" for c in cells))
 
     print("")
-    print("=== ⚠️ THE ONE THAT SETTLES IT: NON-ZERO AGAINST GIVEN, PAIR BY PAIR ===")
+    print("=== NOTE: THE ONE THAT SETTLES IT: NON-ZERO AGAINST GIVEN, PAIR BY PAIR ===")
     print("  if these two are the same, opening the footnote cells buys nothing and they go back to given")
     same = differ = 0
     examples = []

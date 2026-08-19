@@ -225,23 +225,46 @@ export function paint(node, game) {
  */
 export function renderFootnotes(puzzle, game) {
   const line = el("div", "footnotes");
-  line.append(el("span", "term lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
+  const terms = [];
 
   for (const column of FOOTNOTE_COLUMNS) {
     const total = game.value(footnoteTotalCell(column));
+    // A term that did not happen is not printed. Nine boards in ten look like this.
     if (total === null || total === 0) continue;
 
+    // ⚠️ **`<count> #<slot>`, and the count prints even when it is one.** The old form printed the
+    // term total and then bare slot references — `SH: 2` was a *slot*, not a count, and a row carrying
+    // two of one term could not be expressed at all. Measured over the admissible pool: 10,207 of
+    // 373,917 directions carry such a row (2.73%, 5.25% in the 1910s). Those boards cannot be solved:
+    // `PA = AB + BB + HBP + SF + SH + CI` has no other route to the value, and every total still
+    // balances, which is why nothing in the four layers saw it.
+    //
+    // A format that shows the count only when it exceeds one is ambiguous again — the same trap as a
+    // slot letter appearing only when the slot is shared, which made the old form unambiguous by
+    // accident rather than by design.
     const holders = [];
     puzzle.puzzle.footnotes.forEach((_, row) => {
       const value = game.value(footnoteCell(row, column));
-      if (value > 0) holders.push(`#${puzzle.slotReferences[row]}${value > 1 ? `×${value}` : ""}`);
+      if (value > 0) holders.push(`${value} ${text("board.slot")}${puzzle.slotReferences[row]}`);
     });
 
     const term = el("span", "term live");
-    term.append(el("span", "term-label", `${text(`column.${column}`)}: ${total}`));
+    term.append(el("span", "term-label", `${text(`column.${column}`)}: `));
     term.append(el("span", "who", holders.join(", ")));
-    line.append(term);
+    terms.push(term);
   }
+
+  // ⚠️ **LOB last, and it used to be first here while the PDF put it last.** One of three ways the two
+  // renderers had drifted — with no count and no `#` being the other two — none of which a reading of
+  // either page alone would show. `serve/tests/footnote-line-vectors.json` is the one string both are
+  // now answerable to; §33 forbids them sharing the function, so they share the data.
+  terms.push(el("span", "term lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
+  terms.forEach((term, index) => {
+    // Real text nodes, not CSS spacing: the separator is part of the canonical string the two
+    // renderers are compared on, so it has to survive `textContent`.
+    if (index > 0) line.append(document.createTextNode("   "));
+    line.append(term);
+  });
   return line;
 }
 

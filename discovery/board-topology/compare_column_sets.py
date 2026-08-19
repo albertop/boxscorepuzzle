@@ -24,7 +24,12 @@ COLUMN_DATA = {"pa": PA, "at_bats": AB, "runs": R, "hits": H, "rbi": RBI, "walks
 PITCH = {"outs": [20, 7], "hits": [10, 1], "runs": [4, 0], "earned": [4, 0], "walks": [1, 1], "so": [3, 2]}
 
 
-@dataclass
+# ⚠️ **`slots=True`, and deliberately not `frozen=True`.** The convention pairs them, and the pairing
+# is right for a record. This is not one — `build()` fills `values` and `equations` in place, so the
+# object's whole purpose is to be mutated after construction. `frozen` would still *pass* here, because
+# it blocks attribute assignment rather than mutation of a mutable field's contents, which is exactly
+# why it would be the wrong label: it would read as a guarantee this class does not make.
+@dataclass(slots=True)
 class Board:
     name: str
     columns: list[str]

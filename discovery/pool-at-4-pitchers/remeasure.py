@@ -44,7 +44,7 @@ SAMPLE_PER_DECADE = 6
 ORDERING = "row_first"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Snapshot:
     erased: int
     chain: int
@@ -88,7 +88,7 @@ def first_reaching(snapshots: list[Snapshot], target: int) -> Snapshot | None:
 
 
 def ceiling(runs: list[list[Snapshot]]) -> None:
-    print("\n=== HOW FAR A GATED ≤4 BOARD GOES ===")
+    print("\n=== HOW FAR A GATED <=4 BOARD GOES ===")
     finals = [run[-1] for run in runs if run]
     chains = [final.chain for final in finals]
     erased = [final.erased for final in finals]
@@ -302,7 +302,7 @@ def _render(sample: list, folder: str) -> None:
 def main() -> None:
     loaded = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
     sample = [item for item in loaded if not find_violations(item.direction)]
-    print(f"{len(sample)} gated directions at ≤13 batters and ≤4 pitchers, ordering {ORDERING!r}")
+    print(f"{len(sample)} gated directions at <=13 batters and <=4 pitchers, ordering {ORDERING!r}")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
     pitchers = Counter(len(item.direction.pitching) for item in sample)
     print(f"pitchers per board: {dict(sorted(pitchers.items()))}")

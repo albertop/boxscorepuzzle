@@ -30,7 +30,16 @@ const en = {
   "column.sacrifice_hits": "SH",
   "column.catcher_interference": "CI",
 
+  // The slot column's heading, and the prefix a footnote attribution puts before a slot reference.
+  // ⚠️ **One key for both, because they are one mark.** The renderer spelled `#` inline in the
+  // footnote line while reading this key for the heading, so a catalogue could rename the column and
+  // not the reference pointing at it — two spellings of one thing on one screen, which is the defect
+  // `side.home` was introduced to close, recurring six keys further down.
   "board.slot": "#",
+  // ⚠️ `board.footnote_repeat` (`×`) lived here for one hour and is gone with the form that needed
+  // it. `#4×2` put the count *after* the slot as a multiplier; the line now prints `2 #4`, count first
+  // and always, so there is no multiplier to mark. Deleted rather than left unused — a key nothing
+  // asks for is a translation obligation nobody can discharge.
   // ⚠️ **Which side, not just which half of the game.** `BATTING` alone left the two sections unnamed:
   // a player cannot tell whose batting order they are reconstructing, and the board is one team's
   // offence against the other's pitching. Four keys rather than an interpolation, because a language

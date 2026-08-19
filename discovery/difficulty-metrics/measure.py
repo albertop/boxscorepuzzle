@@ -83,7 +83,7 @@ TAIL_TRIM = 3
 SEED = 20260817
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Loaded:
     game_id: str
     season: int

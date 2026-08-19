@@ -48,7 +48,7 @@ SAMPLE_PER_DECADE = 6
 ORDERING = "row_first"
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Shape:
     target: int
     chain: int

@@ -54,7 +54,7 @@ ORDERING = "row_first"
 ERA_WINDOW = (1970, 2009)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Snapshot:
     erased: int
     chain: int
