@@ -8,8 +8,12 @@
 |---|---|---|
 | **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
 
-**v10 is closed entirely**, and so is v09. Its three findings were all in code written the same day, and one of them
-had already produced a wrong statement to the operator before it was caught.
+**Everything from v01 to v12 is closed except that one — sixty-one of sixty-two.**
+
+⚠️ **The last four reviews were almost entirely about one instrument.** That is worth reading as a
+pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
+plausible value**, and no amount of care in the reading catches it — only a guard that fails when the
+measurement is blind.
 
 ## What is left
 
@@ -17,30 +21,41 @@ had already produced a wrong statement to the operator before it was caught.
 schema 2 it has the contract it needed, and the group run, the drawing and the ladder are forge and
 pack work that does not change what the client reads. It is at zero and February is the window.
 
-### Ed25519 — finished
+### Ed25519 and the six packages — finished
 
 Key pair, 128-hex signature, the envelope, **the signed manifest**, test keys generated per run, the
-two key modes mutually exclusive, and the writer refusing to publish without the forge's key. The
-public half is in `serve/data/signing-public-key.hex`; the private half is on the laptop and documented
-in `docs/signing-keys.md`.
+two modes mutually exclusive, ephemeral batches written outside `serve/`, and the production key
+compared with the pinned public key **before the first filesystem mutation**. The public half is in
+`serve/data/signing-public-key.hex`; the private half is on the laptop, documented in
+`docs/signing-keys.md`, and never in Git.
 
-### What Ed25519 replaced
+The six reference packages are published: schema 2, 128-hex signatures, one slot reference per batting
+row, signed manifest. Verified **from disk against the public key committed in the repository** rather
+than against what the writer reported, with both tampering cases refused — altering the generation, and
+removing one id from the list. ⚠️ **That second one is the attack package signatures cannot see**, since
+every id left in the list still verifies.
 
-Done: the key pair, the 128-hex signature, the envelope, **the signed manifest**, and test keys
-generated per run rather than checked in.
+**`serve` has a base to build against, and it is the format that exists.**
 
-**Owed:** the writer still takes `BOXSCORE_SIGNING_SECRET` and a `--fixtures` mode, and the six
-reference packages still carry 64-hex signatures and schema 1.
+### The group run — stopped four times, and what each stop was
 
-⚠️ **Both fallback modes stop being necessary rather than being made safe.** They existed because an
-HMAC key is symmetric — a convenient one in the repository let the script run and anything it signed
-was forgeable by anyone holding the repository. With a key pair a *generated* key signs a throwaway
-batch perfectly well and is worthless to an attacker, because the public half that would verify it goes
-nowhere. `serve` holds a different public key and refuses the batch itself, instead of a comment asking
-to be believed.
+| | What the instrument could not do |
+|---|---|
+| v09-P2-02 | blockage could not **vary**: every other cell was given, so nothing could depend on the group |
+| v11-P1-01 | blockage could not **fire where it mattered**: the baseline removed the group along with the erasure |
+| v10-P2-01/03, v11-P2-01/02 | the **denominators did not match the questions**, and one was chosen by a heading string |
+| v12-P1-01 | the **guard for the second fix accepted the implementation it replaced** |
 
-**Regenerating the six matters for what comes next:** `serve` is built against them, and building
-against schema 1 packages means building against a format that no longer exists.
+**Only the first produced a reported number**, and it reached the operator as a finding before anyone
+noticed the column had one possible value. The other three were caught before a run completed — which
+is the difference between a review that costs an afternoon and one that costs a decision.
+
+The instrument now: measurements as pure functions in `metrics.py` that the tests **call**; report rows
+carrying their own eligibility and denominators as callables; three erasure seeds with per-trial rates;
+run-level coverage kept separate from group trials; an output stamped with a hash of the code that ran
+and an explicit untracked-file check; a per-writer staging path; and a refusal to publish a result whose
+provenance is unknown.
+
 
 ### Then, in order
 
