@@ -7,7 +7,7 @@ are **declined on the environment** and recorded in `non-issue.md`.
 
 | | Open | Why |
 |---|---|---|
-| **v05-P1-02** | how an erased footnote attribution is drawn | half closed. The mechanical half is done and guarded both ways; **the run that decides the drawing was stopped and the instrument rebuilt again** |
+| **v05-P1-02** | ✅ **closed.** The erased term is drawn as the grid's own cell — same border, ground, colour, selection and keypad — with the label and slot reference as text. Recorded in `docs/serve-brief.md`. It also fixed an unsolvable board: zero-total columns were rendered nowhere, so 18 of one board's 39 blanks had no element to tap |
 
 **Everything from v01 to v18 is closed except that one — seventy-seven of seventy-nine**, with
 `v16-P1-01` and `v17-P2-01` declined rather than fixed, each with its reason and its reactivation

@@ -412,6 +412,56 @@ that failed to arrive.
 with the board's content. A glyph specimen is not the board, and choosing from one imported a
 consideration the board does not have while burying the one it does.
 
+## The erased footnote: drawn as a cell — `v05-P1-02`
+
+**An erased footnote term is the same cell the player has been filling all along, drawn somewhere
+else.** Same border, same pale ground, same blue when filled, same selection, same keypad. The label and
+the slot reference stay text; only the number is a cell.
+
+    LOB: 8    SH: 1 [ ]#7    HBP: 0 [ ]#4 [ ]#5
+
+**Why the grid cell rather than a control of its own.** It costs nothing to explain — there is no new
+vocabulary, no icon, no dropdown, no modal — and every new element on 375px competes with the board.
+Four colours already carry meaning and a fifth would have to displace one.
+
+**The reference is black.** It was blue, and blue means *the player typed this*; the reference is given.
+Two meanings on one colour is why it did not read right.
+
+**The touch target is the label and the box together.** Tapping `SH:` selects that term's first unknown,
+so the box can stay 26px in a line of text while the thing a thumb aims at stays wide enough.
+
+**Where it sits in the traversal: last, after the totals.** The footnotes are a separate block and a
+player deals with them at the end. On the phone that is DOM order, which is what the selection walks.
+
+⚠️ **The drawing was not cosmetic: without it the board could not be finished.** Columns whose total is
+zero were skipped entirely, so their erased cells were rendered nowhere — **18 of one board's 39 blanks
+had no element to tap**. Asked of the engine rather than eyeballed: every blank now resolves to a node.
+
+## ⚠️ What the drawing exposed: a third of every board is typing zeros
+
+Rendering it made the real problem visible, which is the point of rendering it.
+
+| | blanks | footnote blanks | in a **zero-total** column | share of all blanks |
+|---|---:|---:|---:|---:|
+| six reference packages | 204 | 91 | **61** | **30%** |
+
+**A column whose total is zero has every cell zero.** There is nothing to deduce and nothing to look
+up: the player types a zero because the board asks, not because anything follows from it. On screen it
+is now the largest single element — four wrapped lines of empty boxes under a nine-row grid.
+
+**This is the same shape as the scoreboard duplicate, an order of magnitude larger.** That one was 2.9%
+of blanks and was removed from the erasable set on the argument that a lookup counted as a deduction is
+a lookup counted as difficulty. This is 30%, and it is not even a lookup.
+
+The group run agrees from the other direction: a slot group carrying **no** live term blocks the rest of
+the board in only **6%** of trials, against 57–74% for a group with one.
+
+**The proposal, not yet implemented because it is a generator change and it needs the same before-and-
+after the scoreboard duplicates are getting:** exclude from `erasable()` any footnote cell whose
+column total is zero — same place, same shape, beside `SCOREBOARD_DUPLICATES`. Note the rule is about
+the *column*, not the cell: a zero in a column totalling three is a real deduction, because working out
+that this batter is not one of the three is the deduction.
+
 ## Still open, and what would close each
 
 **Nothing here is waiting on effort.** Each needs a judgement or a piece that does not exist yet.

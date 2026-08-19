@@ -64,7 +64,7 @@ function boot({ puzzle }) {
   const select = (name) => {
     if (!game.isBlank(name)) return;
     selected = name;
-    for (const node of scroller.querySelectorAll("td.cell")) {
+    for (const node of scroller.querySelectorAll(".cell")) {
       node.classList.toggle("selected", node.dataset.cell === name);
       // The row and column a selected cell shares an equation with. Shown because a deduction is
       // always about a line, and finding it by eye on a 44px grid is the tedious part.
@@ -91,7 +91,7 @@ function boot({ puzzle }) {
         onSelect: select,
       }),
     );
-    scroller.append(renderFootnotes(puzzle, game));
+    scroller.append(renderFootnotes(puzzle, game, select));
     scroller.append(
       renderSection({
         // The other side, always: the board is one team batting against the other's staff.
@@ -110,9 +110,10 @@ function boot({ puzzle }) {
   };
 
   const repaint = () => {
-    for (const node of scroller.querySelectorAll("td.cell")) paint(node, game);
+    for (const node of scroller.querySelectorAll(".cell")) paint(node, game);
     const footnotes = scroller.querySelector(".footnotes");
-    footnotes.replaceWith(renderFootnotes(puzzle, game));
+    footnotes.replaceWith(renderFootnotes(puzzle, game, select));
+    if (selected) select(selected);
   };
 
   app.append(

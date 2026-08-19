@@ -184,42 +184,46 @@ export function paint(node, game) {
  * the puzzle: the measurement says a group carrying a live term blocks the rest of the board in the
  * majority of trials, so hiding the fact that a term exists would remove the deduction entirely.
  */
-export function renderFootnotes(puzzle, game) {
+export function renderFootnotes(puzzle, game, onSelect) {
   const line = el("div", "footnotes");
-  line.append(el("span", "lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
+  line.append(el("span", "term lob", `${text("board.left_on_base")}: ${puzzle.puzzle.leftOnBase}`));
 
   for (const column of FOOTNOTE_COLUMNS) {
     // ⚠️ **The totals row is never erased, so the count is always known** (§6 — the row identity does
-    // not close without it). Everything below follows from that, and the version this replaces did not
-    // use it: it asked whether any per-batter cell was blank and printed `?` if so, which produced
-    // `HBP: ?` on a game with **no hit batsmen at all** and `SH: #5 +?` where the single sacrifice was
-    // already accounted for. Three of four terms were false and the fourth was noise.
-    //
-    // Nothing invents uncertainty the arithmetic has already removed. A total of zero means the thing
-    // did not happen and the term is not printed; §6 warns that nine boards in ten have every term at
-    // zero, and four question marks on a board with one live term is exactly how a player learns to
-    // stop reading this line.
+    // not close without it). The version this replaces printed `?` whenever any per-batter cell in a
+    // column was blank, which produced `HBP: ?` on a game with no hit batsmen at all. Nothing invents
+    // uncertainty the arithmetic has already removed.
     const total = game.value(footnoteTotalCell(column));
-    if (total === null || total === 0) continue;
+    if (total === null) continue;
 
-    const holders = [];
-    let attributed = 0;
+    const known = [];
+    const unknown = [];
     puzzle.puzzle.footnotes.forEach((_, row) => {
-      const value = game.value(footnoteCell(row, column));
-      if (value !== null && value > 0) {
-        holders.push(`#${puzzle.slotReferences[row]}${value > 1 ? `×${value}` : ""}`);
-        attributed += value;
-      }
+      const name = footnoteCell(row, column);
+      if (game.isBlank(name)) unknown.push({ name, slot: puzzle.slotReferences[row] });
+      else if (game.value(name) > 0) known.push(`#${puzzle.slotReferences[row]}${game.value(name) > 1 ? `×${game.value(name)}` : ""}`);
     });
-    // What is left to attribute, not whether a cell happens to be blank. Once the holders account for
-    // the total there is nothing unknown, however many blanks remain — they are all zeroes.
-    const missing = total - attributed;
+    // ⚠️ **A term with nothing to show and nothing to fill is not printed.** §6 warns that nine boards
+    // in ten have every term at zero and that players learn to stop reading the line; a row of empty
+    // labels is how that habit is taught.
+    if (total === 0 && unknown.length === 0) continue;
 
-    const term = el("span", `term ${missing > 0 ? "unknown" : "live"}`);
-    term.append(document.createTextNode(`${text(`column.${column}`)}: ${total} `));
-    const who = [...holders];
-    if (missing > 0) who.push(missing > 1 ? `${text("footnote.unattributed")}×${missing}` : text("footnote.unattributed"));
-    term.append(el("span", "who", who.join(", ")));
+    const term = el("span", "term");
+    const label = el("span", "term-label", `${text(`column.${column}`)}: ${total}`);
+    term.append(label);
+    if (known.length) term.append(el("span", "who", known.join(", ")));
+    for (const { name, slot } of unknown) {
+      // The same cell the player has been filling all along, drawn somewhere else. `paint` and the
+      // selection find it by `data-cell` exactly as they find one in the grid.
+      const cell = el("span", "cell");
+      cell.dataset.cell = name;
+      paint(cell, game);
+      cell.addEventListener("click", () => onSelect(name));
+      term.append(cell, el("span", "who", `#${slot}`));
+    }
+    // Tapping the label selects the term's first unknown, so the target is the label and the box
+    // together and the box can stay small in a line of text.
+    if (unknown.length) label.addEventListener("click", () => onSelect(unknown[0].name));
     line.append(term);
   }
   return line;

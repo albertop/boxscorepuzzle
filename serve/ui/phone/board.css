@@ -280,8 +280,8 @@ td.label { text-align: left; padding-left: 6px; font-size: 13px; white-space: no
 /* A row that did not start: indented, so the lineup slot reads as a group at a glance. */
 td.label.substitute { padding-left: 14px; }
 
-td.cell { cursor: pointer; }
-td.cell.given { color: var(--given); }
+.cell { cursor: pointer; }
+.cell.given { color: var(--given); }
 /* ⚠️ **A full border, not an underline.** An underline is what a printed form puts under a blank; this
    is a grid, and an editable cell should read as a cell.
    `outline` rather than `border`, and that is the whole point: an outline is drawn outside the border
@@ -292,9 +292,9 @@ td.cell.given { color: var(--given); }
    being heard as *empty*. Filled goes white and the digit alone carries the colour, which also keeps
    the three empty states — plain, cream on the active row or column, amber on the active cell — as far
    apart as they were. They were already close to the limit of what separates at a glance. */
-td.cell.blank.filled { background: var(--paper); }
+.cell.blank.filled { background: var(--paper); }
 
-td.cell.blank {
+.cell.blank {
   background: var(--blank);
   color: var(--entered);
   /* The player's own writing has to be findable at a glance among nine rows of given numbers: a cell
@@ -310,22 +310,42 @@ td.cell.blank {
      pixel in costs nothing the instruction was protecting and removes the collision. */
   outline-offset: -1px;
 }
-td.cell.blank:empty::after { content: ""; }
-td.cell.peer { background: var(--peer); }
-td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
+.cell.blank:empty::after { content: ""; }
+.cell.peer { background: var(--peer); }
+.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
 
 /* ---- the footnote line ----------------------------------------------------------------------- */
 
 /* ⚠️ **Live footnotes must be visually prominent** (§6). Nine rows in ten have every term at zero, so
    players learn to stop looking — and the row where one appears is exactly the row whose arithmetic
    fails if they miss it. A zero term is muted; a live one is not. */
-.footnotes { padding: 8px 0 14px; font-size: 13px; line-height: 1.5; }
-.footnotes .term { margin-right: 12px; white-space: nowrap; }
+/* ⚠️ **The erased term is the same cell, drawn somewhere else.** Not a control of its own: the player
+   has been filling these all along, so it inherits the border, the pale ground, the blue, the selection
+   and the keypad with no exceptions and nothing new to learn. Four colours already carry meaning here
+   and a fifth would have to displace one.
+
+   ⚠️ **And it was not optional.** Columns whose total is zero were skipped entirely, so their erased
+   cells were drawn nowhere — 18 of this board's 39 blanks had no element to tap and the board could not
+   be finished. Asked of the engine, not eyeballed. */
+.footnotes { padding: 10px 0 14px; font-size: 13px; line-height: 2.2; }
+/* The touch target is the label *and* the box together, so the box can stay small in a line of text
+   while the thing a thumb aims at stays 44px wide. Tapping `SH:` selects its cell. */
+.footnotes .term { display: inline-flex; align-items: center; gap: 4px; margin-right: 14px; white-space: nowrap; }
+.footnotes .term .cell {
+  display: inline-block;
+  min-width: 26px;
+  height: 26px;
+  line-height: 26px;
+  text-align: center;
+  vertical-align: middle;
+  font-size: 13px;
+}
+/* ⚠️ The reference is **given**, so it is the same black as the rest of the line. It was blue, and blue
+   means *the player typed this* — two meanings on one colour, which is why it did not read right. */
+.footnotes .who { color: var(--ink); font-weight: 700; }
 .footnotes .lob { margin-right: 12px; }
 .footnotes .term.zero { color: var(--rule-strong); }
 .footnotes .term.live { color: var(--ink); font-weight: 700; }
-.footnotes .term.live .who { color: var(--unknown); }
-.footnotes .term.unknown { color: var(--unknown); font-weight: 700; }
 .footnotes .lob { font-weight: 700; }
 
 /* ---- keypad ---------------------------------------------------------------------------------- */
