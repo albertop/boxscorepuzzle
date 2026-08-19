@@ -63,6 +63,18 @@ WANTED = 5
 GATE = 0.25
 SEED = 118
 SAMPLE_PER_DECADE = 4
+WATCHED = "WAS201307070"
+"""⚠️ **The one board with a human verdict attached to a measured number.**
+
+The operator solved it from the ceiling pack and found it hard. It measured **19 stalls with 79 blanks**
+— on the scale that counted the solver deducing footnote zeros. Where it lands now is the single most
+useful figure in the recalibration, because every other number on the new scale has no verdict beside
+it. Reported if the sample contains it; **said plainly if it does not**, rather than left to look like
+it was never asked for.
+
+Nothing about this board is treated specially in the search. It is watched, not favoured.
+"""
+
 SEEDS = (1, 2, 3)
 """Several starts per ordering. One is a sample of size one from the space of erasure paths."""
 
@@ -295,6 +307,17 @@ def main() -> None:
     print(f"blanks in the batting grid: {grid}")
     print(f"uncertified by layer 3b: {sum(1 for c in chosen if not c.certified)} of {len(chosen)}")
     print(f"wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in {_HERE}")
+    watched = [row for row in found if row.loaded.game_id == WATCHED]
+    if watched:
+        best = max(row.stalls for row in watched)
+        print("")
+        print(f"⚠️ THE ONE BOARD WITH A HUMAN VERDICT: {WATCHED}")
+        print(f"   measured 19 stalls / 79 blanks on the scale that counted zeros, and the operator")
+        print(f"   solved it and found it hard. On the corrected scale it reaches {best} stalls.")
+    else:
+        print("")
+        print(f"⚠️ {WATCHED} is not in this sample, so the one measured-and-judged board could not be")
+        print("   re-measured. Said rather than omitted: its absence is not a null result.")
     print(f"(build_pack's own targets are {build_pack.TARGETS}, which are chain rungs and not used here)")
 
 

@@ -35,13 +35,22 @@ from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 
-TARGETS = (5, 6, 7, 8, 9, 10)
-"""Stall counts, not chain lengths.
+REFERENCE_BOARDS = 6
+CANDIDATES = 12
+CEILING = 12
+"""How many boards to publish, and the highest stall count worth attempting.
 
-Chain measures how long a solve is: a chain-10 board is ten subtractions in single file and one was
-solved by hand in under a minute. A stall is the moment propagation runs dry and something beyond
-direct substitution is needed. **No band is implied here** — these are six different boards for the
-client to be built against, not a difficulty scale.
+⚠️ **This used to be a fixed list — `(5, 6, 7, 8, 9, 10)` — with the *n*th game required to hit the
+*n*th number, one attempt each.** Every one of the six was discarded the day the footnote cells went
+back to given, because those numbers were chosen on a scale that counted the solver deducing zeros. On
+the corrected scale only 54% of boards reach five stalls and 21% reach eight, so demanding a particular
+board hit a particular number in one attempt fails almost always.
+
+**So the writer no longer asserts a scale it cannot know.** It asks each board what it reaches, takes the
+highest, and publishes boards with distinct counts. A stall is the moment propagation runs dry and
+something beyond direct substitution is needed; **no band is implied** — these are six different boards
+for the client to be built against, not a difficulty scale. The ladder is a separate thing and it waits
+on the new scale, because its rungs were picked on the old one.
 """
 GATE = 0.25
 SEED = 6
@@ -188,11 +197,15 @@ def _choose(sample: list[Loaded], with_substitution: list[Loaded], with_footnote
             raise SystemExit(message)
         claim(wanted, seen, following)
     for item in sorted(sample, key=lambda entry: entry.season):
-        if len(wanted) == len(TARGETS):
+        # ⚠️ **More candidates than boards, because some reach nothing at all.** With the footnote line
+        # given, two of six candidates produced no puzzle at any target from 12 down — the writer used
+        # to take exactly six and then be short. Taking a margin costs nothing: the surplus is simply
+        # never built.
+        if len(wanted) == CANDIDATES:
             break
         claim(wanted, seen, item)
-    if len(wanted) != len(TARGETS):
-        message = f"only {len(wanted)} distinct games in the sample, wanted {len(TARGETS)}"
+    if len(wanted) < REFERENCE_BOARDS:
+        message = f"only {len(wanted)} distinct games in the sample, wanted {REFERENCE_BOARDS}"
         raise SystemExit(message)
     return wanted
 
@@ -376,11 +389,23 @@ def main() -> None:
         staging.rmdir()
     staging.mkdir()
 
+    # ⚠️ Ask the board rather than tell it. The highest target it reaches, and one board per count so
+    # the six are actually different rather than six copies of the easiest rung.
     written = 0
-    for loaded, target in zip(wanted, TARGETS, strict=True):
-        package = build(loaded, target, key)
+    taken: set[int] = set()
+    for loaded in wanted:
+        if written == REFERENCE_BOARDS:
+            break
+        package = None
+        for target in range(CEILING, 0, -1):
+            if target in taken:
+                continue
+            package = build(loaded, target, key)
+            if package is not None:
+                taken.add(target)
+                break
         if package is None:
-            print(f"  discarded {loaded.game_id} at chain {target}")
+            print(f"  discarded {loaded.game_id}: reached no target from {CEILING} down")
             continue
         path = staging / f"{package.puzzle_id}.json"
         write(path, package.published())
@@ -406,16 +431,16 @@ def main() -> None:
             f"{len(restored.labels)} labels  verified from disk"
         )
 
-    if written != len(TARGETS):
+    if written != REFERENCE_BOARDS:
         # The staging directory is left behind deliberately: it is evidence of what the failed run
         # produced, and the published set is untouched.
-        message = f"wrote {written} puzzles, wanted {len(TARGETS)} — published set left as it was"
+        message = f"wrote {written} puzzles, wanted {REFERENCE_BOARDS} — published set left as it was"
         raise SystemExit(message)
 
     # ⚠️ `written` counts successful builds and `_publish` counts files. They used to be the same
     # number by assumption, and the assumption is exactly what a collision breaks: two builds, one
     # file, and a counter that says six.
-    generation = _publish(staging, len(TARGETS), key, out)
+    generation = _publish(staging, REFERENCE_BOARDS, key, out)
     print(f"{written} puzzles in {out / generation}, committed by replacing {MANIFEST}")
 
 
