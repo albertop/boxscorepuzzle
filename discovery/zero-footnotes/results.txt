@@ -1,0 +1,51 @@
+=== COVERAGE: SHARE OF BOARD-AND-SEED TRIALS THAT REACH EACH TARGET ===
+  the question the 5-versus-15 figure was really answering
+  target    footnotes fully erasable        erasable if non-zero             footnotes given
+       5              144/144 = 100%                77/144 = 53%                78/144 = 54%
+       8              144/144 = 100%                30/144 = 21%                30/144 = 21%
+      11              144/144 = 100%                  1/144 = 1%                  1/144 = 1%
+      15                94/144 = 65%                  0/144 = 0%                  0/144 = 0%
+      19                  6/144 = 4%                  0/144 = 0%                  0/144 = 0%
+
+=== ⚠️ THE ONE THAT SETTLES IT: NON-ZERO AGAINST GIVEN, PAIR BY PAIR ===
+  if these two are the same, opening the footnote cells buys nothing and they go back to given
+  identical on every field: 653/720 = 91%
+  differing:                67/720 = 9%
+  ATL197408180 seed 301 target 5: non-zero True 5st 34b  vs  given True 5st 33b
+  ATL197409282 seed 302 target 5: non-zero True 5st 34b  vs  given True 5st 33b
+  ATL198409200 seed 302 target 5: non-zero True 5st 36b  vs  given True 5st 35b
+  BAL195409080 seed 302 target 5: non-zero True 5st 34b  vs  given True 5st 33b
+  BAL195409250 seed 302 target 5: non-zero True 5st 32b  vs  given True 5st 30b
+  BAL196408120 seed 301 target 5: non-zero True 5st 33b  vs  given True 5st 32b
+
+=== WHAT A REACHED BOARD LOOKS LIKE, PER ARM ===
+                         arm   reached   median blanks   median chain  median footnote blanks
+    footnotes fully erasable       532              36             29                      18
+        erasable if non-zero       108              33             18                       1
+             footnotes given       109              32             17                       0
+
+=== A HANDFUL OF TRIALS, RENDERED RATHER THAN SUMMARISED ===
+  ATL197408180 seed 301     footnotes fully erasable: highest target reached 11
+  ATL197408180 seed 301         erasable if non-zero: highest target reached 5
+  ATL197408180 seed 301              footnotes given: highest target reached 5
+  ATL197408180 seed 302     footnotes fully erasable: highest target reached 15
+  ATL197408180 seed 302         erasable if non-zero: highest target reached 0
+  ATL197408180 seed 302              footnotes given: highest target reached 0
+  ATL197409090 seed 301     footnotes fully erasable: highest target reached 15
+  ATL197409090 seed 301         erasable if non-zero: highest target reached 8
+  ATL197409090 seed 301              footnotes given: highest target reached 8
+  ATL197409090 seed 302     footnotes fully erasable: highest target reached 15
+  ATL197409090 seed 302         erasable if non-zero: highest target reached 0
+  ATL197409090 seed 302              footnotes given: highest target reached 0
+
+=== WHAT PRODUCED THIS ===
+  result schema      1
+  revision           2c60b7f
+  tree               1 files dirty
+  sample             72 directions, 6 per decade, gate 25%
+  seeds              (301, 302); targets (5, 8, 11, 15, 19); arms ('all', 'non_zero', 'given')
+  rows               2160
+  ordering           one canonical walk per (direction, seed) over the union, filtered per
+                     arm, so every shared cell keeps its relative position
+  coverage           measured at fixed targets, not searched, so no monotonicity is assumed
+COMPLETE

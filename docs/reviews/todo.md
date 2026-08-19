@@ -2164,6 +2164,53 @@ And the format module still said the per-batter footnote cells were "given compl
 that labels carried suffixes. Both were reversed weeks ago; the real packages disagreed with the
 docstrings in silence.
 
+## ⚠️⚠️ The pool answered: the footnote cells bought **nothing**
+
+72 directions, 2 seeds, 5 targets, 3 arms, 2160 rows, one canonical walk per trial.
+
+| target | footnotes fully erasable | erasable if non-zero | **footnotes given** |
+|---:|---:|---:|---:|
+| 5 | 100% | 53% | **54%** |
+| 8 | 100% | 21% | **21%** |
+| 11 | 100% | 1% | **1%** |
+| 15 | 65% | 0% | **0%** |
+| 19 | 4% | 0% | **0%** |
+
+**Pair by pair, non-zero and given are identical on every field in 653 of 720 trials — 91%.** The 67
+that differ, differ **only in the blank count**: same stalls, same reachability, one extra cell to fill.
+Opening the footnote cells buys a blank and no difficulty.
+
+### The old figure reproduces exactly, which is what makes this a correction rather than a new result
+
+The measurement that opened these cells said: *with the footnote line given the median board stalls 5
+times and only **56%** reach five; with them open it is 15 and **every** board reaches five.*
+
+Both halves are confirmed and both were counting zeros. Today: **54% reach five with footnotes given** —
+the same 56% — and **100% with zeros erasable**. The gap was never difficulty. It was the solver
+deducing values that were zero because the thing did not happen.
+
+### What this invalidates, stated as invalidated
+
+- The **stall ceiling** and its 27% convergence
+- The **coverage** figures at every target
+- The **5-versus-15 gap**, which was the entire argument for opening these cells
+- ⚠️ **The ladder — 19, 16, 13, 9 and 6 stalls — cannot be built.** At 19 stalls the real arms reach
+  **0%** and even the zero-counting arm reaches 4%. The rungs are stall counts taken in the inflated
+  world, and the hand-solve pack was specified in them.
+- The **group run's** blocking percentages, measured at a target of 8 stalls that only 21% of boards now
+  reach
+
+### The decision this supports, and it is the operator's
+
+**The footnote cells go back to given.** `non_zero` and `given` differ by one board out of 144 at the
+only target either reaches often, and by nothing at all elsewhere. Keeping them erasable costs the
+footnote-cell drawing, up to 24% of the phone screen, and the cap discussion — for a blank with no
+deduction in it.
+
+⚠️ **If that is the call, `v05-P1-02`'s drawing becomes dead code and §6 reverts** — the per-batter cells
+were opened on this measurement and it did not hold. Recorded here rather than acted on: it removes a
+board feature, and §7 says a value that shapes the product is presented as a proposal.
+
 ## ⚠️⚠️ Every stall figure in this project counted zeros — the correction
 
 **Priority A1, and it invalidates numbers rather than adding one.**
