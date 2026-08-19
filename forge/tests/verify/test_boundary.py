@@ -240,3 +240,46 @@ class TestTheEnvelopeIsCheckedToo:
         from boxscore_package.format import PUZZLE_ID  # noqa: PLC0415
 
         assert PUZZLE_ID.fullmatch(puzzle_id("SLN19131005", "CHN"))
+
+
+class TestAPackageCannotContradictItself:
+    """⚠️ **The comment said a version cannot disagree with its payload and nothing enforced it.**
+
+    `schema` was settable and `written_as` returned it unexamined, so the writer API could produce a
+    document the parser refuses — an invariant every caller had to remember rather than one the type
+    keeps. The parser rejecting it on the way *in* is not the same guarantee.
+    """
+
+    def test_a_version_without_references_is_refused(self, board: Board) -> None:
+        with pytest.raises(PackageError, match="requires slot references"):
+            Package(puzzle_id="000000000000000f", puzzle=board, schema=2)
+
+    def test_a_version_this_code_cannot_read_is_refused(self, board: Board) -> None:
+        with pytest.raises(PackageError, match="cannot be schema 1"):
+            Package(
+                puzzle_id="000000000000000f",
+                puzzle=board,
+                slot_references=tuple(str(i + 1) for i in range(len(board.batting))),
+                schema=1,
+            )
+
+    def test_the_references_must_match_the_batting_rows(self, board: Board) -> None:
+        # The property the field exists for. One per row, or a footnote names a row that is not there.
+        with pytest.raises(PackageError, match="slot references for"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=("1",))
+
+    def test_an_empty_tuple_is_a_value_and_not_an_absence(self, board: Board) -> None:
+        # `written_as` used truthiness, so an empty tuple read as absent and downgraded the version.
+        # Here it is simply the wrong length, which is what it is.
+        with pytest.raises(PackageError, match="slot references for"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=())
+
+    def test_a_matching_package_is_accepted(self, board: Board) -> None:
+        # A guard that refuses everything would satisfy all four tests above.
+        package = Package(
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+        )
+
+        assert package.written_as == 2

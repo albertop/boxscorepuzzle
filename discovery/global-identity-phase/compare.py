@@ -132,6 +132,14 @@ def compare(before: Path, after: Path) -> None:
     """Two files, board by board. A median that holds can still hide every board moving."""
     left, right = _keyed(before), _keyed(after)
     shared = sorted(left.keys() & right.keys())
+    # ⚠️ **An instrument that cannot compare must say so, not raise `StatisticsError` three frames
+    # down.** Two disjoint files under `--allow-partial` reached `summarise([])` and `shared[0]`.
+    if not shared:
+        message = (
+            f"{before.name} holds {len(left)} boards and {after.name} holds {len(right)}, and they "
+            f"share none. There is nothing to compare; the two runs used different samples."
+        )
+        raise SystemExit(message)
     # ⚠️ **This compared the intersection and asked only that it be non-empty.** A database change, a
     # partial run or a solver failure can remove exactly the boards a change affects, and the
     # comparison would then report a clean null over the survivors — which is the false null this
@@ -189,6 +197,14 @@ def compare(before: Path, after: Path) -> None:
 def main() -> None:
     if "--against" in sys.argv:
         index = sys.argv.index("--against")
+        # Arity before indexing: `--against` with one path used to raise IndexError rather than say so.
+        if len(sys.argv) < index + 3:
+            message = "usage: compare.py --against <before.json> <after.json>"
+            raise SystemExit(message)
+        for path in (Path(sys.argv[index + 1]), Path(sys.argv[index + 2])):
+            if not path.exists():
+                message = f"{path} does not exist"
+                raise SystemExit(message)
         compare(Path(sys.argv[index + 1]), Path(sys.argv[index + 2]))
         return
     if len(sys.argv) != 2:
@@ -196,6 +212,13 @@ def main() -> None:
         raise SystemExit(message)
     out = Path(sys.argv[1])
     rows = measure()
+    if not rows:
+        # The two ways to get here are different problems, and one message for both hides which.
+        message = (
+            "no rows: every erasure failed to reach the target on a non-empty sample. If the sample "
+            "was empty the loader would have said so above."
+        )
+        raise SystemExit(message)
     out.write_text(json.dumps(rows, indent=1, sort_keys=True), encoding="utf-8")
     summary = summarise(rows)
     print(f"wrote {len(rows)} rows to {out}")

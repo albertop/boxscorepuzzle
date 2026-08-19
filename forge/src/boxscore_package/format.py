@@ -342,13 +342,36 @@ class Package:
     """
 
     schema: int | None = None
-    """The version this package *is*, or `None` to let the payload decide.
+    """The version this package *is*, checked against the payload rather than trusted.
 
     ⚠️ **A version is a statement about the payload, not a stamp applied to it.** A package carrying
     slot references is a version 2 package and one without them is a version 1 package, so the two
     cannot disagree: `written_as` derives it. Set it explicitly only to assert what a parsed document
     claimed.
     """
+
+    def __post_init__(self) -> None:
+        """⚠️ **The comment said a version cannot disagree with its payload, and nothing enforced it.**
+
+        `schema` was publicly settable and `written_as` returned it unexamined, so a caller could
+        serialise version 2 without references, or a version this code cannot read. The parser refused
+        such documents on the way *in*, which meant the writer API could produce a file another process
+        would reject — an invariant each caller had to remember instead of one the type keeps.
+
+        Frozen dataclasses need `object.__setattr__` for this; the alternative was a factory nobody is
+        obliged to use.
+        """
+        if self.slot_references is not None and len(self.slot_references) != len(self.puzzle.batting):
+            message = f"{len(self.slot_references)} slot references for {len(self.puzzle.batting)} batting rows"
+            raise PackageError(message)
+        if self.schema is None:
+            return
+        if self.schema not in READABLE:
+            message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
+            raise PackageError(message)
+        if self.slot_references is None:
+            message = f"schema {self.schema} requires slot references and none were given"
+            raise PackageError(message)
 
     @property
     def written_as(self) -> int:
@@ -360,6 +383,7 @@ class Package:
         consumer needed it — and with one version left, deriving would only manufacture a document
         this code cannot read back.
         """
+        # `is not None`, never truthiness: an empty tuple is a real value and used to read as absent.
         return self.schema if self.schema is not None else SCHEMA_VERSION
     signature: str | None = None
 
