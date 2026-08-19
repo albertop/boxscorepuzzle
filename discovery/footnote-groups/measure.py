@@ -656,7 +656,7 @@ def main() -> None:
     _refuse_unwritable(out)
     sample = [
         item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
         if not find_violations(item.direction)
     ]
     if not sample:

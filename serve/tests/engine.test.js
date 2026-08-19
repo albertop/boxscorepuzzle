@@ -74,8 +74,12 @@ suite("The six real packages parse, and their shape is the contract", () => {
   test("the roster caps §6 states are respected by every real package", () => {
     for (const { id, raw } of packages) {
       const puzzle = readPackage(raw);
-      assert(puzzle.puzzle.batting.length <= 13, `${id} has ${puzzle.puzzle.batting.length} batters`);
-      assert(puzzle.puzzle.pitching.length <= 4, `${id} has ${puzzle.puzzle.pitching.length} pitchers`);
+      // From the shared file, not spelled again. The pitcher cap moved from 4 to 6 and this line held
+      // one of twenty-six copies of it; a forge test asserts the shared numbers still equal the
+      // constants module, so the two cannot drift apart in silence.
+      const { batters, pitchers } = vectors.caps;
+      assert(puzzle.puzzle.batting.length <= batters, `${id} has ${puzzle.puzzle.batting.length} batters`);
+      assert(puzzle.puzzle.pitching.length <= pitchers, `${id} has ${puzzle.puzzle.pitching.length} pitchers`);
     }
   });
 

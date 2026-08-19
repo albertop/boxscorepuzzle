@@ -63,13 +63,17 @@ BATTING_COLUMNS: Final = ("plate_appearances", "at_bats", "runs", "hits", "walks
 """PA, AB, R, H, BB, SO — the six the board shows (§6). Order is part of the format."""
 
 FOOTNOTE_COLUMNS: Final = ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
-"""HBP, SF, SH, CI — the footnote line.
+"""HBP, SF, SH, CI — the footnote line, **given in full: no cell here is erasable** (§6).
 
-⚠️ **The per-batter cells ARE erasable and this said the opposite for weeks.** §6 changed when the
-measurement showed the row identity closes on them; the docstring did not, and the real packages
-disagreed with it in silence. What is never erased is the *totals* row below — and, since the zero
-correction, a per-batter cell whose value is zero, because there is nothing to deduce in a term that
-did not happen.
+⚠️ **This docstring has now been wrong in both directions, which is the point of the warning.** It
+said the cells were given while §6 had opened them; it was corrected to say they were erasable; and the
+pool run then closed them again, leaving it wrong a second time until someone read it. The decision
+itself: the cells were opened on a measurement counting the solver deducing zeros — 96% of the pool's
+footnote terms are zero — and the pool run found coverage identical with them erasable and with them
+given, at every target. Everything built for the open case was deleted rather than disabled.
+
+The authority is `erasure.erasable()`, which returns no footnote cell, and the test asserting no
+reference package carries a footnote blank. A docstring is not a check.
 """
 
 PITCHING_COLUMNS: Final = ("outs", "hits", "runs", "earned_runs", "walks", "strikeouts")

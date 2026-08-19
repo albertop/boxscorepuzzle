@@ -2282,6 +2282,66 @@ Not review findings — these are the things the repairs unblocked.
 **Nothing is labelled easy, medium or hard until the pack comes back.** Five stalls was an example the
 operator gave, not a standard.
 
+## ⚠⚠ The pitcher cap: ≤4 was wrong, and it was wrong for two independent reasons
+
+**Raised to ≤6.** Coverage at 8 stalls 22% → 33%, the pitching section's share of stalls 34% → 45%,
+41% more directions in the pool with the 1990s and 2000s reachable, global identity required on 70% of
+boards against 55%, cross-team 80% against 88%. **The median ceiling is unchanged at 5**, so the ladder's
+range does not move — what moves is how much of the pool reaches it comfortably. A 6-stall board goes
+from the top third of the pool to about half of it.
+
+**Reason one: a justification reused rather than re-derived.** The screen-cost argument was retired by
+the working-set finding — rows do not bind, because the active section's totals stay pinned — and it was
+retired *for the batter cap*. Nobody re-derived it for pitchers, so it went on holding up a cap whose
+support had already been removed. This is the recorded failure form `narrow` produced, arriving again.
+
+**Reason two: a confound with no signature in the output.** The comparison that chose 4 ran while stalls
+counted the solver deducing footnote terms worth zero. **A pitching row carries no footnote terms at
+all**, so pitcher-heavy boards had fewer zeros inflating their scores. The comparison was biased against
+exactly the boards it was judging, and its report read exactly as clean as an honest one.
+
+### What was built so the number cannot drift again
+
+**A constants module, `forge/src/boxscore_domain/`.** Configuration rather than a bag of numbers: each
+value carries the reason it holds that value and, where one exists, the measurement that set it. The
+four that were **chosen rather than measured are marked `PROVISIONAL`** in the same place, because
+presenting a measured cap and an eyeballed threshold in one typeface hides the difference.
+
+**Presentation constants are a separate file** — `serve/ui/phone/tokens.css`, linked before `board.css`.
+§33 keeps the forge ignorant of screens and the service ignorant of generating; one shared constants
+file imported by both sides for the convenience of one is the first thing that would break it.
+
+**A guard, because one definition was not enough on its own.** The erasable set was given a single
+definition and the copies were not removed by that act — nothing stopped them existing. So
+`forge/tests/test_constants_are_not_copied.py` walks the source trees and fails on a cap spelled as a
+literal, in the same family as the guard rejecting decisions made by inspecting a label's formatting.
+It found **17 files** still restating the caps.
+
+⚠️ **Its own test caught its one soft edge.** The first version matched any comparison against a length,
+and `len(row) != 6` — the column count, which is six and is not the pitcher cap — was structurally
+identical to `len(board.pitching) <= 6`. A guard firing on everything carries no information, exactly like
+one that never fires. It now reads **ordering** operators only: a cap is a bound and is asked with `<` or
+`<=`; a width is asked with `==` or `!=`.
+
+**And the verifier checked one cap and not the other.** `plausibility.faults` has enforced the batter cap
+since the file existed; the pitcher cap was held up only by whichever `load()` call passed the right
+argument, which is not a check on the publication path at all. Raising the cap without closing that would
+have been documentation rather than a change. Verified by reverting the new guard, not by rereading it:
+disabling the comparison fails exactly the test written for it.
+
+### Not changed, and why
+
+**Four instruments keep their `max_pitchers=4`** — `pool-at-4-pitchers/` and `pitcher-cap/`. Their
+results are published numbers; rewriting the argument would make them unreproducible and silently
+reattribute them to a board family they never measured. They are named in the guard's exemption list, and
+the literal is now the documentation of what they measured.
+
+⚠⚠ **Every other recorded discovery result was measured at ≤4 and does not automatically carry to
+≤6.** The scoreboard-duplicate question, the erasure orderings, the stall-target coverage figures, the
+independent-cell counts — all of them describe a board family with at most four pitching rows. Their
+scripts now follow the decided caps, so a rerun measures the new board; **the recorded conclusions do
+not, and a justification does not travel.**
+
 ## Noticed while making the client green again after the regeneration
 
 **Two tests pinned a package id, and the id is derived from the game.** `serve/tests/package-vectors.json`

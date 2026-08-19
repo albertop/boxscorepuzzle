@@ -67,7 +67,7 @@ def _stall_position(solution: object) -> float | None:
 
 
 def measure() -> list[dict[str, object]]:
-    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     sample = [item for item in sample if not find_violations(item.direction)]
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate at {SAMPLE_PER_DECADE} per decade"

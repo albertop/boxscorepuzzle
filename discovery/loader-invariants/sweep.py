@@ -116,7 +116,7 @@ def against_an_independent_source(sample: list[Loaded]) -> Counter[str]:
 def plausibility(sample: list[Loaded]) -> Counter[str]:
     broken: Counter[str] = Counter()
     for item in sample:
-        for fault in faults(to_board(item.direction, None), max_batters=13):
+        for fault in faults(to_board(item.direction, None)):
             broken[fault.what] += 1
     return broken
 
@@ -148,7 +148,7 @@ def report(name: str, broken: Counter[str], total: int) -> None:
 
 
 def main() -> None:
-    sample = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True)
     print(f"{len(sample)} directions, {SAMPLE_PER_DECADE} per decade")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
 

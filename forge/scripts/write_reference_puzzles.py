@@ -360,7 +360,7 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
 
 def main() -> None:
     key, out = key_and_destination()
-    sample = load(4, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+    sample = load(4, gated=True, gate=GATE)
 
     with_substitution = [item for item in sample if len(set(item.slots)) < len(item.slots)]
     with_footnote = [

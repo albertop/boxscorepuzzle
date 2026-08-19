@@ -171,7 +171,7 @@ def _render(sample: list, folder: str) -> None:
 
 
 def main() -> None:
-    sample = load(SAMPLE_PER_DECADE, gated=True, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True)
     print(f"{len(sample)} gated directions at the decided caps")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
     _render(sample, "verifier")

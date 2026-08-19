@@ -19,7 +19,14 @@
     "failed on a missing reference rather than on anything about the contract. The id is derived from",
     "the game, so it moves whenever the generator's rules change, which is exactly when these matter",
     "most. They run against the manifest's first package now: any published package is a valid subject,",
-    "because every mutation below is about the schema rather than about a particular board."
+    "because every mutation below is about the schema rather than about a particular board.",
+    "",
+    "`caps` carries the roster caps \u00a75 and \u00a76 decide. They are a product rule, not a schema field, so no",
+    "vector can express them \u2014 but the client still has to assert published packages respect them, and",
+    "spelling the numbers in a JS test is the twenty-sixth copy of a value that has already outlived one",
+    "justification. The definition is forge/src/boxscore_domain, with the reason and the measurement",
+    "beside each value; a forge test asserts these two numbers still equal it, so the pair cannot drift",
+    "in silence. Shared data, not shared code \u2014 the same arrangement as the vectors themselves."
   ],
   "vectors": [
     {
@@ -202,5 +209,9 @@
       "expect": "reject",
       "because": "true is not a whole number, however truthy it is"
     }
-  ]
+  ],
+  "caps": {
+    "batters": 13,
+    "pitchers": 6
+  }
 }

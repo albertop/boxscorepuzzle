@@ -866,7 +866,15 @@ the fail-closed gates exist.*
 > exactly as thirteen batters does. What follows is kept as the reasoning that was actually used at
 > the time; the decision and its measurement are in **§5**. The batter cap of ≤13 is unaffected.
 
-**≤13 batters in the offensive team, ≤4 pitchers in the defensive team.** Nothing in §6 is
+**≤13 batters in the offensive team, ≤6 pitchers in the defensive team.** ⚠️ **Corrected from ≤4,
+which rested on invalidated data.** The comparison that chose 4 counted the solver deducing footnote
+terms worth zero as stalls, and a pitching row carries no footnote terms at all — so pitcher-heavy
+boards had fewer zeros inflating their scores and the comparison was biased against the very thing it
+was judging. Re-measured after the correction: coverage at 8 stalls 22% → 33%, the pitching section's
+share of stalls 34% → 45%, 41% more directions in the pool with the 1990s and 2000s reachable, global
+identity required on 70% of boards against 55%, cross-team on 80% against 88%. The median ceiling is
+unchanged at 5. **And the screen-cost argument was wrong twice**: it was retired for the batter cap by
+the working-set finding and never re-derived for pitchers. Nothing in §6 is
 provisional any more.
 
 **Rows on screen turned out not to be the binding constraint.** With the active section's totals

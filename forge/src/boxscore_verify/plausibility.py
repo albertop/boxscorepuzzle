@@ -16,18 +16,20 @@ loosened until it says nothing.
 
 from dataclasses import dataclass
 
+from boxscore_domain import (
+    BATTER_CAP,
+    MAX_PLATE_APPEARANCES_PER_OUT,
+    MIN_BATTERS,
+    PITCHER_CAP,
+)
 from boxscore_package.format import BATTING_COLUMNS, PITCHING_COLUMNS, Board, Package
 
 OUTS_PER_INNING = 3
-MIN_BATTERS = 9
-"""Nine men bat. A board with fewer is missing rows, whatever its arithmetic says."""
+"""Not a domain constant with a decision behind it — it is how baseball works, and it stays here.
 
-MAX_PLATE_APPEARANCES_PER_OUT = 2.2
-"""A ceiling on how much a lineup can bat per out recorded, **read off the pool rather than guessed**.
-
-Measured over 480 directions: median 1.54, p90 1.74, p99 1.96, maximum 2.12. A first version guessed
-1.9 and flagged 1.9% of perfectly real games — a check that rejects real boxscores gets loosened
-until it says nothing, so the number comes from the distribution with a little headroom above it.
+⚠️ The line between this and `boxscore_domain` is worth stating: that module holds values somebody
+*chose*, which is why each carries its reason and its measurement. Three outs was not chosen and has no
+measurement, so filing it there would put a rule of the sport among decisions that can be revisited.
 """
 
 
@@ -37,7 +39,7 @@ class Implausible:
     detail: str
 
 
-def faults(board: Board, *, max_batters: int = 13) -> list[Implausible]:
+def faults(board: Board, *, max_batters: int = BATTER_CAP, max_pitchers: int = PITCHER_CAP) -> list[Implausible]:
     """Everything about this board that could not have happened in a game.
 
     Runs on a complete board — a source boxscore, or a solved puzzle. A partly erased board has
@@ -45,7 +47,7 @@ def faults(board: Board, *, max_batters: int = 13) -> list[Implausible]:
     """
     found: list[Implausible] = []
     found += _batting_row_faults(board)
-    found += _roster_faults(board, max_batters)
+    found += _roster_faults(board, max_batters, max_pitchers)
     found += _volume_faults(board)
     return found
 
@@ -67,7 +69,7 @@ def _batting_row_faults(board: Board) -> list[Implausible]:
     return found
 
 
-def _roster_faults(board: Board, max_batters: int) -> list[Implausible]:
+def _roster_faults(board: Board, max_batters: int, max_pitchers: int) -> list[Implausible]:
     found: list[Implausible] = []
     if len(board.batting) < MIN_BATTERS:
         found.append(Implausible("too few batting rows", f"{len(board.batting)} rows, and nine men have to bat"))
@@ -75,6 +77,19 @@ def _roster_faults(board: Board, max_batters: int) -> list[Implausible]:
         found.append(Implausible("too many batting rows", f"{len(board.batting)} rows against a cap of {max_batters}"))
     if not board.pitching:
         found.append(Implausible("no pitching rows", "somebody pitched"))
+    # ⚠️ **The batter cap was checked here and the pitcher cap was not**, for as long as this file has
+    # existed. §5 states both, and only one was enforced anywhere outside a SQL filter in a discovery
+    # script — so "≤4 pitchers" was a rule the publication path could not see, held up entirely by
+    # whichever `load()` call happened to pass the right argument. Raising the cap to 6 without closing
+    # this would have been documentation rather than a change.
+    #
+    # It cannot fire on a board the pool filter produced, because that filter caps at the same number.
+    # That is the reason to write it rather than to skip it: this runs on any package reaching the
+    # publication gate, including one that never went through the filter.
+    if len(board.pitching) > max_pitchers:
+        found.append(
+            Implausible("too many pitching rows", f"{len(board.pitching)} rows against a cap of {max_pitchers}")
+        )
     if len(board.footnotes) != len(board.batting):
         found.append(
             Implausible(

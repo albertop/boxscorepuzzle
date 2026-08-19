@@ -419,7 +419,7 @@ Changing the app must never require touching puzzle inventory, and loading inven
 - **Header and totals row stay pinned during scroll.** In a deduction puzzle the totals are consulted constantly.
 - Never hide columns to fit a screen — every visible number is part of an equation, so hiding one erases a constraint.
 - The board is identical on all screens. Desktop gets more whitespace, not more content.
-- **Roster caps: ≤13 batters, ≤4 pitchers. Measured, not estimated** (§6). Rows on screen turned out not to bind — with the active section's totals pinned they never scroll away, and 70% of steps touch rows within a five-row window. That finding is what freed the batter cap from 10 to 13, and it was later applied to pitchers too: the two-pitcher cap rested on screen cost after the argument for it had already been retired. Erasure percentage is superseded, and so is chain length: **the generator targets a stall count**.
+- **Roster caps: ≤13 batters, ≤6 pitchers. Measured, not estimated** (§6). **The values live in `forge/src/boxscore_domain/`, with the reason and the measurement beside each one, and a test forbids spelling them anywhere else.** Rows on screen turned out not to bind — with the active section's totals pinned they never scroll away, and 70% of steps touch rows within a five-row window. That freed the batter cap from 10 to 13. **⚠️ The pitcher cap went 2 → 4 → 6, and both earlier values were wrong for the same two reasons.** The screen argument was retired by the working-set finding and then left standing for pitchers because nobody re-derived it there — a justification reused rather than re-derived. And the difficulty comparison favouring fewer pitchers was run while stalls counted the solver deducing footnote zeros: **a pitching row carries no footnote terms**, so pitcher-heavy boards had fewer zeros inflating their scores and the comparison was biased against exactly what it judged. At ≤6, coverage at 8 stalls goes 22% → 33%, the pitching section's share of stalls 34% → 45%, the pool grows 41% and reaches the 1990s and 2000s, and both equation families move toward the range that separates boards. The median ceiling stays at 5, so the ladder's range does not move — what moves is how much of the pool reaches it comfortably. Erasure percentage is superseded, and so is chain length: **the generator targets a stall count**.
 - **The label column is 66px, seven characters, fixed.** Never full names truncated only where they overflow. **Disambiguation by first initial is mandatory** — 6.64% of boards carry two genuinely identical surnames, so it is not a truncation artefact (§7).
 
 ### 7. Puzzle quality outranks everything (§31, §22)
@@ -482,7 +482,8 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 **⚠️ Rewritten after measurement — the original criterion was wrong at the root (§5).**
 
 1. **Roster compactness** — hard filter, asymmetric and **decided**: the *offensive* team needs
-   **≤13 batters**, the *defensive* team **≤4 pitchers** (§6).
+   **≤13 batters**, the *defensive* team **≤6 pitchers** (§6). Both are `boxscore_domain.BATTER_CAP`
+   and `PITCHER_CAP` — never a literal, and a test enforces that.
 2. **Zero-density gate: below 30%, decided.** It removes every shutout and the three-run games while
    keeping seven-run ones. Direct and cheap — it attacks the cause instead of scoring it.
 3. **Compressibility is a viability constraint, not a ranking.** It measures how much can be removed,
@@ -493,7 +494,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 *Line score variety and digit range are dropped. They were proxies for compressibility, and
 correlating with the wrong target is not a reason to keep a filter.*
-- **Roster compactness, asymmetric — decided:** the *offensive* team needs **≤13 batters**, the *defensive* team **≤4 pitchers**. Only those appear on the board. The pitcher cap is what costs screen space and the batter cap is what costs pool, which is the opposite of the earlier provisional pair (§6).
+- **Roster compactness, asymmetric — decided:** the *offensive* team needs **≤13 batters**, the *defensive* team **≤6 pitchers**. Only those appear on the board. **⚠️ The pitcher cap was said to cost screen space and it does not** — the board scrolls, the totals stay pinned, and raising it *raises* difficulty: the pitching section contributes 45% of stalls at six against 34% at four (§6).
 - Line score variety
 - Digit range — numbers > 3 in several columns
 

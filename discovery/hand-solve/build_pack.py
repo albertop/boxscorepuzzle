@@ -597,7 +597,7 @@ def write_sheet(path: Path, count: int) -> None:
 
 def main() -> None:
     rng = random.Random(SEED)
-    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     pool = candidates(sample)
     chosen = choose(pool, rng)
     audit(chosen)

@@ -1,37 +1,27 @@
-"""Five boards at the highest observed stall count — not a ceiling, and the difference matters.
+"""Five boards at two rungs — the top of the range and the median — built the way production builds.
 
-Not a band and not a spread: the highest end of what search has reached. Stalls are the variable the operator defined, and the only one
-that measures where thinking is actually required — a stall is a *transition* into bounding, the
-moment propagation runs dry and something beyond direct substitution is needed to restart it.
+**Two at 8 stalls and three at 5**, so the ceiling and the board that will ship most days are judged in
+one sitting and against each other. The median is the more important of the two and is the one the
+previous version of this pack did not contain at all.
 
-⚠️ **The first version of this called its result "the ceiling" and "the top", and it was neither.** It
-walked one greedy erasure path per direction, with one seed and one ordering, over four directions per
-decade — so its `19` was the largest value seen on 48 particular paths. Stall count depends on *which*
-cells are absent and is not known to be monotonic in how many are, so one path visits one corner of a
-large space. It was not a per-board maximum, not a sample bound, and not a property of the board family.
+⚠️ **These are erased by `erase(target_stalls=...)`, not by searching for a maximum.** Every earlier
+version of this file walked a greedy path per ordering per seed and kept whichever erasure stalled the
+most. That was right when the question was *how hard can a board of this family get*, and it is wrong
+now: a board found by maximising stalls is over-erased by construction, and **no published board is
+ever made that way**. The generator stops at the first erasure that reaches its target, so that is what
+a person judging a publishable board has to be given. Judging a board that does not ship is the exact
+error of the last several rounds.
 
-**That matters for a solver more than it looks.** Anyone judging these boards is judging the top of a
-range, and being told the range ends where it does not anchors every rating below it. So the search now
-runs every ordering against several seeds, keeps the best per board, and prints the convergence — how
-much the maximum still moved on the last paths — beside every number, with the sample size.
-
-**These are not publishable boards.** They carry a lot of blanks. If
-they read as tedious rather than hard, that is the finding rather than a failure of the pack: it says
-the top of the observed range is not a target and the useful range is narrower than the measurement suggests. If they
-read as solvable and interesting, there is headroom above every standard discussed so far. Either
-answer is worth more than another decimal place on the measurements still owed.
-
-⚠️ **The earlier figure came from the duplicated cell list.** 16 to 18 stalls was measured with
-the duplicated candidate list from v03-P1-02 — every footnote cell appeared twice, so footnotes entered
-at roughly half the rate production gives them — and with the pre-v03-P2-01 solver. Neither should move
-it much: the before-and-after on P2-01 was null on every field except `hardest_search`, on 2% of boards.
-**So these five are generated here with the current corrected code and their stall counts are measured
-now**, not read out of the old results file, and the report says whether they land where the old run
-would have predicted.
+⚠️ **The pitcher cap moved from 4 to 6 and these are generated at 6.** The two facts that make this
+pack worth running are consequences: at ≤6 a board reaching 8 stalls is **33% of the pool rather than
+5%**, so the high rung stops being atypical by construction; and a six-pitcher board spreads its blanks
+over more rows, which is the direct answer to whether twelve blanks reads as sparse. **At least one of
+the five has six pitchers**, asserted rather than hoped for — it is the new case and it should be seen
+before it becomes half of what ships.
 
 The pack's rules are unchanged, and they are what make the answers usable:
 
-  the stall count is never on the page      seeing "12 stalls" anchors the rating to the number
+  the stall count is never on the page      seeing "8 stalls" anchors the rating to the number
   the order is randomised                   the first boards become the reference for the rest
   nothing else that implies difficulty      no chain, no era, no team, no game id
 
@@ -51,134 +41,105 @@ import build_pack  # noqa: E402
 from build_pack import Candidate, build_pdf, write_sheet  # noqa: E402
 from measure import Loaded, load  # noqa: E402
 
-from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
-from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
+from boxscore_domain import MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
+from boxscore_forge.erasure import DEFAULT_ORDERING, Puzzle, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
-from boxscore_forge.solver import Solution, Technique, solve  # noqa: E402
+from boxscore_package.format import Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
 
-WANTED = 5
+COMPOSITION: dict[int, int] = {8: 2, MEDIAN_STALL_CEILING: 3}
+"""Stall target to how many boards of it. **The ceiling and the median, judged together.**
+
+8 is the top of what the pool reaches comfortably at the new cap; 5 is the median ceiling, unchanged by
+the cap change, and therefore what most published boards will be. A pack of nothing but hard boards
+tells you where the top is and nothing about the product.
+"""
+
+WANTED = sum(COMPOSITION.values())
 GATE = 0.25
+"""Tighter than `ZERO_DENSITY_GATE`, deliberately and only here.
+
+The decided pool gate is 30%. This pack puts boards in front of a person to judge, so it draws from the
+cleaner end — a board rejected for zero density is not the board being asked about. **Stated rather
+than left as a bare number that looks like it disagrees with the constants module.**"""
 SEED = 118
-SAMPLE_PER_DECADE = 4
+SAMPLE_PER_DECADE = 6
+SIX_PITCHER_BOARDS = 1
+"""How many of the five must carry the new maximum. **Asserted in `audit()`.**
+
+Not a preference. Six pitchers is the case the cap change introduces and the one nobody has seen on a
+page, and a pack that happened not to contain it would answer a question about the old board.
+"""
+
+SEEDS = (1, 2, 3, 4, 5)
+"""Tried in order until one reaches the target. `erase` is deterministic per seed (§21), so a board
+that fails on all five is a board that cannot carry this target rather than one that was unlucky."""
+
 WATCHED = "WAS201307070"
 """⚠️ **The one board with a human verdict attached to a measured number.**
 
-The operator solved it from the ceiling pack and found it hard. It measured **19 stalls with 79 blanks**
-— on the scale that counted the solver deducing footnote zeros. Where it lands now is the single most
-useful figure in the recalibration, because every other number on the new scale has no verdict beside
-it. Reported if the sample contains it; **said plainly if it does not**, rather than left to look like
-it was never asked for.
+The operator solved it and found it hard. It measured **19 stalls with 79 blanks** — on the scale that
+counted the solver deducing footnote zeros, and via the maximising search this file no longer uses. So
+the honest comparison now is not a stall count but *which targets it can carry and at what blank
+count*, which is what gets reported.
 
-⚠️ **Asked for by name, not hoped for.** The sample is a stratified draw of four directions per
-decade out of a pool in the hundreds of thousands, so the chance of it turning up on its own is
-negligible — which would leave the "not in this sample" branch firing on every run and the comparison
-never actually happening. A check that never fires is indistinguishable from one that is broken. It is
-added to the sample through `load(also=...)`, where it still faces the gate, the caps and the
-provenance rule like every other board.
-
-Nothing about it is treated specially **in the search or in the selection**. It is watched, not
-favoured: it competes for one of the five slots on its stall count alone, and it will usually lose.
+⚠️ **Asked for by name through `load(also=...)`, not hoped for.** A stratified draw out of a pool in
+the hundreds of thousands would never contain it, so the "not in this sample" branch would be the whole
+instrument — and a check that never fires is indistinguishable from one that is broken. It still faces
+the gate, the caps and the provenance rule like every other board, and it is **watched, not favoured**:
+it competes for a slot on the same terms as anything else.
 """
 
-SEEDS = (1, 2, 3)
-"""Several starts per ordering. One is a sample of size one from the space of erasure paths."""
 
-SEARCHED = tuple(sorted(ORDERINGS))
-"""Every ordering, not the default. `row_first` was chosen because it pads the easy board least, which
-is a reason to *generate* with it and no reason at all to search with it alone."""
-
-
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Reached:
-    """The best erasure found for one board, and how much searching it took to stop improving."""
+    """One board erased to one target, by the production path."""
 
     loaded: Loaded
-    stalls: int
-    blanks: int
-    erased: frozenset[str]
-    paths: int
-    found_on_path: int
-    """Which path produced the best result. If the best keeps arriving on the last path searched, the
-    search has not converged and the number is still a lower bound with a wider gap."""
+    target: int
+    puzzle: Puzzle
+    seed: int
+    """Which seed produced it. Recorded so the board can be rebuilt exactly (§21)."""
 
 
-def stalls_in(solution: Solution) -> int:
-    """Transitions into bounding. One halt is one stall however many steps it lasts."""
-    count = 0
-    previous = False
-    for step in solution.deductions:
-        bounding = step.technique is Technique.BOUNDING
-        count += bounding and not previous
-        previous = bounding
-    return count
+def blanks_in(board: Board) -> int:
+    """Every cell the player has to fill, across both grids and both totals rows.
 
-
-def _one_path(loaded: Loaded, ordering: str, seed: int) -> tuple[int, frozenset[str]] | None:
-    """Erase until nothing more can go, and keep the erasure that stalled the most on this path.
-
-    A full walk rather than a descending search on `erase(target_stalls=...)`. `erase` stops at the
-    first erasure that *reaches* a target, which is right when a target is wanted and wrong here: the
-    most-stalling board is not necessarily the first one over a line.
+    ⚠️ The footnote line is given in full, so it contributes nothing — counted anyway rather than
+    omitted, because a count that silently skips a section is how a board looks sparser than it is.
     """
-    direction = loaded.direction
-    shape = shape_of(direction)
-    values = cell_values(direction)
-    rng = random.Random(seed)  # noqa: S311
-    candidates = ORDERINGS[ordering](erasable(direction), direction, rng)
-
-    erased: set[str] = set()
-    best: tuple[int, frozenset[str]] | None = None
-    for cell in candidates:
-        trial = erased | {cell}
-        solution = solve(shape, {name: value for name, value in values.items() if name not in trial})
-        if not solution.is_complete:
-            continue
-        erased = trial
-        stalls = stalls_in(solution)
-        if best is None or stalls > best[0]:
-            best = (stalls, frozenset(erased))
-    return best
+    return (
+        sum(cell is None for row in board.batting for cell in row)
+        + sum(cell is None for row in board.pitching for cell in row)
+        + sum(cell is None for cell in board.batting_totals)
+        + sum(cell is None for cell in board.pitching_totals)
+        + sum(cell is None for row in board.footnotes for cell in row)
+    )
 
 
-def best_of(loaded: Loaded) -> Reached | None:
-    """Every ordering against every seed, keeping the best erasure found for this board.
+def reach(loaded: Loaded, target: int) -> Reached | None:
+    """The first seed that carries this board to this target, or nothing.
 
-    Still a lower bound — the space of erasure sets is far larger than the paths a greedy walk visits —
-    but a lower bound from several directions rather than from one, and one that reports how hard it
-    was still improving when the search stopped.
+    Nothing is a discard, not a failure: §22 throws candidates away silently and never relaxes a rule
+    to reach a number.
     """
-    best: Reached | None = None
-    path = 0
-    for ordering in SEARCHED:
-        for seed in SEEDS:
-            path += 1
-            found = _one_path(loaded, ordering, seed)
-            if found is None:
-                continue
-            stalls, erased = found
-            if best is None or stalls > best.stalls:
-                best = Reached(
-                    loaded=loaded,
-                    stalls=stalls,
-                    blanks=len(erased),
-                    erased=erased,
-                    paths=len(SEARCHED) * len(SEEDS),
-                    found_on_path=path,
-                )
-    return best
+    for seed in SEEDS:
+        puzzle = erase(loaded.direction, target_stalls=target, seed=seed, ordering=DEFAULT_ORDERING)
+        if puzzle is not None:
+            return Reached(loaded=loaded, target=target, puzzle=puzzle, seed=seed)
+    return None
 
 
 def to_candidate(found: Reached) -> Candidate | None:
     """The board as the pack prints it, or nothing if any layer refuses it.
 
-    ⚠️ **Verified rather than assumed.** These are the most-erased boards the generator can make, which
-    is exactly where a puzzle stops being derivable — checking here is not a formality.
+    ⚠️ **Verified rather than assumed.** Checking here is not a formality: these go in front of a person
+    as publishable boards, and a board that fails a layer is not one.
     """
     source = to_board(found.loaded.direction, None)
-    board = to_board(found.loaded.direction, found.erased)
+    board = to_board(found.loaded.direction, found.puzzle.erased)
     package = PuzzlePackage(
         labels=("C",) * len(board.batting),
         pitcher_labels=("C",) * len(board.pitching),
@@ -192,7 +153,7 @@ def to_candidate(found: Reached) -> Candidate | None:
     notes = found.loaded.direction.batter_footnotes
     return Candidate(
         loaded=found.loaded,
-        target=found.stalls,
+        target=found.target,
         puzzle=board,
         solution=source,
         certified=derivable_in_view(package),
@@ -204,20 +165,46 @@ def to_candidate(found: Reached) -> Candidate | None:
     )
 
 
+def _pitchers(candidate: Candidate) -> int:
+    return len(candidate.puzzle.pitching)
+
+
 def choose(found: list[Reached], rng: random.Random) -> list[Candidate]:
-    """The five highest stall counts, one board per game, then shuffled."""
+    """Fill each target's quota, one board per game, with the six-pitcher case guaranteed a place.
+
+    ⚠️ **The six-pitcher board is placed first, not hoped into the result.** Filling the quotas and then
+    checking would leave the assertion in `audit()` failing on perfectly good packs for a reason the
+    selection could have prevented — a quota nobody arranged to meet is a quota that fails at random.
+    """
     chosen: list[Candidate] = []
     seen: set[str] = set()
-    for item in sorted(found, key=lambda entry: -entry.stalls):
-        if len(chosen) == WANTED:
-            break
-        if item.loaded.game_id in seen:
-            continue
+    remaining = dict(COMPOSITION)
+
+    def take(item: Reached) -> bool:
+        if remaining.get(item.target, 0) == 0 or item.loaded.game_id in seen:
+            return False
         candidate = to_candidate(item)
         if candidate is None:
-            continue
+            return False
         seen.add(item.loaded.game_id)
+        remaining[item.target] -= 1
         chosen.append(candidate)
+        return True
+
+    # ⚠ **Scarcest target first.** Deterministic either way, but ordering by ascending target fills the
+    # abundant rung before the scarce one, and every game consumed there is a game the scarce rung
+    # cannot use — which is precisely how an earlier pack ended with zero boards at one of its rungs and
+    # reported its composition as though it had them. Descending, so 8 stalls picks before 5.
+    ordered = sorted(found, key=lambda item: (-item.target, item.loaded.game_id))
+    crowded = [item for item in ordered if len(item.loaded.direction.pitching) == PITCHER_CAP]
+    placed = 0
+    for item in crowded:
+        if placed == SIX_PITCHER_BOARDS:
+            break
+        placed += take(item)
+    for item in ordered:
+        take(item)
+
     rng.shuffle(chosen)
     return chosen
 
@@ -225,16 +212,26 @@ def choose(found: list[Reached], rng: random.Random) -> list[Candidate]:
 def audit(chosen: list[Candidate]) -> None:
     """Asserted, not printed. A pack that claims its quotas and does not meet them fails silently.
 
-    The order check is the one that matters most here. Five boards sorted by stall count would make
-    the first page the reference for every rating after it, and the 1-6 scale is the whole reason the
-    pack exists.
+    That has already happened once in this project, when weighted sampling produced zero boards at the
+    easiest rung and the pack reported its composition and was believed.
     """
     if len(chosen) != WANTED:
         message = f"{len(chosen)} boards, wanted {WANTED}"
         raise SystemExit(message)
+    counts = {target: sum(1 for c in chosen if c.target == target) for target in COMPOSITION}
+    if counts != COMPOSITION:
+        message = f"composition is {counts}, wanted {COMPOSITION}"
+        raise SystemExit(message)
     games = {candidate.loaded.game_id for candidate in chosen}
     if len(games) != WANTED:
         message = f"{len(games)} distinct games across {WANTED} boards; a solver would see a lineup twice"
+        raise SystemExit(message)
+    crowded = sum(1 for candidate in chosen if _pitchers(candidate) == PITCHER_CAP)
+    if crowded < SIX_PITCHER_BOARDS:
+        message = (
+            f"{crowded} boards with {PITCHER_CAP} pitchers, wanted {SIX_PITCHER_BOARDS}; the case the "
+            f"cap change introduces is not in the pack, so the pack answers a question about the old board"
+        )
         raise SystemExit(message)
     stalls = [candidate.target for candidate in chosen]
     if stalls == sorted(stalls) or stalls == sorted(stalls, reverse=True):
@@ -249,20 +246,16 @@ def write_key(path: Path, chosen: list[Candidate]) -> None:
     """The stall count, out of git and unopened until every sheet is filled."""
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["board", "game_id", "season", "stalls", "blanks", "certified_by_3b"])
+        writer.writerow(["board", "game_id", "season", "stalls", "blanks", "pitchers", "certified_by_3b"])
         for index, candidate in enumerate(chosen, start=1):
-            blanks = sum(cell is None for row in candidate.puzzle.batting for cell in row)
-            blanks += sum(cell is None for row in candidate.puzzle.pitching for cell in row)
-            blanks += sum(cell is None for cell in candidate.puzzle.batting_totals)
-            blanks += sum(cell is None for cell in candidate.puzzle.pitching_totals)
-            blanks += sum(cell is None for row in candidate.puzzle.footnotes for cell in row)
             writer.writerow(
                 [
                     f"{index:02d}",
                     candidate.loaded.game_id,
                     candidate.loaded.season,
                     candidate.target,
-                    blanks,
+                    blanks_in(candidate.puzzle),
+                    _pitchers(candidate),
                     "yes" if candidate.certified else "no",
                 ]
             )
@@ -272,24 +265,25 @@ def main() -> None:
     rng = random.Random(SEED)  # noqa: S311
     sample = [
         item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4, also=(WATCHED,))
+        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, also=(WATCHED,))
         if not find_violations(item.direction)
     ]
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate at {SAMPLE_PER_DECADE} per decade"
         raise SystemExit(message)
-    paths = len(SEARCHED) * len(SEEDS)
-    print(f"{len(sample)} gated directions x {paths} paths ({SEARCHED} against seeds {SEEDS})", flush=True)
+    targets = sorted(COMPOSITION, reverse=True)
+    print(f"{len(sample)} gated directions, erasing to targets {targets} with seeds {SEEDS}", flush=True)
 
     found: list[Reached] = []
     for number, loaded in enumerate(sample, start=1):
-        reached = best_of(loaded)
-        if reached is not None:
-            found.append(reached)
+        for target in targets:
+            reached = reach(loaded, target)
+            if reached is not None:
+                found.append(reached)
         if number % 10 == 0:
-            print(f"  {number}/{len(sample)} searched, best so far {max(c.stalls for c in found)}", flush=True)
+            print(f"  {number}/{len(sample)} erased, {len(found)} board-target pairs so far", flush=True)
     if not found:
-        message = "no direction produced a derivable erasure at all"
+        message = "no direction reached any target at all"
         raise SystemExit(message)
 
     chosen = choose(found, rng)
@@ -300,32 +294,29 @@ def main() -> None:
     write_key(_HERE / "ceiling-key.csv", chosen)
     write_sheet(_HERE / "ceiling-recording-sheet.csv", len(chosen))
 
-    everything = sorted((item.stalls for item in found), reverse=True)
-    late = sum(1 for item in found if item.found_on_path > paths // 2)
-    print("")
-    print(f"highest observed, per board, best of {paths} paths each ({len(found)} boards): {everything[:10]}")
     # Plain text on purpose. Every long run here is redirected to a file, Windows gives a redirected
     # stream cp1252, and a report that dies on its own warning sign loses the compute that produced it.
-    print("NOT A CEILING: a greedy walk visits one corner of the space of erasure sets, and stall")
-    print(f"   count is not known to be monotonic in blank count. This is a lower bound from {paths} starts.")
-    print(f"convergence: {late} of {len(found)} boards found their best in the second half of the search")
-    print(f"   ({late / len(found):.0%}) — a high share means the search was still improving when it stopped")
-    print(f"chosen (printed order): {[candidate.target for candidate in chosen]}")
-    grid = [sum(cell is None for row in c.puzzle.batting for cell in row) for c in chosen]
-    print(f"blanks in the batting grid: {grid}")
+    print()
+    for target in targets:
+        reaching = {item.loaded.game_id for item in found if item.target == target}
+        share = len(reaching) / len({item.loaded.game_id for item in found})
+        print(f"coverage at {target} stalls: {len(reaching)} boards ({share:.0%} of those reaching any target)")
+    print(f"chosen (printed order): targets {[c.target for c in chosen]}")
+    print(f"   blanks:   {[blanks_in(c.puzzle) for c in chosen]}")
+    print(f"   pitchers: {[_pitchers(c) for c in chosen]}")
+    print(f"   batters:  {[len(c.puzzle.batting) for c in chosen]}")
     print(f"uncertified by layer 3b: {sum(1 for c in chosen if not c.certified)} of {len(chosen)}")
     print(f"wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in {_HERE}")
-    # Plain text here too. The block above says why, and then this one printed a warning sign into
-    # the same redirected cp1252 stream — the rule applied outward and not inward, one screen down.
-    watched = [row for row in found if row.loaded.game_id == WATCHED]
-    print("")
+
+    watched = [item for item in found if item.loaded.game_id == WATCHED]
+    print()
     if watched:
-        best = max(row.stalls for row in watched)
-        print(f"THE ONE BOARD WITH A HUMAN VERDICT: {WATCHED}, best of {len(watched)} direction(s)")
-        print("   measured 19 stalls / 79 blanks on the scale that counted zeros, and the operator")
-        rank = sorted((row.stalls for row in found), reverse=True).index(best) + 1
-        print(f"   solved it and found it hard. On the corrected scale it reaches {best} stalls,")
-        print(f"   ranking {rank} of {len(found)} boards searched.")
+        print(f"THE ONE BOARD WITH A HUMAN VERDICT: {WATCHED}")
+        print("   measured 19 stalls / 79 blanks under the maximising search, on the scale that counted")
+        print("   zeros, and the operator solved it and found it hard. Built the way production builds:")
+        for item in sorted(watched, key=lambda i: -i.target):
+            board = to_board(item.loaded.direction, item.puzzle.erased)
+            print(f"   target {item.target}: reached with {blanks_in(board)} blanks (seed {item.seed})")
     else:
         print(f"{WATCHED} was asked for by name and did not come back, so the one measured-and-judged")
         print("   board could not be re-measured. It was rejected by the gate, the caps, the provenance")

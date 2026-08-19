@@ -17,7 +17,13 @@ export const BATTING_COLUMNS = ["plate_appearances", "at_bats", "runs", "hits", 
 /** IP, H, R, ER, BB, SO, with innings held as outs and rendered as thirds. */
 export const PITCHING_COLUMNS = ["outs", "hits", "runs", "earned_runs", "walks", "strikeouts"];
 
-/** HBP, SF, SH, CI — the footnote line. **Per-batter cells are erasable; the totals row is not** (§6). */
+/**
+ * HBP, SF, SH, CI — the footnote line, **given in full: nothing here is erasable** (§6).
+ *
+ * ⚠️ The cells were opened, then closed again by the pool run — coverage was identical with them
+ * erasable and with them given, because 96% of the pool's footnote terms are zero and the solver was
+ * counting itself deducing them. This comment claimed the opposite until someone read it.
+ */
 export const FOOTNOTE_COLUMNS = ["hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference"];
 
 export const battingCell = (row, column) => `batting[${row}].${column}`;

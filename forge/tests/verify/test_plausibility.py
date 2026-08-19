@@ -9,6 +9,7 @@ from collections.abc import Callable
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from boxscore_domain import PITCHER_CAP
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import sign
 from boxscore_verify.plausibility import faults
@@ -118,6 +119,27 @@ class TestRosterShape:
         found = faults(replace(board, pitching=()))
 
         assert any("no pitching rows" in fault.what for fault in found)
+
+    def test_more_pitching_rows_than_the_cap(self, board: Board, replace: Replace) -> None:
+        """⚠️ The cap §5 states and nothing enforced.
+
+        The batter cap has been checked here since this file existed; the pitcher cap was held up only
+        by whichever `load()` call passed the right argument, which is not a check on the publication
+        path at all. Driven by **adding rows** rather than by lowering the cap, because lowering it is
+        the shape that already passes for batters and this needs to fail on a board that is too big.
+        """
+        crowded = replace(board, pitching=board.pitching * 4)
+        found = faults(crowded)
+
+        assert len(crowded.pitching) > PITCHER_CAP, "the fixture did not grow past the cap"
+        assert any("too many pitching rows" in fault.what for fault in found)
+
+    def test_a_board_at_the_cap_exactly_is_not_a_fault(self, board: Board, replace: Replace) -> None:
+        # The boundary the check must not move: ≤, not <. A cap that rejects the largest legal board
+        # would discard a third of the pool silently.
+        found = faults(replace(board, pitching=(board.pitching[0],) * PITCHER_CAP))
+
+        assert not any("too many pitching rows" in fault.what for fault in found)
 
 
 class TestVolume:

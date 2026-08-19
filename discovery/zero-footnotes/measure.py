@@ -266,7 +266,7 @@ def provenance(directions: int, rows: int) -> str:
 def main() -> None:
     sample = [
         item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
         if not find_violations(item.direction)
     ]
     if not sample:

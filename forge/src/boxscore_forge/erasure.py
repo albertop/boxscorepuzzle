@@ -32,12 +32,11 @@ from boxscore_forge.constraints import (
     batting_cell,
     batting_total_cell,
     cell_values,
-    footnote_cell,
     pitching_cell,
     pitching_total_cell,
     shape_of,
 )
-from boxscore_forge.identities import BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS
+from boxscore_forge.identities import BATTING_COLUMNS, PITCHING_COLUMNS
 from boxscore_forge.solver import Solution, solve
 
 

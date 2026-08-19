@@ -29,7 +29,11 @@ build-backend = "hatchling.build"
 # Three packages, and the separation between them is a design requirement rather than tidiness.
 # `boxscore_forge` generates; `boxscore_verify` judges what it produced and shares no code with it
 # (§22); `boxscore_package` is the file format, which both genuinely need and neither owns.
-packages = ["src/boxscore_forge", "src/boxscore_verify", "src/boxscore_package"]
+# `boxscore_domain` is the fourth and holds no code at all: the decided values of the domain, with
+# the reason and the measurement beside each one. Same argument as `boxscore_package` — both sides
+# genuinely need it and neither owns it — and being data rather than logic, §22's independence
+# between generator and verifier is untouched by both importing it.
+packages = ["src/boxscore_forge", "src/boxscore_verify", "src/boxscore_package", "src/boxscore_domain"]
 
 [tool.ruff]
 # Discovery is linted too. The duplicate `audit()` that disabled a launch-gate check lived there,

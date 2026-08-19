@@ -1,5 +1,6 @@
 /*
- * The phone board. 375px is the design width and every number here comes from it (§6).
+ * The phone board — the rules that spend the tokens. **Every constant lives in `tokens.css`**, which
+ * `index.html` links first; this file holds no bare number that a token could name.
  *
  * ⚠️ **Themeable via CSS variables and carrying no branding** — seam C5. The engine has no chrome, and
  * a colour named after the product here would be the first piece of chrome in it.
@@ -36,81 +37,6 @@
    One family at three weights, not two families. The clubs use a display face beside a body face
    because they have full pages; this has 375 pixels, and two families on that width compete. The
    difference comes from weight and colour. */
-:root {
-  /* ⚠️ **Plex for the board, Roboto for two glyphs.** Plex gives `1` a foot serif and this board renders
-     `1` constantly; Roboto's is a bare stem. Plex's `⅓` and `⅔` are cramped to illegibility at keypad
-     size and Roboto's are clean. Those two characters are borrowed by `unicode-range`, scoped to
-     U+2153-2154, rather than letting two keys decide the whole board.
-
-     This is not the *two families* §6's reasoning rules out — that is about a display face competing
-     with a body face for 375 pixels, and a fallback that can set no word competes with nothing. */
-  --face: "IBM Plex Sans Condensed";
-  --cell: 44px;
-  --slot-column: 24px;
-  --label-column: 66px;
-  --board-margin: 8px;
-
-  --ink: #16181d;
-  --paper: #ffffff;
-  --rule: #d3d7de;
-  --rule-strong: #9aa1ad;
-  --given: #16181d;
-  /* ⚠️ **What the player wrote, and nothing else.** This token used to paint three things: the value
-     in a cell, the slot references beside a live footnote term, and the `?` marks. Only the first is
-     the player's handwriting — the other two are the board stating what it knows and does not know.
-     Painting all three alike would have made the board claim the player had written its own unknowns. */
-  /* ⚠️ **Not red, and the same blue the footnote line already uses.**
-
-     Red is the one colour every player reads as *this is wrong*. Spent on "I typed this" it is
-     unavailable for errors, and an error is the one thing no other colour can carry. It was also
-     false twice over: in a deduction puzzle what the player types is not provisional — once it
-     balances it is as settled as what was given — so red said *tentative* and said *incorrect*.
-
-     One blue for both meanings rather than two similar ones. Two blues a shade apart, carrying
-     different meanings, is worse than one carrying both: the eye files them as the same category and
-     then discovers they are not.
-
-     ⚠️ **The alternative was the givens' black in bold, and the totals row is what settled it.** Weight
-     cannot mark an entry there, because the totals row is bold already — and the real packages erase
-     batting and pitching totals, so it is an input surface, in the one row every column sum closes on.
-     Colour works everywhere; weight had a hole exactly where the board is most consulted. */
-  --entered: #1b57c4;
-  --unknown: #1b57c4;
-  --blank: #f4f6f9;
-  --selected: #ffe9a8;
-  --selected-rule: #c99a12;
-  /* The row and the column a selected cell shares an equation with. **One tint for both**, from the
-     selection's own family, so the two lines read as *what this cell is connected to* rather than as
-     two kinds of thing. The version before this gave them separate colours on the reasoning that the
-     row identity and the column sum are different relations — true, and not what the highlight is for:
-     it answers *where do I look*, not *which equation is this*. Operator's call, and the right one. */
-  --peer: #f6efe2;
-  --muted: #6b7280;
-  /* ⚠️ **Neutral, and deliberately not the scoreboard's green.** The green belongs to what is *given* —
-     the scoreboard and the section headers, the parts the player never touches. The keypad is the
-     opposite: it is where the player acts. One colour across both would say they are the same kind of
-     object. It is also a third of the screen, and a third of the screen in saturated green competes
-     with the board, which is where attention belongs. */
-  --keypad: #e6e8ec;
-  --key: #ffffff;
-  --key-ink: #16181d;
-
-  /* The scoreboard. One colour, named for where it comes from, so a future change is a decision about
-     the object rather than about a hex value nobody can place. */
-  --fenway: rgb(83, 120, 108);
-  --scoreboard-ink: #f2f6f4;
-  --scoreboard-dim: #b9cdc5;
-  --scoreboard-rule: rgba(242, 246, 244, 0.35);
-
-  /* ⚠️ **Chosen by rendering, and the losers are deleted.** Two of the three lived here behind a
-     `data-header` attribute so they could be compared on the real board; keeping them would be three
-     things every future change has to hold working. The finding worth remembering: the first two
-     candidates were a near-black green and a near-black grey, and **at near-black the hue does not
-     read** — they were indistinguishable in situ, so "take it from the scoreboard's family" bought
-     nothing until the green was allowed to be green. */
-  --header-ground: #1f362e;
-  --header-ink: #ffffff;
-}
 
 
 

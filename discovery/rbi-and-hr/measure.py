@@ -655,7 +655,7 @@ def main() -> None:
         # the page did not, and re-running the whole measurement to redraw it would take an hour.
         sample = [
             item
-            for item in load(1, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+            for item in load(1, gated=True, gate=GATE)
             if not I.find_violations(item.direction)
         ][:RENDERED]
         if not sample:
@@ -666,7 +666,7 @@ def main() -> None:
         print(f"{len(sample)} boards rendered to {out}")
         return
 
-    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate at {SAMPLE_PER_DECADE} per decade"
         raise SystemExit(message)

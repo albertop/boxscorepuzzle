@@ -84,3 +84,16 @@ def test_every_vector_says_why() -> None:
     # A vector without a reason is a rule nobody can evaluate when it starts failing.
     for vector in VECTORS["vectors"]:
         assert vector.get("because"), f"{vector['name']} carries no reason"
+
+
+def test_the_shared_caps_still_equal_the_constants_module() -> None:
+    """⚠️ The other half of "one predicate, one place": share the definition, or assert they agree.
+
+    The client cannot import `boxscore_domain` — §33 ships `serve/` alone and forbids the cross-import —
+    so the caps reach it as data. That makes two places holding one rule, which is the shape every
+    serious defect in this project has had. The pairing is not left to habit: raising a cap in the
+    module and not in the JSON turns this red.
+    """
+    from boxscore_domain import BATTER_CAP, PITCHER_CAP  # noqa: PLC0415
+
+    assert VECTORS["caps"] == {"batters": BATTER_CAP, "pitchers": PITCHER_CAP}

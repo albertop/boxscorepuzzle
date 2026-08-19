@@ -49,6 +49,7 @@ from boxscore_forge.identities import (  # noqa: E402
     find_violations,
 )
 from boxscore_forge.solver import Solution, solve  # noqa: E402
+from boxscore_domain import BATTER_CAP, PITCHER_CAP, ZERO_DENSITY_GATE  # noqa: E402
 
 CONTRIBUTED = (
     "B_G = 1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0"
@@ -278,10 +279,10 @@ def load(
     limit: int,
     *,
     gated: bool = False,
-    gate: float = 0.30,
-    max_batters: int = 13,
+    gate: float = ZERO_DENSITY_GATE,
+    max_batters: int = BATTER_CAP,
     min_pitchers: int = 0,
-    max_pitchers: int = 4,
+    max_pitchers: int = PITCHER_CAP,
     also: tuple[str, ...] = (),
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
@@ -387,10 +388,11 @@ def load(
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
-    -- Caps are arguments, not constants, and the defaults are the decided pair: ≤13 batters and
-    -- ≤4 pitchers (§5, §6). Anything measured under ≤2 pitchers describes a board that is no longer
-    -- being built — the pitcher cap changed after its screen-cost justification turned out to have
-    -- been retired by the working-set measurement without anyone revisiting it.
+    -- Caps are arguments so an instrument can vary them, but the defaults are the decided pair and
+    -- they are **imported rather than spelled**: ≤13 batters and ≤6 pitchers (§5, §6). Written as
+    -- literals here they were also literals at twenty-five call sites, which is how ≤4 outlived the
+    -- measurement supporting it. Anything measured under ≤2 or ≤4 pitchers describes a board that is
+    -- no longer being built.
     WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
       AND l.VisLineScore IS NOT NULL
       AND g.SEASON BETWEEN ? AND ?

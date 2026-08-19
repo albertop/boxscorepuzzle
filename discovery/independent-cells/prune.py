@@ -357,7 +357,7 @@ def report_pitching_location(results: list[Result]) -> None:
 
 
 def main() -> None:
-    loaded = load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
+    loaded = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     sample = [item for item in loaded if not find_violations(item.direction)]
     print(f"{len(sample)} gated directions, gate {GATE:.0%}")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
