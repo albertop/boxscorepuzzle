@@ -434,14 +434,25 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
 
 ## v04 — verified, none rejected
 
-| Finding | Verdict | What was confirmed |
-|---|---|---|
-| P1-01 the manifest commit destroys the snapshot readers are following | real | and the sweep also eats a concurrent publisher's staging directory |
-| P1-02 signed packages behind an unsigned manifest | real | the release inventory is the one thing no signature covers |
-| P2-01 provenance projected by two unordered `TOP 1` queries | real, **latent** | 0 of 203,908 games have more than one provenance row |
-| P2-02 the ceiling pack overclaims "ceiling" | real | one seed, one ordering, one greedy path per direction |
-| P2-03 the comparator can null over a changed cohort | real | intersection compared, duplicates collapsed silently |
-| P2-04 `families_used` and `family_counts` contradict each other | real | `family_counts` reads only `from_identity` |
+| Finding | Verdict | State | What was confirmed |
+|---|---|---|---|
+| P2-02 the ceiling pack overclaims "ceiling" | real | **closed** | one seed, one ordering, one greedy path per direction |
+| P1-01 the manifest commit destroys the snapshot readers are following | real | open | and the sweep also eats a concurrent publisher's staging directory |
+| P1-02 signed packages behind an unsigned manifest | real | open, **with v03-P2-04** | the release inventory is the one thing no signature covers |
+| P2-01 provenance projected by two unordered `TOP 1` queries | real, **latent** | open | 0 of 203,908 games have more than one provenance row |
+| P2-03 the comparator can null over a changed cohort | real | open | intersection compared, duplicates collapsed silently |
+| P2-04 `families_used` and `family_counts` contradict each other | real | open | `family_counts` reads only `from_identity` |
+
+### v04-P2-02 — closed
+
+Every ordering against three seeds, nine paths per board, keeping the best per board, and the prose
+says **highest observed** with the sample size beside it rather than *ceiling* or *the top*.
+
+**The rename was not the finding; the number was.** Nine paths raised the maximum from 19 to 21, and
+the convergence figure the run now prints says **27% of boards found their best in the second half of
+the search** — so nine starts were not enough either, and the figure stays a lower bound. One path was
+a sample of size one from the space of erasure sets, and that is now measured rather than argued.
+
 
 ### P1-01 — the atomic rename was necessary and is not sufficient
 
