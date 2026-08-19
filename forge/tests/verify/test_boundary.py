@@ -315,19 +315,28 @@ class TestAPackageCannotContradictItself:
                 slot_references="".join(str(index + 1) for index in range(rows)),
             )
 
-    def test_a_list_is_stored_as_a_tuple_the_caller_cannot_reach(self, board: Board) -> None:
-        """A `list` passed every element rule too, and that defeats the frozen dataclass: the caller
-        keeps the reference and can change the package after it was built — after signing, in the
-        writer's case, so the signed shape and the object stop agreeing."""
+    def test_a_list_is_refused_rather_than_converted(self, board: Board) -> None:
+        """⚠️ **The first repair accepted a list and canonicalised it to a tuple.**
+
+        That left two contracts for one field: the annotation said `tuple[str, ...]`, so a typed
+        producer could not use the supported path without an error, while the constructor admitted a
+        mutable container into a frozen object whose whole point is that a signed package cannot change
+        afterwards. No caller passes a list and `from_json` converts at the parse boundary, which is
+        where a conversion belongs — so refusing is the shorter way to have one contract.
+        """
         references = [str(index + 1) for index in range(len(board.batting))]
 
-        package = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=references)
-        before = package.as_json()
-        references[0] = "9"
+        with pytest.raises(PackageError, match="slot_references is list"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=references)
 
-        assert isinstance(package.slot_references, tuple), "the caller still owns the container"
-        assert package.slot_references == tuple(str(index + 1) for index in range(len(board.batting)))
-        assert package.as_json() == before, "mutating the caller's list changed the serialised package"
+    def test_the_parse_boundary_still_accepts_the_json_list(self, board: Board) -> None:
+        # The consequence that must *not* follow: JSON has no tuples, so refusing lists at the
+        # constructor while `from_json` converts is one contract, and refusing them everywhere would
+        # be a package this code can write and not read.
+        document = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)).as_json()
+
+        assert isinstance(document["slot_references"], list)
+        assert Package.from_json(document).slot_references == refs(board)
 
 
 class TestConstructionAndParsingApplyTheSameRule:

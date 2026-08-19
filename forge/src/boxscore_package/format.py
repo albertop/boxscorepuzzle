@@ -366,10 +366,11 @@ class Package:
         if self.slot_references is None:
             message = "a package needs one slot reference per batting row; schema 1 is gone"
             raise PackageError(message)
+        # The guard refuses anything but a tuple, so there is nothing left to canonicalise here. The
+        # version that accepted a list and converted it made the annotation and the constructor
+        # disagree; refusing is the shorter way to have one contract, and it keeps a mutable container
+        # out of a frozen object whose point is that a signed package cannot change afterwards.
         _check_slot_references(self.slot_references, len(self.puzzle.batting))
-        # Canonicalised to a tuple, so a caller who passed a list cannot mutate what this package
-        # serialises to — or what a signature already taken over it covers.
-        object.__setattr__(self, "slot_references", tuple(self.slot_references))
         if self.schema is not None and self.schema not in READABLE:
             message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
             raise PackageError(message)
@@ -386,6 +387,7 @@ class Package:
         """
         # `is not None`, never truthiness: an empty tuple is a real value and used to read as absent.
         return self.schema if self.schema is not None else SCHEMA_VERSION
+
     signature: str | None = None
 
     def published(self) -> Self:
@@ -487,9 +489,16 @@ def _check_slot_references(values: object, rows: int) -> None:
     # ⚠️ **The container is checked before its contents.** Widening this to `Sequence[object]` kept
     # the element guard reachable and left the outer shape unchecked — and a `str` **is** a Sequence,
     # so a nine-row package given `"123456789"` passed the length, the per-character grammar and the
-    # uniqueness test. A list passed too, which defeats the frozen dataclass: the caller keeps a
-    # reference and can change what a signed package serialises to afterwards.
-    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+    # uniqueness test.
+    #
+    # ⚠️ **A tuple, and only a tuple.** The first repair accepted a list and canonicalised it, which
+    # left the field's annotation saying `tuple[str, ...]` while the constructor took something else:
+    # a typed producer could not use the supported path without an error, and a mutable container was
+    # admitted into a frozen object whose whole purpose is that a signed package cannot change
+    # afterwards. Two contracts for one field is this project's named failure shape, and the cheap way
+    # to have one is to refuse — no caller passes a list, and `from_json` converts at the parse
+    # boundary, which is where a conversion belongs.
+    if not isinstance(values, tuple):
         message = f"slot_references is {type(values).__name__}, expected a tuple of strings"
         raise PackageError(message)
     if len(values) != rows:

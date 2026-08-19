@@ -302,20 +302,19 @@ def _board_digest(item: Loaded) -> str:
 
 def identify() -> RunIdentity:
     """Read the world once, at the top of the run, before anything is measured."""
-    porcelain = _git("status", "--porcelain", "--untracked-files=all")
     # ⚠️ **A status line is not a file's contents.** `_describe` hashed the porcelain output, so two
     # different edits to the same path produced the same digest — the same defect as digesting an
     # identifier instead of a board, in the field next to it. Tracked edits are digested from the diff
     # and untracked files from their bytes.
+    paths = _porcelain_paths(_git_bytes("status", "--porcelain", "-z", "--untracked-files=all"))
     diff = _git_bytes("diff", "--binary", "HEAD")
-    if porcelain == "unknown" or diff is None:
+    if paths is None or diff is None:
         tracked = untracked = "unknown"
     else:
-        entries = porcelain.splitlines()
         # ⚠️ Untracked and modified were counted together and both labelled `+untracked`, so an
         # ordinary edit read as an unknown file. Two questions, two answers.
-        tracked = _describe([line[3:] for line in entries if not line.startswith("??")], diff)
-        untracked_paths = [line[3:] for line in entries if line.startswith("??")]
+        tracked_paths, untracked_paths = paths
+        tracked = _describe(tracked_paths, diff)
         untracked = _describe(untracked_paths, _bytes_of(untracked_paths))
     return RunIdentity(
         revision=_git("rev-parse", "--short", "HEAD"),
@@ -325,24 +324,75 @@ def identify() -> RunIdentity:
     )
 
 
-def _describe(paths: list[str], contents: bytes) -> str:
-    """`clean`, or a count with a digest over the paths **and the bytes that changed**."""
+def _describe(paths: list[str], contents: bytes | None) -> str:
+    """`clean`, or a count with a digest over the paths **and the bytes that changed**.
+
+    ⚠️ **`clean` was returned whenever the path list was empty, whatever the contents said.** The paths
+    and the bytes come from two commands against a mutable tree, so `git status` can report nothing
+    tracked while `git diff` carries a change made between the two calls — and the artifact then said
+    *clean* over a run that used an edited solver. **A contradiction between the two is not a clean
+    tree; it is an unreadable one**, and the whole point of this field is that it fails closed.
+
+    The two directions are not symmetric, and only one is dangerous. Contents without paths
+    under-reports and is refused. Paths without contents over-reports and is kept, because a dirty
+    digest over a tree that has since been restored costs nothing but an unnecessary rerun.
+    """
+    if contents is None:
+        return "unknown"
+    if contents and not paths:
+        return "unknown"
     if not paths:
         return "clean"
     digest = hashlib.sha256("".join(sorted(paths)).encode() + contents).hexdigest()[:8]
     return f"{len(paths)} files, {digest}"
 
 
-def _bytes_of(paths: list[str]) -> bytes:
-    """The contents of every untracked file, in path order. Unreadable ones are named, not skipped."""
+def _bytes_of(paths: list[str]) -> bytes | None:
+    """The contents of every untracked file in path order, or `None` if one could not be read.
+
+    ⚠️ **An unreadable file used to become the literal marker `<unreadable>` and publish anyway**, so
+    two different files nobody could read were one identity — a digest that cannot see the thing it
+    names, reporting as though it had. Same rule as the diff: a failure to read is not a reading.
+    """
     blob = b""
     for path in sorted(paths):
-        target = _ROOT / path
         try:
-            blob += path.encode() + target.read_bytes()
+            blob += path.encode("utf-8", "surrogateescape") + (_ROOT / path).read_bytes()
         except OSError:
-            blob += path.encode() + b"<unreadable>"
+            return None
     return blob
+
+
+def _porcelain_paths(raw: bytes | None) -> tuple[list[str], list[str]] | None:
+    """`(tracked, untracked)` from `--porcelain -z`, or `None` when the command failed.
+
+    ⚠️ **`-z` because porcelain quotes and escapes any path that needs it.** Sliced from the text form,
+    `"src/a\tb.py"` arrives with its quotes attached, opens nothing, and used to become the
+    `<unreadable>` marker. NUL-separated records are the only form that round-trips a filename, and
+    `surrogateescape` keeps bytes git will not promise are UTF-8.
+    """
+    if raw is None:
+        return None
+    fields = raw.decode("utf-8", "surrogateescape").split("\0")
+    tracked: list[str] = []
+    untracked: list[str] = []
+    index = 0
+    while index < len(fields):
+        entry = fields[index]
+        index += 1
+        if not entry:
+            continue
+        status, path = entry[:2], entry[3:]
+        if status == "??":
+            untracked.append(path)
+            continue
+        tracked.append(path)
+        # A rename or a copy carries its source path as its own record; both names are part of what
+        # changed, and consuming it here is what keeps the walk aligned with the record boundaries.
+        if ("R" in status or "C" in status) and index < len(fields):
+            tracked.append(fields[index])
+            index += 1
+    return tracked, untracked
 
 
 def _git(*arguments: str) -> str:
@@ -434,12 +484,54 @@ def provenance(identity: "RunIdentity", coverage: "Coverage", groups: int, trial
     )
 
 
-def _refuse_unless_identified(identity: RunIdentity) -> None:
+def _destination(argv: list[str]) -> Path:
+    """`--output <path>`, or the canonical name. A missing value says so rather than raising."""
+    if "--output" not in argv:
+        return _HERE / "results.txt"
+    index = argv.index("--output")
+    if index + 1 >= len(argv):
+        message = "--output needs a path"
+        raise SystemExit(message)
+    return Path(argv[index + 1])
+
+
+def _refuse_unwritable(out: Path) -> None:
+    """Prove the artifact can be written **before** the run, by writing.
+
+    ⚠️ **`out.parent.is_dir()` is not writability.** A directory sitting at `out`, a read-only parent,
+    a full disk — every one of them passes an existence test and fails five hours later inside
+    `publish()`, which is exactly the operational cost `v14-P2-01` moved the provenance gate to avoid,
+    one field over. The only check that answers the question is the operation itself.
+    """
+    if out.is_dir():
+        message = f"{out} is a directory; the artifact cannot replace it"
+        raise SystemExit(message)
+    if not out.parent.is_dir():
+        message = f"{out.parent} is not a directory; nothing this run produces could be published"
+        raise SystemExit(message)
+    probe = out.with_name(f"{out.name}.probe-{os.getpid()}-{secrets.token_hex(4)}")
+    try:
+        probe.write_bytes(b"")
+        probe.replace(probe.with_name(f"{probe.name}.moved"))
+    except OSError as error:
+        message = f"{out.parent} cannot be written to ({error}); this run could publish nothing"
+        raise SystemExit(message) from error
+    finally:
+        probe.unlink(missing_ok=True)
+        probe.with_name(f"{probe.name}.moved").unlink(missing_ok=True)
+
+
+def _refuse_unless_identified(identity: RunIdentity, *, expect_inputs: bool = False) -> None:
     """A result that cannot say what produced it is worse than no result: it occupies the name a
     decision gets read from. *Either* repository question failing is enough, since an untracked file
     can shadow an imported dependency without touching a commit."""
     if not identity.publishable:
         message = f"provenance is incomplete ({identity}); refusing to run"
+        raise SystemExit(message)
+    # The preflight cannot ask this — nothing is loaded yet — but the publication gate must, or a
+    # stamp reading `inputs not yet loaded` would certify an artifact that names no data at all.
+    if expect_inputs and not identity.directions:
+        message = f"the identity names no inputs ({identity.inputs}); refusing to publish"
         raise SystemExit(message)
 
 
@@ -476,18 +568,14 @@ def publish(
 
 
 def main() -> None:
-    out = Path(sys.argv[sys.argv.index("--output") + 1]) if "--output" in sys.argv else _HERE / "results.txt"
+    out = _destination(sys.argv)
     identity = identify()
     # ⚠️ **Fail closed *before* the work, not after.** This check sat after the sample, three seeds of
     # erasure and every solve — hours of compute whose outcome was already decided, since nothing later
     # can repair an `unknown` repository field. A guaranteed-discarded run that looks like a
     # progressing experiment is worse than an immediate refusal.
     _refuse_unless_identified(identity)
-    # Same reason, one field over: a destination that cannot be written to is known now and discovered
-    # in five hours otherwise, with nothing to show for them.
-    if not out.parent.is_dir():
-        message = f"{out.parent} is not a directory; nothing this run produces could be published"
-        raise SystemExit(message)
+    _refuse_unwritable(out)
     sample = [
         item
         for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE, max_batters=13, max_pitchers=4)
@@ -522,7 +610,7 @@ def main() -> None:
     text = captured.getvalue()
     # The second gate. `identify()` is frozen, so this cannot disagree with the first — it is here
     # because a publication path that trusts an earlier check is one refactor from having no check.
-    _refuse_unless_identified(identity)
+    _refuse_unless_identified(identity, expect_inputs=True)
     print(text)
     publish(out, text)
     print(f"written to {out}")

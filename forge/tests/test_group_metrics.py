@@ -346,6 +346,59 @@ class TestTheArtifactDeclaresItself:
         assert one != two, "the tracked digest ignored what actually changed"
         assert module._describe([], b"") == "clean"
 
+    def test_a_diff_with_no_status_paths_is_unknown_and_never_clean(self) -> None:
+        """⚠️ **`clean` was returned whenever the path list was empty, whatever the contents said.**
+
+        The paths and the bytes come from two commands against a mutable working tree, so `git status`
+        can report nothing tracked while `git diff` carries a change made between the two calls. The
+        stamp then said *clean* over a run that used an edited solver — the one outcome this field
+        exists to make impossible.
+        """
+        module = _module("measure")
+
+        assert module._describe([], b"@@ -1 +1 @@ an edit status did not see") == "unknown"
+        assert module._describe([], b"") == "clean", "an actually clean tree must still read clean"
+
+    def test_the_conservative_direction_is_kept_rather_than_refused(self) -> None:
+        # Paths with an empty diff over-reports: a file restored between the two calls. That costs an
+        # unnecessary rerun, which is the right way to be wrong, so it stays dirty rather than unknown.
+        module = _module("measure")
+
+        assert module._describe([" M forge/src/x.py"], b"").startswith("1 files")
+
+    def test_an_unreadable_untracked_file_is_unknown_rather_than_a_marker(self) -> None:
+        """⚠️ It became the literal string `<unreadable>` and published anyway, so two different files
+        nobody could read were one identity. Same rule as the diff: a failure to read is not a reading.
+        """
+        module = _module("measure")
+
+        assert module._bytes_of(["no/such/file.py"]) is None
+        assert module._describe(["no/such/file.py"], module._bytes_of(["no/such/file.py"])) == "unknown"
+
+    def test_a_path_needing_quotes_survives_the_porcelain_parse(self) -> None:
+        """⚠️ Sliced from the text form, porcelain quotes and escapes any awkward path, so
+        `"src/a\tb.py"` arrived with its quotes attached, opened nothing, and became the marker above.
+        `-z` is the only form that round-trips a filename.
+        """
+        module = _module("measure")
+        raw = b"?? src/a\tb.py\x00 M forge/src/x.py\x00"
+
+        tracked, untracked = module._porcelain_paths(raw)
+
+        assert untracked == ["src/a\tb.py"], "the tab was escaped away"
+        assert tracked == ["forge/src/x.py"]
+
+    def test_a_rename_carries_both_names_and_does_not_desynchronise_the_walk(self) -> None:
+        # A rename's source path is its own NUL-terminated record. Consuming it is what keeps the
+        # following entry from being read as a status line.
+        module = _module("measure")
+        raw = b"R  new.py\x00old.py\x00 M after.py\x00"
+
+        tracked, untracked = module._porcelain_paths(raw)
+
+        assert tracked == ["new.py", "old.py", "after.py"]
+        assert untracked == []
+
     def test_a_failed_diff_is_not_an_empty_diff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """⚠️ The near miss worth keeping: `git diff --binary` returns bytes a text pipe cannot decode.
 
@@ -395,7 +448,7 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         with pytest.raises(SystemExit, match="provenance is incomplete"):
             module.main()
 
-    def test_an_unwritable_destination_is_found_before_the_loader(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_a_missing_parent_is_found_before_the_loader(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # The same class as the gate above: knowable now, discovered in five hours otherwise.
         module = _module("measure")
         monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unwritable output"))
@@ -403,6 +456,87 @@ class TestTheRunRefusesBeforeItSpendsAnything:
 
         with pytest.raises(SystemExit, match="is not a directory"):
             module.main()
+
+    def test_a_directory_sitting_at_the_output_is_found_before_the_loader(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ **`out.parent.is_dir()` is not writability.** A directory at `out` passes an existence
+        test and fails five hours later inside `publish()` — the operational cost `v14-P2-01` moved the
+        provenance gate to avoid, one field over.
+        """
+        module = _module("measure")
+        (tmp_path / "results.txt").mkdir()
+        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unwritable output"))
+        monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(tmp_path / "results.txt")])
+
+        with pytest.raises(SystemExit, match="is a directory"):
+            module.main()
+
+    def test_the_probe_leaves_nothing_behind_when_the_destination_is_fine(self, tmp_path: Path) -> None:
+        # The check is the operation itself, so it has to clean up after itself like `publish` does.
+        module = _module("measure")
+
+        module._refuse_unwritable(tmp_path / "results.txt")
+
+        assert list(tmp_path.iterdir()) == []
+
+    def test_the_probe_actually_writes_and_the_failure_is_consulted(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ **Written because the guard above did not guard.** Removing the probe's write entirely
+        left every destination test green: they check that a *directory* at `out` is refused, which the
+        `is_dir()` branch answers without writing anything. So the claim "writability is proved by
+        writing" had no test, which is the shape this project has recorded five times.
+
+        Stated as what it forbids: the write is made to fail, and a refusal must follow. An
+        implementation that stops writing never triggers it and fails here.
+        """
+        module = _module("measure")
+
+        def refuse(*_: object, **__: object) -> None:
+            message = "read-only file system"
+            raise OSError(message)
+
+        monkeypatch.setattr(Path, "write_bytes", refuse)
+
+        with pytest.raises(SystemExit, match="cannot be written to"):
+            module._refuse_unwritable(tmp_path / "results.txt")
+
+    def test_the_probe_stays_in_the_destination_directory(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        # `replace` is atomic only within a filesystem, so a probe elsewhere proves the wrong thing.
+        module = _module("measure")
+        seen: list[Path] = []
+        original = Path.write_bytes
+
+        def record(self: Path, data: bytes) -> int:
+            seen.append(self)
+            return original(self, data)
+
+        monkeypatch.setattr(Path, "write_bytes", record)
+        module._refuse_unwritable(tmp_path / "results.txt")
+
+        assert seen and all(path.parent == tmp_path for path in seen)
+
+    def test_output_without_a_path_says_so(self) -> None:
+        # Scripts fail with an explanation, not an IndexError three frames down.
+        module = _module("measure")
+
+        with pytest.raises(SystemExit, match="--output needs a path"):
+            module._destination(["measure.py", "--output"])
+
+        assert module._destination(["measure.py"]).name == "results.txt"
+
+    def test_publication_refuses_an_identity_that_names_no_inputs(self) -> None:
+        """The preflight cannot ask this — nothing is loaded yet — but the publication gate must, or a
+        stamp reading `inputs not yet loaded` would certify an artifact naming no data at all."""
+        module = _module("measure")
+        identity = module.RunIdentity(revision="abc", tracked_changes="clean", untracked="clean", instrument="0")
+
+        module._refuse_unless_identified(identity)  # the preflight is satisfied
+        with pytest.raises(SystemExit, match="names no inputs"):
+            module._refuse_unless_identified(identity, expect_inputs=True)
 
     def test_an_identified_run_passes_the_gate(self) -> None:
         # A gate that refuses everything would satisfy the test above.
