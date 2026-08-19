@@ -339,9 +339,20 @@ def main() -> None:
             f"p50 {statistics.median(ordered):5.1f}  p90 {ordered[9 * len(ordered) // 10]:5.1f}  "
             f"max {ordered[-1]:5.1f}"
         )
-    for threshold in (5, 10, 20):
-        share = sum(1 for cost in trivial_costs if cost >= threshold) / max(len(trivial_costs), 1)
-        print(f"  trivial steps with scan cost >= {threshold:>2}: {share:.1%}")
+    # ⚠️ **These thresholds used to be 5, 10 and 20 against a metric that runs 0 to 1.** Every answer
+    # was 0.0% whatever the data said, so the section could neither support nor refute the claim it
+    # exists to test. `search_cost` is a *share* of the scanned board that led nowhere — it was a raw
+    # count in an earlier solver and the numbers outlived the change.
+    #
+    # Compared against the real steps' own distribution now, which is the only comparison that means
+    # anything: a trivial step above the real steps' median took more looking for than half of the
+    # work the discount keeps.
+    if trivial_costs and real_costs:
+        reference = sorted(real_costs)
+        for name, mark in (("median", reference[len(reference) // 2]), ("p90", reference[9 * len(reference) // 10])):
+            share = sum(1 for cost in trivial_costs if cost >= mark) / len(trivial_costs)
+            print(f"  trivial steps at or above the real steps' {name} ({mark:.2f}): {share:.1%}")
+        print("  search_cost is a share of the scanned board that led nowhere, so it lies in [0, 1].")
 
     print("\n=== SEARCH COST ===")
     print(f"  per direction: mean {statistics.fmean(seconds):.2f}s, max {max(seconds):.2f}s")

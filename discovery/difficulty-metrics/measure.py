@@ -39,7 +39,6 @@ from boxscore_forge.boxscore import (  # noqa: E402
 )
 from boxscore_forge.constraints import (  # noqa: E402
     cell_values,
-    footnote_cell,
     shape_of,
 )
 from boxscore_forge.erasure import erasable  # noqa: E402
@@ -749,90 +748,23 @@ def _frontier_tail(sample: list[Loaded], rng: random.Random) -> None:
 
 
 def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
-    """Footnotes whose row cannot be told apart, modelled by leaving both candidate cells unknown.
+    """⚠️ **Retired: this measured duplicate positions, not ambiguous footnote references.**
 
-    Measured on top of a real erasure rather than on an otherwise complete board. With everything
-    else given there is no rest of the board to be held up, so "the ambiguity never mattered" would
-    be unmeasurable by construction.
+    It grouped rows by `loaded.labels` and erased the group's footnote cells as one ambiguous domain.
+    That was sound while labels carried a suffix and a repeated label meant a shared lineup slot. It is
+    not sound now: labels are bare positions, and **42.1% of repeated position labels span more than
+    one slot**, so two `CF` rows are usually two men who never replaced each other. The experiment
+    would build an artificial domain over unrelated rows and report the solver's reaction as footnote
+    ambiguity — plausible percentages for a case the board does not contain.
 
-    ⚠️ **Kept as a record; it now measures a case that no longer exists.** The ambiguity came from two
-    batting rows sharing a position label, and labels are disambiguated at the source since
-    `_batting_labels` — `LF-1` and `LF-2` rather than two `LF` rows. Run against a current sample this
-    finds no groups at all, which is the result rather than a bug. The erasure constraint it implied
-    is not needed (§5).
+    Its docstring described the opposite implementation, predicting no groups would be found. Left as a
+    named refusal rather than deleted, so a reader who remembers it finds out why instead of finding
+    nothing. The live question — whether an unassigned footnote resolves — belongs to
+    `discovery/footnote-groups`, which groups by **slot** and reports per group size and term count.
     """
-    print("\n=== AMBIGUOUS FOOTNOTE ATTRIBUTION ===")
-    never_mattered = had_to_be_resolved = non_unique = boards = 0
-    families_when_it_mattered: Counter[str] = Counter()
-    stuck_share: list[float] = []
-    per_pattern: Counter[str] = Counter()
-
-    for loaded in sample:
-        groups: dict[str, list[int]] = {}
-        for index, label in enumerate(loaded.labels):
-            groups.setdefault(label, []).append(index)
-        values = cell_values(loaded.direction)
-        for indexes in groups.values():
-            if len(indexes) < 2:
-                continue
-            ambiguous = [
-                footnote_cell(i, column)
-                for i in indexes
-                for column in ("hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference")
-                if any(values[footnote_cell(j, column)] for j in indexes)
-            ]
-            if not ambiguous:
-                continue
-            boards += 1
-            # Many erasure patterns, not one. Whether the ambiguity resolves depends on which cells
-            # are blank, so a single pattern cannot tell a bad direction from a bad erasure.
-            outcomes: Counter[str] = Counter()
-            for _ in range(AMBIGUITY_TRIALS):
-                grid = rng.sample(erasable(loaded.direction), 6)
-                puzzle = {k: v for k, v in values.items() if k not in ambiguous and k not in grid}
-                try:
-                    solution = solve(shape_of(loaded.direction), puzzle)
-                except ContradictionError:
-                    outcomes["stuck"] += 1
-                    per_pattern["stuck"] += 1
-                    continue
-                if not solution.is_complete:
-                    outcomes["stuck"] += 1
-                    per_pattern["stuck"] += 1
-                    continue
-                settled = {deduction.cell for deduction in solution.deductions} & set(ambiguous)
-                depended = any(
-                    deduction.cell not in ambiguous and deduction.depends_on & settled
-                    for deduction in solution.deductions
-                )
-                outcomes["mattered" if depended else "irrelevant"] += 1
-                per_pattern[("mattered" if depended else "irrelevant")] += 1
-                if depended:
-                    for family in solution.families_used:
-                        families_when_it_mattered[family.value] += 1
-
-            if outcomes["stuck"] == AMBIGUITY_TRIALS:
-                non_unique += 1
-            elif outcomes["mattered"]:
-                had_to_be_resolved += 1
-            else:
-                never_mattered += 1
-            stuck_share.append(outcomes["stuck"] / AMBIGUITY_TRIALS)
-
-    print(f"  ambiguous groups carrying a footnote      : {boards}")
-    print(f"  never mattered under any erasure tried    : {never_mattered}")
-    print(f"  mattered under at least one erasure       : {had_to_be_resolved}")
-    print(f"  stuck under EVERY erasure tried           : {non_unique}")
-    if stuck_share:
-        print(f"  mean share of erasure patterns that stick: {statistics.fmean(stuck_share):.1%}")
-        print(f"  groups that never stick at all           : {sum(1 for s in stuck_share if s == 0)}")
-    total_patterns = sum(per_pattern.values()) or 1
-    print("\n  per erasure pattern, not per group:")
-    for outcome in ("irrelevant", "mattered", "stuck"):
-        print(f"    {outcome:<11}: {per_pattern[outcome]:>5}  ({100.0 * per_pattern[outcome] / total_patterns:.1f}%)")
-    if families_when_it_mattered:
-        print(f"  families used when it mattered            : {dict(families_when_it_mattered)}")
-
+    del sample, rng
+    message = "ambiguity() grouped by position label and no longer measures ambiguity; see discovery/footnote-groups"
+    raise RuntimeError(message)
 
 def main() -> None:
     sample = load(35)
@@ -841,7 +773,6 @@ def main() -> None:
     by_decade = Counter((item.season // 10) * 10 for item in balanced)
     print(f"decades: {dict(sorted(by_decade.items()))}")
     survey(balanced)
-    ambiguity(balanced, random.Random(SEED + 1))
 
 
 if __name__ == "__main__":

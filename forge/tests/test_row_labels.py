@@ -234,3 +234,31 @@ class TestTheSlotReferenceHasOneSource:
         # `9b`, never a bare `b`. The footnote prints the same string the cell does, so finding the
         # row is recognition rather than composing the number from the row above.
         assert all(reference[0].isdigit() for reference in _loader().slot_references([1, 9, 9, 9]))
+
+
+class TestAFootnoteReferenceNamesExactlyOneRow:
+    """The invariant that replaces the retired ambiguity experiment.
+
+    ⚠️ That experiment grouped rows by position label and erased their footnote cells as one ambiguous
+    domain. Labels are bare positions now and **42.1% of repeated position labels span more than one
+    lineup slot**, so it would have built a domain over men who never replaced each other and reported
+    the solver's reaction as footnote ambiguity.
+
+    The live question — whether an unassigned footnote resolves — is measured per slot group elsewhere.
+    What belongs here is the construction invariant: **a reference must name one row.** A duplicate is
+    a bug in `slot_references`, not a finding about solvers.
+    """
+
+    def test_every_reference_is_unique(self) -> None:
+        for slots in ([1, 2, 3], [9, 9, 9], [1, 2, 2, 3, 9, 9], [5, 5, 5, 5, 5], list(range(1, 10))):
+            references = _loader().slot_references(slots)
+
+            assert len(set(references)) == len(references), f"{slots} produced {references}"
+
+    def test_two_men_at_one_position_in_different_slots_get_different_references(self) -> None:
+        # The case the retired experiment would have called ambiguous: same label, different slot.
+        labels = _loader()._batting_labels(["CF", "SS", "CF"])
+        references = _loader().slot_references([2, 3, 6])
+
+        assert labels[0] == labels[2] == "CF"
+        assert references[0] != references[2]
