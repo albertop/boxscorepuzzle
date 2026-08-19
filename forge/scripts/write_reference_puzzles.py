@@ -25,7 +25,7 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
-from measure import Loaded, load  # noqa: E402
+from measure import Loaded, load, slot_references  # noqa: E402
 
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
@@ -94,6 +94,7 @@ def build(loaded: Loaded, target: int, secret: bytes) -> Package | None:
             puzzle=to_board(loaded.direction, produced.erased),
             solution=to_board(loaded.direction, None),
             labels=loaded.labels,
+            slot_references=slot_references(loaded.slots),
             pitcher_labels=loaded.pitcher_labels,
             reveal=reveal_for(loaded),
             metadata={

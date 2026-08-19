@@ -364,6 +364,10 @@ class Package:
             labels=self.labels,
             pitcher_labels=self.pitcher_labels,
             reveal=self.reveal,
+            # ⚠️ Carried through. Dropping it here would publish a version 1 package from a version 2
+            # one silently — the client would lose the only thing that resolves a footnote, and the
+            # version field would follow the payload down without complaining.
+            slot_references=self.slot_references,
             metadata={key: value for key, value in self.metadata.items() if key not in LEAKING_METADATA},
             schema=self.schema,
             signature=self.signature,
