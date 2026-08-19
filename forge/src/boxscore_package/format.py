@@ -371,9 +371,8 @@ class Package:
         # disagree; refusing is the shorter way to have one contract, and it keeps a mutable container
         # out of a frozen object whose point is that a signed package cannot change afterwards.
         _check_slot_references(self.slot_references, len(self.puzzle.batting))
-        if self.schema is not None and self.schema not in READABLE:
-            message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
-            raise PackageError(message)
+        if self.schema is not None:
+            _check_schema(self.schema, "a package cannot be schema")
 
     @property
     def written_as(self) -> int:
@@ -448,10 +447,7 @@ class Package:
         if not isinstance(raw, dict):
             message = f"puzzle package is {type(raw).__name__}, expected an object"
             raise PackageError(message)
-        schema = raw.get("schema")
-        if not isinstance(schema, int) or isinstance(schema, bool) or schema not in READABLE:
-            message = f"puzzle package schema {schema!r}, this code reads {list(READABLE)}"
-            raise PackageError(message)
+        _check_schema(raw.get("schema"), "puzzle package schema")
         try:
             # Hoisted so the slot references can be checked against the board they belong to: one per
             # batting row is the property, and it cannot be stated without the rows.
@@ -474,6 +470,24 @@ class Package:
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _check_schema(value: object, where: str) -> None:
+    """The version rule, in one place, used by construction **and** by parsing.
+
+    ⚠️ **They applied different subsets, and the constructor's was the weaker one.** `__post_init__`
+    asked only `not in READABLE`, and Python makes `2.0 == 2`, so `schema=2.0` passed, `written_as`
+    returned the float, and `as_json()` emitted `"schema": 2.0` — a document `from_json` correctly
+    refuses. **The type could once again build output outside the language its own parser accepts**,
+    which is the sentence already written above this class about slot references, arriving one field
+    over because the rule had two copies instead of one home.
+
+    `bool` is excluded explicitly: `True == 1`, and a JSON document declaring `"schema": true` was once
+    read as a version 1 package.
+    """
+    if not isinstance(value, int) or isinstance(value, bool) or value not in READABLE:
+        message = f"{where} {value!r}; this code reads {list(READABLE)}"
+        raise PackageError(message)
 
 
 def _check_slot_references(values: object, rows: int) -> None:

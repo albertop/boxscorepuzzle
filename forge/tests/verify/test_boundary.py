@@ -297,6 +297,33 @@ class TestAPackageCannotContradictItself:
 
         assert package.written_as == 2
 
+    @pytest.mark.parametrize("schema", [2.0, "2", True, 1, None])
+    def test_a_schema_the_parser_would_refuse_cannot_be_constructed(self, board: Board, schema: object) -> None:
+        """⚠️ **The constructor asked only `not in READABLE`, and Python makes `2.0 == 2`.**
+
+        So `schema=2.0` passed, `written_as` returned the float, and `as_json()` emitted
+        `"schema": 2.0` — a document `from_json` correctly refuses. The type could build output outside
+        the language its own parser accepts, which is the sentence already written above this class
+        about slot references, arriving one field over because the rule had two copies and not one home.
+
+        `None` is in this list because it is the *only* value that may be absent: it means "current",
+        and it must not be confused with a version the parser would reject.
+        """
+        if schema is None:
+            assert Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board)).written_as == 2
+            return
+
+        with pytest.raises(PackageError, match="a package cannot be schema"):
+            Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), schema=schema)
+
+    def test_the_one_schema_this_code_writes_round_trips(self, board: Board) -> None:
+        # A guard that refuses every schema would satisfy the test above.
+        document = Package(puzzle_id="000000000000000f", puzzle=board, slot_references=refs(board), schema=2).as_json()
+
+        assert document["schema"] == 2
+        assert isinstance(document["schema"], int) and not isinstance(document["schema"], bool)
+        assert Package.from_json(document).written_as == 2
+
     def test_a_bare_string_is_not_a_sequence_of_references(self, board: Board) -> None:
         """⚠️ **The container was never checked, only its contents.**
 

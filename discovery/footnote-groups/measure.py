@@ -306,15 +306,23 @@ def identify() -> RunIdentity:
     # different edits to the same path produced the same digest — the same defect as digesting an
     # identifier instead of a board, in the field next to it. Tracked edits are digested from the diff
     # and untracked files from their bytes.
-    paths = _porcelain_paths(_git_bytes("status", "--porcelain", "-z", "--untracked-files=all"))
+    # ⚠️ **The tracked paths come out of the diff itself, not out of a second command.** Status and
+    # diff are two observations of a mutable tree: v15 refused the one contradiction it could see
+    # (no paths, non-empty diff) and accepted every other mixed pair without proving the two came from
+    # one state. One snapshot cannot contradict itself, so the contradiction stops being detectable
+    # and starts being impossible.
     diff = _git_bytes("diff", "--binary", "HEAD")
-    if paths is None or diff is None:
+    # Untracked files are invisible to `diff` by definition, so this question keeps its own command.
+    # It is still two observations — the listing and the bytes — and that residue is recorded rather
+    # than solved, because solving it means running the worker from an immutable snapshot.
+    listed = _porcelain_paths(_git_bytes("status", "--porcelain", "-z", "--untracked-files=all"))
+    if diff is None or listed is None:
         tracked = untracked = "unknown"
     else:
         # ⚠️ Untracked and modified were counted together and both labelled `+untracked`, so an
         # ordinary edit read as an unknown file. Two questions, two answers.
-        tracked_paths, untracked_paths = paths
-        tracked = _describe(tracked_paths, diff)
+        untracked_paths = listed
+        tracked = _describe(_diff_paths(diff), diff)
         untracked = _describe(untracked_paths, _bytes_of(untracked_paths))
     return RunIdentity(
         revision=_git("rev-parse", "--short", "HEAD"),
@@ -343,28 +351,59 @@ def _describe(paths: list[str], contents: bytes | None) -> str:
         return "unknown"
     if not paths:
         return "clean"
-    digest = hashlib.sha256("".join(sorted(paths)).encode() + contents).hexdigest()[:8]
+    # ⚠️ Length-prefixed, and **sixteen** hex characters. Eight is 32 bits, which is small enough to
+    # search by varying a disposable file until the displayed identity matches an approved one.
+    preimage = b"".join(_record(path.encode("utf-8", "surrogateescape")) for path in sorted(paths))
+    digest = hashlib.sha256(preimage + contents).hexdigest()[:16]
     return f"{len(paths)} files, {digest}"
 
 
 def _bytes_of(paths: list[str]) -> bytes | None:
-    """The contents of every untracked file in path order, or `None` if one could not be read.
+    """One canonical record per untracked file, or `None` if one could not be read.
 
     ⚠️ **An unreadable file used to become the literal marker `<unreadable>` and publish anyway**, so
     two different files nobody could read were one identity — a digest that cannot see the thing it
     names, reporting as though it had. Same rule as the diff: a failure to read is not a reading.
+
+    ⚠️ **And the encoding was not injective.** Path bytes and file bytes were concatenated with no
+    lengths and no separators, so `{a: b"b", bc: b""}` and `{ab: b"b", c: b""}` produced the same
+    preimage, the same digest and the same `2 files` label — two different trees with one identity, no
+    adversary required. Every field is now length-prefixed, which is what makes the encoding reversible
+    in principle and therefore collision-free in practice.
     """
     blob = b""
     for path in sorted(paths):
         try:
-            blob += path.encode("utf-8", "surrogateescape") + (_ROOT / path).read_bytes()
+            content = (_ROOT / path).read_bytes()
         except OSError:
             return None
+        blob += _record(path.encode("utf-8", "surrogateescape")) + _record(content)
     return blob
 
 
-def _porcelain_paths(raw: bytes | None) -> tuple[list[str], list[str]] | None:
-    """`(tracked, untracked)` from `--porcelain -z`, or `None` when the command failed.
+def _record(field: bytes) -> bytes:
+    """`<length>:<bytes>`. A length prefix is the whole difference between a digest and a guess."""
+    return f"{len(field)}:".encode() + field
+
+
+def _diff_paths(diff: bytes) -> list[str]:
+    """The paths named by a `--binary` diff, taken from the snapshot the bytes came from.
+
+    `diff --git a/<path> b/<path>` is the header of every file section. Reading the paths here rather
+    than from a second `git status` is what makes the two halves of the tracked digest one observation.
+    """
+    prefix = b"diff --git a/"
+    paths = []
+    for line in diff.splitlines():
+        if line.startswith(prefix):
+            body = line[len(prefix) :]
+            half = body.find(b" b/")
+            paths.append(body[:half].decode("utf-8", "surrogateescape") if half > 0 else body.decode())
+    return paths
+
+
+def _porcelain_paths(raw: bytes | None) -> list[str] | None:
+    """The untracked paths from `--porcelain -z`, or `None` when the command failed.
 
     ⚠️ **`-z` because porcelain quotes and escapes any path that needs it.** Sliced from the text form,
     `"src/a\tb.py"` arrives with its quotes attached, opens nothing, and used to become the
@@ -374,7 +413,6 @@ def _porcelain_paths(raw: bytes | None) -> tuple[list[str], list[str]] | None:
     if raw is None:
         return None
     fields = raw.decode("utf-8", "surrogateescape").split("\0")
-    tracked: list[str] = []
     untracked: list[str] = []
     index = 0
     while index < len(fields):
@@ -382,17 +420,16 @@ def _porcelain_paths(raw: bytes | None) -> tuple[list[str], list[str]] | None:
         index += 1
         if not entry:
             continue
-        status, path = entry[:2], entry[3:]
+        status = entry[:2]
         if status == "??":
-            untracked.append(path)
+            untracked.append(entry[3:])
             continue
-        tracked.append(path)
-        # A rename or a copy carries its source path as its own record; both names are part of what
-        # changed, and consuming it here is what keeps the walk aligned with the record boundaries.
+        # A rename or a copy carries its source path as its own record. Nothing here needs the tracked
+        # paths any more — they come from the diff — but the extra record still has to be consumed, or
+        # a source path is read as the next status line.
         if ("R" in status or "C" in status) and index < len(fields):
-            tracked.append(fields[index])
             index += 1
-    return tracked, untracked
+    return untracked
 
 
 def _git(*arguments: str) -> str:
@@ -510,15 +547,41 @@ def _refuse_unwritable(out: Path) -> None:
         message = f"{out.parent} is not a directory; nothing this run produces could be published"
         raise SystemExit(message)
     probe = out.with_name(f"{out.name}.probe-{os.getpid()}-{secrets.token_hex(4)}")
+    moved = probe.with_name(f"{probe.name}.moved")
     try:
         probe.write_bytes(b"")
-        probe.replace(probe.with_name(f"{probe.name}.moved"))
+        probe.replace(moved)
     except OSError as error:
         message = f"{out.parent} cannot be written to ({error}); this run could publish nothing"
         raise SystemExit(message) from error
     finally:
         probe.unlink(missing_ok=True)
-        probe.with_name(f"{probe.name}.moved").unlink(missing_ok=True)
+        moved.unlink(missing_ok=True)
+    if out.exists():
+        _prove_replaceable(out)
+
+
+def _prove_replaceable(out: Path) -> None:
+    """Rename an existing destination away and back, which is the right `publish` actually needs.
+
+    ⚠️ **Creating a sibling proves the directory, not the target.** `publish` ends in
+    `pending.replace(out)`, and on Windows an existing `out` can be read-only, held open by another
+    process without delete sharing, or carry an ACL of its own while a fresh sibling is created
+    happily. That is the realistic case — a results file left open in an editor — and it failed only
+    inside `publish`, hours later, which is the whole cost this preflight exists to avoid.
+
+    Renaming the file away and back is the same right `replace` needs, and it is restored in `finally`
+    so an interruption between the two leaves the file where it was.
+    """
+    aside = out.with_name(f"{out.name}.replaceable-{os.getpid()}-{secrets.token_hex(4)}")
+    try:
+        out.replace(aside)
+    except OSError as error:
+        message = f"{out} exists and cannot be replaced ({error}); this run could publish nothing"
+        raise SystemExit(message) from error
+    finally:
+        if aside.exists():
+            aside.replace(out)
 
 
 def _refuse_unless_identified(identity: RunIdentity, *, expect_inputs: bool = False) -> None:

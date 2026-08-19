@@ -383,21 +383,83 @@ class TestTheArtifactDeclaresItself:
         module = _module("measure")
         raw = b"?? src/a\tb.py\x00 M forge/src/x.py\x00"
 
-        tracked, untracked = module._porcelain_paths(raw)
+        assert module._porcelain_paths(raw) == ["src/a\tb.py"], "the tab was escaped away"
 
-        assert untracked == ["src/a\tb.py"], "the tab was escaped away"
-        assert tracked == ["forge/src/x.py"]
-
-    def test_a_rename_carries_both_names_and_does_not_desynchronise_the_walk(self) -> None:
-        # A rename's source path is its own NUL-terminated record. Consuming it is what keeps the
-        # following entry from being read as a status line.
+    def test_a_rename_does_not_desynchronise_the_walk(self) -> None:
+        """A rename's source path is its own NUL-terminated record. Nothing needs the tracked paths
+        here any more — they come out of the diff — but the extra record still has to be consumed, or
+        `old.py` is read as a status line and `?? real-untracked.py` is lost with it."""
         module = _module("measure")
-        raw = b"R  new.py\x00old.py\x00 M after.py\x00"
+        raw = b"R  new.py\x00?? old.py\x00?? real-untracked.py\x00"
 
-        tracked, untracked = module._porcelain_paths(raw)
+        assert module._porcelain_paths(raw) == ["real-untracked.py"], "a rename source was read as a record"
 
-        assert tracked == ["new.py", "old.py", "after.py"]
-        assert untracked == []
+    def test_the_tracked_paths_come_out_of_the_diff_that_was_digested(self) -> None:
+        """⚠️ **The two halves of the tracked digest used to be two commands.**
+
+        v15 refused the one contradiction it could see — no paths with a non-empty diff — and accepted
+        every other mixed pair without proving the paths and the bytes described one state. A single
+        snapshot cannot contradict itself, so the question stops being detectable and starts being
+        impossible.
+        """
+        module = _module("measure")
+        diff = (
+            b"diff --git a/forge/src/x.py b/forge/src/x.py\n"
+            b"index 000..111 100644\n--- a/forge/src/x.py\n+++ b/forge/src/x.py\n@@ -1 +1 @@\n-a\n+b\n"
+            b"diff --git a/discovery/y.py b/discovery/y.py\n@@ -1 +1 @@\n-c\n+d\n"
+        )
+
+        assert module._diff_paths(diff) == ["forge/src/x.py", "discovery/y.py"]
+        assert module._diff_paths(b"") == [], "an empty diff names nothing, which is a clean tree"
+
+    def test_identify_digests_the_diffs_own_paths_and_not_the_status_listing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The half the test above cannot reach: that `identify` **calls** it.
+
+        ⚠️ A helper that exists and is never called is indistinguishable from one that is broken, and
+        testing `_diff_paths` alone would stay green while `identify` went on asking `git status`. So
+        the two observations are made to disagree — status names `stale.py`, the diff names `fresh.py`
+        — and the tracked digest must be the diff's.
+        """
+        module = _module("measure")
+        diff = b"diff --git a/fresh.py b/fresh.py\n@@ -1 +1 @@\n-a\n+b\n"
+
+        def observe(*arguments: str) -> bytes:
+            return b" M stale.py\x00" if arguments[0] == "status" else diff
+
+        monkeypatch.setattr(module, "_git_bytes", observe)
+        monkeypatch.setattr(module, "_git", lambda *_: "abc1234")
+
+        assert module.identify().tracked_changes == module._describe(["fresh.py"], diff)
+        assert module.identify().tracked_changes != module._describe(["stale.py"], diff)
+
+    def test_two_different_untracked_trees_cannot_share_an_identity(self) -> None:
+        """⚠️ **The encoding was not injective**, and no adversary was required.
+
+        Path bytes and file bytes were concatenated with no lengths and no separators, so
+        `{a: b"b", bc: b""}` and `{ab: b"b", c: b""}` produced the same preimage, the same digest and
+        the same `2 files` label. Stated as the pair it must now separate.
+        """
+        module = _module("measure")
+
+        one = module._describe(
+            ["a", "bc"], module._record(b"a") + module._record(b"b") + module._record(b"bc") + module._record(b"")
+        )
+        two = module._describe(
+            ["ab", "c"], module._record(b"ab") + module._record(b"b") + module._record(b"c") + module._record(b"")
+        )
+
+        assert one != two, "two different untracked trees still share one identity"
+
+    def test_the_digest_keeps_more_than_thirty_two_bits(self) -> None:
+        # Eight hex characters is small enough to search by varying a disposable file until the
+        # displayed identity matches an approved one.
+        module = _module("measure")
+
+        digest = module._describe(["x.py"], b"content").split(", ")[1]
+
+        assert len(digest) == 16
 
     def test_a_failed_diff_is_not_an_empty_diff(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """⚠️ The near miss worth keeping: `git diff --binary` returns bytes a text pipe cannot decode.
@@ -518,6 +580,45 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         module._refuse_unwritable(tmp_path / "results.txt")
 
         assert seen and all(path.parent == tmp_path for path in seen)
+
+    def test_an_existing_output_that_cannot_be_replaced_is_found_before_the_loader(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ **Creating a sibling proves the directory, not the target.**
+
+        `publish` ends in `pending.replace(out)`, and on Windows an existing `out` can be read-only,
+        held open without delete sharing, or carry an ACL of its own while a fresh sibling is created
+        happily — a results file left open in an editor is the realistic case. It failed only inside
+        `publish`, hours later, which is the cost this preflight exists to avoid.
+        """
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+        out.write_text("a previous run", encoding="utf-8")
+        original = Path.replace
+
+        def refuse_the_target(self: Path, target: object) -> Path:
+            if self == out:
+                message = "the file is in use by another process"
+                raise OSError(message)
+            return original(self, target)
+
+        monkeypatch.setattr(Path, "replace", refuse_the_target)
+        monkeypatch.setattr(module, "load", lambda *_, **__: pytest.fail("the loader ran for an unpublishable run"))
+        monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(out)])
+
+        with pytest.raises(SystemExit, match="cannot be replaced"):
+            module.main()
+
+    def test_proving_replaceability_leaves_the_existing_file_where_it_was(self, tmp_path: Path) -> None:
+        # The check moves the file, so it has to put it back — including when the run never happens.
+        module = _module("measure")
+        out = tmp_path / "results.txt"
+        out.write_text("a previous run", encoding="utf-8")
+
+        module._refuse_unwritable(out)
+
+        assert out.read_text(encoding="utf-8") == "a previous run"
+        assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"]
 
     def test_output_without_a_path_says_so(self) -> None:
         # Scripts fail with an explanation, not an IndexError three frames down.
