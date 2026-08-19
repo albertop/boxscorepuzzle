@@ -17,8 +17,10 @@ Run this on the laptop, from `forge/`. It writes the private half to a file outs
 prints the public half.
 
 ```bash
-./.venv/Scripts/python.exe -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; import pathlib; k = Ed25519PrivateKey.generate(); p = pathlib.Path.home() / '.boxscorepuzzle-signing-key'; p.write_text(k.private_bytes_raw().hex(), encoding='utf-8'); print('private key written to', p); print('public key:', k.public_key().public_bytes_raw().hex())"
+uv run python -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; import pathlib; k = Ed25519PrivateKey.generate(); p = pathlib.Path.home() / '.boxscorepuzzle-signing-key'; p.write_text(k.private_bytes_raw().hex(), encoding='utf-8'); print('private key written to', p); print('public key:', k.public_key().public_bytes_raw().hex())"
 ```
+
+⚠️ **`uv run python`, not `.venv/Scripts/python.exe`.** The venv's executable is a launcher pointing at a uv-managed interpreter, and it resolves in some shells and not others — it works from bash and fails from PowerShell with *did not find executable*. `uv run` asks uv to resolve the interpreter, which is the thing that knows where it is. If `uv` is not on the PATH it is under `%LOCALAPPDATA%\Microsoft\WinGet\Packages\astral-sh.uv_*\uv.exe`.
 
 **64 hexadecimal characters each.** The private half is the file's whole contents; the public half is
 what the command prints.
@@ -43,7 +45,7 @@ The public key is a function of the private one, so it never needs storing separ
 need to be *read* to put it in the repository:
 
 ```bash
-./.venv/Scripts/python.exe -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; import os; print(Ed25519PrivateKey.from_private_bytes(bytes.fromhex(os.environ['BOXSCORE_SIGNING_KEY'])).public_key().public_bytes_raw().hex())"
+uv run python -c "from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey; import os; print(Ed25519PrivateKey.from_private_bytes(bytes.fromhex(os.environ['BOXSCORE_SIGNING_KEY'])).public_key().public_bytes_raw().hex())"
 ```
 
 ---
