@@ -37,7 +37,15 @@ from boxscore_forge.constraints import cell_values, footnote_cell, shape_of  # n
 from boxscore_forge.identities import FOOTNOTE_COLUMNS, find_violations  # noqa: E402
 from boxscore_forge.solver import Technique, solve  # noqa: E402
 
-SAMPLE_PER_DECADE = 60
+SAMPLE_PER_DECADE = 20
+"""⚠️ **Sixty per decade was abandoned after two hours in the loader.** Seven hundred directions is
+fifteen times the usual sample, and each one costs three correlated subqueries added the same day - the
+entry position, the substitution record and the starting lineup. The cost per direction changed and the
+sample size was chosen as if it had not.
+
+Twenty keeps the cells that decide something wide: two- and three-row groups with two terms are 2,412
+and 720 in the pool, so they arrive in quantity. The four- and five-row tails come out with small n and
+are printed with it, which is honest rather than confident."""
 GATE = 0.25
 
 
