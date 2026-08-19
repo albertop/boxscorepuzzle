@@ -73,6 +73,7 @@ select = [
 # discovery script reported 25 unfixable findings for printing — its interface. A check that fires on
 # everything carries no information, exactly like one that never fires.
 "../discovery/**/*.py" = ["T201", "S105"]
+"../tools/*.py" = ["T201"]   # a dev server that says nothing on start looks like one that did not start
 "tests/**" = ["S101", "PLR2004"]   # asserts and magic numbers are fine in tests
 
 [tool.pytest.ini_options]

@@ -242,12 +242,43 @@ column is. **The section name is not the header row** — found by scrolling and
 printed as `SH: 2`, which reads as *two sacrifice hits*. It is now `SH: #2`. The board already calls
 that column `#`.
 
-**5. ⚠️ One package labels a shared slot `5a 3B` / `5b 3B` — the same position twice.** That is the shape
+**5. ⚠️ The package could not say which club batted last — schema 3.** The line score has an offensive
+half and a defensive half, and nothing said which of the two was at home. The first phone layer drew
+`Away` over the offensive row **with nothing telling it so**, and on the reference set it was wrong:
+`126c0496` is the Browns at home, leading 3–1, not batting the bottom of the ninth. *A label sits
+outside the arithmetic*, which is exactly why every column total balanced while the board said something
+untrue.
+
+**It is not derivable and the client must not try.** A ragged line score determines it — the home side
+leading after the top of the ninth never bats again — and four of the six are nine and nine. A client
+inferring it *where it could* would be right sometimes and silently wrong the rest of the time, which is
+worse than not knowing. The forge reads it from the game, so the forge writes it: `offense_is_home`, and
+a new schema because a board that cannot name its sides is not a board with one field missing.
+
+**6. ⚠️ One package labels a shared slot `5a 3B` / `5b 3B` — the same position twice.** That is the shape
 the operator flagged on the forge side: a third baseman being replaced by another third baseman is
 nearly impossible, and the rule adopted was that the label is the position of **entry**. It may be
 legitimate — a pinch hitter who then takes the position — but it is the exact pattern that was a bug
 last time. **Reported, not worked around**, because a client that compensates for it becomes the second
 place encoding the rule.
+
+**7. ⚠️ The manifest is a pointer and must never be cached; the packages are immutable and should be.**
+Found the moment the six were regenerated: the generation directory changed, the manifest was rewritten
+to name it, and the browser went on serving the old manifest **and the old JavaScript modules** — so a
+correct client refused the packages as the wrong schema and the failure read as a code defect. That is
+the second time a cache has produced a phantom bug here.
+
+The fix is two-sided and the sides are opposite. `<generation>/<id>.json` can never change — a new one
+gets a new generation — so it caches hard. `manifest.json` is the only thing saying which generation is
+current, and **a stale pointer is indistinguishable from a stale build**. `no-store`, always. Development
+uses `tools/dev_server.py`, which turns caching off entirely and strips conditional-request headers, so
+what the page runs is what is on disk; production caching is nginx's job and takes the shape above.
+
+**8. A retained generation the client cannot read is not a rollback target.** The writer keeps one
+generation back, which is right — but the retained one is schema 2 and this client refuses it by design.
+Rolling back would mean rolling back the client too. Recorded rather than resolved: it is only a real
+problem once inventory exists, and the honest fix is that a schema change invalidates retained
+generations rather than pretending they are usable.
 
 ## Decisions taken
 
@@ -271,6 +302,12 @@ physical size of a 44px target.
 record; whatever renders a shareable result reads it. Left open, deliberately and in writing: whether the
 grid is per-cell, and therefore whether the engine must emit a derived first-outcome vector. Until that
 design exists the engine emits the C7 record and nothing else.
+
+**2026-08-19 — the sections name their side, and the package has to say which.** `AWAY BATTING` over
+one section and `HOME PITCHING` over the other, because the board is one team's offence against the
+other's staff and a player could not tell whose batting order they were reconstructing. This forced
+schema 3: the client cannot infer which side batted last and must not guess. The line score also swaps
+its rows so the visiting side prints on top, which is where a line score puts the team that bats first.
 
 **2026-08-19 — the solution ships in the package and stays visible.** Hiding it means a network
 dependency in the play path, which §23 forbids, and it buys nothing §9 has not already accepted.

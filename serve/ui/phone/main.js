@@ -22,8 +22,24 @@ import {
 
 const DATA = "../../data/puzzles";
 
+/**
+ * The manifest is a **pointer** and the packages are **immutable**, so they cache differently.
+ *
+ * ⚠️ **Found the moment the six were regenerated.** The generation directory changed, the manifest was
+ * rewritten to name it — and the browser kept serving the old manifest, so the client loaded packages
+ * from a retired generation and refused them as the wrong schema. The code was correct and the page was
+ * wrong, which is the shape `docs/serve-brief.md` §6 already records once: a prototype reported as *not
+ * rendering* that was the cache.
+ *
+ * A package at `<generation>/<id>.json` can never change — a new one gets a new generation — so it is
+ * safe to cache hard. The manifest is the only thing that says which generation is current, and a stale
+ * pointer is indistinguishable from a stale build. `no-store`, always.
+ *
+ * This is the read side of §33's rule that the calendar extends rather than rewrites, and of the
+ * caching rule in CLAUDE.md: cache the day's puzzle, never the pointer to it.
+ */
 async function loadPuzzle() {
-  const manifest = await (await fetch(`${DATA}/manifest.json`)).json();
+  const manifest = await (await fetch(`${DATA}/manifest.json`, { cache: "no-store" })).json();
   const wanted = new URLSearchParams(location.search).get("p");
   const id = manifest.puzzles.includes(wanted) ? wanted : manifest.puzzles[0];
   const raw = await (await fetch(`${DATA}/${manifest.generation}/${id}.json`)).json();
@@ -38,7 +54,7 @@ function boot({ puzzle }) {
 
   const score = document.createElement("div");
   score.className = "linescore";
-  score.append(renderLineScore(puzzle.puzzle.lineScore));
+  score.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
   app.append(score);
 
   const scroller = document.createElement("div");
@@ -62,7 +78,7 @@ function boot({ puzzle }) {
     scroller.replaceChildren();
     scroller.append(
       renderSection({
-        title: text("board.batting"),
+        title: text(puzzle.offenseIsHome ? "board.batting_home" : "board.batting_away"),
         columns: columnsFor.batting,
         rows: puzzle.puzzle.batting,
         labels: puzzle.labels,
@@ -76,7 +92,8 @@ function boot({ puzzle }) {
     scroller.append(renderFootnotes(puzzle, game));
     scroller.append(
       renderSection({
-        title: text("board.pitching"),
+        // The other side, always: the board is one team batting against the other's staff.
+        title: text(puzzle.offenseIsHome ? "board.pitching_away" : "board.pitching_home"),
         columns: columnsFor.pitching,
         rows: puzzle.puzzle.pitching,
         labels: puzzle.pitcherLabels,

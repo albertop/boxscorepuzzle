@@ -26,8 +26,14 @@ const en = {
   "column.catcher_interference": "CI",
 
   "board.slot": "#",
-  "board.batting": "Batting",
-  "board.pitching": "Pitching",
+  // ⚠️ **Which side, not just which half of the game.** `BATTING` alone left the two sections unnamed:
+  // a player cannot tell whose batting order they are reconstructing, and the board is one team's
+  // offence against the other's pitching. Four keys rather than an interpolation, because a language
+  // that puts the side after the noun cannot be produced by gluing two strings together.
+  "board.batting_home": "HOME BATTING",
+  "board.batting_away": "AWAY BATTING",
+  "board.pitching_home": "HOME PITCHING",
+  "board.pitching_away": "AWAY PITCHING",
   "board.totals": "Totals",
   "board.left_on_base": "LOB",
   "board.inning_not_played": "—",
@@ -35,8 +41,11 @@ const en = {
   "linescore.runs": "R",
   "linescore.hits": "H",
   "linescore.errors": "E",
-  "linescore.offense": "Away",
-  "linescore.defense": "Home",
+  // ⚠️ These used to be `offense` → "Away" and `defense` → "Home", which was a **fabricated label**:
+  // nothing in the package said which side batted last, and on the reference set the guess was wrong.
+  // Now they name a side and the caller decides which row gets which, from `offense_is_home`.
+  "linescore.home": "Home",
+  "linescore.away": "Away",
 
   "keypad.clear": "Clear",
   "keypad.third": "⅓",

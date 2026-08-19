@@ -19,7 +19,7 @@ import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS } from "./columns.j
 
 export class PackageError extends Error {}
 
-const READABLE = [2];
+const READABLE = [3];
 
 const LINE_SCORE_SCALARS = [
   "offense_runs",
@@ -137,9 +137,19 @@ export function readPackage(raw) {
   if (raw.metadata !== undefined && (raw.metadata === null || typeof raw.metadata !== "object" || Array.isArray(raw.metadata))) {
     fail("metadata is present and is not an object");
   }
+  // ⚠️ **The client cannot work this out and must not try.** Which club batted last is determined by
+  // a ragged line score — the home side leading after the top of the ninth never bats again — and
+  // undetermined by a square one. Four of the six reference packages are nine and nine. A client that
+  // inferred it *where it could* would label the board correctly sometimes and silently wrongly the
+  // rest of the time, and a label sits outside the arithmetic, so every total would still balance.
+  // Schema 3 exists so the forge, which reads it from the game, says it.
+  if (typeof raw.offense_is_home !== "boolean") {
+    fail(`offense_is_home is ${JSON.stringify(raw.offense_is_home)}, expected true or false`);
+  }
   return {
     id: raw.puzzle_id,
     schema: raw.schema,
+    offenseIsHome: raw.offense_is_home,
     puzzle,
     solution,
     labels: strings(raw.labels, puzzle.batting.length, "labels"),

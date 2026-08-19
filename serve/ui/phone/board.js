@@ -27,7 +27,7 @@ const el = (tag, className, content) => {
 
 /* ---- line score ------------------------------------------------------------------------------ */
 
-export function renderLineScore(score) {
+export function renderLineScore(score, offenseIsHome) {
   const innings = Math.max(score.offense_by_inning.length, score.defense_by_inning.length);
   const table = el("table");
   const head = el("tr");
@@ -55,8 +55,27 @@ export function renderLineScore(score) {
     return row;
   };
 
-  table.append(side(text("linescore.offense"), score.offense_by_inning, score.offense_runs, score.offense_hits, score.offense_errors));
-  table.append(side(text("linescore.defense"), score.defense_by_inning, score.defense_runs, score.defense_hits, score.defense_errors));
+  const offense = () =>
+    side(
+      text(offenseIsHome ? "linescore.home" : "linescore.away"),
+      score.offense_by_inning,
+      score.offense_runs,
+      score.offense_hits,
+      score.offense_errors,
+    );
+  const defense = () =>
+    side(
+      text(offenseIsHome ? "linescore.away" : "linescore.home"),
+      score.defense_by_inning,
+      score.defense_runs,
+      score.defense_hits,
+      score.defense_errors,
+    );
+  // ⚠️ **The visiting side goes on top**, because that is where a line score puts the team that bats
+  // first and a player reads the shape before the labels. So when the offence is the home team the two
+  // rows swap — the package's field order is not the printing order, and assuming it was is how the
+  // board came to claim the batting team was away.
+  table.append(...(offenseIsHome ? [defense(), offense()] : [offense(), defense()]));
   return table;
 }
 

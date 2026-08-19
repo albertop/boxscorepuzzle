@@ -15,7 +15,10 @@ import { assert, equal, suite, test, throws } from "./harness.js";
 const MANIFEST = "../data/puzzles/manifest.json";
 
 async function loadAll() {
-  const manifest = await (await fetch(MANIFEST)).json();
+  // ⚠️ `no-store`, for the reason the phone loader carries in full: the manifest is a pointer and a
+  // stale pointer sends the tests at a retired generation, which reads as a schema failure in code
+  // that is correct. That happened on the first regeneration.
+  const manifest = await (await fetch(MANIFEST, { cache: "no-store" })).json();
   const generation = manifest.generation;
   const loaded = [];
   for (const id of manifest.puzzles) {
@@ -45,6 +48,17 @@ suite("The six real packages parse, and their shape is the contract", () => {
       equal(puzzle.pitcherLabels.length, puzzle.puzzle.pitching.length, "one label per pitching row");
     });
   }
+
+  test("⚠️ the side that batted cannot be inferred from the line score alone", () => {
+    // Why the field exists rather than being derived. A ragged line score determines it — the home
+    // side leading after the top of the ninth never bats again — and a square one does not. If most of
+    // the reference set is square, a client that inferred it would be guessing on most boards.
+    const square = packages
+      .map(({ raw }) => readPackage(raw))
+      .filter((p) => p.puzzle.lineScore.offense_by_inning.length === p.puzzle.lineScore.defense_by_inning.length);
+    assert(square.length > 0, "every reference package is ragged, so this reasoning needs rechecking");
+    for (const p of square) assert(typeof p.offenseIsHome === "boolean", "a square board carries no side");
+  });
 
   test("the roster caps §6 states are respected by every real package", () => {
     for (const { id, raw } of packages) {
@@ -121,15 +135,28 @@ suite("A malformed package is refused at the boundary, naming the field", () => 
     throws(() => readPackage(raw), "line_score.defense_hits");
   });
 
-  test("an unreadable schema is refused, and 2.0 is not schema 2", () => {
+  test("an unreadable schema is refused, including the version this replaced", () => {
     const raw = good();
-    raw.schema = 3;
-    throws(() => readPackage(raw), "package schema 3");
-    // JSON has no integer type, so `2.0` arrives as the number 2 and is legitimately schema 2. What
-    // must not pass is a non-integer: 2.5 is not a version.
+    // ⚠️ Schema 2 is refused rather than tolerated. A v2 package has no `offense_is_home`, and there is
+    // no honest default: `true` and `false` are both claims about a real game, so a client that
+    // defaulted would render a false statement rather than admit it does not know.
+    raw.schema = 2;
+    throws(() => readPackage(raw), "package schema 2");
+    // JSON has no integer type, so `3.0` arrives as the number 3 and is legitimately schema 3. What
+    // must not pass is a non-integer: 3.5 is not a version.
     const half = good();
-    half.schema = 2.5;
-    throws(() => readPackage(half), "package schema 2.5");
+    half.schema = 3.5;
+    throws(() => readPackage(half), "package schema 3.5");
+  });
+
+  test("⚠️ a package that cannot say which side batted last is refused", () => {
+    // The finding this schema exists for. The client had been labelling the offensive half `Away`
+    // with nothing telling it so, and on the reference set that was wrong.
+    for (const bad of [undefined, null, 0, 1, "true"]) {
+      const raw = good();
+      raw.offense_is_home = bad;
+      throws(() => readPackage(raw), "offense_is_home", `${JSON.stringify(bad)} was accepted`);
+    }
   });
 
   test("metadata that is not an object is refused (seam C3)", () => {
