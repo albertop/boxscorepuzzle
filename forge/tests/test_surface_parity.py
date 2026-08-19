@@ -81,7 +81,7 @@ def _expected(board: Board, slots: "list[int]", pack: object) -> dict[str, set[s
 class TestTheFootnoteLineShowsTheErasedBoard:
     def test_the_line_says_exactly_what_the_puzzle_says(self, cubs_at_braves_1968: Direction) -> None:
         pack = _pack()
-        board, source, erased = _erased_board(cubs_at_braves_1968)
+        board, _source, erased = _erased_board(cubs_at_braves_1968)
         slots = list(range(1, len(board.batting) + 1))
         # Non-vacuous: footnote cells have to have been erased for this to test anything.
         assert [cell for cell in erased if cell.startswith("footnotes[")]
