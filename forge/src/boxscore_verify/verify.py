@@ -27,6 +27,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Final
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import SignatureError
 from boxscore_package.signing import verify as verify_signature
@@ -95,7 +97,7 @@ class Verdict:
         return self.rejection is None
 
 
-def verify(package: Package, *, secret: bytes | Unsigned | None) -> Verdict:
+def verify(package: Package, *, secret: Ed25519PublicKey | Unsigned | None) -> Verdict:
     """Run every layer in order and stop at the first that rejects.
 
     Stopping early is right for a discard — the puzzle is gone either way — and the layer that caught
@@ -119,7 +121,7 @@ def verify(package: Package, *, secret: bytes | Unsigned | None) -> Verdict:
     return Verdict(puzzle_id=package.puzzle_id)
 
 
-def check_signature(package: Package, secret: bytes | Unsigned | None) -> Rejection | None:
+def check_signature(package: Package, secret: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Checked first: nothing else is worth computing about a file that arrived damaged."""
     if secret is None:
         message = "no signing secret: pass UNSIGNED to skip this layer, deliberately"
@@ -133,7 +135,7 @@ def check_signature(package: Package, secret: bytes | Unsigned | None) -> Reject
     return None
 
 
-def check_identities(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
+def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Layer 1: the boxscore balances, and the puzzle is a board of the same game.
 
     The structural half is not decoration. §6 gives the line score and the footnote line complete and
@@ -174,7 +176,7 @@ def check_identities(package: Package, _: bytes | Unsigned | None) -> Rejection 
     return None
 
 
-def check_uniqueness(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
+def check_uniqueness(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Layer 2: exactly one board completes the puzzle.
 
     None means the erasure produced a contradiction; two means cells came out that were not forced,
@@ -199,7 +201,7 @@ def check_uniqueness(package: Package, _: bytes | Unsigned | None) -> Rejection 
     return None
 
 
-def check_derivability(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
+def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Layer 3: reachable without a guess.
 
     §22 calls unique-but-underivable the worst failure because it looks correct: the puzzle passes
@@ -220,7 +222,7 @@ def check_derivability(package: Package, _: bytes | Unsigned | None) -> Rejectio
     return None
 
 
-def check_end_to_end(package: Package, _: bytes | Unsigned | None) -> Rejection | None:
+def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Layer 4: solve the published board from scratch and compare against the original.
 
     Deliberately redundant with layers 2 and 3, and deliberately not reusing their results. It is the
@@ -315,7 +317,7 @@ def derivable_in_view(package: Package) -> bool:
         return False
 
 
-LAYERS: dict[Layer, Callable[[Package, bytes | Unsigned | None], Rejection | None]] = {
+LAYERS: dict[Layer, Callable[[Package, Ed25519PublicKey | Unsigned | None], Rejection | None]] = {
     Layer.SIGNATURE: check_signature,
     Layer.IDENTITIES: check_identities,
     Layer.UNIQUENESS: check_uniqueness,

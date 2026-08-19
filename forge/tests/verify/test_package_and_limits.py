@@ -11,6 +11,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from boxscore_package import format as package_format
 from boxscore_package.format import Board, Package, PackageError, read, write
@@ -22,7 +23,14 @@ from boxscore_verify.rules import all_cells, relations, values_of
 from boxscore_verify.verify import UNSIGNED, Fault, Layer, Verdict, tally, verify
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
-SECRET = b"a test secret"
+_KEY = Ed25519PrivateKey.generate()
+SECRET = _KEY
+"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
+with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
+signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
+test key checked into the repository is a key anybody can sign with."""
+
+PUBLIC = _KEY.public_key()
 
 
 class TestTheFormatSurvivesDisk:
@@ -36,7 +44,7 @@ class TestTheFormatSurvivesDisk:
         restored = read(path)
 
         assert restored == original
-        verify_signature(restored, SECRET)
+        verify_signature(restored, PUBLIC)
 
     def test_the_published_half_keeps_the_answer_and_drops_what_would_spoil_it(self, board: Board) -> None:
         # ⚠️ This reverses an earlier promise, on purpose. The published half used to strip the
@@ -65,7 +73,7 @@ class TestTheFormatSurvivesDisk:
 
         write(path, signed.published())
 
-        verify_signature(read(path), SECRET)
+        verify_signature(read(path), PUBLIC)
 
     def test_it_refuses_a_schema_it_does_not_know(self, tmp_path: Path, board: Board) -> None:
         # A future schema must fail loudly rather than be read with today's assumptions, which is

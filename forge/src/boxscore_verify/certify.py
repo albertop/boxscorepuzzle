@@ -24,6 +24,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 from boxscore_package.format import BATTING_COLUMNS, Package
 from boxscore_verify.expected_id import expected_puzzle_id
 from boxscore_verify.plausibility import faults, reveal_faults
@@ -81,7 +83,9 @@ class Certification:
         return not self.refusals
 
 
-def check_mathematics(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_mathematics(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """§22's four layers plus the signature. Necessary, and on its own not sufficient."""
     del evidence
     verdict: Verdict = verify(package, secret=secret)
@@ -90,20 +94,26 @@ def check_mathematics(package: Package, evidence: Evidence, secret: bytes | Unsi
     return [f"{verdict.rejection.layer}: {verdict.rejection.detail}"]
 
 
-def check_board_is_possible(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_board_is_possible(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """Could this have been a baseball game — the class of check `verify()` cannot make."""
     del evidence, secret
     board = package.solution or package.puzzle
     return [f"implausible board: {fault.what}" for fault in faults(board)]
 
 
-def check_reveal_is_complete(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_reveal_is_complete(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """The payoff screen, which no layer of §22 looks at and which named the wrong club four times."""
     del evidence, secret
     return [f"broken reveal: {fault.what}" for fault in reveal_faults(package)]
 
 
-def check_evidence_is_about_this_package(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_evidence_is_about_this_package(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """Does the evidence describe *this* puzzle, or merely some puzzle?
 
     Recomputed rather than compared to a value the producer supplies: an expected id handed over by
@@ -118,7 +128,9 @@ def check_evidence_is_about_this_package(package: Package, evidence: Evidence, s
     return []
 
 
-def check_provenance(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_provenance(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """An accepted source, named rather than merely not excluded."""
     del package, secret
     refusals: list[str] = []
@@ -129,7 +141,9 @@ def check_provenance(package: Package, evidence: Evidence, secret: bytes | Unsig
     return refusals
 
 
-def check_independent_correspondence(package: Package, evidence: Evidence, secret: bytes | Unsigned) -> list[str]:
+def check_independent_correspondence(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
     """The board against sources that did not come from its own rows.
 
     Two kinds of comparison, and conflating them is how this check was weaker than it looked.
@@ -175,7 +189,7 @@ def check_independent_correspondence(package: Package, evidence: Evidence, secre
     return refusals
 
 
-CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, bytes | Unsigned], list[str]]]] = {
+CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, Ed25519PublicKey | Unsigned], list[str]]]] = {
     "evidence_is_about_this_package": check_evidence_is_about_this_package,
     "mathematics": check_mathematics,
     "board_is_possible": check_board_is_possible,
@@ -189,7 +203,7 @@ def certify_for_publication(
     package: Package,
     *,
     evidence: Evidence | None,
-    secret: bytes | Unsigned,
+    secret: Ed25519PublicKey | Unsigned,
 ) -> Certification:
     """Every check, all of them, or the puzzle is not published.
 

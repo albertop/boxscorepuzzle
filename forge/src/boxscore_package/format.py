@@ -65,8 +65,10 @@ contract says is not a smaller problem than a malformed board — it is the same
 board's own validation never looks.
 """
 
-SIGNATURE = re.compile(r"^[0-9a-f]{64}$")
-"""HMAC-SHA256, hex. A signature of the wrong *type* used to reach `compare_digest`, which raises
+SIGNATURE = re.compile(r"^[0-9a-f]{128}$")
+"""Ed25519, hex — 64 bytes, so 128 characters. It was 64 for HMAC-SHA256, and the length changing is
+part of why this is schema 2 rather than an amendment to schema 1. A signature of the wrong
+*type* used to reach the comparison, which raises
 rather than refusing — a malformed file crashing the verifier instead of being rejected by it."""
 
 

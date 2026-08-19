@@ -10,6 +10,7 @@ disagrees with the design document, which is the only thing it is supposed to ag
 """
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -20,7 +21,14 @@ from boxscore_verify.reason import derive, solutions
 from boxscore_verify.rules import all_cells, relations, values_of
 from boxscore_verify.verify import UNSIGNED, Fault, Layer, verify
 
-SECRET = b"a test secret"
+_KEY = Ed25519PrivateKey.generate()
+SECRET = _KEY
+"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
+with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
+signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
+test key checked into the repository is a key anybody can sign with."""
+
+PUBLIC = _KEY.public_key()
 
 
 def _split(draw: st.DrawFn, total: int, parts: int) -> list[int]:
@@ -156,7 +164,7 @@ class TestSolvingAgreesWithItself:
 class TestTheSignatureTracksTheContent:
     @given(board=boards())
     def test_signing_then_verifying_round_trips(self, board: Board) -> None:
-        verify_signature(sign(_package(board, board), SECRET), SECRET)
+        verify_signature(sign(_package(board, board), SECRET), PUBLIC)
 
     @given(board=boards(), index=st.integers(0, 10_000))
     def test_any_change_to_the_published_half_breaks_the_signature(self, board: Board, index: int) -> None:
@@ -184,7 +192,7 @@ class TestTheSignatureTracksTheContent:
         )
 
         with pytest.raises(SignatureError):
-            verify_signature(tampered, SECRET)
+            verify_signature(tampered, PUBLIC)
 
     @given(board=boards())
     def test_the_signature_survives_the_publishing_step(self, board: Board) -> None:
@@ -193,7 +201,7 @@ class TestTheSignatureTracksTheContent:
         # and the signature is taken over the published shape so removing it changes nothing.
         signed = sign(_package(board, board), SECRET)
 
-        verify_signature(signed.published(), SECRET)
+        verify_signature(signed.published(), PUBLIC)
 
     @given(board=boards())
     def test_altering_the_solution_breaks_the_signature(self, board: Board) -> None:
@@ -220,13 +228,13 @@ class TestTheSignatureTracksTheContent:
         )
 
         with pytest.raises(SignatureError):
-            verify_signature(altered, SECRET)
+            verify_signature(altered, PUBLIC)
 
 
 class TestRejectionsAreAttributed:
     @given(board=boards())
     def test_an_unsigned_package_is_a_signature_failure_not_a_puzzle_failure(self, board: Board) -> None:
-        verdict = verify(_package(board, board), secret=SECRET)
+        verdict = verify(_package(board, board), secret=PUBLIC)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE

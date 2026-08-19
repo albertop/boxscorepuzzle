@@ -44,7 +44,7 @@ really does, so the two cannot drift.
 | `slot_references` | list of strings | **no** | kept | One per batting row, in row order: `9` where a lineup slot holds one row, `9a`/`9b` where it is shared. **The string the board draws and the footnote line prints** — the client never derives it. Pitching rows carry none: those are the opposing team's pitchers and have no place in this batting order. |
 | `reveal` | object | yes | kept | The answer to the mystery: names, teams, date, card (§7, §29). |
 | `metadata` | object | no | **filtered** | Rich metadata per seam C3. Keys that would give the game away are removed on publishing: `game_id`, `retrosheet_id`, `season`, `date`, `teams`. |
-| `signature` | string | yes | kept | HMAC-SHA256 over the published shape, keys sorted, separators compact, `signature` itself excluded. |
+| `signature` | string | yes | kept | Ed25519 over the published shape, keys sorted, separators compact, `signature` itself excluded. 128 hex characters. The forge holds the private key and `serve` holds the public one, so the service can verify and cannot sign. |
 
 ### board
 

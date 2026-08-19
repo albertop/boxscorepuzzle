@@ -7,6 +7,8 @@ passed the defective board without a murmur.
 
 from collections.abc import Callable
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import sign
 from boxscore_verify.plausibility import faults
@@ -14,7 +16,14 @@ from boxscore_verify.verify import verify
 
 Replace = Callable[..., Board]
 
-SECRET = b"a test secret"
+_KEY = Ed25519PrivateKey.generate()
+SECRET = _KEY
+"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
+with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
+signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
+test key checked into the repository is a key anybody can sign with."""
+
+PUBLIC = _KEY.public_key()
 
 
 def package(puzzle: Board, source: Board) -> Package:
@@ -54,7 +63,7 @@ class TestTheDefectItself:
         # see a board that does not correspond to reality.
         broken = with_phantom_row(board, replace)
 
-        assert verify(sign(package(broken, broken), SECRET), secret=SECRET).accepted
+        assert verify(sign(package(broken, broken), SECRET), secret=PUBLIC).accepted
         assert faults(broken)
 
 

@@ -9,6 +9,7 @@ is rejected but *which layer* rejected it and *why*.
 from collections.abc import Callable
 
 import pytest
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from boxscore_package.format import Board, LineScore, Package
 from boxscore_package.signing import sign
@@ -16,7 +17,14 @@ from boxscore_verify.verify import UNSIGNED, Fault, Layer, check_derivability, v
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 
-SECRET = b"a test secret, not the one that signs anything real"
+_KEY = Ed25519PrivateKey.generate()
+SECRET = _KEY
+"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
+with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
+signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
+test key checked into the repository is a key anybody can sign with."""
+
+PUBLIC = _KEY.public_key()
 
 
 def package(puzzle: Board, source: Board) -> Package:
@@ -194,17 +202,17 @@ class TestTheSignatureCatchesCorruptionInTransit:
             signature=signed.signature,
         )
 
-        verdict = verify(tampered, secret=SECRET)
+        verdict = verify(tampered, secret=PUBLIC)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE
         assert verdict.rejection.fault is Fault.CORRUPTED
 
     def test_an_unsigned_package_is_refused_when_a_secret_is_expected(self, board: Board) -> None:
-        verdict = verify(package(board, board), secret=SECRET)
+        verdict = verify(package(board, board), secret=PUBLIC)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE
 
     def test_a_signed_package_passes(self, board: Board) -> None:
-        assert verify(sign(package(board, board), SECRET), secret=SECRET).accepted
+        assert verify(sign(package(board, board), SECRET), secret=PUBLIC).accepted

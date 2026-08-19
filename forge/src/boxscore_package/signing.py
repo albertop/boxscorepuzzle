@@ -30,21 +30,21 @@ Nothing is wrong with SHA-256 or `compare_digest`. The defect is authority place
 an asymmetric signature — Ed25519, private key on the forge, public key deployed to `serve`, with a
 key id in the signed envelope so it can be rotated.
 
-**Not yet done, and deliberately not half done.** It needs `cryptography` as a dependency, and it
-changes the format: the signature goes from 64 hex characters to 128 and the envelope gains a key id,
-which `docs/package-format-v1.md` currently calls frozen at schema 1. Both are recorded in
-`docs/reviews/todo.md` as v03-P2-04. Until then this module signs with a shared secret and this note
-is here so nobody reads the old justification and concludes the question was settled.
+**Done.** Ed25519: the forge holds the private key, `serve` holds the public one and cannot sign, and
+the signature is 128 hex characters. The manifest is signed as well as the packages.
 """
 
-import hmac
 import json
-from hashlib import sha256
 from typing import Final
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 
 from boxscore_package.format import Package
 
 _ENCODING: Final = "utf-8"
+KEY_BYTES: Final = 32
+"""An Ed25519 key is 32 bytes, so 64 hex characters. Signatures are 64 bytes, 128 hex."""
 
 
 class SignatureError(Exception):
@@ -65,9 +65,32 @@ def canonical_bytes(package: Package) -> bytes:
     return json.dumps(document, sort_keys=True, separators=(",", ":")).encode(_ENCODING)
 
 
-def sign(package: Package, secret: bytes) -> Package:
+def signing_key(raw: str | bytes) -> Ed25519PrivateKey:
+    """The forge's private key, from 64 hex characters. **Never leaves the laptop** (§33)."""
+    return Ed25519PrivateKey.from_private_bytes(_key_bytes(raw, "signing"))
+
+
+def verifying_key(raw: str | bytes) -> Ed25519PublicKey:
+    """The public key `serve` holds. It verifies and **cannot sign**, which is the whole point."""
+    return Ed25519PublicKey.from_public_bytes(_key_bytes(raw, "verifying"))
+
+
+def _key_bytes(raw: str | bytes, which: str) -> bytes:
+    text = raw.decode(_ENCODING) if isinstance(raw, bytes) else raw
+    try:
+        material = bytes.fromhex(text.strip())
+    except ValueError as error:
+        message = f"the {which} key is not hexadecimal"
+        raise SignatureError(message) from error
+    if len(material) != KEY_BYTES:
+        message = f"the {which} key is {len(material)} bytes, expected {KEY_BYTES}"
+        raise SignatureError(message)
+    return material
+
+
+def sign(package: Package, key: Ed25519PrivateKey) -> Package:
     """Return the package carrying its signature. The original is left alone."""
-    digest = hmac.new(secret, canonical_bytes(package), sha256).hexdigest()
+    signature = key.sign(canonical_bytes(package)).hex()
     return type(package)(
         puzzle_id=package.puzzle_id,
         puzzle=package.puzzle,
@@ -75,13 +98,14 @@ def sign(package: Package, secret: bytes) -> Package:
         labels=package.labels,
         pitcher_labels=package.pitcher_labels,
         reveal=package.reveal,
+        slot_references=package.slot_references,
         metadata=package.metadata,
         schema=package.schema,
-        signature=digest,
+        signature=signature,
     )
 
 
-def verify(package: Package, secret: bytes) -> None:
+def verify(package: Package, key: Ed25519PublicKey) -> None:
     """Raise unless the package still matches its signature.
 
     Raises rather than returning a boolean on purpose: a caller can ignore a `False` by forgetting to
@@ -90,9 +114,39 @@ def verify(package: Package, secret: bytes) -> None:
     if package.signature is None:
         message = f"puzzle {package.puzzle_id} carries no signature"
         raise SignatureError(message)
-    expected = hmac.new(secret, canonical_bytes(package), sha256).hexdigest()
-    # Constant-time comparison. The threat here is corruption rather than forgery, but a timing-safe
-    # compare costs nothing and the habit is worth more than the reasoning about whether it matters.
-    if not hmac.compare_digest(expected, package.signature):
+    try:
+        key.verify(bytes.fromhex(package.signature), canonical_bytes(package))
+    except (InvalidSignature, ValueError) as error:
         message = f"puzzle {package.puzzle_id} does not match its signature"
+        raise SignatureError(message) from error
+
+
+def sign_manifest(document: dict[str, object], key: Ed25519PrivateKey) -> dict[str, object]:
+    """The manifest signed the same way the packages are.
+
+    ⚠️ **The manifest is what decides the delivery**, and altering it breaks no package signature: omit
+    ids, point at a retained generation, point at nothing, and every package the client does receive
+    still checks out. A signature on each puzzle says each puzzle is genuine; only this says the *set*
+    is.
+    """
+    body = {key_: value for key_, value in document.items() if key_ != "signature"}
+    signed = dict(body)
+    signed["signature"] = key.sign(_canonical(body)).hex()
+    return signed
+
+
+def verify_manifest(document: dict[str, object], key: Ed25519PublicKey) -> None:
+    signature = document.get("signature")
+    if not isinstance(signature, str):
+        message = "the manifest carries no signature"
         raise SignatureError(message)
+    body = {key_: value for key_, value in document.items() if key_ != "signature"}
+    try:
+        key.verify(bytes.fromhex(signature), _canonical(body))
+    except (InvalidSignature, ValueError) as error:
+        message = "the manifest does not match its signature"
+        raise SignatureError(message) from error
+
+
+def _canonical(document: dict[str, object]) -> bytes:
+    return json.dumps(document, sort_keys=True, separators=(",", ":")).encode(_ENCODING)
