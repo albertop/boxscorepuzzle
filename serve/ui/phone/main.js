@@ -6,7 +6,7 @@
  * The real `/today` route is shell work and does not live here.
  */
 
-import { battingCell, footnoteCell, pitchingCell } from "../../engine/columns.js";
+import { battingCell, footnoteCell, pitchingCell, sectionOf } from "../../engine/columns.js";
 import { createGame } from "../../engine/game.js";
 import { PackageError, readPackage } from "../../engine/package.js";
 import { text } from "../../engine/strings.js";
@@ -70,7 +70,13 @@ function boot({ puzzle }) {
       // always about a line, and finding it by eye on a 44px grid is the tedious part.
       const other = node.dataset.cell !== name;
       const sameRow = node.dataset.cell.split(".")[0] === name.split(".")[0];
-      const sameColumn = node.dataset.cell.split(".")[1] === name.split(".")[1];
+      // ⚠️ **Same column *within the same block*.** `hits` names a batting column and a pitching column,
+      // so comparing the column alone lit the pitching grid from a batting selection — two grids that
+      // share a word and no equation. The offence's hits and what the opposing staff allowed are
+      // related, but by the cross-team identity, not by being one column.
+      const sameColumn =
+        node.dataset.cell.split(".")[1] === name.split(".")[1] &&
+        sectionOf(node.dataset.cell) === sectionOf(name);
       // ⚠️ **The footnote line takes the amber and nothing else.** The highlight answers *which cells
       // does this one share an equation with*, and it answers it by lying along a row or a column — a
       // shape the grid has and the line does not. Tinting `#5a` and `#5b` because they share a column

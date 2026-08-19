@@ -28,6 +28,19 @@ export const pitchingCell = (row, column) => `pitching[${row}].${column}`;
 export const pitchingTotalCell = (column) => `pitching_totals.${column}`;
 
 /**
+ * Which block of the board a cell belongs to: `batting`, `pitching` or `footnotes`.
+ *
+ * ⚠️ **A column name alone does not identify a column.** `hits` names a batting column *and* a pitching
+ * column, and `batting[3].hits` and `pitching[0].hits` sit in different equations entirely — one is the
+ * offence's hits, the other is what the opposing staff allowed. Anything that asks "is this the same
+ * column" has to ask "in the same block" first, or it will relate two grids that share nothing but a
+ * word. A name is not the thing, one more time.
+ *
+ * A totals row belongs to its own grid, because that is where its column sum closes.
+ */
+export const sectionOf = (name) => name.split(/[[.]/)[0].replace("_totals", "");
+
+/**
  * Innings held as outs, rendered as a printed boxscore renders them.
  *
  * `to` and `from` are inverses over every value the board can hold, which the tests assert rather than

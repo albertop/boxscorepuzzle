@@ -6,7 +6,14 @@
  * looking at something real. These load `serve/data/puzzles/`.
  */
 
-import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS, inningsFromDisplay, inningsToDisplay } from "../engine/columns.js";
+import {
+  BATTING_COLUMNS,
+  FOOTNOTE_COLUMNS,
+  PITCHING_COLUMNS,
+  inningsFromDisplay,
+  inningsToDisplay,
+  sectionOf,
+} from "../engine/columns.js";
 import { createGame } from "../engine/game.js";
 import { PackageError, readPackage } from "../engine/package.js";
 import { CATALOGS, keys, text, useCatalog } from "../engine/strings.js";
@@ -301,6 +308,34 @@ suite("Innings are thirds, and the two directions are inverses", () => {
     for (const { id, raw } of packages) {
       const outs = readPackage(raw).solution.pitchingTotals[0];
       equal(outs % 3, 0, `${id} staff pitched ${inningsToDisplay(outs)} innings`);
+    }
+  });
+});
+
+suite("A cell's block, because a column name alone does not identify a column", () => {
+  test("⚠️ `hits` in batting and `hits` in pitching are different columns", () => {
+    // The defect this exists for: selecting a batting cell tinted the pitching grid's column, because
+    // both are called `hits`. They share a word and no equation — the offence's hits and what the
+    // opposing staff allowed are related by the cross-team identity, not by being one column.
+    equal(sectionOf("batting[3].hits"), "batting");
+    equal(sectionOf("pitching[0].hits"), "pitching");
+    assert(sectionOf("batting[3].hits") !== sectionOf("pitching[0].hits"), "the two grids read as one");
+  });
+
+  test("a totals row belongs to its own grid, where its column sum closes", () => {
+    equal(sectionOf("batting_totals.hits"), "batting");
+    equal(sectionOf("pitching_totals.hits"), "pitching");
+    equal(sectionOf("footnote_totals.hit_by_pitch"), "footnote");
+  });
+
+  test("every cell the engine describes resolves to a block", () => {
+    // Derived from the engine rather than from a list here, so a section added tomorrow is covered.
+    const game = createGame(readPackage(packages[0].raw));
+    const sections = new Set(game.cells().map((cell) => sectionOf(cell.name)));
+
+    assert(sections.size >= 3, `only ${sections.size} blocks: ${[...sections]}`);
+    for (const name of game.cells().map((c) => c.name)) {
+      assert(sectionOf(name).length > 0 && !sectionOf(name).includes("["), `${name} resolved to ${sectionOf(name)}`);
     }
   });
 });
