@@ -434,15 +434,63 @@ a filesystem, so a reader sees the old file or the new one and never a truncated
 
 ## v05 — verified, none rejected
 
-| Finding | Verdict | What was confirmed |
-|---|---|---|
-| P1-02 the renderers hand back erased footnotes | real, **and it invalidates the packs built today** | `footnote_line` reads `direction.batter_footnotes` while `board_table` draws `candidate.puzzle` |
-| P1-01 lineup slots do not cross the package boundary | real | `Package` carries no slots and they cannot be reconstructed |
-| P1-03 the writer signs with a repository-known fallback | real | no executable boundary enforces the comment |
-| P2-01 `ambiguity()` now measures duplicate positions | real | it groups by `labels`, which no longer disambiguate |
-| P2-02 search-cost thresholds are in an obsolete unit | real | normalised 0–1 compared against 5, 10, 20 |
-| P2-03 the prototypes need ~405px, not 375 | real | 375px section plus 14px body padding, and no viewport meta |
-| P2-04 the new guards do not exercise what they claim | real, **mine, today** | see below |
+| Finding | Verdict | State | What was confirmed |
+|---|---|---|---|
+| P1-03 the writer signs with a repository-known fallback | real | **closed** | no executable boundary enforced the comment |
+| P2-01 `ambiguity()` now measures duplicate positions | real | **closed** | it grouped by `labels`, which no longer disambiguate |
+| P2-02 search-cost thresholds are in an obsolete unit | real | **closed** | normalised 0–1 compared against 5, 10, 20 |
+| P2-03 the prototypes need ~405px, not 375 | real | **closed** | 375px section plus 14px body padding, and no viewport meta |
+| P2-04 the new guards do not exercise what they claim | real, mine | **closed** | see below |
+| P1-02 the renderers hand back erased footnotes | real | **half closed** | mechanical half done; the representation waits on the group run |
+| P1-01 lineup slots do not cross the package boundary | real | open, **needs a schema decision** | `Package` carries no slots and they cannot be reconstructed |
+
+**Five of seven closed.** What is left is one half-finished repair whose remaining half is a design
+question the running measurement answers, and one that cannot be done without deciding what happens to
+a schema the format document calls frozen.
+
+### v05-P1-03 — closed
+
+A missing `BOXSCORE_SIGNING_SECRET` made the writer sign with a key that lives in this repository,
+write into `serve/data/puzzles`, and pass the same certification path as a real batch — so anyone
+holding the repository could forge a package indistinguishable from forge output, and nothing
+executable enforced the comment saying otherwise.
+
+A missing secret is an error now. The repository key is reachable only through `--fixtures`, which
+prints what it is. The tests assert the *ordering* — that the fixture key cannot be assigned on any
+path that has not first tested the flag — rather than that the flag exists.
+
+### v05-P2-01 — closed
+
+`ambiguity()` grouped by position label and erased the group's footnote cells as one domain. Sound
+while a repeated label meant a shared slot; with bare labels, **42.1% of repeated labels span more than
+one slot**, so it would have built a domain over men who never replaced each other and reported the
+solver's reaction as footnote ambiguity.
+
+Unwired and left as a **named refusal** rather than deleted, so a reader who remembers it learns why.
+What replaces it is an invariant rather than an experiment: a reference names exactly one row.
+
+### v05-P2-02 — closed
+
+Thresholds of 5, 10 and 20 against a metric that runs 0 to 1 — a raw count from an earlier solver whose
+numbers outlived it. **Every answer was 0.0% whatever the data said**, so the section could neither
+support nor refute the claim it exists to test. Compared against the real steps' own median and p90
+now, with the metric's range printed beside it.
+
+### v05-P2-03 — closed
+
+Each prototype claimed 375px and needed about 405. All four now carry a document shell, the viewport
+declaration, border-box sizing and a section that is 375px including borders. A test asserts the four
+properties per file, with a can-it-fire case.
+
+### v05-P2-04 — closed
+
+The position table had no `started_at` column, so every "starter" case ran the fallback and the branch
+that fixed the two-third-basemen defect was untested; it now leads the table. The cell-equals-footnote
+test assigned both names from one expression; it reads the two real consumers now — the cell the table
+draws and the string the line prints.
+
+⚠️ **A third tautology was written while fixing these and caught before commit**, by asking what change
+the guard would let through rather than rereading what it asserts.
 
 ### v05-P1-02 — the printed board is easier than the board that was graded
 
