@@ -42,14 +42,12 @@
      against the scoreboard rather than argued about. `data-header="grey"` on the root picks the
      second. The loser gets deleted once it has been looked at. */
   --header-ground: #16241f;
-  --header-ink: #eef3f1;
-  --header-dim: #9fb5ac;
+  --header-ink: #ffffff;
 }
 
 :root[data-header="grey"] {
   --header-ground: #22262b;
-  --header-ink: #eef0f3;
-  --header-dim: #a7adb6;
+  --header-ink: #ffffff;
 }
 
 /* ⚠️ A third, because rendering the first two answered a different question than the one asked. At
@@ -58,8 +56,7 @@
    green enough to be the same object as the scoreboard. */
 :root[data-header="kin"] {
   --header-ground: #1f362e;
-  --header-ink: #eef5f2;
-  --header-dim: #a3bcb2;
+  --header-ink: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -187,7 +184,13 @@ table.grid {
   position: sticky;
   z-index: 3;
   background: var(--header-ground);
-  color: var(--header-dim);
+  /* ⚠️ **Both rows of the block are white.** The column row was on `--header-dim`, on the reasoning
+     that a heading is chrome around the data — but `PA AB R H BB K` is not chrome. It is the only
+     thing that says what a column holds, and on a board where every number is part of an equation a
+     player reads back up to it constantly. Dimming it made the second-most consulted text on the
+     screen the faintest, and `--header-dim` is gone with it — a token nobody reads is a mechanism
+     kept past its problem. */
+  color: var(--header-ink);
   font-size: 11px;
   height: 26px;
   font-weight: 600;
@@ -195,7 +198,6 @@ table.grid {
 .grid thead th.section-title {
   top: 0;
   height: 28px;
-  color: var(--header-ink);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .1em;
