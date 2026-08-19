@@ -22,7 +22,6 @@ offense equal the outs recorded by the opposing pitchers.
 
 import json
 import re
-from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Final, Self
@@ -368,6 +367,9 @@ class Package:
             message = "a package needs one slot reference per batting row; schema 1 is gone"
             raise PackageError(message)
         _check_slot_references(self.slot_references, len(self.puzzle.batting))
+        # Canonicalised to a tuple, so a caller who passed a list cannot mutate what this package
+        # serialises to — or what a signature already taken over it covers.
+        object.__setattr__(self, "slot_references", tuple(self.slot_references))
         if self.schema is not None and self.schema not in READABLE:
             message = f"a package cannot be schema {self.schema}; this code writes {list(READABLE)}"
             raise PackageError(message)
@@ -472,7 +474,7 @@ class Package:
             raise PackageError(message) from error
 
 
-def _check_slot_references(values: "Sequence[object]", rows: int) -> None:
+def _check_slot_references(values: object, rows: int) -> None:
     """The complete rule, in one place, used by construction **and** by parsing.
 
     ⚠️ **These applied different subsets.** `__post_init__` checked the count and `from_json` checked
@@ -482,6 +484,14 @@ def _check_slot_references(values: "Sequence[object]", rows: int) -> None:
     produce output outside the language its own parser accepts, or every producer rediscovers the
     guard independently.
     """
+    # ⚠️ **The container is checked before its contents.** Widening this to `Sequence[object]` kept
+    # the element guard reachable and left the outer shape unchecked — and a `str` **is** a Sequence,
+    # so a nine-row package given `"123456789"` passed the length, the per-character grammar and the
+    # uniqueness test. A list passed too, which defeats the frozen dataclass: the caller keeps a
+    # reference and can change what a signed package serialises to afterwards.
+    if isinstance(values, str) or not isinstance(values, (tuple, list)):
+        message = f"slot_references is {type(values).__name__}, expected a tuple of strings"
+        raise PackageError(message)
     if len(values) != rows:
         message = f"{len(values)} slot references for {rows} batting rows"
         raise PackageError(message)
