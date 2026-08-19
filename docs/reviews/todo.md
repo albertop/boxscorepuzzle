@@ -432,6 +432,66 @@ and then moved files in, leaving a window with nothing published — the same de
 It now replaces first and deletes the leftovers afterwards: `Path.replace` is an atomic rename within
 a filesystem, so a reader sees the old file or the new one and never a truncated one.
 
+## v06 — verified, none rejected. **All five are in code written today.**
+
+| Finding | Verdict | What was confirmed |
+|---|---|---|
+| P1-01 open-versus-given is not paired by trajectory | real, **and it undercuts the decision it was run for** | the list is filtered *before* it is ordered |
+| P1-02 zero-stall outcomes are dropped as failures | real | `... if ceiling else None`, and 48 directions produced 47 pairs |
+| P2-01 the group report aggregates what it must not | real | `min(group.terms, 4)`, and technique keyed on rows alone |
+| P2-02 surface parity is prefix-sensitive and batting-only | real | rejects `LABEL: ref`, not `LABEL: other, ref` |
+| P2-03 a prototype still shows suffixed labels | real | `3B-2`, `P-2`, `P-3`, `PH-2`, `PH-3`, `PH-4` |
+
+### v06-P1-01 — I rebuilt the confound I had been taught, in the measurement that answered the question
+
+`walk()` filters the footnote cells out of the candidate list **and then orders it**. `_row_first`
+buckets by row, so the two treatments have buckets of different lengths, the same seed produces
+different shuffles, and **the common cells do not keep their order**. The two walks differ in the
+treatment *and* in the erasure trajectory.
+
+This is v03-P2-05 exactly — the finding the operator explained, that I recorded as a lesson to carry
+forward, and whose fix I wrote down in this file: *one stable priority permutation for the cells the
+configurations share, separately controlled insertion for the new ones.* I then wrote the measurement
+without it.
+
+⚠️ **What it costs is not the number, it is the conclusion.** *Footnotes stay erasable* rests on that
+run, and so does everything that followed from it — that P1-02 is real work, that an erased attribution
+needs a representation, that the design document was the wrong one. **47 of 47 in one direction is
+strong, and unanimity cannot repair a confound**: if the given treatment's order is systematically
+worse, every board moves the same way. The claim is not refuted; it is unsupported.
+
+**The fix is the one already written down**: one deterministic priority over the union, the given order
+obtained by filtering that order, several matched seeds, and paired deltas with counts.
+
+### v06-P1-02 — a zero is an outcome, not a failure
+
+`walk()` returns `None` when the ceiling is zero, which is exactly the board where the given treatment
+made no progress — the most informative case for the question being asked — and the caller drops the
+whole pair. 48 directions produced 47. **The bias removes the weakest results of the weaker treatment**,
+so given-footnote reach and median ceiling are both overstated.
+
+A real failure needs a status of its own; a zero needs to be counted.
+
+### v06-P2-01 — the report aggregates the two dimensions its own contract separates
+
+`min(group.terms, 4)` files every group of four or more terms under *four*, and the technique section
+keys on rows alone. The instruction was explicit: **not "three or more" and not "two or more terms" —
+if solvability falls, where it falls is the finding.** An aggregate can look reassuring while one
+`(rows, terms)` cell fails, which is the threshold the whole run exists to find.
+
+### v06-P2-02 — a guard weaker than the sentence above it
+
+The negative check rejects `LABEL: reference` and passes `LABEL: other, reference`, so a leak in any
+position but the first survives. The positive check asserts only that a label appears, so any reference
+under it satisfies. And the table half enumerates `board.batting` while the module docstring claims
+every erased cell — pitching and the line score are not compared at all.
+
+### v06-P2-03 — a prototype showing a visual language the product no longer has
+
+`substitute-grouping-sample.html` still renders `3B-2`, `P-2`, `PH-4`. I said in conversation that it
+was not comparable and **did not mark it in the file**, which is the difference between a note and a
+guard. Regenerate it or move it out of the active set.
+
 ## v05 — verified, none rejected
 
 | Finding | Verdict | State | What was confirmed |
