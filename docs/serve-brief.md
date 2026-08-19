@@ -215,6 +215,40 @@ instead of in February. Render early, render often, and read what comes out.
 
 ---
 
+## What the real packages forced that the design did not say
+
+Found by rendering the six and reading them, in the first session. Each is a fact about the board, not
+a preference.
+
+**1. The pinned totals row is an input surface.** §6 pins it "because the totals are consulted
+constantly", which reads as a read-only anchor. **Every one of the six erases batting totals** — H and K
+most often — and four of six erase a pitching total. So the pinned row needs full 44px targets, and
+tapping a pinned cell must not move the board underneath it. What is *never* erased is the footnote
+totals row and LOB, because the row identity does not close without the first and the global identity
+cannot be expressed at all without the second.
+
+**2. The line score is ragged, and a dash is not a zero.** Two of the six have eight offensive innings
+against nine defensive ones — the home side leading after the top of the ninth never bats. A grid
+assuming 9×2 is wrong for a third of real games, and **printing `0` in the unplayed half states a fact
+that did not happen** while leaving every total balanced. Nothing arithmetic catches that.
+
+**3. Two sections means two headers and two totals rows.** §6 says "header and totals row stay pinned",
+singular. Batting and pitching have different columns, so there are two of each and they compete for
+the same edges. The first version made the section title sticky above the column headings: the moment
+you scrolled, `BATTING` covered `PA AB R H BB K` and the board lost the only thing that says what a
+column is. **The section name is not the header row** — found by scrolling and looking.
+
+**4. A bare slot reference in the footnote reads as a count.** A sacrifice hit by the second batter
+printed as `SH: 2`, which reads as *two sacrifice hits*. It is now `SH: #2`. The board already calls
+that column `#`.
+
+**5. ⚠️ One package labels a shared slot `5a 3B` / `5b 3B` — the same position twice.** That is the shape
+the operator flagged on the forge side: a third baseman being replaced by another third baseman is
+nearly impossible, and the rule adopted was that the label is the position of **entry**. It may be
+legitimate — a pinch hitter who then takes the position — but it is the exact pattern that was a bug
+last time. **Reported, not worked around**, because a client that compensates for it becomes the second
+place encoding the rule.
+
 ## Decisions taken
 
 Recorded here as they are made, with the date and the reason.

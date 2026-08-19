@@ -1,0 +1,198 @@
+/*
+ * The phone board. 375px is the design width and every number here comes from it (§6).
+ *
+ * ⚠️ **Themeable via CSS variables and carrying no branding** — seam C5. The engine has no chrome, and
+ * a colour named after the product here would be the first piece of chrome in it.
+ *
+ * The arithmetic, so a future change can be checked rather than guessed:
+ *   375 viewport − 2×8 margin = 359 available
+ *   359 − 24 slot − 66 label  = 269 for six data columns = 44.8px each
+ * That is the 44px touch target with 0.8px to spare. **A seventh column does not fit** and cannot be
+ * added; the label column is what would have to give, and it is already at seven characters.
+ */
+
+:root {
+  --cell: 44px;
+  --slot-column: 24px;
+  --label-column: 66px;
+  --board-margin: 8px;
+
+  --ink: #16181d;
+  --paper: #ffffff;
+  --rule: #d3d7de;
+  --rule-strong: #9aa1ad;
+  --given: #16181d;
+  --entered: #1b57c4;
+  --blank: #f4f6f9;
+  --selected: #ffe9a8;
+  --selected-rule: #c99a12;
+  --peer: #eef2f8;
+  --muted: #6b7280;
+  --keypad: #e8ebf0;
+  --key: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e6e8ec;
+    --paper: #14161a;
+    --rule: #2c3038;
+    --rule-strong: #565d69;
+    --given: #e6e8ec;
+    --entered: #7fa8ff;
+    --blank: #1b1e24;
+    --selected: #4a3c12;
+    --selected-rule: #d8ab26;
+    --peer: #1f232a;
+    --muted: #9aa1ad;
+    --keypad: #0e1013;
+    --key: #1b1e24;
+  }
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.2 system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* The board must not rubber-band as a page; only the scroller inside it scrolls. */
+  overscroll-behavior: none;
+}
+
+#app { display: flex; flex-direction: column; height: 100dvh; }
+
+/* ---- line score: the anchor, read-only, never erased ------------------------------------------ */
+
+.linescore {
+  flex: none;
+  padding: 6px var(--board-margin) 4px;
+  overflow-x: auto;
+}
+.linescore table { border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 12px; }
+.linescore th, .linescore td { min-width: 17px; padding: 2px 3px; text-align: center; color: var(--muted); }
+.linescore td.side { text-align: left; color: var(--ink); font-weight: 600; padding-right: 6px; }
+.linescore td.value { color: var(--ink); }
+.linescore .rhe { font-weight: 700; }
+.linescore .rhe-rule { border-left: 1px solid var(--rule-strong); }
+/* ⚠️ A half-inning that was never played. Not a zero — the home side leading after the top of the
+   ninth does not bat, and printing 0 there states a fact that did not happen. */
+.linescore td.unplayed { color: var(--rule-strong); }
+
+/* ---- the board ------------------------------------------------------------------------------- */
+
+.scroller {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 var(--board-margin);
+  -webkit-overflow-scrolling: touch;
+}
+
+table.grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  table-layout: fixed;
+  font-variant-numeric: tabular-nums;
+}
+
+.grid col.slot { width: var(--slot-column); }
+.grid col.label { width: var(--label-column); }
+
+.grid th, .grid td {
+  height: var(--cell);
+  padding: 0;
+  text-align: center;
+  border-bottom: 1px solid var(--rule);
+  font-weight: 400;
+}
+
+/* ⚠️ Pinned, because in a deduction puzzle the totals are consulted constantly (§6) — and, as the
+   real packages showed, **the totals row holds blanks the player must fill**, so it is an input
+   surface that happens to be pinned rather than a read-only anchor. */
+.grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--paper);
+  font-size: 11px;
+  height: 26px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.grid tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  background: var(--paper);
+  border-top: 1px solid var(--rule-strong);
+  font-weight: 700;
+}
+
+/* ⚠️ **Not sticky.** It was, at `top: 0` with a higher z-index than the column headings — so the
+   moment you scrolled, `BATTING` covered `PA AB R H BB K` and the board lost the only thing that says
+   what a column is. §6 pins the header row; the section name is not the header row. Found by scrolling
+   and looking, not by reading the rule. */
+.section-title {
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  padding: 10px 0 2px;
+}
+
+td.slot { color: var(--muted); font-size: 11px; border-right: 1px solid var(--rule); }
+td.label { text-align: left; padding-left: 6px; font-size: 13px; white-space: nowrap; overflow: hidden; }
+/* A row that did not start: indented, so the lineup slot reads as a group at a glance. */
+td.label.substitute { padding-left: 14px; }
+
+td.cell { cursor: pointer; }
+td.cell.given { color: var(--given); }
+/* A blank has to read as an invitation across a room, not as a slightly paler cell. */
+td.cell.blank { background: var(--blank); color: var(--entered); font-weight: 600; box-shadow: inset 0 -2px 0 var(--rule-strong); }
+td.cell.blank:empty::after { content: ""; }
+td.cell.peer { background: var(--peer); }
+td.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
+
+/* ---- the footnote line ----------------------------------------------------------------------- */
+
+/* ⚠️ **Live footnotes must be visually prominent** (§6). Nine rows in ten have every term at zero, so
+   players learn to stop looking — and the row where one appears is exactly the row whose arithmetic
+   fails if they miss it. A zero term is muted; a live one is not. */
+.footnotes { padding: 8px 0 14px; font-size: 13px; line-height: 1.5; }
+.footnotes .term { margin-right: 12px; white-space: nowrap; }
+.footnotes .lob { margin-right: 12px; }
+.footnotes .term.zero { color: var(--rule-strong); }
+.footnotes .term.live { color: var(--ink); font-weight: 700; }
+.footnotes .term.live .who { color: var(--entered); }
+.footnotes .term.unknown { color: var(--entered); font-weight: 700; }
+.footnotes .lob { font-weight: 700; }
+
+/* ---- keypad ---------------------------------------------------------------------------------- */
+
+.keypad {
+  flex: none;
+  background: var(--keypad);
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+.keypad button {
+  height: var(--cell);
+  border: 0;
+  border-radius: 8px;
+  background: var(--key);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+.keypad button:active { background: var(--selected); }
+.keypad button.wide { grid-column: span 2; font-size: 14px; }
+.keypad button.thirds { font-size: 16px; }
+.keypad button:disabled { opacity: .35; }

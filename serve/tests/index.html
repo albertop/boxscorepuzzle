@@ -1,0 +1,12 @@
+<title>engine tests</title>
+<style>
+  body { font: 13px ui-monospace, monospace; margin: 1rem; background: #111; color: #ddd; }
+  h1 { font-size: 15px; } h2 { font-size: 13px; color: #8ab; margin: 1.2em 0 .3em; }
+  p { margin: .1em 0; } .pass { color: #7c7; } .fail { color: #f77; }
+</style>
+<main id="out"></main>
+<script type="module">
+  import { run } from "./harness.js";
+  await import("./engine.test.js");
+  await run(document.getElementById("out"));
+</script>
