@@ -270,6 +270,12 @@ before-and-after must say how many individual items changed, and a comparison th
 items it compared is not a comparison. This is the same defect as a check that never fires — an
 instrument that cannot distinguish, reporting as though it had.
 
+**A regular expression over code cannot tell a name from the tail of another name.** `sign\(` matched
+inside `verify_signature(` and produced code that signed with the *public* key — from a pattern that
+looked specific. Second instance in this project, after the `sed` that renamed a dataclass field.
+**Rewrites across call sites are verified by running, never by reading the diff**, and a pattern that
+anchors on a bare identifier needs a word boundary in front of it or it is matching substrings.
+
 **Verify against the real artifact, not against what you believe you wrote.** Parse the file before
 running three hours of compute against it.
 

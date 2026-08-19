@@ -12,23 +12,41 @@
 with `v04-P1-02` are unblocked — `cryptography` is added and locked, so Ed25519 is work rather than a
 dependency wait.
 
-## What is left, in order
+## What is left
 
-1. **Ed25519, and the manifest signed with it.** Private key on the laptop only, public key to `serve`,
-   fail closed, `UNSIGNED` remaining the only explicit bypass and only for tests. **The manifest too** —
-   it decides which generation and which puzzles are the delivery, and altering it breaks no package
-   signature. Not urgent until the VPS holds a key, which is why it follows the schema and not the
-   other way round.
-2. **The group run, redone** with the stable-ordering discipline: one canonical order, cohorts kept
-   whole, `(rows, terms)` cells never aggregated, one-row groups as the control at a fixed term count.
-3. **The generator constraint, if the data calls for one** — no footnote left open in a group too large
-   to resolve. That discards erasures rather than directions, which costs nothing.
-4. **The erased-attribution drawing**, now knowing how many candidates a blank separates.
-5. **The ladder pack** — 19, 16, 13, 9, 6 stalls, rungs filled from boards of similar reach so the
-   ladder varies stalls and not headroom, `audit()` reporting the uncertified share per rung rather
-   than requiring it.
-6. **The operator solves it.**
-7. **`serve`**, still at zero, February the window — and unblocked as of schema 2.
+**`serve` runs in parallel with everything below it**, not after. It depends on none of them: since
+schema 2 it has the contract it needed, and the group run, the drawing and the ladder are forge and
+pack work that does not change what the client reads. It is at zero and February is the window.
+
+### Ed25519 — nearly finished
+
+Done: the key pair, the 128-hex signature, the envelope, **the signed manifest**, and test keys
+generated per run rather than checked in.
+
+**Owed:** the writer still takes `BOXSCORE_SIGNING_SECRET` and a `--fixtures` mode, and the six
+reference packages still carry 64-hex signatures and schema 1.
+
+⚠️ **Both fallback modes stop being necessary rather than being made safe.** They existed because an
+HMAC key is symmetric — a convenient one in the repository let the script run and anything it signed
+was forgeable by anyone holding the repository. With a key pair a *generated* key signs a throwaway
+batch perfectly well and is worthless to an attacker, because the public half that would verify it goes
+nowhere. `serve` holds a different public key and refuses the batch itself, instead of a comment asking
+to be believed.
+
+**Regenerating the six matters for what comes next:** `serve` is built against them, and building
+against schema 1 packages means building against a format that no longer exists.
+
+### Then, in order
+
+1. **`serve` — the engine**, in parallel from now. The board with pinned totals and scrolling, the
+   numeric keypad with the thirds keys for innings, row grouping with the slot column, the footnote
+   line, and the end-of-game reveal drawing the real boxscore. No accounts, no payments, no PWA shell:
+   C5 says the engine carries no chrome, so it can be built in isolation, and it holds the most
+   unknowns.
+2. **The group run**, with the stable-ordering discipline.
+3. **The generator constraint**, if the data calls for one.
+4. **The erased-attribution drawing**, once the group run says how many candidates a blank separates.
+5. **The ladder pack**, and the operator solves it.
 
 **No further measurements after the group run unless something is broken.** Several open questions will
 keep imperfect numbers, and that is the correct state to build in.
