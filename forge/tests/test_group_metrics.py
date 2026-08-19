@@ -16,7 +16,9 @@ proves the fragment exists somewhere, not that it governs the table.
 import importlib.util
 import io
 import sys
+from collections.abc import Callable
 from contextlib import redirect_stdout
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -45,43 +47,76 @@ def _hidden() -> frozenset[str]:
     return frozenset(footnote_cell(0, column) for column in FOOTNOTE_COLUMNS)
 
 
-class TestTheBaselineRestoresTheGroup:
-    """⚠️ The defect this class exists for: the baseline removed every cell in `erased`, and footnote
-    cells **are** erasable. When the sampled erasure had already hidden the group, baseline and
-    treatment were the same board — so blockage was forced false on precisely the states where the
-    question is asked.
+@dataclass(frozen=True)
+class _Solved:
+    """What `solve` returns, reduced to what these metrics read."""
+
+    values: dict
+    deductions: tuple = ()
+
+
+def _fake_solve(marker: str, needs: frozenset[str]) -> Callable[[object, dict], _Solved]:
+    """A solver that settles `marker` only when every cell in `needs` was given.
+
+    ⚠️ **A fake rather than a real board, because the assertion has to be exact.** The test this
+    replaces called the production function and asserted the result was `True` or `False` — which the
+    corrected implementation and the broken one both satisfy, so reverting the fix would have left the
+    guard green. This one distinguishes them.
     """
 
-    def test_an_erasure_that_hides_the_group_still_leaves_a_real_comparison(
-        self, cubs_at_braves_1968: Direction
-    ) -> None:
+    def solve(shape: object, given: dict) -> _Solved:  # noqa: ARG001
+        settled = dict(given)
+        if needs <= set(given):
+            settled[marker] = 1
+        return _Solved(values=settled)
+
+    return solve
+
+
+class TestTheBaselineRestoresTheGroup:
+    """⚠️ The defect: the baseline removed every cell in the sampled erasure, and footnote cells **are**
+    erasable. When the erasure had already hidden the group, baseline and treatment were the same board
+    and blockage was forced false — on precisely the states the question is about.
+    """
+
+    def _setup(self) -> tuple[object, frozenset[str], frozenset[str], dict]:
         metrics = _module("metrics")
-        shape, values = shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968)
-        hidden = _hidden()
-        # The adversarial case, constructed rather than hoped for: the erasure contains the group.
-        erased = hidden | {"batting[1].hits", "batting[2].walks"}
-
-        baseline = {name: value for name, value in values.items() if name not in (erased - hidden)}
-        treatment = {name: value for name, value in values.items() if name not in (erased | hidden)}
-
-        assert set(baseline) != set(treatment), "baseline and treatment are the same board"
-        assert hidden <= set(baseline), "the baseline did not restore the group"
-        assert not (hidden & set(treatment)), "the treatment did not hide the group"
-        # And the production function agrees with that construction rather than reimplementing it.
-        assert metrics.stops_progress(shape, values, erased, hidden) in (True, False)
-
-    def test_the_old_construction_would_have_compared_a_board_with_itself(
-        self, cubs_at_braves_1968: Direction
-    ) -> None:
-        # Stated as a fact so the regression stays visible rather than being implied by the fix.
-        values = cell_values(cubs_at_braves_1968)
-        hidden = _hidden()
+        hidden = frozenset({"footnotes[0].hit_by_pitch"})
+        # The adversarial case: the erasure already contains the group.
         erased = hidden | {"batting[1].hits"}
+        values = {"batting[0].hits": 1, "batting[1].hits": 2, "footnotes[0].hit_by_pitch": 0}
+        return metrics, hidden, erased, values
 
-        old_baseline = {name: value for name, value in values.items() if name not in erased}
-        old_treatment = {name: value for name, value in values.items() if name not in (erased | hidden)}
+    def test_it_is_true_when_restoring_the_group_unlocks_an_outside_cell(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        metrics, hidden, erased, values = self._setup()
+        monkeypatch.setattr(metrics, "solve", _fake_solve("batting[1].hits", hidden))
 
-        assert old_baseline == old_treatment
+        assert metrics.stops_progress(None, values, erased, hidden) is True
+
+    def test_it_is_false_when_the_group_unlocks_nothing(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # The other direction. A predicate that always said True would pass the test above.
+        metrics, hidden, erased, values = self._setup()
+        monkeypatch.setattr(metrics, "solve", _fake_solve("batting[1].hits", frozenset()))
+
+        assert metrics.stops_progress(None, values, erased, hidden) is False
+
+    def test_the_broken_baseline_would_have_said_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The guard, stated as the thing it rejects.
+
+        With the old construction the baseline excluded all of `erased`, so on this input it never
+        held the group and could not settle the outside cell — the two closures matched and blockage
+        came out false. The production function is handed the same input and must disagree.
+        """
+        metrics, hidden, erased, values = self._setup()
+        monkeypatch.setattr(metrics, "solve", _fake_solve("batting[1].hits", hidden))
+
+        broken_baseline = metrics.solve(None, {k: v for k, v in values.items() if k not in erased})
+        broken_treatment = metrics.solve(None, {k: v for k, v in values.items() if k not in (erased | hidden)})
+
+        assert set(broken_baseline.values) == set(broken_treatment.values), "the old construction differed"
+        assert metrics.stops_progress(None, values, erased, hidden) is True, "the fix is not in place"
 
 
 class TestCardinalityAndDerivabilityAreDifferentQuestions:
@@ -92,11 +127,20 @@ class TestCardinalityAndDerivabilityAreDifferentQuestions:
 
         assert metrics.completions(to_board(cubs_at_braves_1968, _hidden())) == 1
 
-    def test_derivability_is_asked_of_the_solver_not_of_the_board(self, cubs_at_braves_1968: Direction) -> None:
+    def test_a_group_the_board_determines_is_derivable(self, cubs_at_braves_1968: Direction) -> None:
+        # Exact, not membership in {True, False} — which the broken implementation also satisfied.
         metrics = _module("metrics")
         shape, values = shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968)
 
-        assert metrics.derivable(shape, values, _hidden()) in (True, False)
+        assert metrics.derivable(shape, values, _hidden()) is True
+
+    def test_a_board_the_solver_cannot_finish_is_not_derivable(self, cubs_at_braves_1968: Direction) -> None:
+        # The counterexample: hide enough that propagation and bounding cannot close it.
+        metrics = _module("metrics")
+        shape, values = shape_of(cubs_at_braves_1968), cell_values(cubs_at_braves_1968)
+        far_too_much = frozenset(values) - {"line_score.offense_runs"}
+
+        assert metrics.derivable(shape, values, far_too_much) is False
 
 
 class TestTheDenominatorsAreDeclaredNotInferred:
@@ -148,11 +192,12 @@ class TestTheDenominatorsAreDeclaredNotInferred:
         captured = io.StringIO()
 
         with redirect_stdout(captured):
-            module.report(self._groups(module), 1)
+            module.report(self._groups(module), module.Coverage(directions=1, attempted=3, reached=2))
         printed = captured.getvalue()
 
         assert "[1/6]" in printed, "the blockage cell did not print its trial counts"
-        assert "erasures attempted 9, reached the target 6" in printed
+        assert "2 reached 8 stalls" in printed, "the run-level coverage line is missing"
+        assert "group-erasure trials: 6" in printed, "group trials were not distinguished from erasures"
         assert "groups with no successful erasure: 1" in printed
 
 
@@ -160,7 +205,7 @@ class TestTheArtifactDeclaresItself:
     def test_the_stamp_carries_the_schema_and_a_completion_marker(self) -> None:
         module = _module("measure")
 
-        stamp = module.provenance(boards=1, groups=2, trials=3)
+        stamp = module.provenance(module.Coverage(directions=1, attempted=3, reached=3), groups=2, trials=3)
 
         assert f"result schema      {module.RESULT_SCHEMA}" in stamp
         assert stamp.strip().endswith("COMPLETE"), "an interrupted run must not look finished"
@@ -170,7 +215,12 @@ class TestTheArtifactDeclaresItself:
         # ref and said nothing about edits, so an edited instrument was labelled with the last commit.
         module = _module("measure")
 
-        assert "revision" in module.provenance(boards=1, groups=1, trials=1)
+        stamp = module.provenance(module.Coverage(directions=1, attempted=1, reached=1), groups=1, trials=1)
+
+        assert "revision" in stamp
+        # ⚠️ `--dirty` does not see untracked files, so the stamp asks for them separately: an
+        # untracked helper changes the result while the revision reads clean.
+        assert "instrument         sha256" in stamp, "the instrument is not identified by content"
 
 
 class TestBlockageCanStillBeObserved:

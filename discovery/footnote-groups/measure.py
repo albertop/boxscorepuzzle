@@ -28,7 +28,10 @@ Read-only against DGL. Run from `forge/`.
 """
 
 import contextlib
+import hashlib
 import io
+import os
+import secrets
 import subprocess
 import sys
 from collections import defaultdict
@@ -84,7 +87,26 @@ class Group:
     used: int
 
 
-def groups_in(loaded: Loaded) -> list[Group]:
+@dataclass(frozen=True)
+class Coverage:
+    """Run-level accounting, which is not the same as the group-trial denominator.
+
+    ⚠️ **`erase` is called once per direction and seed, before the direction becomes slot groups.**
+    Reporting `len(groups) * len(SEEDS)` as *erasures attempted* counted group-erasure evaluations,
+    and summing `group.trials` reported one successful erasure once per group on its board — so a
+    direction with nine groups claimed nine successes for one call. The repeated count is the right
+    denominator for a per-group per-erasure rate and the wrong measure of how often the eraser worked.
+    """
+
+    directions: int = 0
+    attempted: int = 0
+    reached: int = 0
+
+    def plus(self, attempted: int, reached: int) -> "Coverage":
+        return Coverage(self.directions + 1, self.attempted + attempted, self.reached + reached)
+
+
+def groups_in(loaded: Loaded) -> tuple[list[Group], int]:
     direction = loaded.direction
     shape, values = shape_of(direction), cell_values(direction)
     by_slot: dict[int, list[int]] = defaultdict(list)
@@ -111,7 +133,7 @@ def groups_in(loaded: Loaded) -> list[Group]:
                 used=sum(uses_the_group(shape, values, erased, hidden) for erased in erasures),
             )
         )
-    return found
+    return found, len(erasures)
 
 
 @dataclass(frozen=True)
@@ -169,7 +191,7 @@ def _cohort(cells: dict, rows: int, terms: object) -> list[Group]:
     return cells.get((rows, terms), [])
 
 
-def report(groups: list[Group], boards: int) -> None:
+def report(groups: list[Group], coverage: "Coverage") -> None:
     cells: dict[tuple[int, int], list[Group]] = defaultdict(list)
     for group in groups:
         cells[(group.rows, group.terms)].append(group)
@@ -192,10 +214,13 @@ def report(groups: list[Group], boards: int) -> None:
 
     print("")
     print("=== COVERAGE, SO THE DENOMINATORS CAN BE READ ===")
-    print(f"  erasures attempted {len(groups) * len(SEEDS)}, reached the target {sum(g.trials for g in groups)}")
+    print(f"  erasures: {coverage.attempted} attempted over {coverage.directions} directions, "
+          f"{coverage.reached} reached {TARGET_STALLS} stalls")
+    print(f"  group-erasure trials: {sum(g.trials for g in groups)} — the blockage denominator, which")
+    print("    repeats each successful erasure once per group on its board and is not an eraser count")
     print(f"  groups with no successful erasure: {sum(1 for g in groups if g.trials == 0)} — excluded")
     print(f"  ambiguous groups (more than one completion): {sum(1 for g in groups if g.completions > 1)}")
-    print(f"  {len(groups)} slot groups from {boards} boards")
+    print(f"  {len(groups)} slot groups from {coverage.directions} directions")
 
     print("")
     print("=== THE CONTROL, AT A FIXED TERM COUNT ===")
@@ -212,7 +237,30 @@ def report(groups: list[Group], boards: int) -> None:
             print(f"  {terms} terms: one row [{len(one)}], two rows [{len(two)}] — too few to compare")
 
 
-def provenance(boards: int, groups: int, trials: int) -> str:
+def _git(*arguments: str) -> str:
+    """Git output, or `unknown`. `unknown` is not publishable — see `main`."""
+    try:
+        return subprocess.run(  # noqa: S603
+            ["git", "-C", str(_ROOT), *arguments],  # noqa: S607
+            capture_output=True, text=True, check=True, timeout=10,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"
+
+
+def source_hashes() -> str:
+    """A digest of the code that actually decides, so a revision is not the only identity.
+
+    A commit says what was committed. These say what ran — including files git has never heard of,
+    which is the gap `--dirty` leaves open.
+    """
+    digest = hashlib.sha256()
+    for path in sorted((_HERE / "measure.py", _HERE / "metrics.py")):
+        digest.update(path.read_bytes())
+    return digest.hexdigest()[:12]
+
+
+def provenance(coverage: "Coverage", groups: int, trials: int) -> str:
     """What produced this file, including whether the tree was clean.
 
     ⚠️ **A commit alone does not identify the code that ran.** The version this replaces read
@@ -220,23 +268,22 @@ def provenance(boards: int, groups: int, trials: int) -> str:
     uncommitted edits — so an edited instrument was labelled with the previous commit. `git describe`
     through the repository answers all three, and `--dirty` is the part that matters.
     """
-    try:
-        described = subprocess.run(  # noqa: S603
-            ["git", "-C", str(_ROOT), "describe", "--always", "--dirty=+uncommitted"],  # noqa: S607
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=10,
-        ).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        described = "unknown"
+    described = _git("describe", "--always", "--dirty=+uncommitted")
+    # ⚠️ **`--dirty` does not see untracked files.** An untracked `metrics.py` or query helper changes
+    # the result while the revision reads clean, which is the failure this stamp exists to prevent.
+    untracked = _git("status", "--porcelain", "--untracked-files=all")
+    if untracked and untracked != "unknown":
+        described = f"{described} +untracked({len(untracked.splitlines())} files)"
     return "\n".join(
         [
             "=== WHAT PRODUCED THIS ===",
             f"  result schema      {RESULT_SCHEMA}   (1 could not vary; 2 could not fire where it mattered)",
             f"  revision           {described}",
-            f"  sample             {boards} directions, {SAMPLE_PER_DECADE} per decade, gate {GATE:.0%}",
-            f"  erasure seeds      {SEEDS} at {TARGET_STALLS} stalls, {trials} reached it",
+            f"  instrument         sha256 {source_hashes()}   (measure.py and metrics.py as they ran)",
+            f"  sample             {coverage.directions} directions, {SAMPLE_PER_DECADE} per decade, gate {GATE:.0%}",
+            f"  erasures           {SEEDS} per direction; {coverage.reached} of {coverage.attempted} reached "
+        f"{TARGET_STALLS} stalls",
+        f"  group trials       {trials}   (each successful erasure once per group on its board)",
             f"  groups             {groups}",
             "  blockage           counterfactual, per trial; the baseline restores the group whatever",
             "                     the erasure did to it, so the only difference is the assignment",
@@ -258,8 +305,11 @@ def main() -> None:
     print(f"{len(sample)} gated directions", flush=True)
 
     groups: list[Group] = []
+    coverage = Coverage()
     for number, item in enumerate(sample, start=1):
-        groups.extend(groups_in(item))
+        found, reached = groups_in(item)
+        groups.extend(found)
+        coverage = coverage.plus(len(SEEDS), reached)
         if number % 20 == 0:
             print(f"  {number}/{len(sample)} boards, {len(groups)} groups", flush=True)
     if not groups:
@@ -270,14 +320,27 @@ def main() -> None:
     # name a decision gets read from. Written aside and replaced, with `COMPLETE` as the last line.
     captured = io.StringIO()
     with contextlib.redirect_stdout(captured):
-        report(groups, len(sample))
+        report(groups, coverage)
         print("")
-        print(provenance(len(sample), len(groups), sum(group.trials for group in groups)))
+        print(provenance(coverage, len(groups), sum(group.trials for group in groups)))
     text = captured.getvalue()
+    if "revision           unknown" in text:
+        # Fail closed. A result that cannot say what produced it is worse than no result, because it
+        # occupies the name a decision gets read from.
+        message = "git could not identify the revision; refusing to publish a result with no provenance"
+        raise SystemExit(message)
     print(text)
-    pending = out.with_suffix(out.suffix + ".pending")
-    pending.write_text(text, encoding="utf-8")
-    pending.replace(out)
+    # ⚠️ **A fixed staging name is not a single-writer contract.** An atomic final rename protects the
+    # destination and not the preparation: two overlapping runs sharing `results.txt.pending` can
+    # truncate each other, or one can move the other's bytes into the canonical path. This is the same
+    # class already removed from the reference publisher, and a long run makes a duplicate launch
+    # operationally plausible rather than a timing curiosity.
+    pending = out.with_name(f"{out.name}.pending-{os.getpid()}-{secrets.token_hex(4)}")
+    try:
+        pending.write_text(text, encoding="utf-8")
+        pending.replace(out)
+    finally:
+        pending.unlink(missing_ok=True)
     print(f"written to {out}")
 
 
