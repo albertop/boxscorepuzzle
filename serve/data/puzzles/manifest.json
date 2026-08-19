@@ -1,13 +1,13 @@
 {
- "generation": "5dce9f673a0f",
+ "generation": "32c9fc57af9c",
  "puzzles": [
   "126c049659c4a61c",
   "1dc57470b44caded",
+  "238dfdf24e3355e5",
   "83b7eced32865aa5",
-  "9f42acb60c536afd",
-  "d2a0915c69c62858",
-  "e949d7cc70d2eb2b"
+  "a86790f4b74df312",
+  "d2a0915c69c62858"
  ],
  "schema": 1,
- "signature": "6e1f69ecec4a9dee9b32d91fec6a785f878a885b1ee8510eddf634b904d5a1bdce6ab07ed08e77c96c9c5baa728a6209a60637ca68f8f700b24f5bada67de50f"
+ "signature": "f6e5ee3148935bfa2445bea8528c3f55171cddd4849c1aadd952335ec85dfe6e3814be5abc7ba5b496690a0b327611a15b8accea2837e1488031d476e4084c07"
 }

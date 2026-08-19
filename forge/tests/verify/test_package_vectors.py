@@ -29,7 +29,9 @@ VECTORS = json.loads((_ROOT / "serve" / "tests" / "package-vectors.json").read_t
 
 def _reference() -> dict[str, Any]:
     manifest = json.loads((_ROOT / "serve" / "data" / "puzzles" / "manifest.json").read_text(encoding="utf-8"))
-    path = _ROOT / "serve" / "data" / "puzzles" / manifest["generation"] / f"{VECTORS['package']}.json"
+    # ⚠️ Whatever is published, not a named id: the id is derived from the game and regeneration renames
+    # it, which broke every vector on a missing file rather than on anything about the contract.
+    path = _ROOT / "serve" / "data" / "puzzles" / manifest["generation"] / f"{manifest['puzzles'][0]}.json"
     return json.loads(path.read_text(encoding="utf-8"))
 
 

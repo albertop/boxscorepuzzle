@@ -1,0 +1,12 @@
+  1dc57470b44caded.json   3 stalls (10b/2p)  10 labels  verified from disk
+  126c049659c4a61c.json   2 stalls (9b/2p)  9 labels  verified from disk
+  d2a0915c69c62858.json   1 stalls (9b/2p)  9 labels  verified from disk
+  discarded SLN191308060: reached no target from 12 down
+  83b7eced32865aa5.json   4 stalls (9b/1p)  9 labels  verified from disk
+  discarded SLA192310010: reached no target from 12 down
+  238dfdf24e3355e5.json   5 stalls (9b/1p)  9 labels  verified from disk
+  discarded WS1192305270: reached no target from 12 down
+  discarded WS1193304250: reached no target from 12 down
+  discarded WS1193304130: reached no target from 12 down
+  a86790f4b74df312.json   7 stalls (9b/2p)  9 labels  verified from disk
+6 puzzles in C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\serve\data\puzzles\32c9fc57af9c, committed by replacing manifest.json

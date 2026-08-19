@@ -114,15 +114,6 @@ suite("The six real packages parse, and their shape is the contract", () => {
     assert(erasedTotals > 0, "no reference package erases a total, so the pinned row is read-only after all");
   });
 
-  test("per-batter footnote cells are erasable, whatever the forge docstring says", () => {
-    // ⚠️ `FOOTNOTE_COLUMNS` in `forge/src/boxscore_package/format.py` is documented as "given complete
-    // and never erased (§6)". The real packages disagree with it, and §6 agrees with the packages.
-    // Two places stating one rule differently — recorded in the backlog rather than fixed from here.
-    const erased = packages
-      .map(({ raw }) => readPackage(raw).puzzle.footnotes.flat().filter((value) => value === null).length)
-      .reduce((a, b) => a + b, 0);
-    assert(erased > 0, "no reference package erases a per-batter footnote cell");
-  });
 });
 
 suite("A malformed package is refused at the boundary, naming the field", () => {
@@ -252,29 +243,28 @@ suite("The game: state, entries and the C7 record", () => {
     equal(record.puzzle_id, puzzle.id);
   });
 
-  test("⚠️ the traversal puts the footnotes last, after both totals rows", () => {
-    // The product decision, in the core rather than in a layer: three presentation layers each deciding
-    // what comes next is three answers to one question. Stated as what it forbids — a footnote before
-    // any grid or totals cell fails, which is what a naive board-order walk would produce.
+  test("⚠️ the traversal reaches no footnote cell, because none is blank", () => {
+    // This used to assert the opposite ordering rule — footnotes last — and it was the check that
+    // reported the reversal honestly, by refusing to pass on a board with no footnote blank. The rank
+    // it guarded is gone; what remains worth forbidding is the cells coming back without anyone
+    // deciding to bring them back, which would now interleave them with the batting grid in silence.
     const game = createGame(puzzle);
     const order = game.traversal();
-    const isFootnote = (name) => name.startsWith("footnotes");
 
     equal(new Set(order), new Set(game.blanks()), "the traversal lost or invented a blank");
-    const firstFootnote = order.findIndex(isFootnote);
-    assert(firstFootnote > 0, "no footnote blank on this board, so this test proves nothing");
-    assert(order.slice(firstFootnote).every(isFootnote), "a grid or totals cell comes after a footnote");
+    equal(order.filter((name) => name.startsWith("footnote")), [], "a footnote cell is blank again");
   });
 
-  test("the totals rows come after their grid and before the footnotes", () => {
-    // A traversal that put everything in one bucket would satisfy the test above.
+  test("the totals rows come after their grid", () => {
+    // A traversal that put everything in one bucket would satisfy the test above, which now only ever
+    // counts an empty set. This is the one asserting the order is still an order.
     const game = createGame(puzzle);
     const order = game.traversal();
-    const rank = (name) => (name.startsWith("footnote") ? 3 : name.includes("_totals.") ? 2 : 1);
+    const rank = (name) => (name.includes("_totals.") ? 2 : 1);
 
     const ranks = order.map(rank);
-    equal(ranks, [...ranks].sort((a, b) => a - b), "the three blocks are interleaved");
-    assert(new Set(ranks).size === 3, `only ${new Set(ranks).size} of the three blocks are present`);
+    equal(ranks, [...ranks].sort((a, b) => a - b), "the two blocks are interleaved");
+    assert(new Set(ranks).size === 2, `only ${new Set(ranks).size} of the two blocks are present`);
   });
 
   test("a snapshot restores exactly what it saved and ignores cells that no longer exist", () => {
@@ -341,10 +331,12 @@ suite("The shared conformance vectors — the same file the Python reader runs",
     else target[last] = value;
   };
 
-  const reference = packages.find((p) => p.id === vectors.package);
+  // Whatever is published: the vectors are about the schema, not about a particular board, and an
+  // id pinned here broke every one of them the first time a regeneration renamed it.
+  const reference = packages[0];
 
-  test("the reference package the vectors mutate is in the manifest", () => {
-    assert(reference !== undefined, `${vectors.package} is not among the published packages`);
+  test("there is a published package for the vectors to mutate", () => {
+    assert(reference !== undefined, "the manifest lists no packages");
   });
 
   for (const vector of vectors.vectors) {
@@ -410,7 +402,13 @@ suite("The footnote line is given, and says so", () => {
     // §6: nine boards in ten carry nothing here and players learn to stop looking, so the prominence is
     // the mechanism. Both halves asserted — an empty term absent, a live term marked.
     const { renderFootnotes } = await import("../ui/phone/board.js");
-    const puzzle = readPackage(packages.find((p) => p.id === "1dc57470b44caded").raw);
+    // Found by asking, not named: an id pinned here survived one regeneration by luck while the
+    // vectors' pinned id did not, and the requirement is "a board with a live term", not this board.
+    const withLiveTerm = packages
+      .map(({ raw }) => readPackage(raw))
+      .find((p) => p.puzzle.footnoteTotals.some((total) => total > 0));
+    assert(withLiveTerm !== undefined, "no reference package has a live footnote term, so this proves nothing");
+    const puzzle = withLiveTerm;
     const game = createGame(puzzle);
 
     const line = renderFootnotes(puzzle, game);

@@ -13,9 +13,14 @@
     "two implementations answerable to one contract without becoming one implementation.",
     "",
     "A vector that both sides accept, or both reject, says nothing on its own. What it forbids is the",
-    "two disagreeing."
+    "two disagreeing.",
+    "",
+    "\u26a0\ufe0f These used to name a package by id, and the first regeneration renamed it \u2014 every vector then",
+    "failed on a missing reference rather than on anything about the contract. The id is derived from",
+    "the game, so it moves whenever the generator's rules change, which is exactly when these matter",
+    "most. They run against the manifest's first package now: any published package is a valid subject,",
+    "because every mutation below is about the schema rather than about a particular board."
   ],
-  "package": "9f42acb60c536afd",
   "vectors": [
     {
       "name": "the reference package itself",
@@ -25,91 +30,175 @@
     },
     {
       "name": "labels absent",
-      "mutate": [["labels", null]],
+      "mutate": [
+        [
+          "labels",
+          null
+        ]
+      ],
       "expect": "reject",
       "because": "the forge could build, sign and certify a package the browser refused for exactly this"
     },
     {
       "name": "one label too few",
-      "mutate": [["labels", ["CF", "SS"]]],
+      "mutate": [
+        [
+          "labels",
+          [
+            "CF",
+            "SS"
+          ]
+        ]
+      ],
       "expect": "reject",
       "because": "a label per batting row, or a row has no name"
     },
     {
       "name": "pitcher labels absent",
-      "mutate": [["pitcher_labels", null]],
+      "mutate": [
+        [
+          "pitcher_labels",
+          null
+        ]
+      ],
       "expect": "reject",
       "because": "same rule, other grid"
     },
     {
       "name": "an empty label",
-      "mutate": [["labels[0]", ""]],
+      "mutate": [
+        [
+          "labels[0]",
+          ""
+        ]
+      ],
       "expect": "reject",
       "because": "an empty string is not a position; it renders as a row with no name"
     },
     {
       "name": "a null footnote total",
-      "mutate": [["puzzle.footnote_totals[0]", null]],
+      "mutate": [
+        [
+          "puzzle.footnote_totals[0]",
+          null
+        ]
+      ],
       "expect": "reject",
       "because": "the client counted it as a blank and rendered no term for it, so the board could not be finished"
     },
     {
       "name": "a null batting total",
-      "mutate": [["puzzle.batting_totals[0]", null]],
+      "mutate": [
+        [
+          "puzzle.batting_totals[0]",
+          null
+        ]
+      ],
       "expect": "accept",
-      "because": "that row IS erasable — the six reference packages all erase from it, which is why the two rows are not one rule"
+      "because": "that row IS erasable \u2014 the six reference packages all erase from it, which is why the two rows are not one rule"
     },
     {
       "name": "a malformed slot reference",
-      "mutate": [["slot_references[0]", "10"]],
+      "mutate": [
+        [
+          "slot_references[0]",
+          "10"
+        ]
+      ],
       "expect": "reject",
       "because": "the grammar is a slot with an optional letter; the client never checked it"
     },
     {
       "name": "a repeated slot reference",
-      "mutate": [["slot_references[1]", "1"]],
+      "mutate": [
+        [
+          "slot_references[1]",
+          "1"
+        ]
+      ],
       "expect": "reject",
       "because": "two rows answering to #1 makes a footnote attribution ambiguous, which is the field's whole purpose"
     },
     {
       "name": "metadata absent",
-      "mutate": [["metadata", null]],
+      "mutate": [
+        [
+          "metadata",
+          null
+        ]
+      ],
       "expect": "reject",
       "because": "seam C3 makes it loose in content, which is not the same as optional"
     },
     {
       "name": "metadata as an array",
-      "mutate": [["metadata", []]],
+      "mutate": [
+        [
+          "metadata",
+          []
+        ]
+      ],
       "expect": "reject",
       "because": "a list here breaks every reader that asks it for a key"
     },
     {
       "name": "offense_is_home absent",
-      "mutate": [["offense_is_home", null]],
+      "mutate": [
+        [
+          "offense_is_home",
+          null
+        ]
+      ],
       "expect": "reject",
       "because": "a board that cannot name its sides renders a false statement"
     },
     {
       "name": "offense_is_home as a number",
-      "mutate": [["offense_is_home", 1]],
+      "mutate": [
+        [
+          "offense_is_home",
+          1
+        ]
+      ],
       "expect": "reject",
       "because": "0 and 1 are the shape a producer in another language reaches for and they mean nothing here"
     },
     {
       "name": "schema 2",
-      "mutate": [["schema", 2]],
+      "mutate": [
+        [
+          "schema",
+          2
+        ]
+      ],
       "expect": "reject",
       "because": "a v2 document has no offense_is_home and there is no honest default"
     },
     {
       "name": "a short batting row",
-      "mutate": [["puzzle.batting[0]", [1, 2, 3, 4, 5]]],
+      "mutate": [
+        [
+          "puzzle.batting[0]",
+          [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        ]
+      ],
       "expect": "reject",
       "because": "a short row reads the next column's value into this one and every total still balances"
     },
     {
       "name": "a boolean cell",
-      "mutate": [["puzzle.batting[0][0]", true]],
+      "mutate": [
+        [
+          "puzzle.batting[0][0]",
+          true
+        ]
+      ],
       "expect": "reject",
       "because": "true is not a whole number, however truthy it is"
     }
