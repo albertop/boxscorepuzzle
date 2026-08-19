@@ -78,16 +78,27 @@ must not present as the same contract.
 ⚠️ **Every one of those ten fixes is guarded by a test that fails when the fix is reverted**, checked by
 reverting each one and watching a named test go red — not by rereading the assertions.
 
-### ▶ The run — stopped at ten minutes by v14, restarted
+### ▶ The run — going, at `44d9582` on a clean tree
 
-The first launch (09:22, `20e6e1f`) was stopped after ten minutes: `v14-P1-01` lands on the artifact it
-would have produced, and it had not yet finished loading. **The evidence would not have been wrong — the
-tree was clean at a known commit, which pins everything the weak digest failed to pin — but the stamp
-would have carried a claim the artifact did not support**, and a provenance nobody can check is a claim
-rather than evidence. Ten minutes is the entire cost of that decision.
+| | |
+|---|---|
+| launched | 2026-08-19 09:37 |
+| revision | `44d9582`, tracked **clean**, untracked **clean** |
+| instrument | `4f894c5391eb` — measure, metrics **and the loader** |
+| result schema | **4** |
+| parameters | three seeds, eight directions per decade, the 25% gate, `≤13` batters, `≤4` pitchers, target 8 stalls |
 
-Three seeds, eight directions per decade, the 25% gate, `≤13` batters and `≤4` pitchers, target 8
-stalls.
+**The first launch (09:22, `20e6e1f`) was stopped after ten minutes.** `v14-P1-01` lands on the artifact
+it would have produced, and it had not yet finished loading. **The evidence would not have been wrong —
+the tree was clean at a known commit, which pins everything the weak digest failed to pin — but the
+stamp would have carried a claim the artifact did not support**, and a provenance nobody can check is a
+claim rather than evidence. Ten minutes is the entire cost of that decision, and it is the argument for
+reviewing an instrument before trusting a number rather than after.
+
+⚠️ **The loader is the slow part, and it prints nothing.** Both launches sat with an empty log for their
+first ten minutes: `load()` gates every candidate direction on zero density before the first board is
+measured. An empty log early is the expected state, not a stall — the first line is the gated-direction
+count.
 
 **What it has to answer**, and nothing beyond it: how many completions a hidden slot group admits, how
 often propagation-plus-bounding recovers it, and how often hiding it stops the rest of an erased board
