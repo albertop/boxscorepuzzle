@@ -32,6 +32,7 @@ Read-only against DGL. Run from `forge/`.
 
 import contextlib
 import io
+import json
 import os
 import secrets
 import statistics
@@ -41,6 +42,7 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+NL = chr(10)
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
@@ -183,9 +185,24 @@ def report(rows: list[Arm]) -> None:
 
 
 def _git(*arguments: str) -> str:
+    """Git output, or `unknown`.
+
+    ⚠️ **A `# noqa` was inserted after the argument list and commented out the rest of the call.**
+    `capture_output=True, text=True, check=True, timeout=10` became part of the comment, so git wrote to
+    the terminal and `.stdout` was `None` — and the run died in the stamp after seventy-two boards had
+    been measured. Ruff passed, because the result is valid syntax. **Ruff is not running the code**, and
+    the rule this broke is written down: verify against the real artifact before spending an hour of
+    compute against it.
+
+    Each argument on its own line now, so nothing can be swallowed by a trailing comment.
+    """
     try:
         return subprocess.run(  # noqa: S603
-            ["git", "-C", str(_ROOT), *arguments]  # noqa: S607, capture_output=True, text=True, check=True, timeout=10
+            ["git", "-C", str(_ROOT), *arguments],  # noqa: S607
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
         ).stdout.strip()
     except (OSError, subprocess.SubprocessError, UnicodeDecodeError):
         return "unknown"
@@ -229,6 +246,16 @@ def main() -> None:
                 rows.extend(_measure(item.direction, item.game_id, seed, target))
         if number % 10 == 0:
             print(f"  {number}/{len(sample)} boards, {len(rows) // 2} pairs", flush=True)
+
+    # ⚠️ **The rows go to disk before anything is formatted.** The first run of this instrument measured
+    # all seventy-two boards and then died inside the stamp, and every pair was lost because the report
+    # had not been written yet. Compute is the expensive part and formatting is the fragile part; they
+    # should not share a failure.
+    raw = _HERE / "rows.json"
+    raw.write_text(
+        json.dumps([row.__dict__ for row in rows], indent=1, sort_keys=True), encoding="utf-8", newline=NL
+    )
+    print(f"{len(rows)} rows saved to {raw}", flush=True)
 
     captured = io.StringIO()
     with contextlib.redirect_stdout(captured):
