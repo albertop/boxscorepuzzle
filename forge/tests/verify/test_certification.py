@@ -7,16 +7,18 @@ registry, and the list still says everything is covered. This walks the modules 
 """
 
 import ast
+import dataclasses
 import inspect
 from dataclasses import replace
 from pathlib import Path
 
-from boxscore_package.format import BATTING_COLUMNS, Board, Package
+from boxscore_package.format import BATTING_COLUMNS, Board, Package, PrintedBoxscore, Reveal
 from boxscore_verify import certify as certification
 from boxscore_verify import plausibility
 from boxscore_verify.certify import (
     CERTIFICATIONS,
     UNSIGNED,
+    Certification,
     Evidence,
     certify_for_publication,
 )
@@ -186,6 +188,113 @@ class TestItFailsClosed:
         result = certify_for_publication(package_for(board), evidence=good_evidence(board), secret=UNSIGNED)
 
         assert result.publishable, result.refusals
+
+
+class TestThePrintedBoxscoreIsCorroborated:
+    """⚠️⚠️ **v30-P1-02: the gate certified a package whose unshared half was fabricated.**
+
+    Schema 5 gave the reveal both clubs. `check_reveal_agrees` compares the half the board also
+    carries; `format.py` said the other half "belongs to `certify_for_publication`", and no such check
+    existed — `Evidence` carried no rows and no certification looked at them. The fixture named those
+    rows `Not A Real Player`, filled them with zeros, and `test_a_sound_package_is_publishable`
+    expected the gate to accept it. It did.
+
+    These are the failing cases. Each one moves a single number in the half no board carries and
+    asserts the gate refuses, because a check is worth what its failures prove and every other test
+    that touches this fixture now builds a *consistent* half by construction.
+    """
+
+    def _reveal(self, board: Board) -> Reveal:
+        reveal = package_for(board).reveal
+        assert reveal is not None
+        return reveal
+
+    def _with(self, board: Board, boxscore: PrintedBoxscore) -> Certification:
+        package = dataclasses.replace(
+            package_for(board),
+            reveal=dataclasses.replace(self._reveal(board), boxscore=boxscore),
+        )
+        return certify_for_publication(package, evidence=good_evidence(board), secret=UNSIGNED)
+
+    def test_the_defence_scoring_something_else_is_refused(self, board: Board) -> None:
+        # The club the board never shows, against a total loaded from a different table.
+        box = self._reveal(board).boxscore
+        rows = (dataclasses.replace(box.defense.batting[0], runs=box.defense.batting[0].runs + 1),)
+
+        result = self._with(board, dataclasses.replace(box, defense=dataclasses.replace(box.defense, batting=rows)))
+
+        assert not result.publishable
+        assert any("defence's batters scored" in refusal for refusal in result.refusals), result.refusals
+
+    def test_the_defence_hitting_something_else_is_refused(self, board: Board) -> None:
+        box = self._reveal(board).boxscore
+        rows = (dataclasses.replace(box.defense.batting[0], hits=box.defense.batting[0].hits + 2),)
+
+        result = self._with(board, dataclasses.replace(box, defense=dataclasses.replace(box.defense, batting=rows)))
+
+        assert not result.publishable
+        assert any("defence's batters hit" in refusal for refusal in result.refusals), result.refusals
+
+    def test_the_offence_staff_allowing_something_else_is_refused(self, board: Board) -> None:
+        # ⚠️ The cross-team identity applied to the direction the board does not show: the runs this
+        # staff allowed and the runs the other club scored are the same events.
+        box = self._reveal(board).boxscore
+        rows = (dataclasses.replace(box.offense.pitching[0], runs=box.offense.pitching[0].runs + 1),)
+
+        result = self._with(board, dataclasses.replace(box, offense=dataclasses.replace(box.offense, pitching=rows)))
+
+        assert not result.publishable
+        assert any("pitchers allowed, in runs" in refusal for refusal in result.refusals), result.refusals
+
+    def test_an_impossible_number_of_outs_is_refused(self, board: Board) -> None:
+        box = self._reveal(board).boxscore
+        rows = (dataclasses.replace(box.offense.pitching[0], outs=99),)
+
+        result = self._with(board, dataclasses.replace(box, offense=dataclasses.replace(box.offense, pitching=rows)))
+
+        assert not result.publishable
+        assert any("outs across" in refusal for refusal in result.refusals), result.refusals
+
+    def test_a_short_last_inning_is_accepted(self, board: Board) -> None:
+        # ⚠️ The negative case, so the bound is a decision rather than an accident. A home side that
+        # scores the winning run stops batting, so the staff can be up to three outs short. An equality
+        # here would refuse every walk-off ever played.
+        box = self._reveal(board).boxscore
+        rows = (dataclasses.replace(box.offense.pitching[0], outs=box.offense.pitching[0].outs - 2),)
+
+        result = self._with(board, dataclasses.replace(box, offense=dataclasses.replace(box.offense, pitching=rows)))
+
+        assert result.publishable, result.refusals
+
+    def test_an_empty_grid_is_refused(self, board: Board) -> None:
+        box = self._reveal(board).boxscore
+
+        result = self._with(board, dataclasses.replace(box, defense=dataclasses.replace(box.defense, batting=())))
+
+        assert not result.publishable
+        assert any("no rows for defense.batting" in refusal for refusal in result.refusals), result.refusals
+
+    def test_the_all_zero_half_that_used_to_publish_is_refused(self, board: Board) -> None:
+        # ⚠️ The exact shape the review found: every unshared row present, named, and entirely zero.
+        # It passed the gate for the whole life of schema 5, which is one commit, and this is the
+        # assertion that it cannot again.
+        box = self._reveal(board).boxscore
+        zeroed = dataclasses.replace(
+            box,
+            defense=dataclasses.replace(
+                box.defense,
+                batting=(dataclasses.replace(box.defense.batting[0], runs=0, hits=0, at_bats=0, runs_batted_in=0),),
+            ),
+            offense=dataclasses.replace(
+                box.offense,
+                pitching=(dataclasses.replace(box.offense.pitching[0], outs=0, runs=0, hits=0, earned_runs=0),),
+            ),
+        )
+
+        result = self._with(board, zeroed)
+
+        assert not result.publishable
+        assert len(result.refusals) >= 3, result.refusals
 
 
 class TestTheDuplicatedSourceListAgrees:

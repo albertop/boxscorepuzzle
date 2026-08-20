@@ -84,7 +84,7 @@ export function describeCells(puzzle) {
 export function isSession(saved) {
   if (saved === null || typeof saved !== "object" || Array.isArray(saved)) return false;
 
-  const { entries, hinted, firstWrong, elapsed } = saved;
+  const { entries, hinted, firstWrong, elapsed, finishedAt } = saved;
   if (entries !== undefined) {
     if (entries === null || typeof entries !== "object" || Array.isArray(entries)) return false;
     // The same rule `enter()` applies. A cell holds a whole number or it holds nothing.
@@ -97,6 +97,12 @@ export function isSession(saved) {
     if (!Array.isArray(names) || names.some((name) => typeof name !== "string")) return false;
   }
   if (elapsed !== undefined && (!Number.isFinite(elapsed) || elapsed < 0)) return false;
+  // ⚠️ `null` is a real value here — a board still being played — so absence and null are both
+  // accepted and anything else is refused. A negative or non-finite duration is a corrupted session,
+  // and §23 says a refused session gives the player today's board rather than an error.
+  if (finishedAt !== undefined && finishedAt !== null && (!Number.isFinite(finishedAt) || finishedAt < 0)) {
+    return false;
+  }
   return true;
 }
 
@@ -186,9 +192,17 @@ export function createGame(puzzle, clock = createClock()) {
       }
       if (value === null) entries.delete(name);
       else entries.set(name, value);
-      const correct = value !== null && value === cell.answer;
-      if (value !== null && !correct && !firstWrong.has(name)) firstWrong.add(name);
-      return correct;
+      // ⚠️⚠️ **A keystroke is not an attempt, and this recorded one as if it were.** The keypad appends
+      // digits and calls `enter()` after each press, so a *correct* answer of 12 arrived as `1` and
+      // then `12` — and the intermediate `1` was filed as a wrong entry before the player had finished
+      // typing. Totals and pitcher outs are routinely two digits, so ordinary play corrupted the C7
+      // error record at collection time, where it can never be reconstructed. v30-P2-01.
+      //
+      // Errors are recorded by `check()` instead: the one moment the player asserts the board is done
+      // is the one moment an entry is an answer rather than a keystroke. A player who types a wrong
+      // value and fixes it before checking made no mistake the game ever saw, which is the honest
+      // reading — nothing told them, so they deduced it.
+      return value !== null && value === cell.answer;
     },
 
     clear(name) {
@@ -211,10 +225,45 @@ export function createGame(puzzle, clock = createClock()) {
     /** Every blank filled with its answer. There is no other ending. */
     isSolved: () => [...cells.values()].every((cell) => valueOf(cell.name) === cell.answer),
 
-    /** Stop the clock and keep the duration. Calling it twice reports the first ending, not the second. */
+    /**
+     * What pressing *Check* means: the verdict, and the moment an entry counts as an answer.
+     *
+     * ⚠️⚠️ **The three states are all it ever returns, and that is a product rule rather than an
+     * omission.** The board never says which cells are wrong or how many: marking makes probing beat
+     * deducing, and a count is a binary search over the board. So this returns `incomplete`, `wrong`
+     * or `solved` and there is deliberately no fourth carrying detail.
+     *
+     * ⚠️ **Recording lives here and phrasing lives in the shell.** The engine holds the record, so it
+     * decides what a mistake *is*; `checkBoard` in `finish.js` decides what the player is told. The
+     * rule used to be split the other way round and errors were counted per keystroke.
+     */
+    check() {
+      const blanks = [...cells.values()].filter((cell) => cell.given === null);
+      if (blanks.some((cell) => valueOf(cell.name) === null)) return { state: "incomplete" };
+      // ⚠️ A set, not a counter: the same cell wrong across two checks is one mistake, and counting
+      // twice would make hesitation look like ignorance.
+      for (const cell of blanks) {
+        if (valueOf(cell.name) !== cell.answer) firstWrong.add(cell.name);
+      }
+      return { state: this.isSolved() ? "solved" : "wrong" };
+    },
+
+    /** Whether this board has been finished. Restored with the session, so a reopen knows. */
+    isFinished: () => finishedAt !== null,
+
+    /**
+     * Stop the clock and keep the duration. Calling it twice reports the first ending, not the second.
+     *
+     * ⚠️⚠️ **And the freeze survives a reload, which it did not.** `finishedAt` lived only in memory:
+     * `snapshot()` saved entries, hints and elapsed time but not completion, so a solved board
+     * reopened with `finishedAt === null`, the shell started its clock for a visible page, and the
+     * next *Check* froze a larger number. Duration is the metric that gets compared and shared, so the
+     * ordinary reopen — the path persistence exists for — quietly rewrote what the player earned.
+     * v30-P1-03.
+     */
     finish() {
       if (finishedAt === null) {
-        clock.hold();
+        clock.seal();
         finishedAt = clock.elapsed();
       }
       return this.record();
@@ -246,6 +295,11 @@ export function createGame(puzzle, clock = createClock()) {
       entries: Object.fromEntries(entries),
       hinted: [...hinted],
       firstWrong: [...firstWrong],
+      // ⚠️ **The frozen duration, not a flag.** A boolean would say the board was finished and leave
+      // the shell to ask the clock how long it took — and the clock has kept running since. The
+      // number is the thing that has to survive, so the number is what is stored; `null` is a board
+      // still being played and is the only other value.
+      finishedAt,
       // ⚠️ The duration travels with the entries because they are one session. Saved separately they
       // would be two writes that can disagree, and a board restored with somebody else's clock is a
       // shared time that is simply wrong.
@@ -270,9 +324,16 @@ export function createGame(puzzle, clock = createClock()) {
       for (const [name, value] of Object.entries(saved.entries ?? {})) if (cells.has(name)) entries.set(name, value);
       for (const name of saved.hinted ?? []) if (cells.has(name)) hinted.add(name);
       for (const name of saved.firstWrong ?? []) if (cells.has(name)) firstWrong.add(name);
+      finishedAt = saved.finishedAt ?? null;
       // ⚠️ The duration is part of the session, not a separate thing the shell remembers to carry.
       // Left out, a reload gave the board back with the clock at zero.
       if (saved.elapsed !== undefined) clock.restore(saved.elapsed);
+      // ⚠️⚠️ **Sealed, not held, and the difference is the finding.** The shell calls `followAttention`,
+      // which starts the clock on a visible page and on every pointer press — so a *held* clock under a
+      // restored finished board resumes on the first tap and the next *Check* freezes a larger number
+      // than the player earned. Sealing is a fact about the clock rather than a promise every future
+      // shell has to keep. v30-P1-03.
+      if (finishedAt !== null) clock.seal();
       return true;
     },
   };

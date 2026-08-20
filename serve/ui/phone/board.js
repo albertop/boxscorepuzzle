@@ -386,7 +386,7 @@ export const isInningsCell = (name) => name.startsWith("pitching") && name.endsW
  * control that works again the moment anything reaches it another way — a keyboard, a test, a future
  * layer. Presentation says *not here*; the handler is what makes it true.
  */
-export function renderKeypad(onKey) {
+export function renderKeypad(onKey, onCheck) {
   const pad = el("div", "keypad");
   for (const digit of [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]) {
     const key = el("button", null, String(digit));
@@ -406,6 +406,20 @@ export function renderKeypad(onKey) {
   const clear = el("button", "wide", text("keypad.clear"));
   clear.addEventListener("click", () => onKey({ clear: true }));
   pad.append(clear);
+
+  // ⚠️⚠️ **Check sits in the pad's last slot, and this used to be an argument against.** The note that
+  // stood here said a button ending the game must not sit under the thumb, because that is a game
+  // ended by accident. What answers it is not the position but the gate: the key is **disabled for the
+  // whole time the player is filling cells**, so the only moment it can be pressed by accident is the
+  // instant after the last digit.
+  //
+  // ⚠️ **And that accident costs nothing, which is why the trade holds.** §27 has no fail state: an
+  // unwanted press on a complete-but-wrong board says the board does not balance and records the cells
+  // that were wrong — exactly what a deliberate press would have done a second later. The clock does
+  // not stop and attempts are unlimited.
+  const check = el("button", "check", text("done.check"));
+  check.addEventListener("click", () => onCheck());
+  pad.append(check);
   pad.allowThirds = (allowed) => {
     for (const key of pad.querySelectorAll("button.thirds")) {
       key.disabled = !allowed;
@@ -414,7 +428,23 @@ export function renderKeypad(onKey) {
       key.setAttribute("aria-disabled", allowed ? "false" : "true");
     }
   };
+  /**
+   * Whether the board can be checked at all: **every blank filled, and nothing about whether it is
+   * right.**
+   *
+   * ⚠️ A disabled key here tells the player their board is incomplete, which is a fact they can
+   * already read off the grid — unlike *which* cells are wrong or *how many*, which the board may
+   * never say. Completeness is not a step toward the answer; correctness is.
+   */
+  pad.allowCheck = (allowed) => {
+    check.disabled = !allowed;
+    // The name has to say it too: a disabled control a screen reader announces as available reads as
+    // broken rather than as inapplicable. Same rule as the thirds keys.
+    check.setAttribute("aria-disabled", allowed ? "false" : "true");
+  };
+
   pad.allowThirds(false);
+  pad.allowCheck(false);
   return pad;
 }
 

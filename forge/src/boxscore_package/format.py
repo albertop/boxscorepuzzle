@@ -749,10 +749,22 @@ def check_reveal_agrees(reveal: "Reveal", solution: Board, labels: tuple[str, ..
     played. A reveal whose two halves disagree about a row is exactly how a footnote ends up attributed
     to the wrong man while every total still balances.
 
-    ⚠️ **What it deliberately does not check: the other half.** `offense.pitching` and
-    `defense.batting` appear nowhere else in the package, so there is nothing to compare them against
-    and no assertion here could tell a real one from a fabricated one. That is the layer-4 problem in
-    miniature and it belongs to `certify_for_publication`, against the game log — not here.
+    ⚠⚠ **What it does not check is the other half, and this docstring used to delegate that to a check
+    that did not exist.** It said the unshared half "belongs to `certify_for_publication`, against the
+    game log". `Evidence` carried no rows, no certification looked at them, and **the gate certified a
+    package whose `defense.batting` and `offense.pitching` were whatever the producer put there** —
+    the test fixture named those rows `Not A Real Player` and the gate accepted it. v30-P1-02. A
+    forward reference to somebody else's check is the absence of a check reading as the presence of a
+    passing one, and it was written the same day as the rule about it.
+
+    `boxscore_verify.certify.check_printed_boxscore_corresponds` exists now and is registered. It
+    compares the unshared grids with the line score, which comes from a different table: the defence's
+    batters scored the defence's runs, the offence's staff allowed the same events from the other
+    side, and its outs are bounded by the innings the defence batted.
+
+    ⚠️ **It still cannot corroborate a row.** There is no independent source at row granularity, so
+    which batter had the hits and what he was called is checked by nothing. That residual is stated in
+    that function rather than forwarded again.
     """
     printed = reveal.boxscore
     if printed.offense.code != reveal.offense_team or printed.defense.code != reveal.defense_team:

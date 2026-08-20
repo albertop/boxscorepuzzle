@@ -219,16 +219,79 @@ suite("The game: state, entries and the C7 record", () => {
     assert(game.isSolved(), "every answer entered and the board is not solved");
   });
 
-  test("a wrong entry is recorded once and never punished", () => {
+  /** Fill every blank with its answer except the named one, which gets `wrong`. */
+  const boardWith = (game, wrongAt, wrong) => {
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, name === wrongAt ? wrong : answers.get(name));
+  };
+
+  test("⚠️⚠️ typing a correct two-digit answer is not a mistake", async () => {
+    // **The keypad appends digits and calls `enter()` after each press**, so a correct answer of 12
+    // arrives as `1` and then `12`. Recording on entry filed that intermediate `1` as a wrong answer
+    // before the player had finished typing — and totals and pitcher outs are routinely two digits, so
+    // ordinary play corrupted the C7 record at collection time. v30-P2-01.
+    //
+    // ⚠️ Driven through `applyKey`, which is the path the keypad actually takes. The old test called
+    // `enter()` with an already-complete wrong value and could not see this.
+    const { applyKey } = await import("../ui/phone/board.js");
+    const game = createGame(puzzle);
+    // ⚠️ **Not an innings cell.** `applyKey` reads a digit on `.outs` as a whole *inning*, so typing
+    // `2` then `1` at an answer of 21 outs means twenty-one innings and writes 63. That is the pad
+    // working as designed — innings are entered whole-then-third — and it is a different path from the
+    // one this test is about. Picking the cell without excluding it made the test fail on its own
+    // fixture rather than on the code.
+    const twoDigit = game
+      .blanks()
+      .filter((name) => !name.endsWith(".outs"))
+      .find((name) => game.cells().find((cell) => cell.name === name).answer >= 10);
+    assert(twoDigit, "no plain blank in the fixture needs two digits; this test cannot fire");
+    const answer = game.cells().find((cell) => cell.name === twoDigit).answer;
+
+    for (const digit of String(answer)) applyKey(game, twoDigit, { digit: Number(digit) });
+
+    equal(game.value(twoDigit), answer, "the digits did not assemble");
+    equal(game.check().state, "incomplete", "the rest of the board is not filled, so this is not a verdict");
+    equal(game.record().errors, 0, "typing a correct answer one digit at a time was counted as a mistake");
+  });
+
+  test("a wrong entry is recorded once, at the check, and never punished", () => {
+    // ⚠️ **Check is where an entry becomes an answer.** A set, not a counter: the same cell wrong at
+    // two checks is one mistake made once, and counting twice makes hesitation look like ignorance.
     const game = createGame(puzzle);
     const name = game.blanks()[0];
     const wrong = game.cells().find((cell) => cell.name === name).answer + 7;
-    equal(game.enter(name, wrong), false, "a wrong entry reported correct");
-    equal(game.enter(name, wrong), false, "still wrong");
+    boardWith(game, name, wrong);
+
+    equal(game.record().errors, 0, "an entry was counted before the player asked");
+    equal(game.check().state, "wrong");
+    equal(game.check().state, "wrong", "a second check");
     equal(game.record().errors, 1, "hesitation was counted as two mistakes");
     // §8: there is no fail state. The wrong value stays on the board and the game continues.
     equal(game.value(name), wrong, "the engine removed a wrong entry");
     assert(!game.record().solved, "solved with a wrong entry on the board");
+  });
+
+  test("a wrong value corrected before the check is not a mistake", () => {
+    // ⚠️ The decision this boundary makes, stated as a test so it is a decision rather than a
+    // side effect. Nothing told the player they were wrong — the board never marks a cell — so a value
+    // they replaced before asking is one they worked out themselves.
+    const game = createGame(puzzle);
+    const name = game.blanks()[0];
+    const answer = game.cells().find((cell) => cell.name === name).answer;
+    boardWith(game, name, answer + 7);
+    game.enter(name, answer);
+
+    equal(game.check().state, "solved");
+    equal(game.record().errors, 0, "a self-corrected value was counted as a mistake");
+  });
+
+  test("an incomplete board records nothing, because it is not an answer", () => {
+    const game = createGame(puzzle);
+    const name = game.blanks()[0];
+    game.enter(name, game.cells().find((cell) => cell.name === name).answer + 7);
+
+    equal(game.check().state, "incomplete");
+    equal(game.record().errors, 0, "a half-filled board counted a mistake");
   });
 
   test("a hint fills the answer and is not an error", () => {
@@ -1478,6 +1541,113 @@ suite("⚠️⚠️ The end of the game, and what the board may never say", () =
   });
 });
 
+suite("⚠️⚠️ A finished board stays finished, and its time stays what was earned", () => {
+  /** A game over the reference puzzle with a clock this test moves by hand. */
+  const gameWithClock = async (start = 0) => {
+    const { createGame } = await import("../engine/game.js");
+    const { createClock } = await import("../engine/clock.js");
+    const { readPackage } = await import("../engine/package.js");
+    let now = 1_000_000;
+    const clock = createClock({ now: () => now, elapsed: start });
+    const puzzle = readPackage(packages[0].raw);
+    return { game: createGame(puzzle, clock), clock, puzzle, advance: (ms) => (now += ms) };
+  };
+
+  const solve = (game) => {
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+  };
+
+  test("⚠️⚠️ a solved board restored from its session does not restart its clock", async () => {
+    // **The reopen path is the one persistence exists for**, and it rewrote the number the player
+    // earned. `finish()` froze the duration in memory only: `snapshot()` never carried it, so a
+    // restored game had `finishedAt === null`, the shell started the clock for a visible page, and the
+    // next Check froze a larger value. Duration is the metric that gets compared and shared.
+    const first = await gameWithClock();
+    first.clock.run();
+    first.advance(90_000);
+    solve(first.game);
+    const earned = first.game.finish().duration_ms;
+    const saved = first.game.snapshot();
+
+    const second = await gameWithClock();
+    assert(second.game.restore(saved), "the session was refused");
+    // Everything the shell does to a visible board, and then some.
+    second.clock.run();
+    second.advance(600_000);
+
+    equal(second.game.isFinished(), true, "a finished board came back unfinished");
+    equal(second.game.record().duration_ms, earned, "ten minutes of being open were added to a finished game");
+    equal(second.game.finish().duration_ms, earned, "checking again re-froze the clock at a later time");
+  });
+
+  test("⚠️ the clock is sealed rather than held, so a tap cannot restart it", async () => {
+    // `hold()` stops the clock and the next `run()` starts it. `followAttention` calls `run()` on every
+    // pointer press and whenever the page becomes visible, so holding is not enough on a board whose
+    // duration is already the answer.
+    const { game, clock, advance } = await gameWithClock();
+    clock.run();
+    advance(30_000);
+    solve(game);
+    const earned = game.finish().duration_ms;
+
+    clock.run();
+    advance(300_000);
+
+    equal(clock.isSealed(), true, "the clock was not sealed by finishing");
+    equal(clock.elapsed(), earned, "a sealed clock counted five more minutes");
+  });
+
+  test("an unfinished session still restores a running clock, which is the ordinary case", async () => {
+    // ⚠️ The negative case. A seal that applied to every restore would freeze the clock of a board the
+    // player is halfway through, and nothing in the suite would notice because every other assertion
+    // here is about a *finished* board.
+    const first = await gameWithClock();
+    first.clock.run();
+    first.advance(45_000);
+    first.game.enter(first.game.blanks()[0], 1);
+    const saved = first.game.snapshot();
+
+    const second = await gameWithClock();
+    second.game.restore(saved);
+    second.clock.run();
+    second.advance(15_000);
+
+    equal(second.game.isFinished(), false, "an unfinished board came back finished");
+    equal(second.clock.isSealed(), false, "an unfinished board came back with a sealed clock");
+    equal(second.game.record().duration_ms, 60_000, "the restored clock did not keep counting");
+  });
+
+  test("a session with a malformed completion is refused rather than trusted", async () => {
+    // §23: a refused session gives the player today's board, never an error. A negative duration is a
+    // corrupted session and the field is validated like every other part of the shape.
+    const { isSession } = await import("../engine/game.js");
+
+    assert(isSession({ entries: {}, finishedAt: 90_000 }), "a real completion was refused");
+    assert(isSession({ entries: {}, finishedAt: null }), "an unfinished board was refused");
+    assert(isSession({ entries: {} }), "an absent completion was refused");
+    assert(!isSession({ entries: {}, finishedAt: -1 }), "a negative duration was accepted");
+    assert(!isSession({ entries: {}, finishedAt: "90000" }), "a string duration was accepted");
+    assert(!isSession({ entries: {}, finishedAt: Infinity }), "an infinite duration was accepted");
+  });
+
+  test("⚠️ the errors recorded before finishing survive the reopen", async () => {
+    // The C7 record is irreversible: what is not collected cannot be reconstructed. A restore that
+    // brought back the board and dropped its mistakes would lose them silently.
+    const first = await gameWithClock();
+    const answers = new Map(first.game.cells().map((cell) => [cell.name, cell.answer]));
+    const blanks = first.game.blanks();
+    for (const name of blanks) first.game.enter(name, answers.get(name) + (blanks.indexOf(name) < 2 ? 1 : 0));
+    equal(first.game.check().state, "wrong");
+    const saved = first.game.snapshot();
+
+    const second = await gameWithClock();
+    second.game.restore(saved);
+
+    equal(second.game.record().errors, 2, "the reopen lost the mistakes");
+  });
+});
+
 suite("⚠️ The reveal is a printed boxscore, not the board with names attached", () => {
   const finished = async (raw) => {
     const { createGame } = await import("../engine/game.js");
@@ -1719,9 +1889,13 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
     const game = createGame(puzzle);
     const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
     const blanks = game.blanks();
-    // Three wrong entries, then the right ones: the record carries three, the panel says nothing.
-    blanks.slice(0, 3).forEach((name) => game.enter(name, answers.get(name) + 1));
+    // ⚠️ **Filled wrong, checked, then fixed and checked again**, because *check* is where an entry
+    // becomes an answer. Entering a wrong value and correcting it without ever asking is not a mistake
+    // the game saw, so a test that only entered would now record nothing and prove nothing.
+    for (const name of blanks) game.enter(name, answers.get(name) + (blanks.indexOf(name) < 3 ? 1 : 0));
+    equal(game.check().state, "wrong", "the fixture did not produce a wrong board");
     for (const name of blanks) game.enter(name, answers.get(name));
+    equal(game.check().state, "solved");
     const record = game.finish();
     const panel = renderReveal(puzzle, record);
 

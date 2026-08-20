@@ -30,14 +30,23 @@ the batting order was refused as ambiguous before layer 3 ever ran: adoption tha
 imports and false in the outcome. `test_lineup_fallback_is_adopted.py` takes a real fallback board
 through the publication gate, and reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`.
 
-⚠️ **What this module does NOT establish.**
+✅ **The pre-registered confirmation ran on 2026-08-20 and all three criteria held.**
+`discovery/batting-order/confirm.py`, 48 directions by 3 seeds by 5 targets by 3 arms, every board through
+the publication gate rather than through the arithmetic layers alone. Coverage at 8 stalls went 29/48
+to 39/48; arm A lost 34 directions in total, which is the proof that a loss can be expressed at all;
+division filler on the gained cohort was 0.6%. The figures and their caveats are in
+`docs/reviews/batting-order-plan.md`.
 
-- **n = 11.** The whole case rests on eleven directions out of forty-eight, ten qualifying walks out of
-  fifteen, in a subgroup that was **not pre-registered**. A subgroup chosen after seeing the aggregate
-  is a known way to manufacture a result, and this one **has not survived a confirmation run**.
-- **Every figure above predates the verifier's step**, so it describes what the generator produces
-  rather than what can ship. `discovery/batting-order/confirm.py` is the re-run and it has not been
-  run.
+⚠️ **What this module does NOT establish, after the confirmation.**
+
+- **The filler figure is not a causal one.** The denominator is every non-division deduction in the
+  solve, not deductions the constraint enabled — it was labelled `causal` and that asserted the thing
+  the adoption question turns on. The share is a real measure of *filler* and it is what the criterion
+  asked for; it is not evidence that the rest of the solve used the cyclic order. A causal figure needs
+  a counterfactual solve, which is not run and not scheduled. v30-P1-01.
+- **n = 11 is what the *original* subgroup rested on**, and that subgroup was not pre-registered. The
+  confirmation was, which is what makes the result usable — the pre-confirmation caveat is preserved
+  in `batting-order-reversal.md`, where it remains true of the run it describes.
 - **That eight stalls corresponds to felt difficulty.** Nothing here measures a person. The one human
   verdict on record is the operator's, in `batting-order-reversal.md`, and it is about the constraint
   making boards harder to hold in the head rather than about any stall count.
@@ -67,9 +76,11 @@ def division_against_chain(puzzle: Puzzle) -> float:
     ⚠️ **It is a ratio, not a share, and it is not bounded by 1.** The numerator counts steps and the
     denominator is a depth, so eight lineup steps sharing one depth on a short chain can exceed 1.0.
     That is a real weakness of the unit, not of this implementation — the number `0.20` was read off
-    two boards measured this way, and changing the unit here would silently move the threshold. **The
-    unit is on the list the pre-registered confirmation run has to settle**, together with whether the
-    threshold belongs at 0.20 at all.
+    two boards measured this way, and changing the unit here would silently move the threshold.
+
+    **The confirmation ran and did not settle it**: it reported filler against the whole solve, a
+    different denominator from this one. So `0.20` against `chain_length` is still the value two boards
+    produced and still provisional, as is whether the threshold belongs at 0.20 at all.
 
     ⚠⚠ **This said "zero on every board the production path produces", and adoption made that false**
     — v29-P3-01. It was true while the constraint was fenced off: `LINEUP_ARITHMETIC` cannot fire

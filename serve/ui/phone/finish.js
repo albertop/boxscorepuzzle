@@ -43,11 +43,14 @@ export function formatDuration(milliseconds) {
  * there is deliberately no fourth carrying detail.
  */
 export function checkBoard(game) {
-  const blanks = game.blanks();
-  const empty = blanks.filter((name) => game.value(name) === null);
-  if (empty.length > 0) return { state: "incomplete", message: text("done.incomplete") };
-  if (!game.isSolved()) return { state: "wrong", message: text("done.not_yet") };
-  return { state: "solved", message: "" };
+  // ⚠⚠ **The verdict comes from the engine and the wording is decided here.** This used to compute
+  // the verdict too, which put the rule in the shell while the C7 record lives in the engine — and the
+  // engine, having no notion of *check*, recorded a mistake on every keystroke of a two-digit answer.
+  // `game.check()` is the moment an entry becomes an answer; this is the moment it becomes a sentence.
+  const { state } = game.check();
+  if (state === "incomplete") return { state, message: text("done.incomplete") };
+  if (state === "wrong") return { state, message: text("done.not_yet") };
+  return { state, message: "" };
 }
 
 /** Innings held as outs, printed the way a boxscore prints them. */

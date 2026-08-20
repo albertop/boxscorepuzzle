@@ -154,12 +154,19 @@ function boot({ puzzle }) {
     footnotes.replaceWith(renderFootnotes(puzzle, game));
   };
 
-  keypad = renderKeypad((key) => {
-    if (!selected) return;
-    applyKey(game, selected, key);
-    repaint();
-    remember();
-  });
+  // Every blank filled. Recomputed after each entry, because that is the only thing that changes it.
+  const boardIsFull = () => game.blanks().every((name) => game.value(name) !== null);
+
+  keypad = renderKeypad(
+    (key) => {
+      if (!selected) return;
+      applyKey(game, selected, key);
+      repaint();
+      remember();
+      keypad.allowCheck(boardIsFull());
+    },
+    () => check(),
+  );
   app.append(keypad);
 
   // ⚠⚠ **The end of the game, and until now there was not one.** A player could fill every cell and
@@ -172,11 +179,7 @@ function boot({ puzzle }) {
   verdict.setAttribute("role", "status");
   verdict.setAttribute("aria-live", "polite");
 
-  const done = document.createElement("button");
-  done.type = "button";
-  done.className = "done";
-  done.textContent = text("done.check");
-  done.addEventListener("click", () => {
+  function check() {
     const result = checkBoard(game);
     // ⚠️ **The clock keeps running on a wrong board, and there is no attempt limit.** §27: no fail
     // state. What a mistake costs is time, which is what gets measured and shared — a limit would add
@@ -194,12 +197,24 @@ function boot({ puzzle }) {
     remember();
     app.classList.add("solved");
     app.append(renderReveal(puzzle, record));
-  });
+  }
 
+  // ⚠️ The strip is still here and now carries only the verdict. The key moved into the pad; the
+  // sentence did not, because a message that replaces a keypad key is a message nobody reads.
   const footer = document.createElement("div");
   footer.className = "footer";
-  footer.append(verdict, done);
+  footer.append(verdict);
   app.append(footer);
+
+  // ⚠⚠ **A finished board reopens finished.** Completion and its frozen duration are part of the
+  // session now, so a solved puzzle came back looking unplayed: the reveal was gone, the clock resumed
+  // for a visible page, and the next *Check* recorded a longer time than the player earned. The clock
+  // is sealed by `restore` and cannot be restarted; this is the other half, which is drawing what the
+  // player already earned instead of asking them to press Check again. v30-P1-03.
+  if (game.isFinished()) {
+    app.classList.add("solved");
+    app.append(renderReveal(puzzle, game.record()));
+  }
 
   const attention = followAttention({ clock, save: remember, doc: document, target: app });
   // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is
@@ -207,6 +222,7 @@ function boot({ puzzle }) {
   addEventListener("pagehide", attention.away);
 
   draw();
+  keypad.allowCheck(boardIsFull());
   globalThis.__game = game;
   globalThis.__puzzle = puzzle;
   globalThis.__store = store;

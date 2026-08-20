@@ -12,10 +12,21 @@ which builds them apart on purpose and asserts the mismatch is refused — inclu
 package assembled in memory, because the constructor is the boundary and `from_json` is not the only
 way in.
 
-⚠️ **The unshared half is invented and says so.** `offense.pitching` and `defense.batting` appear
-nowhere else in a package, so there is nothing to derive them from and nothing that could check them.
-They are filled with a single obviously-fake line rather than with plausible numbers, so a test that
-starts depending on them fails visibly instead of quietly agreeing with a fabrication.
+⚠⚠ **The unshared half is derived from the line score, and it used to be invented.** `offense.pitching`
+and `defense.batting` appear nowhere else in the *board*, so the first version filled them with one
+all-zero row named `Not A Real Player` — and `test_a_sound_package_is_publishable` expected the
+publication gate to accept that. It did, because the check `format.py` delegated the unshared half to
+did not exist. v30-P1-02.
+
+`check_printed_boxscore_corresponds` exists now, so these rows have to satisfy the anchors the line
+score provides: the defence's batters scored the defence's runs and made its hits, and the offence's
+staff allowed the same events from the other side and recorded the outs the innings imply. Derived
+here rather than typed, for the same reason the shared half is.
+
+⚠️ **The names stay obviously synthetic and are still checked by nothing.** There is no independent
+source at row granularity — `retroGameLogs` carries team totals, not lines — so `INVENTED` marks the
+one thing about these rows that no gate can corroborate, and a test that starts depending on *which*
+fake batter had the hits is depending on nothing.
 """
 
 from boxscore_package.format import (
@@ -71,13 +82,13 @@ def _printed_from(
                 )
                 for index, row in enumerate(solution.batting)
             ),
-            pitching=(_invented_pitcher(),),
+            pitching=(_staff_for(solution),),
         ),
         defense=PrintedSide(
             code=defense,
             city="Otherton",
             nickname="Placeholders",
-            batting=(_invented_batter(),),
+            batting=(_lineup_for(solution),),
             pitching=tuple(
                 PrintedPitcher(
                     name=pitcher_names[index],
@@ -116,27 +127,37 @@ def reveal_for(
     )
 
 
-def _invented_batter() -> PrintedBatter:
+def _lineup_for(solution: Board) -> PrintedBatter:
+    """The defence's whole batting order as one row, carrying the runs and hits the line score says.
+
+    One row rather than nine: the gate compares club totals, and inventing a distribution across nine
+    fake men would be adding detail nothing can check — which is what the fixture is here to avoid.
+    """
+    score = solution.line_score
     return PrintedBatter(
         name=INVENTED,
         position="C",
-        at_bats=0,
-        runs=0,
-        hits=0,
-        runs_batted_in=0,
+        at_bats=score.defense_hits,
+        runs=score.defense_runs,
+        hits=score.defense_hits,
+        runs_batted_in=score.defense_runs,
         walks=0,
         strikeouts=0,
     )
 
 
-def _invented_pitcher() -> PrintedPitcher:
+def _staff_for(solution: Board) -> PrintedPitcher:
+    """The offence's staff as one line, allowing what the defence scored and recording the outs it made."""
+    score = solution.line_score
     return PrintedPitcher(
         name=INVENTED,
         role="SP",
-        outs=0,
-        hits=0,
-        runs=0,
-        earned_runs=0,
+        # Three per completed inning. The bound the gate applies allows the last one to be short; the
+        # fixture takes the simple case where it was not.
+        outs=3 * len(score.defense_by_inning),
+        hits=score.defense_hits,
+        runs=score.defense_runs,
+        earned_runs=score.defense_runs,
         walks=0,
         strikeouts=0,
     )

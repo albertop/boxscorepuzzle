@@ -1,7 +1,7 @@
 """Does the adoption hold on boards that can actually publish?
 
 ⚠️⚠️ **Everything that decided this was measured while no such board existed.** `boxscore_verify` had
-no value-producing lineup step, so layer 3 refused anything leaning on the cyclic order. The 47 causal
+no value-producing lineup step, so layer 3 refused anything leaning on the cyclic order. The 47 non-division
 deductions and the nine-of-eleven-with-no-filler describe **what the generator produces**, not what can
 ship. The step exists now; this is the re-run.
 
@@ -44,9 +44,14 @@ docstring said it existed to stop exactly that.
      constraint on loses more than it gains, the conditional design is doing the work and the
      constraint itself is not.**
   3. **Filler.** On the **gained cohort only** — `target == 8`, `arm == "fallback"`,
-     `reason == "fallback"`, publishable, direction in the paired gained set — causal deductions
-     outnumber division filler. The earlier claim was nine of eleven with none at all. **A majority
+     `reason == "fallback"`, publishable, direction in the paired gained set — division steps are a
+     small share of the solve. The earlier claim was nine of eleven with none at all. **A majority
      carrying filler overturns it.**
+
+     ⚠️ **The denominator is every other deduction, not deductions the constraint caused.** It was
+     called `causal` and that asserted the one thing this run was meant to settle. The share is a real
+     measure of how much of the solve is read-the-total-divide-by-nine, which is what the criterion
+     asks; it is not evidence that the remaining steps used the cyclic order. v30-P1-01.
 
 ⚠️ **What would NOT count:** a favourable figure drawn from a wider cohort than the criterion names —
 other targets, other seeds, common boards, or fallback rows whose wrapper returned the plain result.
@@ -129,7 +134,7 @@ class Row:
     stalls: int
     chain: int
     division: int
-    causal: int
+    other_steps: int
     reason: str
     """`plain`, `on`, `fallback`, `discarded_filler` or `unreachable` — which path produced this."""
 
@@ -214,7 +219,25 @@ def _preflight(loaded: Loaded) -> None:
 
 
 def _steps(solution: object) -> tuple[int, int]:
-    """Division filler against causal deductions, counted as it was when the adoption was decided."""
+    """Division filler, and **every other deduction** — which is not the same as a causal one.
+
+    ⚠⚠ **The second number was called `causal` and it is not.** It is `len(deductions) - division`:
+    ordinary column sums, row propagation, cross-team and global-identity deductions and bounding
+    steps, whether or not the batting order contributed anything to them. Subtracting division from
+    the total establishes nothing about causation, and the name asserted the one thing the adoption
+    measurement was supposed to settle — whether the constraint *resolves* cells or merely permits
+    more erasure while unrelated equations resolve them. v30-P1-01.
+
+    **What the ratio still means, and it is worth keeping.** Division steps as a share of the whole
+    solution is a real measure of *filler*: how much of the player's work is read-the-total-divide-by-
+    nine. That is what the pre-registered criterion asked for and it is what this reports. The
+    denominator is simply "the rest of the solve" rather than "deductions the constraint enabled".
+
+    ⚠️ **A causal number needs a counterfactual and this instrument does not have one.** It would mean
+    solving the identical erasure with and without the mechanism and counting what disappears — and
+    bounding carries no originating identity, so a dependency graph could not attribute it. Until that
+    exists, nothing here may be reported as causal, and `_report_filler` no longer does.
+    """
     division = sum(1 for step in solution.deductions if step.technique is Technique.LINEUP_ARITHMETIC)
     return division, len(solution.deductions) - division
 
@@ -259,7 +282,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
                         stalls=0,
                         chain=0,
                         division=0,
-                        causal=0,
+                        other_steps=0,
                     )
                 )
                 continue
@@ -267,7 +290,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
             verdict = verify(package, secret=UNSIGNED)
             # ⚠️⚠️ The gate production calls, not the arithmetic verifier alone.
             gate = certify_for_publication(package, evidence=_evidence(loaded, package.solution), secret=UNSIGNED)
-            division, causal = _steps(puzzle.solution)
+            division, other_steps = _steps(puzzle.solution)
             refused = "" if gate.publishable else "; ".join(str(item) for item in gate.refusals)[:80]
             rows.append(
                 Row(
@@ -280,7 +303,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
                     stalls=puzzle.solution.stalls,
                     chain=puzzle.solution.chain_length,
                     division=division,
-                    causal=causal,
+                    other_steps=other_steps,
                 )
             )
     return rows
@@ -397,21 +420,24 @@ def _report_filler(rows: list[Row]) -> None:
     print("")
     print("  every qualifying row, so the reduction can be checked rather than trusted:")
     header = f"  {'':<3}{'game':<14}{'off':<5}{'seed':>5}{'stalls':>7}{'chain':>7}"
-    print(header + f"{'blanks':>7}{'division':>9}{'causal':>7}")
+    print(header + f"{'blanks':>7}{'division':>9}{'other':>7}")
     counted = {(row.game, row.offense, row.seed) for row in decided}
     for row in sorted(cohort, key=lambda item: (item.game, item.offense, item.seed)):
         mark = "->" if (row.game, row.offense, row.seed) in counted else "  "
         print(
             f"  {mark:<3}{row.game:<14}{row.offense:<5}{row.seed:>5}{row.stalls:>7}{row.chain:>7}"
-            f"{row.blanks:>7}{row.division:>9}{row.causal:>7}"
+            f"{row.blanks:>7}{row.division:>9}{row.other_steps:>7}"
         )
 
     division = sum(row.division for row in decided)
-    causal = sum(row.causal for row in decided)
+    other_steps = sum(row.other_steps for row in decided)
     clean = sum(1 for row in decided if row.division == 0)
-    share = division / max(causal + division, 1)
+    share = division / max(other_steps + division, 1)
     print("")
-    print(f"  over {len(decided)} directions: {causal} causal, {division} division ({share:.1%} filler)")
+    print(f"  over {len(decided)} directions: {division} division steps in {other_steps + division} "
+          f"deductions ({share:.1%} filler)")
+    print("  NOTE the other steps are every non-division deduction, NOT deductions the constraint")
+    print("       caused. A causal count needs a counterfactual solve; see _steps().")
     print(f"  {clean} of {len(decided)} directions carry no division filler at all, against 9 of 11 before")
 
 

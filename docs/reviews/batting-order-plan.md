@@ -183,8 +183,24 @@ the hard end. A constraint that helped everywhere would have been the more suspi
 +6/−0. Across all targets and seeds arm A loses **34** directions in total, which is the proof that
 v29-P1-01's fix took — the old arm could not express a loss at all.
 
-**3. Filler — confirmed, and stronger than before.** On the gained cohort, one row per direction:
-**346 causal deductions against 2 division steps, 0.6% filler. Nine of ten directions carry none.**
+**3. Filler — confirmed, and the headline overstated what it measured.** On the gained cohort, one row
+per direction: **2 division steps in 348 deductions, 0.6% filler. Nine of ten directions carry none.**
+
+⚠️⚠️ **It read "346 causal deductions" and they are not causal.** The number is
+`len(deductions) − division`: every column sum, row propagation, cross-team and global-identity
+deduction and bounding step in the solve, whether or not the batting order contributed to any of them.
+Subtracting division from the total establishes nothing about causation — and causation is precisely
+what the adoption question turns on, since the constraint may *resolve* cells or may merely permit more
+erasure while unrelated equations resolve them. v30-P1-01.
+
+**The criterion still holds on the number that was actually measured.** Division steps as a share of
+the solve is a real measure of filler, it is what the pre-registration asked for, and 0.6% is what it
+came back as. What cannot be claimed from this run is that the constraint *caused* the other 346.
+
+⚠️ **A causal figure needs a counterfactual** — the identical erasure solved with and without the
+mechanism, counting what disappears. Bounding carries no originating identity, so a dependency graph
+could not attribute it and the counterfactual is the only safe authority. **Not run, not scheduled**,
+and no number here may be reported as causal until it is.
 
 ## ⚠️ What moved against the figures that decided the adoption
 

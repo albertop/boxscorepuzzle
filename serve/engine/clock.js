@@ -86,6 +86,8 @@ export function createClock({ now = () => Date.now(), elapsed = 0, running = fal
   let accumulated = Math.max(0, Number(elapsed) || 0);
   /** When the current running span began, or `null` while held. **Never persisted.** */
   let since = running ? now() : null;
+  /** Once true the clock can never run again. See `seal`. */
+  let sealed = false;
 
   const closeSpan = () => {
     if (since === null) return;
@@ -99,8 +101,29 @@ export function createClock({ now = () => Date.now(), elapsed = 0, running = fal
   return {
     /** Start counting, or keep counting. Calling it twice does not start a second span. */
     run() {
+      if (sealed) return;
       since ??= now();
     },
+
+    /**
+     * Stop for good. **A finished board's duration is the answer, and nothing may add to it.**
+     *
+     * ⚠️⚠️ **`hold()` was not enough and the difference is the whole finding.** Holding stops the
+     * clock; the very next pointer press starts it again, because `followAttention` calls `run()` on
+     * any interaction and on the page becoming visible. So a solved board reopened, resumed, and the
+     * next *Check* froze a larger number than the player earned — and duration is the metric that gets
+     * compared and shared. v30-P1-03.
+     *
+     * ⚠️ **Sealed here rather than guarded in the shell.** The shell could remember not to start it,
+     * and a second shell — tablet, desktop — would have to remember too. A clock that refuses is a
+     * fact about the clock; a shell that declines is a promise about every shell there will ever be.
+     */
+    seal() {
+      closeSpan();
+      sealed = true;
+    },
+
+    isSealed: () => sealed,
 
     /** Stop counting and keep what was counted. */
     hold() {
@@ -127,6 +150,11 @@ export function createClock({ now = () => Date.now(), elapsed = 0, running = fal
       accumulated = Math.max(0, Number(elapsed) || 0);
       // A clock restored while running keeps running, from now rather than from whenever it last began.
       if (since !== null) since = now();
+    },
+
+    /** A restored session may bring back a clock that was already stopped for good. */
+    reseal() {
+      sealed = false;
     },
 
     /**

@@ -24,6 +24,16 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
+# ⚠⚠ **The stream is forced to UTF-8, and the same fix was made in `lint_discovery.py` an hour
+# earlier and not carried here.** This prints test *names* and failure messages, which come from
+# `engine.test.js` and are full of warning signs; Windows gives a redirected stream cp1252, so the
+# first real failure this runner reported died on a `UnicodeEncodeError` while printing it — turning
+# a named failing test into a traceback. **A tool that prints text it did not write cannot control the
+# characters in it.** A rule applied to one file and not to its sibling is the shape this project keeps
+# finding; this is that shape, inside the fix for it.
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = ROOT / "tools" / "dev_server.py"
 READY_TIMEOUT_MS = 120_000

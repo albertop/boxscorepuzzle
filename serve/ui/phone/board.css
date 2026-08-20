@@ -392,8 +392,13 @@ td.label.substitute { padding-left: 14px; }
 
 /* ---- the ending: check, and what the player gets for being right ------------------------------ */
 
-/* ⚠️ Below the keypad rather than above it. The keypad is where the thumb lives, and a button that
-   ends the game sitting under the thumb is a game ended by accident. */
+/* ⚠️⚠️ **Check moved into the keypad's last slot, and this comment used to argue against that.** It
+   said a button ending the game must not sit under the thumb. What answers it is the gate rather than
+   the position: the key is disabled for the whole time the player is filling cells, so the accident
+   window is the instant after the last digit — and §27 has no fail state, so an unwanted press on a
+   complete board does what a deliberate one would have done a second later.
+
+   The strip below the pad stays, carrying only the verdict. */
 .footer {
   flex: none;
   display: flex;
@@ -421,16 +426,18 @@ td.label.substitute { padding-left: 14px; }
   font-weight: 600;
 }
 
-.done {
-  flex: none;
-  min-height: var(--cell);
-  padding: 0 18px;
-  border: 0;
-  border-radius: 8px;
+/* ⚠️ The Check key. It takes the pad's ground when disabled and the header's green when live, so the
+   change from *not yet* to *ready* is visible without reading it — the one moment the board changes
+   what it offers. `:disabled { opacity: .35 }` above applies to it like every other key. */
+.keypad button.check {
   background: var(--header-ground);
   color: var(--header-ink);
-  font: 600 15px/1 var(--face), system-ui, sans-serif;
+  font: 600 14px/1 var(--face), system-ui, sans-serif;
   letter-spacing: 0.02em;
+}
+.keypad button.check:disabled {
+  background: var(--key);
+  color: var(--key-ink);
 }
 
 /* ---- the reveal: a printed boxscore, not a results card -------------------------------------- */

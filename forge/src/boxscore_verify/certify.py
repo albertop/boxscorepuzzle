@@ -186,6 +186,91 @@ def check_independent_correspondence(
     return refusals
 
 
+def check_printed_boxscore_corresponds(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
+    """The half of the printed boxscore no board carries, against the anchors that can speak about it.
+
+    ⚠️⚠️ **This check did not exist and `format.py` delegated to it by name.** Schema 5 gave the reveal
+    both clubs; `check_reveal_agrees` compares the half the board also carries, cell by cell, and its
+    docstring said the other half "belongs to `certify_for_publication`, against the game log". It did
+    not. `Evidence` carried no rows, no certification looked at them, and **the publication gate
+    certified a package whose `defense.batting` and `offense.pitching` were whatever the producer put
+    there.** The fixture in `tests/reveals.py` names those rows `Not A Real Player` and
+    `test_a_sound_package_is_publishable` expected the gate to accept it, which made the gap a
+    demonstration rather than a hypothesis. **The absence of a check reading as the presence of a
+    passing one**, written the same day as the rule about it.
+
+    **What can be checked, and it is real.** The unshared grids are the *other direction* of the same
+    game, so the line score speaks about them — and the line score's totals come from `retroGamesReg`,
+    a different table from the `retroDailyReg` rows the printed sheet is built from:
+
+      - the defence's batters scored the runs and made the hits the line score attributes to the
+        defence, and
+      - the offence's pitchers allowed exactly those same runs and hits, because they are the same
+        events counted from the other side. That is §3's cross-team identity, applied to the direction
+        the board does not show.
+      - the offence's pitchers recorded the outs the defence's batters made, which is bounded by the
+        innings the defence actually batted.
+
+    A fabricated grid, a stale join, a side swap or a partial loader result breaks at least one of
+    these. The all-zero fixture broke three.
+
+    ⚠️ **What cannot be checked, stated instead of delegated.** There is **no independent source at row
+    granularity.** `retroGameLogs` carries team totals, not lines, so *which* batter had the hits and
+    *what he was called* is corroborated by nothing — a swap of two rows within a club passes every
+    assertion here. That is a real residual and the honest place for it is this docstring rather than
+    another forward reference to a check somebody else is expected to have written.
+    """
+    # ⚠️ `evidence` is unused and that is a statement, not an oversight: the anchors this check needs
+    # are the *line score*, which travels inside the package, and there is no row-level source in
+    # `Evidence` to compare against. Kept in the signature because the registry calls every
+    # certification the same way, and a check that quietly took a different shape would be one the
+    # registry could stop wiring in without anything noticing.
+    del evidence, secret
+    reveal = package.reveal
+    if reveal is None:
+        # `check_reveal_is_complete` owns the absent case and refusing twice would double-count it.
+        return []
+    printed = reveal.boxscore
+    score = package.solution.line_score
+    refusals: list[str] = []
+
+    for where, rows in (
+        ("offense.batting", printed.offense.batting),
+        ("offense.pitching", printed.offense.pitching),
+        ("defense.batting", printed.defense.batting),
+        ("defense.pitching", printed.defense.pitching),
+    ):
+        if not rows:
+            refusals.append(f"the printed boxscore has no rows for {where}")
+    if refusals:
+        # The sums below would all read zero against a real total and bury the actual fault in noise.
+        return refusals
+
+    # The defence's own batting, and the offence's staff counting the same events from the other side.
+    batted, pitched = printed.defense.batting, printed.offense.pitching
+    for what, found, official in (
+        ("the defence's batters scored", sum(row.runs for row in batted), score.defense_runs),
+        ("the defence's batters hit", sum(row.hits for row in batted), score.defense_hits),
+        ("the offence's pitchers allowed, in runs", sum(row.runs for row in pitched), score.defense_runs),
+        ("the offence's pitchers allowed, in hits", sum(row.hits for row in pitched), score.defense_hits),
+    ):
+        if found != official:
+            refusals.append(f"{what} {found}, and the line score says {official}")
+
+    # ⚠️ A bound rather than an equality, because the last half-inning is not always completed: a home
+    # side that scores the winning run stops batting. So the staff recorded three outs for every inning
+    # the defence finished, and between none and three in the one it may not have.
+    innings = len(score.defense_by_inning)
+    outs = sum(row.outs for row in pitched)
+    if innings and not (3 * (innings - 1) <= outs <= 3 * innings):
+        refusals.append(
+            f"the offence's pitchers recorded {outs} outs across {innings} innings the defence batted, "
+            f"which is outside {3 * (innings - 1)} to {3 * innings}"
+        )
+    return refusals
+
 CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, Ed25519PublicKey | Unsigned], list[str]]]] = {
     "evidence_is_about_this_package": check_evidence_is_about_this_package,
     "mathematics": check_mathematics,
@@ -193,6 +278,7 @@ CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, Ed25519PublicKey | 
     "reveal_is_complete": check_reveal_is_complete,
     "provenance": check_provenance,
     "independent_correspondence": check_independent_correspondence,
+    "printed_boxscore_corresponds": check_printed_boxscore_corresponds,
 }
 
 
