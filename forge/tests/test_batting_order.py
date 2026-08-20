@@ -275,18 +275,55 @@ class TestTheRecordedPathIsThePathTaken:
         # already follows. What must not happen is the total being added while it too was given.
         assert step.depends_on == frozenset(), f"a given was recorded as an edge: {step.depends_on}"
 
-    def test_a_deduced_companion_is_an_edge_and_moves_the_depth(self) -> None:
-        """The case the old code lost: the companion was **worked out**, so it is a real dependency."""
+    def test_a_shared_slot_with_two_unknowns_is_left_as_a_sum(self) -> None:
+        """The neighbouring guarantee: two open rows in a slot constrain each other and fix neither."""
         from boxscore_forge.solver import Technique  # noqa: PLC0415
 
         slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
-        # Nothing given but the total, so slot 9's two rows stay a sum and neither is settled: the
-        # constraint refuses to split them, which is the neighbouring guarantee.
         solution = self._solve(slots, {batting_total_cell("plate_appearances"): 39})
         shared = {batting_cell(8, "plate_appearances"), batting_cell(9, "plate_appearances")}
         settled = {d.cell for d in solution.deductions if d.technique is Technique.LINEUP_ARITHMETIC}
 
         assert not (shared & settled), "the solver split a shared slot rather than leaving the sum"
+
+    def test_a_deduced_companion_is_an_edge_and_moves_the_depth(self) -> None:
+        """⚠️⚠️ **The test that carried this name did not create a deduced companion.**
+
+        It gave only the team total, left both rows of slot 9 unresolved, and asserted they were
+        absent — which is the *unsplittable sum*, a different guarantee that already had its own test
+        above. Reverting the companion transport left it green. **A guard that cannot fail is
+        indistinguishable from one that is broken**, and this one was named for the exact defect it
+        could not see.
+
+        The real case: row 9's plate appearances fall out of the row identity by propagation, and then
+        lineup arithmetic derives row 8 as *the slot total less row 9*. Row 9 was **worked out**, so it
+        is an edge and it moves the depth.
+        """
+        from boxscore_forge.constraints import footnote_cell  # noqa: PLC0415
+        from boxscore_forge.identities import FOOTNOTE_COLUMNS  # noqa: PLC0415
+        from boxscore_forge.solver import Technique  # noqa: PLC0415
+
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+        companion = batting_cell(9, "plate_appearances")
+        given = {
+            batting_total_cell("plate_appearances"): 39,
+            batting_cell(9, "at_bats"): 1,
+            batting_cell(9, "walks"): 0,
+            **{footnote_cell(9, column): 0 for column in FOOTNOTE_COLUMNS},
+        }
+        solution = self._solve(slots, given)
+        steps = {step.cell: step for step in solution.deductions}
+
+        assert companion in steps, "the companion was not deduced, so this test proves nothing"
+        assert steps[companion].technique is Technique.PROPAGATION
+        settled = steps[batting_cell(8, "plate_appearances")]
+
+        assert settled.technique is Technique.LINEUP_ARITHMETIC
+        assert settled.value == 3, "the slot's four less the companion's one"
+        assert companion in settled.depends_on, "the row it subtracted is missing from the graph"
+        assert settled.depth == steps[companion].depth + 1, (
+            f"depth {settled.depth} against a companion at {steps[companion].depth}"
+        )
 
     def test_a_given_total_is_not_recorded_as_a_dependency(self) -> None:
         # ⚠️ It was, unconditionally. Propagation records only cells that were *deduced*, because a
@@ -396,6 +433,25 @@ class TestTheTwoImplementationsAgree:
         assert ours, "the generator emitted nothing, so this proves nothing"
         # Sorted, because the two sides emit the spread bound in their own place in the list.
         assert sorted(map(str, ours)) == sorted(map(str, theirs))
+
+    def test_every_relation_is_stated_as_an_inequality_with_the_right_constant(self) -> None:
+        """⚠⚠ **The fields that carry the meaning, and which the row comparison above cannot see.**
+
+        Found by reverting: flipping the verifier's spread bound to `equality=True` changes it from *at
+        most one apart* to *exactly one apart* — which would reject every board whose plate appearances
+        divide evenly by nine — and **the whole suite stayed green**. The agreement test compares which
+        rows each relation is about, and `equality` does not change the rows.
+
+        A structural comparison is blind to semantics by construction. These are the two fields the
+        structure does not carry.
+        """
+        rules = _verifier(tuple(range(1, 10)))
+        chain = [rule for rule in rules if rule.constant == 0]
+        spread = [rule for rule in rules if rule.constant == 1]
+
+        assert len(chain) == 8, f"{len(chain)} adjacent comparisons, expected eight"
+        assert len(spread) == 1, f"{len(spread)} spread bounds, expected one"
+        assert all(not rule.equality for rule in rules), "a batting-order relation is stated as an equality"
 
     def test_they_disagree_about_direction_deliberately(self) -> None:
         # Recorded rather than papered over: the generator writes `earlier - later >= 0` and the

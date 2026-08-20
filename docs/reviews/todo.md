@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (three passes on the last), 112 findings, none rejected. One is open and stated
+**Twenty-seven reviews (four passes on the last), 113 findings, none rejected. One is open and stated
 below.** Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
 
@@ -19,6 +19,7 @@ kept being wrong was the apparatus measuring it, and no two were wrong the same 
 | v27 first | the relations encoded monotonicity, not the cycle: `6 5 4 4 4 4 4 4 4` was accepted |
 | v27 second | the corrected model was exact and **deduced nothing** — 0 of 9 — and no test could see it |
 | v27 third | the inversion survived **one property away** from where it was fixed |
+| v27 fourth | the guard named *a deduced companion is an edge* **never created one** |
 
 ⚠️ **Four of the seven were invisible in output that looked entirely reasonable.** That is the shape
 this project keeps meeting and it has a new member: *a model can be exactly right and have no
@@ -2290,6 +2291,37 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## ⚠⚠ v27 fourth pass — and the change of method it forced
+
+**The finding.** `test_a_deduced_companion_is_an_edge_and_moves_the_depth` gave only the team total,
+left both rows of the shared slot unresolved, and asserted they were absent. That is the *unsplittable
+sum* — a different guarantee, which already had its own test. **It never created a deduced companion**,
+so reverting the transport it was named for left it green. A guard that cannot fail is indistinguishable
+from one that is broken, and this one was named for the exact defect it could not see.
+
+Rebuilt against the real case: row 9's plate appearances fall out of the row identity by propagation,
+then lineup arithmetic derives row 8 as *the slot total less row 9*, at depth 2 and depending on it.
+
+### ⚠⚠ What actually needed fixing was how I was working
+
+**Five passes in a row found defects in code written minutes earlier. The reviewer was doing the
+checking I should have done**, and shipping-then-waiting is not a method.
+
+`discovery/batting-order/mutation_sweep.py` reverts each claim of this work in turn — ten of them, each
+the *smallest* change that undoes one thing — and requires the suite to notice. **It found one on its
+first run, which I would otherwise have handed over:** flipping the verifier's spread bound from
+`<= 1` to `== 1` — which would reject every board whose plate appearances divide evenly by nine — left
+the entire suite green.
+
+⚠️ **The reason is worth more than the fix.** The cross-implementation test compares *which rows* each
+relation is about. `equality` does not change the rows. **A structural comparison is blind to semantics
+by construction**, and it was the only thing standing between the two implementations and a silent
+divergence. The gap is closed by asserting the two fields the structure cannot carry: the constant and
+the equality flag.
+
+**All ten claims are guarded now, checked rather than believed.** The sweep is kept and is meant to run
+after touching the constraint, the solver, or their tests — not as a habit, as a step.
 
 ## ⚠⚠ v27 third pass: the fix left the inversion alive one property away
 

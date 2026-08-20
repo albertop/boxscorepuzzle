@@ -1,4 +1,4 @@
-# Code Review v27 - Third Pass
+# Code Review v27 - Fourth Pass
 
 ## Scope
 
@@ -13,7 +13,42 @@ This review concentrates on the batting-order work added after v26:
 
 The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
 
-## Third-Pass Findings
+## Fourth-Pass Finding
+
+### v27-P2-08 - The regression named for a deduced shared-slot dependency never creates one
+
+- **Persona:** Test engineer / Statistician-methodologist
+- **Severity:** P2
+- **Location:** `forge/tests/test_batting_order.py:278`
+- **Description:** `test_a_deduced_companion_is_an_edge_and_moves_the_depth` gives only the team plate-appearance total, deliberately leaves both rows in shared slot 9 unresolved, and then asserts that neither row was deduced. It never has propagation deduce one companion before lineup arithmetic solves the other, and it never asserts `depends_on`, `depth`, or `chain_length`. The production fix now carries deduced companions into the dependency graph, but this test does not exercise that behavior.
+- **Impact:** The companion transport can regress while the newly added suite remains green. Removing the companion from `_lineup_moves` or from `_next_step`'s dependency set would again understate shared-slot chain depth, including the metric consumed by the arm comparison, without this purported regression test detecting it.
+- **Reproduction:** In the setup at lines 282-289, neither shared-row PA is ever present in `solution.deductions`; the only assertion is that both remain absent. Revert only the companion contribution to `leaned_on` in `solver.py`: this test's result and assertion are unchanged because no dependency edge is ever produced.
+- **Recommended fix and rationale:** Build a fixture where row identity first deduces one shared-slot companion's PA from its batting components, then lineup arithmetic derives the other row from the known slot total. Assert that the lineup step contains that deduced companion in `depends_on` and that its depth is one greater than the deepest deduced input. Keep the current unsplittable-sum scenario as a separate test. This makes the regression guard fail for the exact graph defect it claims to close.
+
+## Fourth-Pass Disposition
+
+- `v27-P2-06` is fixed in production: shared-slot lineup moves now return known companions and `_next_step` includes deduced companions, while consistently excluding givens, from the dependency graph.
+- `v27-P2-07` is fixed: `bounding_steps` now counts `Technique.BOUNDING` directly rather than deriving it from `trivial_steps`.
+- The new tests cover direct lineup arithmetic, shared-slot non-splitting, given exclusion, and the corrected bounding count. The remaining gap is the ineffective deduced-companion regression in `v27-P2-08`.
+- `discovery/batting-order/arms.log` is currently empty, so it provides no completed experimental result to assess in this pass.
+- The verifier's inability to replay `LINEUP_ARITHMETIC` is already recorded as pending product work in `todo.md`; it is not duplicated as a review finding.
+
+## Fourth-Pass Persona Summary
+
+- **Software architect:** The lineup dependency transport and direct bounding metric now match the intended model.
+- **Security engineer:** No practical security regression found in the changed surface.
+- **Performance engineer:** No practical runtime or memory regression found.
+- **Test engineer:** One regression test does not execute or assert the behavior named by the test (`v27-P2-08`).
+- **Data scientist:** No new arithmetic correctness defect found.
+- **Statistician/methodologist:** Production chain-depth provenance is fixed, but its shared-slot deduced-input case remains unprotected.
+- **UX/API contract reviewer:** No shipped API or user-facing contract regression found.
+- **Solo-maintainer pragmatist:** Fix the single test gap; no broader refactor is warranted.
+
+## Fourth-Pass Verdict
+
+One new practical finding remains: **one P2** (`v27-P2-08`). No new P0, P1, or P3 finding was identified. The two third-pass production defects are resolved; the open item is a narrowly scoped regression-coverage hole in the exact shared-slot provenance case.
+
+## Resolved Third-Pass Findings
 
 ### v27-P2-06: Shared-slot lineup deductions omit the row they subtract from their dependency graph
 
@@ -35,13 +70,13 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** Solve a one-row-per-slot shape with slots 1 through 9 and a given PA total of 39. The nine PA deductions all have `Technique.LINEUP_ARITHMETIC` and the solution has zero bounding stalls, but `bounding_steps` returns nine because all nine deductions have `known_terms_combined is None`.
 - **Recommended fix and rationale:** Implement `bounding_steps` as an explicit count of `deduction.technique is Technique.BOUNDING`. Audit other properties that use `has_a_comparable_cost` as a technique proxy now that “not comparable” has two meanings, and add a regression asserting that the total-visible lineup solve has nine lineup steps, zero bounding steps, and zero stalls. Technique identity is the stable contract; cost availability is no longer an equivalent classification.
 
-## Third-Pass Disposition
+## Third-Pass Disposition (superseded)
 
 - **`v27-P1-05` resolved in the generator solver:** `_lineup_moves()` now performs the quotient/remainder step directly, leaves a shared slot unsplit when two rows remain unknown, assigns the cheapest dedicated technique, and has end-to-end `solve()` tests. Production still passes no slots and is explicitly covered as unchanged.
 - **Verifier limitation not duplicated:** the independent verifier has no corresponding value-aware step and would reject a board that relies on this constraint as underivable. This is explicitly recorded in the TODO and in the instrument output as pending only if the operator decides to ship the feature.
 - **Experiment incomplete:** `arms.log` currently contains progress only through 10 of 48 directions. No coverage, technique, or payoff conclusion is available yet.
 
-## Third-Pass Persona Summary
+## Third-Pass Persona Summary (superseded)
 
 | Persona | Result |
 |---|---|
@@ -54,7 +89,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 | Baseball / Boxscore Domain Reviewer | The direct total-to-slot arithmetic and refusal to split two unknown substitute rows are correct. |
 | Kakuro / Logic-Puzzle Reviewer | The generator now reaches the exact cyclic consequence; no new mathematical finding. |
 
-## Third-Pass Verdict
+## Third-Pass Verdict (superseded)
 
 The central second-pass P1 is closed in the generator, and no numerical claim from the still-running experiment has been accepted. Two P2 integration findings remain: dependency provenance is incomplete for shared slots, and one legacy metric misclassifies the new cheapest technique as bounding. No P0, P1, or P3 finding is open from this third pass.
 
