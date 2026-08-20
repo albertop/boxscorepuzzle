@@ -142,7 +142,14 @@ CREATE TABLE dbo.retroGameProvenanceStaging (
     GAME_ID     varchar(20)  NOT NULL PRIMARY KEY,
     source_type varchar(3)   NOT NULL,
     is_deduced  bit          NOT NULL,
-    loaded_at   datetime2(0) NOT NULL CONSTRAINT DF_retroGameProvenanceStaging_loaded_at DEFAULT SYSUTCDATETIME()
+    -- ⚠⚠ **Unnamed on purpose (v28-P2-04).** A named default constraint made this loader work
+    -- exactly once: sp_rename renames the table and not its constraints, so the canonical table kept
+    -- DF_retroGameProvenanceStaging_loaded_at, and the next rebuild's CREATE TABLE collided with it --
+    -- constraint names are schema-scoped, not table-scoped. Every later refresh then failed
+    -- deterministically before staging a row. The transaction meant provenance was never corrupted,
+    -- which is exactly why it would have gone unnoticed until someone needed a rebuild.
+    -- Letting the server generate the name keeps it unique per creation, and nothing reads it.
+    loaded_at   datetime2(0) NOT NULL DEFAULT SYSUTCDATETIME()
 );
 "@
     [void]$command.ExecuteNonQuery()

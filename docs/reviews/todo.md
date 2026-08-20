@@ -2,8 +2,8 @@
 
 ## Where everything stands
 
-**Twenty-eight reviews, 126 findings, none rejected. v28 was a full-tree review rather than a delta:
-five findings, all five closed.** Two more are open below, plus several found without a reviewer —
+**Twenty-eight reviews, 127 findings, none rejected. v28 was a full-tree review rather than a delta:
+six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
 which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
 
@@ -142,6 +142,28 @@ is refused before connecting, and one zip of 116 is refused as *a drop of 99.4%*
 rehearsed on throwaway tables — rolled back, the original survives intact and the staging table is
 gone; committed, the new rows are in. `DROP` plus `sp_rename` inside a transaction is atomic on this
 server, which was the one assumption that could not be made.
+
+### ⚠⚠ v28-P2-04: the repair for P2-02 made the loader work exactly once
+
+The staging table named its default constraint `DF_retroGameProvenanceStaging_loaded_at`. **`sp_rename`
+renames a table and not its constraints**, so after the swap the *canonical* table carried a
+staging-only constraint name — and the next rebuild's `CREATE TABLE ...Staging` collided with it,
+because constraint names are schema-scoped rather than table-scoped.
+
+⚠️ **The transaction meant provenance was never at risk, and that is exactly why it would have gone
+unnoticed.** The failure is deterministic, silent until someone needs a refresh, and lands *before* any
+row is staged — a rebuild path that works once looks identical to one that works, until the second
+time.
+
+Reproduced before fixing: rebuild 1 succeeded, the constraint was confirmed sitting on the canonical
+table under the staging name, rebuild 2 failed with *There is already an object named
+'DF_..._loaded_at'*. Fixed by letting the server generate the name — unique per creation, and nothing
+reads it. **Verified with three consecutive rebuilds**, all of which now succeed with the default still
+in place, and the refusal paths re-checked afterwards.
+
+⚠️ A fix for a data-integrity defect that introduces an operational one is still a regression. This is
+the second thing today found in a repair rather than in the original — the mutation sweep's own blind
+spot was the first.
 
 ### ⚠️ v28-P2-03: the discovery renderer drew a different clue surface from the product
 
