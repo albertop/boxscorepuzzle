@@ -51,7 +51,7 @@ product's own interface language and legal documents.
 
 - PEP 8 enforced via `ruff`. Max line length: 120. Target: `py313`.
 - **Formatting via `ruff format`.** Not negotiable per-file, not configurable per-developer. Run it
-  in pre-commit and in CI.
+  in the pre-push hook and in CI. (There is no pre-commit hook; see *GitHub configuration*.)
 - Naming: no single-letter variable names. Use descriptive names that convey intent (`result` not
   `r`, `directory` not `d`). **Exception:** conventional indices in tight numeric loops (`i`, `j`)
   and standard math notation where a longer name would obscure the formula.
@@ -438,7 +438,30 @@ between them is a signed package of validated puzzles.
 
 ### GitHub configuration
 
-- Branch protection on `main`: CI must pass before merge.
+⚠⚠ **This section described a repository that cannot exist on the current plan.** It required branch
+protection, a red CI that blocks merge, and a pre-commit gate; none of the three is in place and the
+first two are **not available**. GitHub gates branch protection *and* rulesets behind a paid plan for
+**private** repositories, and this one is private permanently (§16) because `forge/` holds the generator
+and the human-solvability guarantee. Both API calls return `403 Upgrade to GitHub Pro or make this
+repository public`.
+
+A normative document prescribing a state the operator cannot reach hides **which check is actually
+load-bearing**, which is worse than describing a weaker arrangement honestly. What is true:
+
+- **CI runs on every push and is a report, not a gate.** `.github/workflows/ci.yml`: ruff over `forge/`
+  blocking, the `discovery/` ratchet, mypy strict, the suite with the coverage floor, and the browser
+  suite headless, on Ubuntu and Windows. **Nothing stops a red commit reaching `main`.**
+- **`.githooks/pre-push` is the local substitute and is not enabled by default.** Turn it on with
+  `git config core.hooksPath .githooks`. It runs what CI runs before a push to `main`.
+- **`git push --no-verify` skips it**, and that is an acknowledged escape hatch rather than a hole to
+  be closed: on one laptop with one developer the hook guards against forgetting, not against intent.
+  **It is not branch protection and must not be described as any.**
+- **There is no pre-commit hook.** There was never one; the line requiring it described nothing.
+
+**What would change this:** a GitHub Pro plan. The required checks would then be
+`forge (ubuntu-latest)`, `forge (windows-latest)` and `browser`.
+
+- Branch protection on `main`: CI must pass before merge. **Not available — see above.**
 - **GitHub Actions runs the full suite with coverage on every push.** This is the regression net;
   it does not depend on anyone remembering to run it.
 - Path filters so a `serve/` change doesn't run the forge suite and vice versa.
@@ -538,8 +561,13 @@ Coverage runs separately:
 pytest --cov=src --cov-report=term-missing --cov-report=html
 ```
 
-**Pre-commit** runs `ruff format`, `ruff check`, and `mypy` on changed files. CI runs the full
-suite plus coverage. A red CI blocks merge — no exceptions, no "fix it in the next commit."
+CI runs the full suite plus coverage on every push.
+
+⚠️ **A red CI does not block anything, and there is no pre-commit hook.** This paragraph used to say
+both. See *GitHub configuration* above for what is actually enforced and why the server-side gate is
+unavailable: the local `.githooks/pre-push` is the whole of it, it is opt-in, and `--no-verify` skips
+it. Keeping the stronger sentence made the document read as a guarantee and left nobody able to say
+which check was load-bearing."
 
 ---
 

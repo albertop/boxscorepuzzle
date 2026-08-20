@@ -1648,8 +1648,176 @@ suite("⚠️⚠️ A finished board stays finished, and its time stays what was
   });
 });
 
+suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () => {
+  /**
+   * **`boot()` from `shell.js`, not the pieces it uses.** The suite below this one asserts component
+   * properties and used to be described as a shell test; nothing exercised the completion lifecycle
+   * the shell owns — the pad going away, the board redrawn without selection, *See the boxscore*
+   * taking its place, a restored session opening the reveal. v31-P2-01.
+   *
+   * The boundaries are all handed in: a detached root, a clock this test moves by hand, and a store
+   * backed by an object so one case cannot see another's session.
+   */
+  const bootShell = async (raw, { session = null, now = { at: 7_000_000 } } = {}) => {
+    const { boot } = await import("../ui/phone/shell.js");
+    const { createClock } = await import("../engine/clock.js");
+    const { createStore } = await import("../engine/store.js");
+    const { readPackage } = await import("../engine/package.js");
+    const puzzle = readPackage(raw);
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+    const kept = new Map();
+    const store = createStore({
+      getItem: (key) => kept.get(key) ?? null,
+      setItem: (key, value) => kept.set(key, value),
+      removeItem: (key) => kept.delete(key),
+    });
+    // ⚠️ **Seeded through the store's own `save`, never by writing a key this test invents.** The
+    // first version keyed it `s.<id>`; the store keys it `boxscorepuzzle.session.v1.<id>`, so nothing
+    // was ever restored and two cases failed on the fixture rather than on the shell. A test that
+    // spells a key the code owns is a second copy of that key.
+    if (session) store.save(puzzle.id, session);
+    const shell = boot({ puzzle, root, store, clock: createClock({ now: () => now.at }) });
+    return { ...shell, puzzle, root, now, kept, teardown: () => root.remove() };
+  };
+
+  /** Type one value the way a thumb does: pick the cell, clear it, press keys. */
+  const type = (root, name, value) => {
+    root.querySelector(`.cell[data-cell="${name}"]`).click();
+    const keys = [...root.querySelectorAll(".keypad button")];
+    keys[12].click();
+    const digit = (d) => keys[d === 0 ? 9 : d - 1].click();
+    if (name.startsWith("pitching") && name.endsWith(".outs")) {
+      for (const d of String(Math.floor(value / 3))) digit(Number(d));
+      if (value % 3) keys[9 + (value % 3)].click();
+    } else {
+      for (const d of String(value)) digit(Number(d));
+    }
+  };
+
+  const fill = (shell, { wrongAt = null } = {}) => {
+    const answers = new Map(shell.game.cells().map((cell) => [cell.name, cell.answer]));
+    shell.game.blanks().forEach((name, index) => {
+      type(shell.root, name, answers.get(name) + (index === wrongAt ? 1 : 0));
+    });
+  };
+
+  const press = (root, selector) => root.querySelector(selector).click();
+
+  test("⚠️ a live board offers a keypad and a Check key that is dead until the board is full", async () => {
+    const shell = await bootShell(packages[0].raw);
+    const check = shell.root.querySelector(".keypad button.check");
+
+    equal(check.disabled, true, "Check was live on an empty board");
+    fill(shell);
+    equal(shell.root.querySelector(".keypad button.check").disabled, false, "Check stayed dead on a full board");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ a wrong board keeps the pad, and the verdict names nothing", async () => {
+    const shell = await bootShell(packages[0].raw);
+    fill(shell, { wrongAt: 2 });
+
+    press(shell.root, ".keypad button.check");
+
+    const verdict = shell.root.querySelector(".verdict");
+    equal(verdict.dataset.state, "wrong");
+    equal(verdict.textContent, "Something doesn't add up yet.");
+    assert(shell.root.querySelector(".keypad"), "a wrong board lost its keypad");
+    assert(!shell.root.querySelector(".reveal"), "a wrong board opened the reveal");
+    // ⚠️ The rule the whole ending exists to protect: no cell is named and no count is given.
+    const wrongCell = shell.game.blanks()[2];
+    assert(!verdict.textContent.includes(wrongCell.split(".")[1]), "the verdict named a column");
+    assert(!/\d/.test(verdict.textContent), `the verdict carries a number: ${verdict.textContent}`);
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ finishing replaces the pad, kills the board, and opens the boxscore", async () => {
+    // The whole lifecycle in one pass, through the real handlers.
+    const shell = await bootShell(packages[0].raw);
+    fill(shell);
+
+    press(shell.root, ".keypad button.check");
+
+    assert(shell.root.querySelector(".reveal"), "solving did not open the reveal");
+    assert(!shell.root.querySelector(".keypad"), "the keypad survived the end of the game");
+    assert(!shell.root.querySelector(".footer"), "the verdict strip survived the end of the game");
+    equal(shell.root.querySelector(".again")?.textContent, "See the boxscore");
+    assert(shell.app.classList.contains("app-finished"), "the finished class was never applied");
+    const cells = [...shell.root.querySelectorAll("td.cell")];
+    equal(cells.filter((c) => c.getAttribute("role") === "button").length, 0, "cells are still controls");
+    assert(!shell.root.querySelector(".cell.selected"), "a cell is still selected on a finished board");
+
+    shell.teardown();
+  });
+
+  test("⚠️ closing the reveal and reopening it uses the frozen record, not a new reading", async () => {
+    const shell = await bootShell(packages[0].raw);
+    fill(shell);
+    press(shell.root, ".keypad button.check");
+    const first = shell.root.querySelector(".reveal-time-figure").textContent;
+
+    press(shell.root, ".reveal-close");
+    assert(!shell.root.querySelector(".reveal"), "the reveal did not close");
+    // An hour of the page being open, then back to the boxscore.
+    shell.now.at += 3_600_000;
+    press(shell.root, ".again");
+
+    equal(shell.root.querySelector(".reveal-time-figure").textContent, first, "the shared time moved");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ a restored finished session opens finished, with no pad and no way to type", async () => {
+    // The ordinary reopen, which is the path persistence exists for and the one that used to hand back
+    // an editable board and a running clock.
+    const first = await bootShell(packages[0].raw);
+    fill(first);
+    press(first.root, ".keypad button.check");
+    const earned = first.root.querySelector(".reveal-time-figure").textContent;
+    const saved = first.store.load(first.puzzle.id);
+    first.teardown();
+
+    const second = await bootShell(packages[0].raw, { session: saved, now: { at: 9_000_000 } });
+
+    assert(second.root.querySelector(".reveal"), "a finished session reopened without its boxscore");
+    equal(second.root.querySelector(".reveal-time-figure").textContent, earned, "the restored time is not the earned one");
+    assert(!second.root.querySelector(".keypad"), "a finished session came back with a keypad");
+    equal(second.game.isFinished(), true);
+    equal(second.clock.isSealed(), true, "the restored clock was not sealed");
+
+    second.teardown();
+  });
+
+  test("⚠️ an unfinished session comes back playable, which is the case the others could hide", async () => {
+    // The control. Every assertion above is about a board that has stopped; a shell that refused to
+    // build a keypad at all would pass all of them.
+    const first = await bootShell(packages[0].raw);
+    const name = first.game.blanks()[0];
+    type(first.root, name, first.game.cells().find((c) => c.name === name).answer);
+    const saved = first.store.load(first.puzzle.id);
+    first.teardown();
+
+    const second = await bootShell(packages[0].raw, { session: saved });
+
+    equal(second.game.isFinished(), false);
+    assert(second.root.querySelector(".keypad"), "a half-played session came back without a keypad");
+    assert(!second.root.querySelector(".reveal"), "a half-played session opened the reveal");
+    equal(second.game.value(name), first.game.cells().find((c) => c.name === name).answer, "the entry was lost");
+
+    second.teardown();
+  });
+});
+
 suite("⚠️ The finished board is a record, not a surface", () => {
-  /** Boot the real shell against a package, solve it through the keypad, and hand back the app. */
+  /**
+   * **Components, assembled here.** ⚠️ This said *"boot the real shell against a package, solve it
+   * through the keypad"* and did neither: it calls `createGame`, `renderSection` and `renderKeypad`
+   * itself and never touches the shell. The assertions below are worth having and none of them is
+   * evidence about the completion lifecycle. That is the suite above, which drives `boot()`.
+   */
   const played = async (index = 0, { solve = true } = {}) => {
     const { readPackage } = await import("../engine/package.js");
     const { createGame } = await import("../engine/game.js");

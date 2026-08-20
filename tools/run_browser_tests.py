@@ -83,10 +83,23 @@ def main() -> int:
 
             page.goto(f"http://127.0.0.1:{port}/tests/index.html", wait_until="domcontentloaded")
             try:
-                page.wait_for_function("window.__results !== undefined", timeout=READY_TIMEOUT_MS)
+                # ⚠⚠ **Both conditions, and waiting on only one made the fast-fail dead code.** The
+                # page-error handler above sets `window.__fatal`, and this waited on `window.__results`
+                # alone -- so a module that throws on import still burned the full two minutes before
+                # reporting, and the flag looked like a fast path while being a variable nobody read.
+                # A half-applied patch, committed without running the failing case. v30-P3-02.
+                page.wait_for_function(
+                    "window.__results !== undefined || window.__fatal !== undefined",
+                    timeout=READY_TIMEOUT_MS,
+                )
             except Exception:  # noqa: BLE001
                 print("the browser suite never finished — no window.__results after "
                       f"{READY_TIMEOUT_MS // 1000}s. The console said:")
+                print("\n".join(console) or "  (nothing)")
+                return 1
+
+            if page.evaluate("window.__results === undefined"):
+                print("the browser suite died before it could run. The console said:")
                 print("\n".join(console) or "  (nothing)")
                 return 1
 
