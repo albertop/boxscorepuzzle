@@ -1,19 +1,170 @@
-# Code Review v27 - Sixth Pass
+# Code Review v27 - Tenth Pass
 
 ## Scope
 
-This review concentrates on the batting-order work added after v26:
+This pass reviews the revised correction for `v27-P3-16`:
 
-- `forge/src/boxscore_forge/constraints.py`
-- `forge/tests/test_batting_order.py`
 - `discovery/batting-order/arms.py`
-- `discovery/batting-order/arms.log`
-- The revised `discovery/batting-order/measure.py` and `result.log`
-- The corresponding decisions and status in `docs/reviews/todo.md`
+- `forge/tests/test_specimen_eligibility.py`
+- The specimen mutations added to `discovery/batting-order/mutation_sweep.py`
 
-The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
+Cache files and source timestamps produced by the mutation sweep's restore cycle were excluded from the correction scope. The batting-order fallback remains experimental and the verifier's value-producing lineup step remains deliberately deferred. No source code, tests, generated output, configuration, or planning document was changed by this review. Tests and static-analysis tools were not run.
 
-## Sixth-Pass Findings
+## Tenth-Pass Correction Review
+
+### `v27-P3-16` is resolved
+
+`_classify_specimen()` now establishes eligibility before composition. It requires a retained `(arm, SPECIMEN_TARGET)` specimen for every arm that will be rendered, restricts treatment rows to the exact specimen target and to reached rows, and returns `None` rather than `negative` when that observation does not exist. Only an eligible reached treatment with zero lineup-arithmetic steps enters the contrast pool; a positive count enters the positive pool.
+
+The focused test module covers a missing treatment, a missing baseline, a genuine reached-zero contrast, a reached-positive treatment, missing specimen maps despite optimistic rows, and a row from another target. The mutation sweep separately removes the both-pages check, converts an absent treatment observation into a contrast, and removes the target restriction. Those mutations match the three ways the correction could regress rather than merely restating its final syntax.
+
+The defensive `never reached` branch in `_specimen_pages()` remains appropriate for direct or future callers, but the main selection path can no longer choose such a direction and then claim it as one of the completed specimen comparisons.
+
+## Tenth-Pass Disposition
+
+- `v27-P3-16` is materially resolved in the classifier, its call site, focused tests, and mutation definitions.
+- The original quota fix `v27-P3-12` remains intact: pool composition is still enforced only after eligible candidates have been collected.
+- The correction does not broaden production behavior or start the deferred verifier implementation.
+- No new production, publication, research-validity, security, performance, test, or API-contract finding was identified.
+
+## Tenth-Pass Persona Summary
+
+- **Software architect:** Eligibility is isolated in a small classifier and the rendering/pool responsibilities remain separate.
+- **Security engineer:** No practical security issue was introduced.
+- **Performance engineer:** Classification is constant-size work and does not change the expensive measurement loop.
+- **Test engineer:** Each meaningful branch has a focused case, and the sweep attacks the actual missing-observation regressions.
+- **Data scientist:** An absent observation is no longer pooled with a measured zero.
+- **Statistician/methodologist:** Both rendered arms must now exist at the same declared target before composition is evaluated.
+- **UX/API contract reviewer:** A selected specimen once again guarantees the promised two-page comparison.
+- **Solo-maintainer pragmatist:** The fix is local, explicit, and avoids redesigning the specimen pipeline.
+
+## Tenth-Pass Verdict
+
+The revised correction closes the remaining **P3**. No new P0, P1, P2, or P3 finding was identified. All findings active at the start of this pass are now resolved.
+
+## Ninth-Pass Correction Review (superseded)
+
+### `v27-P3-16` remains open
+
+The submitted delta does not change the specimen classifier. At `discovery/batting-order/arms.py:519`, `uses_lineup` is still computed with `any(...)` over reached treatment rows, and line 524 still sends every false result to `negative`. Consequently, a treatment arm that never reached target 5 remains indistinguishable from one that reached it with zero lineup-arithmetic steps. There is still no eligibility check requiring both entries in `SPECIMEN_ARMS` to exist before the direction enters either pool, so `_specimen_pages()` can still emit `never reached` while the summary announces a completed contrast set.
+
+The actual source change is at `discovery/batting-order/mutation_sweep.py:112`: it mutates `division_against_chain()` back to the old total-deduction denominator. That is a sensible additional check for the already-resolved `v27-P2-13`, and its mutation is narrowly stated. It neither modifies the specimen behavior nor adds a mutation/test that would detect an unreached arm entering the contrast pool.
+
+## Ninth-Pass Disposition (superseded)
+
+- No new finding ID is warranted; the behavior is exactly the still-open `v27-P3-16`.
+- The correction needed in `arms.py` is still to exclude a direction from both pools unless every `(arm, SPECIMEN_TARGET)` in `SPECIMEN_ARMS` exists, then classify the reached treatment row by whether its lineup count is zero or positive.
+- The new denominator mutation appropriately strengthens evidence for resolved finding `v27-P2-13`.
+- No new production, publication, security, performance, or statistical defect was found in the submitted delta.
+
+## Ninth-Pass Persona Summary (superseded)
+
+- **Software architect:** No production boundary changed; the research selector remains the only open surface.
+- **Security engineer:** No practical security issue was introduced.
+- **Performance engineer:** The new mutation adds test-suite runtime only when the sweep is deliberately run; no product runtime changes.
+- **Test engineer:** The denominator now has a useful mutant, but no guard was added for paired specimen eligibility.
+- **Data scientist:** Missing treatment results are still classified as zero-treatment results in the specimen sample.
+- **Statistician/methodologist:** The contrast pool still mixes a measured zero with an absent observation.
+- **UX/API contract reviewer:** The artifact can still promise a rendered comparison and substitute a `never reached` message.
+- **Solo-maintainer pragmatist:** One local eligibility condition in `arms.py` remains sufficient; broader work is unnecessary.
+
+## Ninth-Pass Verdict (superseded)
+
+The submitted change does **not** correct `v27-P3-16`. No new P0, P1, P2, or P3 finding was identified, but the existing **P3 remains open**. The only new source change is useful reinforcement for the already-closed denominator defect.
+
+## Resolved Eighth-Pass Finding
+
+### v27-P3-16 - An unreached arm can satisfy the promised no-arithmetic contrast quota
+
+- **Persona:** Test engineer / UX evidence reviewer
+- **Severity:** P3
+- **Location:** `discovery/batting-order/arms.py:518`
+- **Description:** The new two-pool selector correctly enforces the sizes of its positive and negative pools, but the classification still defines `uses_lineup` with `any(...)` over *reached* treatment rows. `False` therefore has two meanings: the treatment reached target 5 and used zero lineup-arithmetic steps, or the treatment never reached target 5 and produced no qualifying row. Both are appended to `negative`. The selector also does not require the baseline arm to have reached the specimen target. `_specimen_pages()` handles either missing arm by writing a `never reached` message instead of rendering that half of the comparison, while the summary still says that three boards with the declared two-positive/one-contrast composition were written.
+- **Impact:** A normal rerun can pass the new quota, announce a complete contrast set, and replace one or more promised board pages with absence messages. That defeats the purpose of reading the same board under both arms and can leave the adoption decision resting on less visual evidence than the instrument claims to provide. This is limited to the research artifact and does not affect published puzzles.
+- **Reproduction:** Use a seed-one direction whose `on_total_erasable` arm does not reach `SPECIMEN_TARGET`. The generator creates no `(on_total_erasable, 5)` specimen, the filtered `any(...)` returns `False`, and the direction enters `negative`. If selected as its first candidate, `_choose_specimens()` accepts it as the required contrast and `_specimen_pages()` emits `arm on_total_erasable never reached 5 stalls`. Similarly, a direction whose treatment reaches 5 but whose baseline does not can enter either pool and produce a missing baseline page.
+- **Recommended fix and rationale:** Before classifying a direction, require `all((arm, SPECIMEN_TARGET) in specimens for arm in SPECIMEN_ARMS)`. Among those eligible paired specimens, classify the treatment row as positive when `pa_by_lineup > 0` and as contrast only when it reached the target with exactly zero lineup steps. Keep `_choose_specimens()` as the quota postcondition and add a focused case proving an unreached arm belongs to neither pool. Eligibility must establish that the promised comparison exists before composition can establish what kind of comparison it is.
+
+## Eighth-Pass Disposition
+
+- `v27-P2-13` is resolved. `division_against_chain()` now uses `solution.chain_length`, handles a zero-length chain explicitly, and the real fallback test makes chain length differ from deduction count so the denominator affects the verdict.
+- `v27-P2-14` is resolved. The production-off guard now scans first-party calls to `erase()` rather than the internal `shape_of()` forwarding call, and its positive control establishes that the allowed experimental call is visible to the scanner.
+- `v27-P2-15` is resolved for the current import architecture. The guard now starts from every first-party module and rejects any dependency closure reaching both fallback and certification; the stronger temporary rule also rejects every import of the experimental module outside its own tests.
+- `v27-P2-11` is resolved. Every row now persists the completed walk's `walk_max_stalls`, and `_ceiling()` pairs those terminal values by direction and seed without conditioning on target success. Legacy artifacts produce an explicit `NOT ANSWERABLE` result instead of the old censored table.
+- `v27-P3-12` is resolved as originally stated: separate pools and `_choose_specimens()` now enforce the requested numeric quota. `v27-P3-16` is the narrower remaining eligibility defect inside those pools.
+- The expensive verifier lineup step remains deferred, consistently with the current plan. No new production solver, publication, security, or performance defect was found.
+
+## Eighth-Pass Persona Summary
+
+- **Software architect:** The experimental-to-publication import bridge is now guarded in the direction real wiring would take.
+- **Security engineer:** No practical security issue was found in this delta.
+- **Performance engineer:** The conditional retry still limits extra erasure work to ordinary misses; no new runtime concern was found.
+- **Test engineer:** The five earlier guards/measurements are materially corrected; specimen eligibility still conflates a zero result with no result.
+- **Data scientist:** Terminal walk ceilings are now retained independently of configured target crossings.
+- **Statistician/methodologist:** The cap denominator now matches its recorded provisional unit, and the ceiling comparison no longer censors treatment-only reaches.
+- **UX/API contract reviewer:** The specimen summary can still promise a rendered two-arm contrast when one arm has no board at that target.
+- **Solo-maintainer pragmatist:** The only remaining change is local to the specimen classification in `arms.py`; no redesign is warranted.
+
+## Eighth-Pass Verdict
+
+One new practical finding remains: **one P3** (`v27-P3-16`). No P0, P1, or P2 finding was identified. All three seventh-pass P2 findings and both unresolved sixth-pass findings are materially corrected; the remaining issue affects the honesty/completeness of the research specimen pages, not production behavior.
+
+## Resolved Seventh-Pass Findings
+
+### v27-P2-13 - The provisional chain-share cap is implemented with a different denominator
+
+- **Persona:** Statistician-methodologist / Test engineer
+- **Severity:** P2
+- **Location:** `forge/src/boxscore_forge/lineup_fallback.py:39`
+- **Description:** The 20% threshold was derived from the two ATL cases as nine division steps over chain lengths 24 and 26, reported as 38% and 35%. `division_share()` instead divides lineup steps by `len(solution.deductions)`, the total number of solved blanks. The constant and review documents continue to call this a share of the chain, so the implementation applies the provisional number to a different metric from the one that produced it.
+- **Impact:** A board the policy was introduced specifically to discard can pass when it has many deductions outside the critical chain. For example, nine lineup steps on a chain of 24 are 37.5% under the recorded rule, but nine among 50 total deductions are 18% under the code and are retained. That silently removes the only protection against the two known filler-heavy shapes.
+- **Reproduction:** Construct a `Puzzle` whose solution has `chain_length == 24`, nine `LINEUP_ARITHMETIC` deductions, and at least 45 deductions overall. The documented chain share exceeds the 0.20 cap, while `division_share()` returns at most 0.20 and `erase_with_lineup_fallback()` does not discard it. The boundary table in `test_lineup_fallback.py:127` only evaluates `division / total` directly and never exercises which solution property supplies that denominator.
+- **Recommended fix and rationale:** Either compute the recorded metric as lineup-step count divided by `solution.chain_length` (with an explicit zero-chain rule), or rename the metric and re-measure the threshold against total deductions before using 0.20. Add a test with different `chain_length` and deduction counts so changing the denominator changes the verdict. A provisional threshold may be soft; its unit cannot be.
+
+### v27-P2-14 - The production-off test inspects an internal call that already carries slots positionally
+
+- **Persona:** Test engineer / Solo-maintainer pragmatist
+- **Severity:** P2
+- **Location:** `forge/tests/test_lineup_fallback_cannot_publish.py:81`
+- **Description:** `test_production_erasure_still_passes_no_batting_order` claims to inspect production callers of `erase()`, but it parses only `erasure.py`, finds calls to `shape_of()`, and checks whether they contain a keyword named `slots`. The one real call is `shape_of(direction, slots)` at `erasure.py:241`: it already passes slots positionally, so the guard succeeds because it checks syntax rather than activation. No caller of `erase()` is inspected.
+- **Impact:** A production builder can start calling `erase(..., slots=lineup)` and this safety test remains green because `erasure.py` itself did not change. The test therefore cannot enforce the plan's load-bearing claim that production keeps omitting batting-order metadata.
+- **Reproduction:** Add `slots=some_lineup` to any production `erase()` call outside `erasure.py`. The AST scanned by this test is unchanged, its `shape_calls` still contain no keyword named `slots`, and all assertions at lines 95-98 still pass.
+- **Recommended fix and rationale:** Walk first-party call sites of `erase()` and refuse any `slots` argument outside the explicitly experimental module, or expose separate production and experimental entry points so production cannot name the option at all. Mutation-check the actual forbidden wiring by changing a real producer call, not the internal positional forwarding that both modes require.
+
+### v27-P2-15 - Walking imports outward from certification cannot detect a producer that bridges the experiment to it
+
+- **Persona:** Software architect / Test engineer
+- **Severity:** P2
+- **Location:** `forge/tests/test_lineup_fallback_cannot_publish.py:40`
+- **Description:** The publication guard computes modules imported by `boxscore_verify.certify` and asserts that the fallback is not among its dependencies. Real publication wiring points in the opposite direction: a producer imports `erase_with_lineup_fallback()` and also imports `certify_for_publication()`. Adding that bridge does not make certification import the producer, so `_reachable(PUBLICATION_ENTRY)` is unchanged. The same directional blind spot applies to the four other verifier/package entry modules.
+- **Impact:** The test can remain green after the exact wiring mistake it says it prevents. The fallback also returns the ordinary `Puzzle` type with no experimental provenance enforced at the certification boundary, so the import check is currently the claimed structural fence rather than a redundant defense.
+- **Reproduction:** Create a producer module that imports both `boxscore_forge.lineup_fallback` and `boxscore_verify.certify`, then sends the produced board through the normal packaging/certification flow. None of the reachability searches starting from certification or package modules can traverse backward into that caller, so lines 66-79 still pass.
+- **Recommended fix and rationale:** Scan producer/publication modules for any node whose dependency closure reaches both the fallback and certification, and independently make experimental provenance unrepresentable as an ordinary publishable result (for example, a distinct fallback result type accepted only by research code). A graph guard must follow the direction the forbidden call path actually takes; a type/data boundary makes the safety property survive refactors that change imports.
+
+## Seventh-Pass Disposition (superseded)
+
+- The conditional retry correctly attempts ordinary erasure first and uses the same candidate ordering and seed for the fallback attempt.
+- `LINEUP_DIVISION_SHARE_CAP` is visibly marked provisional and its two-board origin is documented, but `v27-P2-13` applies it in the wrong unit.
+- No value-producing lineup step was added to `boxscore_verify`; the expensive verifier work remains deferred as planned.
+- The new publication tests demonstrate that the experimental module is not imported by today's verifier/package dependencies, but `v27-P2-14` and `v27-P2-15` show that they do not enforce the stronger no-wiring claim recorded in the plan.
+- `v27-P2-11` and `v27-P3-12` were not touched by this delta and remain open in the sixth-pass section below.
+- No new production solver arithmetic defect was found.
+
+## Seventh-Pass Persona Summary (superseded)
+
+- **Software architect:** The experimental module is isolated today, but dependency direction makes the claimed publication fence incomplete.
+- **Security engineer:** No adversarial security issue found; the boundary problem is publication correctness.
+- **Performance engineer:** The wrapper repeats erasure only after a miss, matching the intended cost profile.
+- **Test engineer:** Two safety guards cannot fail under the activation paths they claim to prohibit.
+- **Data scientist:** Conditional treatment is represented explicitly by the returned reason.
+- **Statistician/methodologist:** The provisional threshold is applied to total deductions rather than the measured chain-share unit.
+- **UX/API contract reviewer:** No shipped player-facing change is active.
+- **Solo-maintainer pragmatist:** Fix the denominator and replace the two blind guards before relying on the freeze; all changes remain local.
+
+## Seventh-Pass Verdict (superseded)
+
+Three new practical findings remain: **three P2s** (`v27-P2-13`, `v27-P2-14`, and `v27-P2-15`). No new P0, P1, or P3 finding was identified. The fallback behavior itself follows the agreed conditional design, but its filler filter and two publication safeguards currently establish less than their documentation claims.
+
+## Resolved Sixth-Pass Findings
 
 ### v27-P2-11 - The paired ceiling table discards the one-arm reaches that define a ceiling difference
 
@@ -35,7 +186,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** Let the first three seed-one boards have `uses_lineup=True`. Each satisfies the condition at lines 435-448, `len(chosen)` reaches three, and all later boards are skipped. The summary then prints `3 of 3 ... use lineup arithmetic` beside a rule that says there should be one contrast.
 - **Recommended fix and rationale:** Collect lineup-positive and lineup-negative candidates separately, then deterministically choose the required quota only after measurement; fail clearly unless both pools can satisfy it. This turns the specimen rule from a comment about the current artifact into a postcondition of every rerun.
 
-## Sixth-Pass Disposition
+## Sixth-Pass Disposition (superseded)
 
 - `v27-P2-09` is resolved. The mutation sweep runs an untouched baseline first, treats only pytest exit 1 as a killed mutant, and reports infrastructure statuses as broken rather than caught.
 - `v27-P2-10` is resolved for blanks, PA techniques, and families: those tables now join by direction and seed within each target, while coverage deliberately remains unpaired.
@@ -44,7 +195,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - The remaining analytical defect is isolated to the ceiling summary (`v27-P2-11`); it does not invalidate the unpaired coverage table or the correctly paired per-target tables.
 - The verifier's value-aware lineup step remains pending in `todo.md` and is not duplicated here.
 
-## Sixth-Pass Persona Summary
+## Sixth-Pass Persona Summary (superseded)
 
 - **Software architect:** No new production solver or verifier-rule defect found.
 - **Security engineer:** No practical security regression found.
@@ -55,7 +206,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **UX/API contract reviewer:** The rendered evidence is readable, but future selection is not guaranteed to include its promised contrast.
 - **Solo-maintainer pragmatist:** Both remaining fixes are local to `arms.py`; no broader redesign is needed.
 
-## Sixth-Pass Verdict
+## Sixth-Pass Verdict (superseded)
 
 Two new practical findings remain: **one P2** (`v27-P2-11`) and **one P3** (`v27-P3-12`). No new P0 or P1 finding was identified. Both fifth-pass findings are resolved, and no new production defect was found; the open work is confined to accurately reporting the experiment's ceiling and enforcing the declared specimen mix.
 

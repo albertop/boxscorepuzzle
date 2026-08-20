@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (five passes on the last), 115 findings, none rejected. Two are open and stated
+**Twenty-seven reviews (nine passes on the last), 121 findings, none rejected. Two are open and stated
 below, and a third was found and fixed while watching a run — all three without a reviewer, which is
 the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
@@ -22,6 +22,10 @@ kept being wrong was the apparatus measuring it, and no two were wrong the same 
 | v27 third | the inversion survived **one property away** from where it was fixed |
 | v27 fourth | the guard named *a deduced companion is an edge* **never created one** |
 | v27 fifth | the sweep built to catch blind guards **was one**, and the report never paired |
+| v27 sixth | the ceiling table **censored the ceilings**, and the specimen rule was not a postcondition |
+| v27 seventh | the cap ran on **the wrong denominator**, and two new guards could not fail |
+| v27 eighth | an **absent observation** could satisfy the contrast quota a measured zero was for |
+| v27 ninth | **the delta did not fix it** — I strengthened a closed finding instead |
 
 ⚠️ **Four of the seven were invisible in output that looked entirely reasonable.** That is the shape
 this project keeps meeting and it has a new member: *a model can be exactly right and have no
@@ -2418,6 +2422,125 @@ The short version, for anyone reading only this file:
 ⚠️ **Nothing measured here touches human derivability.** Layer 3 has the batting-order *relations* but
 no value-producing lineup move, so any board leaning on the constraint is currently refused as
 underivable.
+
+## ⚠⚠ v27 eighth and ninth passes — one P3, and a ninth pass spent saying I had not fixed it
+
+### v27-P3-16: an absent observation could fill the slot reserved for a measured zero
+
+The specimen classifier asked `any(row.pa_by_lineup > 0 for ... if row.reached)`. **`False` meant two
+different things.** The treatment reached the target using no lineup arithmetic — a genuine contrast,
+which is exactly what the pool is for. Or the treatment **never reached the target at all**, produced
+no qualifying row, and fell through to the same branch. Both went into `negative`.
+
+The second kind could then be picked as the promised contrast, and `_specimen_pages()` would write
+`arm on_total_erasable never reached 5 stalls` where a board should be — while the summary announced a
+complete two-positive/one-contrast set. **The eye-check the adoption decision rests on could quietly
+be one page short and still report itself complete.**
+
+⚠️ **This is the measured-zero-against-absent-observation defect**, which this project has met before
+as a null result read off medians with no per-item count. It arrives dressed differently every time.
+
+Fixed by putting **eligibility before composition**: `_classify_specimen()` returns `None` unless
+*both* rendered arms produced a page at the target, so the promised comparison is known to exist
+before anything decides what kind of comparison it is.
+
+### ⚠⚠ The ninth pass exists because my eighth-pass delta did not touch the defect
+
+The review's ninth pass is one paragraph long and says the classifier is unchanged. It was. **What I
+had actually shipped was a new sweep mutation for `v27-P2-13` — a finding already closed** — while the
+open P3 sat untouched. Useful reinforcement of something that did not need it, delivered as though it
+were the correction.
+
+That is a whole review pass spent telling me I had not done the thing. The check that would have
+caught it is not subtle: **read the finding, then read the diff, and ask whether the diff touches the
+file the finding names.** It named `arms.py:518`. The diff touched `mutation_sweep.py:112`.
+
+**Closed now, and guarded three ways** — `forge/tests/test_specimen_eligibility.py` covers an unreached
+treatment, an unreached baseline, a missing page against rows that claim otherwise, and a row at
+another target; the genuine contrast and the genuine positive are both asserted **so the fix cannot
+pass by closing the pool entirely**; and all three parts are in the mutation sweep, which now stands at
+**sixteen claims**.
+
+## ⚠⚠ v27 sixth and seventh passes — five findings, and three of them are guards I had just written
+
+**All five fixed.** The seventh pass is the one worth reading, because three of its findings are in
+code written the same hour, and one of them is a mutation check that agreed with a blind guard.
+
+### v27-P2-13 — the cap ran on a different denominator than the one it was measured with
+
+`LINEUP_DIVISION_SHARE_CAP = 0.20` came from two boards at **9 division steps over a chain length of
+24 and 26** — 0.375 and 0.346. `division_share()` divided by `len(solution.deductions)` instead.
+Those are not the same quantity: `chain_length` is the longest run of steps each waiting on the one
+before, a **depth**; the deduction count is every cell recovered. On one specimen they are 20 and 37.
+
+⚠️ **So the cap would have kept the two boards it exists to discard.** 9/37 is 0.24 and 9/50 is 0.18,
+both at or under a threshold set from 0.38. The only protection against the known filler-heavy shape
+was silently absent. **A provisional threshold may be soft; its unit may not.**
+
+Fixed as `division_against_chain()`, which carries the accurate name at the call site, plus a test that
+**changes its verdict when the denominator changes** — the previous test asserted the ratio equalled
+`lineup / len(deductions)` and passed because its board had zero lineup steps, so `0/a == 0/b` agreed
+with both implementations and could distinguish neither.
+
+⚠️ Recorded and not hidden: the unit is a ratio, not a share, and is **not bounded by 1** — the
+numerator counts steps and the denominator is a depth. That is a weakness of the unit, and it is on the
+list the pre-registered confirmation run has to settle.
+
+### ⚠⚠ v27-P2-14 — a guard that could not fail, and a mutation check that agreed with it
+
+`test_production_erasure_still_passes_no_batting_order` scanned `erasure.py` for a `shape_of` call
+carrying a **keyword** named `slots`. The real call is `shape_of(direction, slots)` — *positional*. The
+assertion could never be false, and it inspected no caller of `erase()` at all, so a production builder
+could start passing a lineup and the safety test would stay green.
+
+⚠⚠ **The part that matters is how it was "verified".** The mutation used to check it changed that call
+to `slots=slots` — **the one change the guard can see, and not the risk it names.** That is the same
+defect as the guard, one level up: *checking a guard against the mutation it happens to catch is not
+checking it.* The rule in `CLAUDE.md` says to ask what change the guard would let through. I asked what
+change it would catch.
+
+Replaced with a walk over every first-party call to `erase` across the source tree, refusing `slots`
+anywhere outside the experimental module, with a positive control proving the finder sees the one call
+that is allowed to pass it. **Re-checked by creating a real production module that calls
+`erase(..., slots=lineup)`** — it fails.
+
+### v27-P2-15 — the import walk pointed the wrong way
+
+The publication guard computed what `certify_for_publication` imports. Real wiring points the other
+way: a producer imports the fallback **and** imports certification. That bridge leaves certification's
+own import set untouched, so the guard was blind to the exact mistake it named, by construction.
+
+Replaced with a scan for any first-party module whose dependency closure reaches **both** endpoints.
+**Re-checked by creating that bridge module** — it fails. A stricter "nothing imports the experiment at
+all" test sits beside it and is documented to be deleted deliberately when research code legitimately
+imports it, so the fence weakening is visible rather than silent.
+
+⚠️ **Still open as a design note, not a finding:** a graph guard survives only until someone
+refactors imports. The durable form is making experimental provenance **unrepresentable** as an
+ordinary publishable result — a distinct result type that only research code accepts. Recorded in
+`batting-order-plan.md`; not built, because the freeze is at steps 1 and 2.
+
+### v27-P2-11 — the ceiling table censored the ceilings
+
+`_ceiling()` was built from `_pairs()`, which keeps only walks *both* arms reached **at the same
+target**. A walk that ran to 8 under the treatment and stopped at 6 under the baseline contributed
+neither number — and that is precisely the population a ceiling gain lives in. With 73 treated
+target-8 reaches against 53 baseline ones, at least twenty walks could never influence the table
+summarising exactly that.
+
+⚠️ **Any ceiling figure previously reported from this instrument is void**, including the "44
+directions, both medians 8" line. `Row` now carries `walk_max_stalls`, the terminal maximum over the
+whole accepted walk, recorded independently of target reach. The existing `arms.json` predates the
+field, and the table now prints **NOT ANSWERABLE** rather than reverting to the censored answer.
+
+### v27-P3-12 — the specimen rule was a comment, not a postcondition
+
+`if uses_lineup or not contrast` accepted lineup-positive boards as they arrived, so three in a row
+filled the quota and the contrast could never enter — while the summary still printed a rule promising
+one. The artifact happening to contain a contrast was draw order, not the safeguard. Now two pools are
+collected to the end of the sample and `_choose_specimens()` **raises** if either cannot supply its
+share, because a specimen file that quietly lost its contrast is an eye-check on one population
+presented as an eye-check on two.
 
 ## ⚠⚠ v27 fifth pass — two P2s, and the first one is the worst finding in this review
 

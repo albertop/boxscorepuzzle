@@ -131,3 +131,41 @@ generator and a dead product.
 
 INVENTORY_ALERT_MONTHS: Final = 3
 """Alert below this. **PROVISIONAL.** Two months of slack to notice and rebuild."""
+
+# ---------------------------------------------------------------------------------------------------
+# Batting-order constraint — experimental, not adopted (docs/reviews/batting-order-reversal.md)
+# ---------------------------------------------------------------------------------------------------
+
+LINEUP_DIVISION_SHARE_CAP: Final = 0.20
+"""Discard a fallback board with more than this many division steps per unit of chain length.
+**PROVISIONAL, and its unit is provisional too.**
+
+⚠⚠ **v27-P2-13: the number was read off `chain_length` and the code divided by the deduction
+count.** Those are not the same quantity — `chain_length` is the longest run of steps each waiting on
+the one before, a depth; the deduction count is every cell recovered. On one specimen they are 20 and
+37. A cap derived as 9/24 = 38% was being applied to 9/37 = 24%, so **the two boards this cap exists
+to discard would have passed it.** A provisional threshold may be soft; its unit may not.
+
+⚠️ **It is a ratio, not a share.** The numerator counts steps and the denominator is a depth, so it
+is not bounded by 1. The name is kept because the constant may not be spelled twice and renaming it is
+a change to make when the unit is settled, not while it is in doubt — but `division_against_chain()`
+carries the accurate name at the call site.
+
+A `batting_order` step reads the team's plate-appearance total, divides by nine, and writes the result
+down. It costs nothing to find and combines no terms: on one measured board, eight consecutive cells
+were filled `5 5 5 5 5 5 5 4` from a total of 44. **The player experiences that as typing**, which is
+the same thing the footnote cells turned out to be, and the metric counting those steps is measuring
+the board rather than the game.
+
+⚠️⚠️ **This number came from looking at two boards. It is not a measurement and must not be cited as
+one.** Of the eleven directions that reach eight stalls only with the constraint on, nine carry no
+division at all and two carry 38% and 35% of their chain as division. The cap is set to separate those
+two groups and nothing more; it was not fitted, and no board was tested near the boundary. The gap
+between 2% and 35% is wide enough that any threshold in it would do the same job on this sample, which
+is exactly why the sample cannot justify 0.20 over 0.25.
+
+⚠️ **§31 forbids inventing numeric parameters that shape the product.** This one shapes which boards
+enter the pool, so it stays `PROVISIONAL` until the pre-registered confirmation run measures where the
+distribution actually splits — or until the hand-solve pack closes the question above it, in which case
+this constant is deleted rather than measured.
+"""

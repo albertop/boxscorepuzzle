@@ -203,13 +203,17 @@ easy board — 12% trivial steps at a chain target of 5 against 19-20% for the o
 # nothing in baseball, so it bought nothing for the complexity it carried.
 
 
-def erase(
+# ⚠️ Six keyword arguments, one over the limit, and the sixth is `slots` — experimental and
+# defaulted off. Silenced rather than split: the alternative is a second erasure function, and a
+# walk that exists twice is the defect this project keeps finding.
+def erase(  # noqa: PLR0913
     direction: Direction,
     *,
     target_chain: int | None = None,
     target_stalls: int | None = None,
     seed: int,
     ordering: str = DEFAULT_ORDERING,
+    slots: tuple[int, ...] = (),
 ) -> Puzzle | None:
     """Erase towards a target chain length, or give up.
 
@@ -219,6 +223,13 @@ def erase(
 
     `seed` makes the result reproducible, which is §21's idempotence at this step — regenerating a
     batch has to produce the same puzzle for the same game or the no-repetition promise breaks.
+
+    `slots` is the batting order, and **empty is the production path**. Passing it adds the
+    batting-order relations to the shape, which is experimental and not adopted: see
+    `docs/reviews/batting-order-reversal.md` for what is and is not established about it. It is a
+    parameter here rather than a second erasure function because the walk, the ordering and the
+    give-up rule must not exist twice — two copies of a rule drift, and this project has the record to
+    prove it.
     """
     if (target_chain is None) == (target_stalls is None):
         message = "give exactly one of target_chain or target_stalls"
@@ -227,7 +238,7 @@ def erase(
         message = f"unknown erasure ordering {ordering!r}; have {sorted(ORDERINGS)}"
         raise ValueError(message)
 
-    shape = shape_of(direction)
+    shape = shape_of(direction, slots)
     values = cell_values(direction)
     # Seeded on purpose. Section 21 needs the same game to produce the same puzzle every time, and
     # unseeded randomness would make a regenerated batch full of near-duplicates. Nothing here is a

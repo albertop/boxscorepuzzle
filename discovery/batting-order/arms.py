@@ -95,6 +95,17 @@ class Row:
     pa_by_lineup: int
     pa_by_propagation: int
     pa_by_bounding: int
+    # ⚠⚠ **v27-P2-11: the ceiling table could not see a ceiling.** Every other field is a snapshot
+    # at the *first crossing* of a configured target, and `_ceiling()` was taking maxima over those
+    # snapshots after `_pairs()` had already dropped every walk only one arm reached — which is
+    # exactly the population a ceiling difference lives in. A walk that ran to 8 under the treatment
+    # and stopped at 6 under the baseline contributed neither number, so the table could report equal
+    # ceilings while censoring the gains it exists to summarise.
+    #
+    # This is the terminal maximum over the whole accepted walk, recorded independently of whether any
+    # target was reached. `None` means the row came from an artifact written before this field existed;
+    # the table says so rather than quietly reverting to the censored answer.
+    walk_max_stalls: int | None = None
 
 
 def predicted(total: int) -> tuple[int, ...]:
@@ -184,6 +195,8 @@ def _measure(loaded: Loaded, seed: int) -> tuple[list[Row], dict[tuple[str, int]
         erased: set[str] = set()
         best: dict[int, Solution] = {}
         best_erased: dict[int, set[str]] = {}
+        # The whole walk's high-water mark, not a snapshot at a target. See `Row.walk_max_stalls`.
+        walk_max = 0
         for cell in offered:
             trial = erased | {cell}
             solution = solve(shape, {name: value for name, value in values.items() if name not in trial})
@@ -191,6 +204,7 @@ def _measure(loaded: Loaded, seed: int) -> tuple[list[Row], dict[tuple[str, int]
                 continue
             erased = trial
             reached = _stalls(solution)
+            walk_max = max(walk_max, reached)
             for target in TARGETS:
                 if reached >= target and target not in best:
                     best[target] = solution
@@ -221,9 +235,61 @@ def _measure(loaded: Loaded, seed: int) -> tuple[list[Row], dict[tuple[str, int]
                     pa_by_lineup=lineup,
                     pa_by_propagation=propagation,
                     pa_by_bounding=bounding,
+                    walk_max_stalls=walk_max,
                 )
             )
     return rows, specimens
+
+
+def _classify_specimen(measured: list[Row], specimens: dict[tuple[str, int], object]) -> str | None:
+    """Which pool this direction belongs to, or `None` when it belongs to neither.
+
+    ⚠️⚠️ **v27-P3-16: `False` meant two different things and both went into the contrast pool.**
+    The classifier read `any(pa_by_lineup > 0 for ... if reached)`. That is false when the treatment
+    reached the target using no lineup arithmetic — a genuine contrast — and equally false when the
+    treatment **never reached the target at all**, which is not an observation. The second kind could
+    be picked as the promised contrast, and `_specimen_pages()` would write
+    `arm on_total_erasable never reached 5 stalls` where a board was supposed to be, while the summary
+    announced a complete two-positive/one-contrast set.
+
+    **Eligibility comes before composition.** A direction is classified only when *both* rendered arms
+    produced a specimen at the target, so the promised comparison is known to exist before anything
+    decides what kind of comparison it is. A measured zero and an absent observation are not the same
+    value, and pooling them is the null-result defect wearing a different hat.
+    """
+    drawn = [arm for arm in SPECIMEN_ARMS if arm != BASELINE]
+    if any((arm, SPECIMEN_TARGET) not in specimens for arm in SPECIMEN_ARMS):
+        return None
+    reached = [row for row in measured if row.arm in drawn and row.target == SPECIMEN_TARGET and row.reached]
+    if not reached:
+        return None
+    return "positive" if any(row.pa_by_lineup > 0 for row in reached) else "negative"
+
+
+def _choose_specimens(
+    positive: list[tuple[Loaded, dict]], negative: list[tuple[Loaded, dict]]
+) -> list[tuple[Loaded, dict]]:
+    """Fill the declared composition from two pools, or refuse to write a page.
+
+    ⚠⚠ **A postcondition, not a comment.** `SPECIMEN_RULE` says the set is boards using lineup
+    arithmetic *plus one contrast that uses none*, and the previous selector could satisfy neither half
+    while still printing the rule. If a pool cannot supply its share this **raises**: a specimen file
+    that silently lost its contrast is an eye-check on one population presented as an eye-check on two,
+    and the reader has no way to tell.
+
+    Deterministic by draw order within each pool, so a rerun on the same sample renders the same
+    boards.
+    """
+    wanted_contrast = 1
+    wanted_positive = SPECIMEN_BOARDS - wanted_contrast
+    if len(positive) < wanted_positive or len(negative) < wanted_contrast:
+        message = (
+            f"the specimen rule needs {wanted_positive} boards using lineup arithmetic and "
+            f"{wanted_contrast} that does not; the sample offered {len(positive)} and {len(negative)}. "
+            f"Widen the sample or change SPECIMEN_BOARDS -- do not write a page that misstates its rule."
+        )
+        raise SystemExit(message)
+    return positive[:wanted_positive] + negative[:wanted_contrast]
 
 
 def _specimen_pages(loaded: Loaded, specimens: dict[tuple[str, int], tuple[dict[str, int], Solution]]) -> list[str]:
@@ -365,21 +431,52 @@ def _families(rows: list[Row], arm: str) -> None:
 
 
 def _ceiling(rows: list[Row], arm: str) -> None:
-    # By direction, not by game: a game is two boards and merging them would average a winning offence
-    # with a losing one. Only directions both arms reached somewhere contribute.
-    best: dict[tuple[str, str], list[int]] = {}
-    for target in TARGETS:
-        for base, treated in _pairs(rows, arm, target):
-            here = best.setdefault((base.game, base.offense), [0, 0])
-            here[0] = max(here[0], base.stalls)
-            here[1] = max(here[1], treated.stalls)
+    """The stall ceiling per walk, from the terminal maximum — **not from target snapshots**.
+
+    ⚠⚠ **v27-P2-11: the previous version could not see a ceiling difference.** It was built from
+    `_pairs()`, which keeps only walks *both* arms reached at the same target. A walk that ran to 8
+    under the treatment and stopped at 6 under the baseline was dropped entirely — and that is
+    precisely the population a ceiling gain lives in. The persisted run has 73 treated target-8
+    reaches against 53 baseline ones, so at least twenty walks could never influence the table
+    summarising exactly that. It could report equal ceilings while censoring the difference.
+
+    Paired by walk, never by target success: the pairing key is the direction and the seed, and both
+    arms contribute their high-water mark whether or not they reached anything. Aggregated to
+    direction only after the walk-level delta, because a direction is three walks and averaging them
+    before differencing hides which walk moved.
+    """
+    paired: dict[tuple[str, str, int], list[int]] = {}
+    censored = 0
+    for arm_name, index in ((BASELINE, 0), (arm, 1)):
+        for row in rows:
+            if row.arm != arm_name:
+                continue
+            if row.walk_max_stalls is None:
+                censored += 1
+                continue
+            here = paired.setdefault(_key(row), [0, 0])
+            here[index] = max(here[index], row.walk_max_stalls)
+
     print("")
-    print("  --- stall ceiling per direction, on directions both arms reached ---")
+    print("  --- stall ceiling, the terminal maximum of each walk (paired by direction and seed) ---")
+    if censored:
+        # ⚠️ Fail loud rather than silently reverting to the censored answer. An artifact written
+        # before `walk_max_stalls` existed cannot answer this question, and saying so is the whole
+        # point of the finding that produced this field.
+        print(f"  NOT ANSWERABLE: {censored} rows predate walk_max_stalls. Re-run to get this table.")
+        return
+
+    deltas = [values[1] - values[0] for values in paired.values()]
     print(
-        f"  {len(best)} directions   {BASELINE} median {_median([v[0] for v in best.values()]):.0f}"
-        f"   {arm} median {_median([v[1] for v in best.values()]):.0f}"
-        f"   paired delta {_moved([v[1] - v[0] for v in best.values()]).strip()}"
+        f"  {len(paired)} walks   {BASELINE} median {_median([v[0] for v in paired.values()]):.0f}"
+        f"   {arm} median {_median([v[1] for v in paired.values()]):.0f}"
+        f"   paired delta {_moved(deltas).strip()}"
     )
+    by_direction: dict[tuple[str, str], list[int]] = {}
+    for (game, offense, _seed), values in paired.items():
+        by_direction.setdefault((game, offense), []).append(values[1] - values[0])
+    moved = sum(1 for per_walk in by_direction.values() if any(delta != 0 for delta in per_walk))
+    print(f"  {moved} of {len(by_direction)} directions have at least one walk whose ceiling moved")
 
 
 def _report(rows: list[Row]) -> None:
@@ -421,8 +518,14 @@ def main() -> None:
     print("One canonical walk per (direction, seed), FILTERED per arm - never re-ordered.")
 
     rows: list[Row] = []
-    chosen: list[tuple[Loaded, dict, bool]] = []
-    contrast = False
+    # ⚠⚠ **v27-P3-12: two pools, filled without a quota, and the quota applied afterwards.** The
+    # previous version accepted `uses_lineup or not contrast` as boards arrived, so three
+    # lineup-positive boards in a row filled the quota and the contrast could never enter — while the
+    # summary still printed `SPECIMEN_RULE`, which promises one. The composition depended on draw
+    # order, and the artifact happening to contain a contrast was luck. Collect both pools to the end
+    # of the sample, choose after measuring, and **assert the composition rather than describe it**.
+    positive: list[tuple[Loaded, dict]] = []
+    negative: list[tuple[Loaded, dict]] = []
     for number, loaded in enumerate(sample, start=1):
         for seed in SEEDS:
             measured, specimens = _measure(loaded, seed)
@@ -432,32 +535,22 @@ def main() -> None:
             # eye-check on boards where the treatment does nothing, while 73% of reached walks in the
             # same run used it. A sample meant to show a phenomenon has to contain it. One board that
             # uses none is kept deliberately, so the contrast is visible rather than assumed.
-            if seed == SEEDS[0] and len(chosen) < SPECIMEN_BOARDS:
-                # ⚠️ `SPECIMEN_ARMS`, not "any arm but the baseline". Written the second way first, it
-                # would pick a board because `on_total_given` used lineup arithmetic while the arm
-                # actually drawn on the page used none -- selecting for a phenomenon the reader
-                # cannot see. The filter has to name the arm that gets rendered.
-                drawn = [arm for arm in SPECIMEN_ARMS if arm != BASELINE]
-                uses_lineup = any(
-                    row.pa_by_lineup > 0
-                    for row in measured
-                    if row.arm in drawn and row.target == SPECIMEN_TARGET and row.reached
-                )
-                if uses_lineup or not contrast:
-                    contrast = contrast or not uses_lineup
-                    chosen.append((loaded, specimens, uses_lineup))
+            if seed == SEEDS[0]:
+                pool = _classify_specimen(measured, specimens)
+                if pool is not None:
+                    (positive if pool == "positive" else negative).append((loaded, specimens))
         if number % 5 == 0:
             print(f"  {number}/{len(sample)} measured", flush=True)
 
-    pages = [page for loaded, specimens, _ in chosen for page in _specimen_pages(loaded, specimens)]
+    chosen = _choose_specimens(positive, negative)
+    pages = [page for loaded, specimens in chosen for page in _specimen_pages(loaded, specimens)]
     # ⚠️ Written before the report, and meant to be read before the report is believed.
     # ⚠️ A page break the internal blank lines cannot imitate: joining on two newlines made the
     # boundary between one board and the next identical to the one between a board and its own
     # solution path, so the file could not be split back into pages by eye or by code.
     (_HERE / "specimens.txt").write_text(PAGE_BREAK.join(pages), encoding="utf-8", newline=NEWLINE)
-    using = sum(1 for _, _, uses in chosen if uses)
     print(f"wrote {len(pages)} rendered boards to specimens.txt - READ THESE BEFORE TRUSTING THE NUMBERS")
-    print(f"  {using} of {len(chosen)} chosen boards use lineup arithmetic ({SPECIMEN_RULE})")
+    print(f"  {SPECIMEN_BOARDS - 1} using lineup arithmetic and 1 contrast ({SPECIMEN_RULE})")
 
     # Persisted before formatting: the rows are the expensive half and everything below can fail.
     (_HERE / "arms.json").write_text(

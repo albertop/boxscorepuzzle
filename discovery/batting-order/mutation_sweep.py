@@ -108,7 +108,67 @@ MUTATIONS = [
         "    if not shape.slots:\n        return []",
         "    if False:\n        return []",
     ),
+    (
+        "the filler cap's denominator",
+        "forge/src/boxscore_forge/lineup_fallback.py",
+        "    return division / chain",
+        "    return division / len(puzzle.solution.deductions)",
+    ),
+    (
+        "specimen eligibility: both arms must have a rendered page",
+        "discovery/batting-order/arms.py",
+        "    if any((arm, SPECIMEN_TARGET) not in specimens for arm in SPECIMEN_ARMS):\n        return None",
+        "    if False:\n        return None",
+    ),
+    (
+        "specimen eligibility: an unreached treatment is not a contrast",
+        "discovery/batting-order/arms.py",
+        "    if not reached:\n        return None",
+        '    if not reached:\n        return "negative"',
+    ),
+    (
+        "specimen eligibility: rows at another target cannot qualify a direction",
+        "discovery/batting-order/arms.py",
+        "row.arm in drawn and row.target == SPECIMEN_TARGET and row.reached",
+        "row.arm in drawn and row.reached",
+    ),
 ]
+
+WIRING = [
+    (
+        "a production module calling erase(..., slots=...)",
+        "forge/src/boxscore_forge/_sweep_producer.py",
+        (
+            '"""A production builder that enables the batting order."""\n\n'
+            "from boxscore_forge.erasure import erase\n\n\n"
+            "def build(direction, lineup):\n"
+            "    return erase(direction, target_stalls=5, seed=1, slots=lineup)\n"
+        ),
+    ),
+    (
+        "a module bridging the experiment to certification",
+        "forge/src/boxscore_forge/_sweep_bridge.py",
+        (
+            '"""A producer that builds with the experiment and hands the board to certification."""\n\n'
+            "from boxscore_forge.lineup_fallback import erase_with_lineup_fallback\n"
+            "from boxscore_verify.certify import certify_for_publication\n\n"
+            '__all__ = ["certify_for_publication", "erase_with_lineup_fallback"]\n'
+        ),
+    ),
+]
+"""⚠️⚠️ **Mutations that ADD a module, because the risk being guarded is wiring that does not exist yet.**
+
+v27-P2-14 and v27-P2-15 were two guards that could not fail, and an edit-based sweep signed off on
+both. The production guard was "verified" by changing `shape_of(direction, slots)` to
+`slots=slots` — the one change it could see, and **not the change that matters**, which is a
+*different module* calling `erase(..., slots=...)`. The publication guard was verified against edits
+that never created the forbidden shape at all: a third module importing the fallback *and*
+certification.
+
+**A mutation has to be the thing you are afraid of.** These two write that module, run the suite, and
+delete it again.
+"""
+
 
 def run_suite() -> subprocess.CompletedProcess:
     return subprocess.run(  # noqa: S603
@@ -156,6 +216,29 @@ finally:
     for path, text in originals.items():
         (ROOT / path).write_text(text, encoding="utf-8", newline=chr(10))
 
+for name, path, body in WIRING:
+    target = ROOT / path
+    if target.exists():
+        # Refusing rather than overwriting: the file is a fixture this script owns, and finding one
+        # already there means a previous run died mid-mutation and the tree is not clean.
+        failures.append(f"{name}: {path} already exists, so a previous run left the tree dirty")
+        continue
+    target.write_text(body, encoding="utf-8", newline=chr(10))
+    try:
+        result = run_suite()
+    finally:
+        target.unlink()
+    if result.returncode == TESTS_FAILED:
+        print(f"  CAUGHT  {name}")
+    elif result.returncode == PASSED:
+        print(f"  MISSED  {name}")
+        failures.append(name)
+    else:
+        why = BROKEN.get(result.returncode, f"exit {result.returncode}")
+        print(f"  BROKEN  {name} - pytest {why}, so this wiring was never judged")
+        print((result.stdout or "")[-1500:])
+        broken.append(f"{name}: pytest {why}")
+
 print("")
 if broken:
     print(f"{len(broken)} mutation(s) the sweep could not judge - fix these before reading anything else:")
@@ -167,4 +250,4 @@ if failures:
         print(f"   {name}")
 if broken or failures:
     sys.exit(1)
-print(f"all {len(MUTATIONS)} claims are guarded, against a baseline that was green")
+print(f"all {len(MUTATIONS) + len(WIRING)} claims are guarded, against a baseline that was green")
