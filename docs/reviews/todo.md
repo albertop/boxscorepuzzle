@@ -2,8 +2,8 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (four passes on the last), 113 findings, none rejected. One is open and stated
-below.** Two are **declined on the environment**, each with its reason and its reactivation condition in
+**Twenty-seven reviews (four passes on the last), 113 findings, none rejected. Two are open and stated
+below — one of them found without a reviewer, which is the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
 
 ### ⚠️⚠️ The standing observation: seven findings, one piece of work, five distinct shapes
@@ -87,6 +87,35 @@ arrived wrapped in an attack scenario that is out of scope here, and the defect 
 adversary at all.
 
 Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
+
+## ⚠⚠ OPEN, found in passing: ruff says it checks `discovery/` and nothing ever points it there
+
+`forge/pyproject.toml` carries `extend-include = ["../discovery/**/*.py"]`, and the per-file-ignores
+block below it carries a ⚠️ comment about exempting discovery's `print` calls — written by someone who
+believed the directory was being linted. **It is not.** `extend-include` widens which files ruff will
+*accept*; it does not make `ruff check .` from `forge/` walk out of `forge/`. No path argument anywhere
+names `discovery`, and there is no CI workflow at all.
+
+**Pointing ruff at it reports 194 findings** — which is what a rule that has never once run looks like.
+
+⚠️ **This is the project's own named failure mode, in its own configuration file.** A check that never
+fires is indistinguishable from one that is broken, and this one is worse than absent: the exemption
+comment is positive evidence that it works. The `# noqa: E402` directives scattered through the
+discovery scripts are the same evidence — 15 of them are flagged `RUF100`, *unused*, meaning they were
+written to silence a checker that was never going to speak.
+
+**What the 194 are, before anyone reads the number as 194 defects:**
+
+| | count | what it is |
+|---|---|---|
+| `PLR2004`, `S311`, `E402` | 119 | the discovery idiom — magic numbers in a measurement, a seeded RNG, bootstrap-then-import. **Exempt by path, the way `tests/**` already is.** |
+| `RUF100` | 15 | `noqa` for a checker that never ran |
+| the rest | ~60 | ordinary findings, including one **unused import** and four unsorted import blocks |
+
+**Not fixed here.** The fix is a decision about which rules the discovery idiom is exempt from, plus
+somewhere for the check to actually run — and *somewhere it actually runs* is the whole finding, so
+wiring it into a config that nothing invokes would repeat the defect rather than close it. There is no
+CI workflow in this repository yet; that is the same gap seen from the other side.
 
 ## What is left
 

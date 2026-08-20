@@ -76,8 +76,15 @@ def _cell(values: dict[str, int], key: str, *, as_innings: bool = False) -> str:
     return f"{_innings(values[key]):>3}" if as_innings else f"{values[key]:>3}"
 
 
-def render(loaded: Loaded, given: dict[str, int], *, title: str) -> str:
-    """The board exactly as the player sees it. Blanks are the cells they have to work out."""
+def render(loaded: Loaded, given: dict[str, int], *, title: str, show_slots: bool = False) -> str:
+    """The board exactly as the player sees it. Blanks are the cells they have to work out.
+
+    `show_slots` prefixes each batting label with its place in the lineup. It is **a parameter of this
+    renderer and not a second renderer**: a comparison page that draws its own grid has twice shown
+    something other than what it was evaluating, so a variant needed to judge a board is a flag here.
+    Off by default, because the slot is not on the player's board — it is what the batting-order
+    experiment needs to see when reading whether a chain across slots looks like work.
+    """
     direction = loaded.direction
     score = direction.line_score
     lines = [f"  {title}", f"  {loaded.game_id}   {loaded.season}", ""]
@@ -98,7 +105,8 @@ def render(loaded: Loaded, given: dict[str, int], *, title: str) -> str:
     lines.append(f"  {'BATTING':<10}" + "".join(f"{short:>4}" for _, short in BATTING_HEADERS))
     for index, label in enumerate(loaded.labels):
         row = "".join(f" {_cell(given, f'batting[{index}].{field}')}" for field, _ in BATTING_HEADERS)
-        lines.append(f"  {label:<10}{row}")
+        shown = f"{loaded.slots[index]} {label}" if show_slots and loaded.slots else label
+        lines.append(f"  {shown:<10}{row}")
     totals = "".join(f" {_cell(given, f'batting_totals.{field}')}" for field, _ in BATTING_HEADERS)
     lines.append(f"  {'-' * 34}")
     lines.append(f"  {'TOTALS':<10}{totals}")

@@ -40,11 +40,13 @@ from pathlib import Path
 _HERE = Path(__file__).resolve().parent
 _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
+sys.path.insert(0, str(_ROOT / "discovery" / "sample-boards"))
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
 import json  # noqa: E402
 
 from measure import Loaded, load  # noqa: E402
+from render import render, render_path  # noqa: E402
 
 from boxscore_forge.boxscore import Direction  # noqa: E402
 from boxscore_forge.constraints import batting_total_cell, cell_values, shape_of  # noqa: E402
@@ -60,6 +62,10 @@ SEEDS = (1, 2, 3)
 PA_TOTAL = batting_total_cell("plate_appearances")
 PA_COLUMN = ".plate_appearances"
 SLOTS = 9
+SPECIMEN_BOARDS = 3
+SPECIMEN_TARGET = 5
+SPECIMEN_ARMS = ("off", "on_total_erasable")
+NEWLINE = chr(10)
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,7 +159,14 @@ def _stalls(solution: Solution) -> int:
     return count
 
 
-def _measure(loaded: Loaded, seed: int) -> list[Row]:
+def _measure(loaded: Loaded, seed: int) -> tuple[list[Row], dict[tuple[str, int], tuple[dict[str, int], Solution]]]:
+    """The rows, and the boards they were read off.
+
+    ⚠️ **The specimens are returned rather than rebuilt.** Every number below is a summary of a board
+    nobody has looked at, and this project has never once caught a serious defect by reading a
+    statistic. Re-walking the erasure to produce examples would be a second copy of the rule and would
+    render a board other than the one measured — so the walk hands them over.
+    """
     direction = loaded.direction
     values = cell_values(direction)
     walk = _canonical(direction, seed)
@@ -161,6 +174,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
     with_order = shape_of(direction, tuple(loaded.slots))
 
     rows: list[Row] = []
+    specimens: dict[tuple[str, int], tuple[dict[str, int], Solution]] = {}
     for arm in ARMS:
         shape = without if arm == "off" else with_order
         offered = _offered(arm, walk)
@@ -182,6 +196,8 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
         for target in TARGETS:
             solution = best.get(target)
             got = best_erased.get(target, set())
+            if solution is not None:
+                specimens[arm, target] = ({n: v for n, v in values.items() if n not in got}, solution)
             lineup, propagation, bounding = _pa_techniques(solution, got) if solution else (0, 0, 0)
             rows.append(
                 Row(
@@ -204,7 +220,32 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
                     pa_by_bounding=bounding,
                 )
             )
-    return rows
+    return rows, specimens
+
+
+def _specimen_pages(loaded: Loaded, specimens: dict[tuple[str, int], tuple[dict[str, int], Solution]]) -> list[str]:
+    """The same board under both arms, drawn with the board's own renderer.
+
+    ⚠⚠ **Rendered, not described.** Every serious defect this project has found was found by printing
+    something and reading it, and the one that survived several reviews was a *working* instrument
+    pointed at the wrong thing — a metric counting steps the player experiences as typing zeros. No
+    number distinguishes that case from an honest one. These pages exist to answer what no column can:
+    **when the erased PA cells go up, what does the player actually do?**
+
+    `show_slots` is on, because a chain across slots is the thing being judged and the slot is not on
+    the player's board. It is a flag on the real renderer, never a second one.
+    """
+    pages: list[str] = []
+    for arm in SPECIMEN_ARMS:
+        found = specimens.get((arm, SPECIMEN_TARGET))
+        if found is None:
+            pages.append(f"  {loaded.game_id} {loaded.offense_team}: arm {arm} never reached {SPECIMEN_TARGET} stalls")
+            continue
+        given, solution = found
+        blank = sum(1 for cell in cell_values(loaded.direction) if cell not in given and cell.endswith(PA_COLUMN))
+        title = f"arm {arm} - target {SPECIMEN_TARGET} stalls - {blank} of the PA column erased"
+        pages.append(render(loaded, given, title=title, show_slots=True) + NEWLINE * 2 + render_path(solution))
+    return pages
 
 
 def _median(values: list[int]) -> float:
@@ -287,11 +328,19 @@ def main() -> None:
     print("One canonical walk per (direction, seed), FILTERED per arm - never re-ordered.")
 
     rows: list[Row] = []
+    pages: list[str] = []
     for number, loaded in enumerate(sample, start=1):
         for seed in SEEDS:
-            rows.extend(_measure(loaded, seed))
+            measured, specimens = _measure(loaded, seed)
+            rows.extend(measured)
+            if number <= SPECIMEN_BOARDS and seed == SEEDS[0]:
+                pages.extend(_specimen_pages(loaded, specimens))
         if number % 5 == 0:
             print(f"  {number}/{len(sample)} measured", flush=True)
+
+    # ⚠️ Written before the report, and meant to be read before the report is believed.
+    (_HERE / "specimens.txt").write_text((NEWLINE * 2).join(pages), encoding="utf-8", newline=NEWLINE)
+    print(f"wrote {len(pages)} rendered boards to specimens.txt - READ THESE BEFORE TRUSTING THE NUMBERS")
 
     # Persisted before formatting: the rows are the expensive half and everything below can fail.
     (_HERE / "arms.json").write_text(
