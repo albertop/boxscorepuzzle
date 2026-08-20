@@ -388,7 +388,19 @@ td.label.substitute { padding-left: 14px; }
 .keypad .frac .num { font-size: 15px; align-self: flex-start; }
 .keypad .frac .bar { font-size: 20px; margin: 0 1px; }
 .keypad .frac .den { font-size: 15px; align-self: flex-end; }
-.keypad button:disabled { opacity: .35; }
+/* ⚠️⚠️ **A disabled key keeps its own ground and dims only its ink.** This was `opacity: .35` on the
+   whole button, which fades the *background* too — and the key ground and the pad ground are four
+   values apart in the dark palette, so a disabled key sank into the pad and read as a hole where a key
+   should be rather than as a key that is not available. Reported as "the background looks different",
+   which is exactly what it was.
+
+   Dimmer than a live key on purpose and by a wide margin: a disabled control that reads as available
+   is worse than one that reads as missing. WCAG exempts disabled controls from the contrast minimum
+   for this reason, so `--muted` is the right token and the low ratio is the message. */
+.keypad button:disabled {
+  color: var(--muted);
+}
+.keypad button:disabled .frac { color: var(--muted); }
 
 /* ---- the ending: check, and what the player gets for being right ------------------------------ */
 
@@ -436,8 +448,15 @@ td.label.substitute { padding-left: 14px; }
   letter-spacing: 0.02em;
 }
 .keypad button.check:disabled {
+  /* Back to an ordinary key: the ground its neighbours have and the ink they get when disabled. The
+     green is what says *ready*, so it has to be absent while the board is not.
+
+     ⚠️ **`color` is repeated here and it is not redundant.** `.keypad button.check` and
+     `.keypad button:disabled` have the same specificity, and the class rule is written later, so it
+     won — a disabled Check key kept `--header-ink` and rendered in full white beside two muted
+     fraction keys, reading as available on an empty board. Found by looking at it. */
   background: var(--key);
-  color: var(--key-ink);
+  color: var(--muted);
 }
 
 /* ---- the reveal: a printed boxscore, not a results card -------------------------------------- */
