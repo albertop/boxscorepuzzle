@@ -4109,3 +4109,90 @@ stops being one.
 parameter and its output committed. **Not scheduled, and deliberately.** It would re-derive a number
 supporting a decision already taken on other evidence, and nothing would be built differently either
 way — which is this project's own test for whether a measurement should run.
+
+
+# 🔬 Investigation: is the batting order a reasoning tool or an erasure permit?
+
+**Not a bug.** Nothing is broken and nothing is unsafe. This is a question about what the constraint
+*does*, and it is open because the number that was supposed to answer it answers a different question.
+Recorded here rather than as a review finding, because what it needs is a measurement and a decision,
+not a repair. (Raised as v30-P1-01.)
+
+## The question, in one line
+
+When a board reaches its stall target **only** with the batting order on, is that because the solver
+**used the cyclic rule to deduce something**, or because the rule let the generator **erase more cells**
+that the ordinary equations then resolved anyway?
+
+- **Reasoning tool** — the rule settles cells nothing else settles. The adoption case holds as stated.
+- **Erasure permit** — the rule settles nothing; it only raises the blank count, and column sums and
+  row identities do the visible work. Then the gained boards are *boards with more blanks*, which the
+  plain path could also reach by asking for more blanks, and the fallback is complexity for nothing.
+
+## Why the confirmation did not answer it
+
+Criterion 3 reported **"346 causal deductions against 2 division steps, 0.6% filler"**. The 346 is
+computed as `len(deductions) - division`: every column sum, propagation, cross-team, global-identity
+and bounding step in the solve, **whether or not the batting order contributed to any of them**.
+Subtracting one technique from the total says nothing about causation.
+
+The label has been corrected — `confirm.py` says `other_steps` now and states the limit — but **the
+decision built on it has not been re-derived.** The share is a real measure of *filler*, which is what
+the pre-registration asked for. It is not evidence that the rule did any of the remaining work.
+
+⚠️ **A dependency graph cannot substitute.** Bounding carries no originating identity, so a bounded
+cell cannot be attributed to the relation that made it bounded. The counterfactual is the only
+authority available.
+
+## What decided the adoption, and what did not
+
+⚠️⚠️ **The adoption was decided by a person, and that is not in question here.** The operator solved the
+five hand-solve boards with the constraint active and reported that it makes them harder — because the
+player has to hold one more rule in their head, not because it resolves more cells. That verdict is in
+`batting-order-reversal.md`, with the note that no metric in the document captures it.
+
+So this investigation cannot overturn the adoption. **What it can change is the mechanism**, which is
+the "what would be built differently" test this project requires before a measurement runs:
+
+| result | what changes |
+|---|---|
+| the rule settles cells nothing else does | nothing. `erase_with_lineup_fallback` stands, and `LINEUP_DIVISION_SHARE_CAP` is guarding the right thing. |
+| the rule settles nothing load-bearing | the fallback is a second erasure path earning its keep through blank count. Ask the plain path for more blanks instead, delete the fallback, and the cap with it. |
+
+## The design
+
+**The verifier already does both halves**, which is why this is small: `boxscore_verify.reason.derive`
+and `rules.relations` both take `slots` and default to `()`. Solving the identical erased board twice —
+once with the lineup relations and once without — changes the relation set and **nothing else**. No
+re-erasure, no re-seeding, no re-ordering, so there is no trajectory confound to control for.
+
+⚠️ Run through `boxscore_verify`, not the generator's solver: §22 keeps them apart, and a question
+about what a *solver* can derive should be asked of the independent one.
+
+**Population.** The gained cohort from `confirm.json` — directions that reach 8 stalls with the
+fallback and not plain — one board per direction, the seed already recorded there.
+
+**Two readings, and the first is the one that decides.**
+
+1. **Binary, per board: does the identical erasure still solve completely without the lineup
+   relations?** If it does, the rule settled nothing that was load-bearing on that board. This is the
+   answer to *tool or permit* and it needs no threshold.
+2. **Magnitude, per board: how many cells settle only with the relations on?** Reported as *cells
+   downstream of the relation* — it includes the cascade, because a cell the rule settles unlocks
+   others, and that cascade is the point rather than an artefact. **It must not be reported as "cells
+   the rule directly resolved"**, which is the mistake this whole entry exists because of.
+
+**Pre-registered reading, written before the run:** if **more than half** the gained boards still solve
+completely without the relations, the fallback is an erasure permit on this evidence and the mechanism
+goes back on the table. Fewer than half and it stands. **The number is recorded either way**, and a
+result near the boundary is reported as near the boundary rather than rounded into a verdict.
+
+⚠️ **And a rendered sample, checked by eye, before the numbers are trusted** — a handful of boards with
+the cells that stopped settling marked. Every measurement here produces one; this project's record is
+that distributions hide what a rendered board shows.
+
+## Until it runs
+
+`lineup_fallback.py` says the confirmation ran and all three criteria held. **Criteria 1 and 2 hold as
+stated; criterion 3 measures filler and not causation**, and the module now says so rather than leaving
+"all three" to be read as more than it is.

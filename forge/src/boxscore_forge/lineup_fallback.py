@@ -30,7 +30,8 @@ the batting order was refused as ambiguous before layer 3 ever ran: adoption tha
 imports and false in the outcome. `test_lineup_fallback_is_adopted.py` takes a real fallback board
 through the publication gate, and reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`.
 
-✅ **The pre-registered confirmation ran on 2026-08-20 and all three criteria held.**
+✅ **The pre-registered confirmation ran on 2026-08-20. Criteria 1 and 2 held as stated; criterion 3
+measured something narrower than its name.**
 `discovery/batting-order/confirm.py`, 48 directions by 3 seeds by 5 targets by 3 arms, every board through
 the publication gate rather than through the arithmetic layers alone. Coverage at 8 stalls went 29/48
 to 39/48; arm A lost 34 directions in total, which is the proof that a loss can be expressed at all;
@@ -39,11 +40,16 @@ division filler on the gained cohort was 0.6%. The figures and their caveats are
 
 ⚠️ **What this module does NOT establish, after the confirmation.**
 
-- **The filler figure is not a causal one.** The denominator is every non-division deduction in the
-  solve, not deductions the constraint enabled — it was labelled `causal` and that asserted the thing
-  the adoption question turns on. The share is a real measure of *filler* and it is what the criterion
-  asked for; it is not evidence that the rest of the solve used the cyclic order. A causal figure needs
-  a counterfactual solve, which is not run and not scheduled. v30-P1-01.
+- **⚠⚠ Whether this is a reasoning tool or an erasure permit.** Criterion 3's denominator is every
+  non-division deduction in the solve, not deductions the constraint enabled — it was labelled `causal`
+  and that asserted the one thing the adoption question turns on. The share is a real measure of
+  *filler*, which is what the pre-registration asked for; it is **not** evidence that the rest of the
+  solve used the cyclic order, and it does not rule out the rule merely permitting more erasure while
+  the ordinary equations do the visible work.
+
+  **Open as an investigation with a design, not as a defect**: `docs/reviews/todo.md`, *is the batting
+  order a reasoning tool or an erasure permit?*. It cannot overturn the adoption — a person decided
+  that — but it can decide whether this fallback mechanism is earning its keep. v30-P1-01.
 - **n = 11 is what the *original* subgroup rested on**, and that subgroup was not pre-registered. The
   confirmation was, which is what makes the result usable — the pre-confirmation caveat is preserved
   in `batting-order-reversal.md`, where it remains true of the run it describes.
