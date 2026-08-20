@@ -172,7 +172,11 @@ html, body {
    headers, bright values — with everything above the floor. If that is taken, this rule can go back to
    `--scoreboard-dim` and recover the marker's original visual intent, because at that ground the dim
    colour is compliant. Recorded so the option is not lost with the reasoning that found it. */
-.linescore td.unplayed { color: var(--scoreboard-ink); font-weight: 400; }
+/* No rule here on purpose: the marker is drawn as a value, in `board.js`. The lighter weight that
+   briefly replaced the dimming had the same answer against it -- the `x` does not need to be lighter
+   to read as not-a-value, it reads that way because it is an `x`. Deleting the rule outright is what
+   stops the two from drifting; a rule that restates the default is a second definition waiting to
+   disagree. */
 /* ⚠⚠ **The smallest device in use cannot hold a twelve-inning game at 13px.** Measured with the real
    renderer and the real typeface: at 320px a twelve-inning line score at 13px leaves 2.7px between a
    two-digit R and a two-digit H, which is where `11 16 2` starts reading as `1116 2`. At 11px the gap

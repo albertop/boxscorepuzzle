@@ -1366,15 +1366,12 @@ suite("⚠️⚠️ The half-inning marker is a given, so it has to be legible",
     assert(playedRatio >= FLOOR, `a played digit renders at ${playedRatio.toFixed(2)}:1, under ${FLOOR}`);
   });
 
-  test("the marker is still not mistakable for a value", async () => {
-    // ⚠️ The other half. Raising the contrast by making the marker identical to a digit would pass the
-    // test above and lose the distinction the dimming was carrying.
-    const { table, frame } = await drawn(12);
-    const marker = getComputedStyle(table.querySelector("td.unplayed"));
-    const played = getComputedStyle(table.querySelector("td.value"));
-    const differs = marker.fontWeight !== played.fontWeight || marker.color !== played.color;
-    frame.remove();
-
-    assert(differs, "the not-played marker is drawn exactly like a played value");
-  });
+  // ⚠⚠ **A test asserting the marker looked *different* from a value was deleted here, deliberately.**
+  // It pinned an interim design — the same colour at a lighter weight — and the decision went the other
+  // way: the marker is drawn exactly as a run is drawn, because it reads as not-a-value by being a
+  // letter among numerals. Keeping the test would have frozen a choice already reversed, and a guard
+  // that outlives its decision fails honest changes.
+  //
+  // ⚠️ The contrast test above stays, because it is about the panel rather than about the marker. If
+  // the scoreboard's colours ever move, every cell on it is checked — the `x` included, for free.
 });

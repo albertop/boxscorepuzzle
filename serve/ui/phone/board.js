@@ -50,7 +50,18 @@ export function renderLineScore(score, offenseIsHome) {
       // after the top of the ninth does not bat, and a 0 there is a claim about a thing that did not
       // happen — the arithmetic would still balance, which is why nothing arithmetic catches it.
       const played = i < byInning.length;
-      row.append(el("td", played ? "value" : "unplayed", played ? String(byInning[i]) : text("board.inning_not_played")));
+      // ⚠⚠ **The marker is drawn exactly as a run is drawn.** It carries `value` for the styling
+      // and `unplayed` as a name only -- there is no rule on that class. It reads as not-a-value
+      // because it is a letter among numerals, which is the same argument that retired the dimming:
+      // if full contrast costs nothing in meaning, neither does full weight. One fewer thing with
+      // special handling is one fewer place for the two to drift apart.
+      row.append(
+        el(
+          "td",
+          played ? "value" : "value unplayed",
+          played ? String(byInning[i]) : text("board.inning_not_played"),
+        ),
+      );
     }
     row.append(el("td", "value rhe rhe-rule", String(runs)));
     row.append(el("td", "value rhe", String(hits)));
