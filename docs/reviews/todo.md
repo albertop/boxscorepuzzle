@@ -3,7 +3,8 @@
 ## Where everything stands
 
 **Twenty-seven reviews (four passes on the last), 113 findings, none rejected. Two are open and stated
-below — one of them found without a reviewer, which is the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
+below, and a third was found and fixed while watching a run — all three without a reviewer, which is
+the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
 
 ### ⚠️⚠️ The standing observation: seven findings, one piece of work, five distinct shapes
@@ -87,6 +88,76 @@ arrived wrapped in an attack scenario that is out of scope here, and the defect 
 adversary at all.
 
 Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
+
+## ✅ FIXED, and the first diagnosis of it was wrong: every load paid ~20 minutes to a parameter type
+
+**The symptom.** Watching a run of `arms.py`: the client had burned **0.09 seconds of CPU in four
+minutes**. It was not computing, it was waiting. The server was chaining 12-14 second queries, one per
+direction, and a 48-direction sample is 96 of them — roughly **twenty minutes of database wait before
+a single board is measured**. Every discovery script calling `load()` had been paying it.
+
+### ⚠⚠ The wrong answer first, because its shape is the finding
+
+The plan summary showed two `Clustered Index Scan` operators over `dbo.retroSubstitutionsReg`, an
+unindexed 1.76M-row table hit by the two correlated subqueries that find where a substitute entered.
+That was reported to the operator as the cause. **It is real, it is worth an index, and it is the
+smaller half.**
+
+The full plan says something else. `retroDailyReg` — 5,325,173 rows, clustered on exactly the
+`(GAME_ID, IDX)` this query filters by — was **scanned**, and the residual predicate reads:
+
+```
+CONVERT_IMPLICIT(nvarchar(12), retroDailyReg.GAME_ID, 0) = [@P1]
+AND CONVERT_IMPLICIT(nvarchar(3),  retroDailyReg.TEAM_ID, 0) = [@P2]
+```
+
+pyodbc sends every Python `str` as `nvarchar`. `GAME_ID` and `TEAM_ID` are `varchar`, and `nvarchar`
+wins the type precedence, so **the conversion lands on the column**. The database collation is
+`SQL_Latin1_General_CP1_CI_AS` — a *SQL* collation, which gets no `GetRangeThroughConvert` (0
+appearances in the plan, checked). The index cannot be used at all.
+
+⚠️ **What produced the wrong answer was reading a list of operator *types* and calling it the plan.**
+"Two clustered index scans of a 1.76M-row table" was true and led straight to a fix that would not
+have worked; the line naming *which table each operator touched* was one query away and said
+`retroDailyReg` was scanned. **A summary consistent with the wrong answer is not evidence for it.**
+This is the project's own rule — verify against the real artifact — applied to a query plan.
+
+### The measurement, and how it was kept honest
+
+Both arms on the real table, same query, same values:
+
+| | best of three |
+|---|---|
+| `nvarchar`, what pyodbc sends | **827 ms** |
+| `varchar` via `setinputsizes` | **0.1 ms** |
+
+⚠️ **The first run of this test proved nothing and looked like it proved everything:** 8044x, and
+*both arms returned 0 rows* — the probe pair did not exist. A seek that finds nothing is fast, and so
+is a parameter mangled into never matching. The test cannot tell those apart. Re-run with a pair drawn
+from the table, asserting both arms return the **same non-zero count**, which they do: 12 rows each.
+
+### Fixed
+
+`_rows()` in `discovery/difficulty-metrics/measure.py` types the two parameters as the columns are
+declared. Verified through the real function against the old call path: same 12 rows, **0.17 ms
+against 381.8 ms**.
+
+### Still worth doing, separately — the operator's database
+
+The two scans of `retroSubstitutionsReg` are real and the parameter fix does not touch them. That
+subquery correlates column to column (`s.GAME_ID = d.GAME_ID`), both `varchar`, so **no conversion is
+involved and an index would seek**:
+
+```sql
+CREATE NONCLUSTERED INDEX IX_retroSubstitutionsReg_GAME_SUB
+    ON dbo.retroSubstitutionsReg (GAME_ID, SUB_ID)
+    INCLUDE (EVENT_ID, SUB_FLD_CD);
+```
+
+⚠️ **It belongs in the loader script, not only in the database.** CLAUDE.md is explicit that the
+processed Retrosheet database is *not* backed up and the loader is — so an index created by hand is
+lost the next time the database is rebuilt from Retrosheet's files, and the cost returns with nobody
+remembering why.
 
 ## ⚠⚠ OPEN, found in passing: ruff says it checks `discovery/` and nothing ever points it there
 

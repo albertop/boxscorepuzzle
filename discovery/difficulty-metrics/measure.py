@@ -422,6 +422,36 @@ def _parse_line_score(text: str) -> tuple[int, ...]:
     return tuple(innings)
 
 
+def _rows(connection: object, query: str, game_id: str, team_id: str) -> list:
+    """One game-and-team fetch, with the parameters typed as the columns actually are.
+
+    ⚠⚠ **`varchar`, and it is not cosmetic: it is the whole cost of loading.** pyodbc sends every
+    Python `str` as `nvarchar`, and `GAME_ID` and `TEAM_ID` are `varchar` in a **SQL** collation
+    (`SQL_Latin1_General_CP1_CI_AS`). `nvarchar` wins the precedence, so the conversion lands on the
+    *column* — the live plan reads
+    `CONVERT_IMPLICIT(nvarchar(12), retroDailyReg.GAME_ID, 0) = [@P1]` — and a SQL collation gets no
+    `GetRangeThroughConvert`. The clustered index on `(GAME_ID, IDX)` becomes unusable and every fetch
+    **scans all 5,325,173 rows**.
+
+    Measured on the real table, both arms returning the same 12 rows so the comparison is honest:
+    **827 ms against 0.1 ms, 6731x.** Times 96 fetches, that is the twenty minutes every discovery run
+    paid to load before measuring anything.
+
+    ⚠️ **The first diagnosis was wrong, and the shape of the error is why it is written down.** The
+    plan summary showed two full scans of `retroSubstitutionsReg`, an unindexed 1.76M-row table, and
+    that was reported as the cause. It is real and worth an index — but it is the smaller half, and a
+    summary listing operator *types* is not a plan: the line naming which table each one touched said
+    `retroDailyReg` was **scanned**, not sought. **Reading the summary is not reading the plan**, and
+    the summary was consistent with a wrong answer.
+    """
+    import pyodbc  # noqa: PLC0415
+
+    cursor = connection.cursor()  # type: ignore[attr-defined]
+    # 12 and 3 are the declared widths of GAME_ID and TEAM_ID. Wrong widths would silently truncate.
+    cursor.setinputsizes([(pyodbc.SQL_VARCHAR, 12, 0), (pyodbc.SQL_VARCHAR, 3, 0)])
+    return cursor.execute(query, game_id, team_id).fetchall()
+
+
 def load(
     limit: int,
     *,
@@ -608,8 +638,8 @@ def load(
             official_at_bats,
             official_left_on_base,
         ) in candidates:
-            batting_rows = connection.cursor().execute(rows_query, game_id, offense).fetchall()
-            pitching_rows = connection.cursor().execute(pitch_query, game_id, defense).fetchall()
+            batting_rows = _rows(connection, rows_query, game_id, offense)
+            pitching_rows = _rows(connection, pitch_query, game_id, defense)
             if not batting_rows or not pitching_rows:
                 continue
             batting = tuple(
