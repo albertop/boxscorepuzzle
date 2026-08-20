@@ -464,3 +464,174 @@ class TestTheTwoImplementationsAgree:
         theirs_positive = self._rows(cell for cell, coefficient in theirs.terms if coefficient > 0)
 
         assert ours_positive != theirs_positive
+
+
+class TestTheTwoValueStepsAgree:
+    """⚠️⚠️ The relations bound the distribution; two *other* pieces of code produce it.
+
+    `TestTheTwoImplementationsAgree` above compares which rows enter which relation. That is the right
+    comparison for the relations and it is blind to this: the generator's `_lineup_moves` and the
+    verifier's `lineup_values` are separate implementations of *the same arithmetic*, and nothing was
+    checking that they arrive at the same numbers.
+
+    ⚠️ **A disagreement here is the worst kind available.** The generator would erase a cell believing
+    the player can deduce it, and the verifier would deduce something else — or nothing — so layer 3
+    would refuse a board the generator was sure of, or worse, certify one on a different value. §22
+    requires the two be written apart; it requires just as strongly that they answer alike.
+
+    Compared by **row index and value**, never by cell name: the two naming grammars differ on purpose
+    (`batting[0].plate_appearances` against `bat[0].plate_appearances`), so comparing strings would
+    fail on a rename that changed nothing, or pass while the arithmetic drifted.
+    """
+
+    @staticmethod
+    def _row_of(cell: str) -> int:
+        import re  # noqa: PLC0415
+
+        found = re.search(r"\[(\d+)\]", cell)
+        assert found is not None, f"no row index in {cell!r}"
+        return int(found.group(1))
+
+    def _generator_values(self, slots: tuple[int, ...], given: dict[str, int]) -> dict[int, int]:
+        from boxscore_forge.constraints import BoardShape  # noqa: PLC0415
+        from boxscore_forge.solver import _lineup_moves  # noqa: PLC0415
+
+        shape = BoardShape(**{**_SHAPE, "batter_count": len(slots)}, slots=slots)
+        return {self._row_of(cell): value for cell, value, _ in _lineup_moves(shape, given)}
+
+    def _verifier_values(self, slots: tuple[int, ...], given: dict[str, int]) -> dict[int, int]:
+        import re  # noqa: PLC0415
+
+        from boxscore_verify.reason import lineup_values  # noqa: PLC0415
+        from boxscore_verify.rules import batting, batting_total  # noqa: PLC0415
+
+        # The same board stated in the verifier's grammar. Translating the *input* is what makes the
+        # comparison about arithmetic rather than about spelling.
+        theirs: dict[str, int] = {}
+        for cell, value in given.items():
+            row = re.search(r"batting\[(\d+)\]\.plate_appearances", cell)
+            if row:
+                theirs[batting(int(row.group(1)), "plate_appearances")] = value
+            elif cell.endswith("plate_appearances"):
+                theirs[batting_total("plate_appearances")] = value
+        return {self._row_of(cell): value for cell, value in lineup_values(slots, theirs).items()}
+
+    @pytest.mark.parametrize(
+        "slots",
+        [
+            (1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (1, 2, 3, 4, 5, 6, 7, 8, 9, 9),
+            (1, 1, 2, 3, 4, 5, 6, 7, 8, 9),
+            (1, 2, 3, 4, 5, 5, 6, 7, 8, 9),
+        ],
+        ids=["nine clean", "substitute at the end", "substitute at the top", "substitute in the middle"],
+    )
+    @pytest.mark.parametrize("total", [27, 36, 38, 40, 44, 45, 53])
+    def test_they_produce_the_same_values(self, slots: tuple[int, ...], total: int) -> None:
+        # ⚠️ Totals chosen to cover both remainders: 27, 36 and 45 divide evenly, the rest do not, and
+        # the remainder is the only place the two could disagree about which slots get the extra one.
+        given = {batting_total_cell("plate_appearances"): total}
+
+        assert self._generator_values(slots, given) == self._verifier_values(slots, given)
+
+    def test_they_agree_when_a_shared_slot_has_one_row_known(self) -> None:
+        """The subtraction case, where a slot's sum is fixed and one of its rows is already there.
+
+        ⚠️ Kept separate because the parametrised case above never exercises it: with nothing given but
+        the total, a shared slot has two unknowns and **neither** side settles it. A test that only ran
+        the clean case would agree about the easy thing and say nothing about the hard one.
+        """
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+        given = {
+            batting_total_cell("plate_appearances"): 39,
+            batting_cell(9, "plate_appearances"): 1,
+        }
+        ours = self._generator_values(slots, given)
+        theirs = self._verifier_values(slots, given)
+
+        assert ours, "no move was produced, so this proves nothing"
+        assert ours == theirs
+
+    def test_neither_settles_a_shared_slot_with_two_unknowns(self) -> None:
+        # ⚠️ Agreeing to produce *nothing* is a real agreement and the one most easily lost: a side
+        # that split the sum would invent a value, and this is where that shows.
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+        given = {batting_total_cell("plate_appearances"): 39}
+
+        assert 8 not in self._generator_values(slots, given)
+        assert 8 not in self._verifier_values(slots, given)
+        assert 9 not in self._generator_values(slots, given)
+        assert 9 not in self._verifier_values(slots, given)
+
+
+class TestThePoolRuleCannotStopFiring:
+    """⚠️⚠️ The filter that keeps the constraint honest, and a filter is where "never fires" hides.
+
+    35 directions in 371,802 have a per-slot distribution the cycle does not predict. They are excluded
+    rather than tolerated, because a constraint true 99.99% of the time is a trap rather than a weaker
+    rule: on the one board in ten thousand that breaks it, the generator erases cells the player cannot
+    deduce and every total still balances.
+
+    ⚠️ **A rejection rate that low is exactly the shape a dead check takes.** If this stopped rejecting
+    anything, nothing downstream would look different — the pool would grow by 0.009% and no number in
+    any report would move. So the test is what it *rejects*, on a board built to break it.
+    """
+
+    @staticmethod
+    def _direction(per_slot: list[int]) -> tuple[tuple, tuple]:
+        from boxscore_forge.boxscore import BatterFootnotes, BattingLine  # noqa: PLC0415
+
+        # Only the plate appearances matter to this check; everything else is left at nought so a
+        # failure can only be about the order.
+        batting = tuple(
+            BattingLine(plate_appearances=count, at_bats=count, runs=0, hits=0, walks=0, strikeouts=0)
+            for count in per_slot
+        )
+        notes = tuple(
+            BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=0, catcher_interference=0)
+            for _ in per_slot
+        )
+        return batting, notes
+
+    def _violations(self, per_slot: list[int], slots: tuple[int, ...]) -> tuple:
+        from types import SimpleNamespace  # noqa: PLC0415
+
+        from boxscore_forge.identities import _check_batting_order  # noqa: PLC0415
+
+        batting, _ = self._direction(per_slot)
+        return _check_batting_order(SimpleNamespace(batting=batting), slots)
+
+    def test_a_distribution_the_cycle_predicts_is_accepted(self) -> None:
+        # 39 = 4 x 9 + 3, so the first three places bat five times and the rest four.
+        assert self._violations([5, 5, 5, 4, 4, 4, 4, 4, 4], tuple(range(1, 10))) == ()
+
+    def test_a_distribution_the_cycle_forbids_is_rejected(self) -> None:
+        """⚠️ The exact shape that passes every other check.
+
+        `6 5 4 4 4 4 4 4 4` totals 39 like the accepted case, satisfies monotonicity, and is impossible:
+        the order cannot be skipped, so the first place cannot be two ahead of the last.
+        """
+        found = self._violations([6, 5, 4, 4, 4, 4, 4, 4, 4], tuple(range(1, 10)))
+
+        assert found, "the pool rule accepted a distribution no game can produce"
+        assert "slot 1 has 6" in found[0].detail
+
+    def test_a_substitution_is_judged_on_the_slot_and_not_the_row(self) -> None:
+        # Two rows sharing the ninth place. Per row the claim is false at once — a substitute bats
+        # fewer times than the man he replaced — and per slot it holds.
+        assert self._violations([5, 5, 5, 4, 4, 4, 4, 4, 3, 1], (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)) == ()
+
+    def test_an_absent_lineup_is_not_checked_against_a_guess(self) -> None:
+        # ⚠️ Empty slots means the rule is not applied. A default of one row per slot would be wrong on
+        # every board with a substitution, and wrong silently.
+        assert self._violations([6, 5, 4, 4, 4, 4, 4, 4, 4], ()) == ()
+
+    def test_the_detail_names_the_slot_and_both_numbers(self) -> None:
+        # A rejection nobody can act on is a rejection that gets loosened. The operator has to be able
+        # to look at the 35 without re-deriving which slot went wrong.
+        found = self._violations([4, 4, 4, 4, 4, 4, 4, 4, 7], tuple(range(1, 10)))
+
+        assert found
+        assert "slot 9 has 7" in found[0].detail
+        assert "the cycle gives 4" in found[0].detail
+        assert "39 plate appearances" in found[0].detail

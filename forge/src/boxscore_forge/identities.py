@@ -112,8 +112,13 @@ class Violation:
     detail: str
 
 
-def find_violations(direction: Direction) -> tuple[Violation, ...]:
-    """Return every identity the direction breaks. An empty result means the boxscore balances."""
+def find_violations(direction: Direction, slots: tuple[int, ...] = ()) -> tuple[Violation, ...]:
+    """Return every identity the direction breaks. An empty result means the boxscore balances.
+
+    `slots` is the batting order. **Empty means the order is not checked**, never checked against a
+    guess: one row per slot is wrong on every board carrying a substitution, and wrong silently,
+    because the board balances either way.
+    """
     return (
         *_check_column_sums(direction),
         *_check_cross_team_totals(direction),
@@ -122,7 +127,61 @@ def find_violations(direction: Direction) -> tuple[Violation, ...]:
         *_check_line_score(direction),
         *_check_bounds(direction),
         *_check_non_negative(direction),
+        *_check_batting_order(direction, slots),
     )
+
+
+LINEUP_SLOTS: Final = 9
+"""A batting order is nine places. The shape of the game, not a parameter."""
+
+
+def _check_batting_order(direction: Direction, slots: tuple[int, ...]) -> tuple[Violation, ...]:
+    """The per-slot appearances must be what the team total predicts, or the direction is out of the pool.
+
+    ⚠⚠ **The pool rule, and it is a rule about the data rather than about the game.** The order is a
+    cycle and never skips, so `T` plate appearances are dealt round the nine places: `T // 9` each,
+    plus one more for the first `T % 9`. **35 directions in 371,802 do not match that.**
+
+    ⚠️ **They read as transcription noise, not as baseball, and here is why.** The exceptions are flat
+    across every decade from the 1910s to the 2010s; they appear under both source types; they are not
+    concentrated in extra-inning games, nor in games where one side batted last. **A real rule of the
+    game would cluster somewhere** — a scoring convention has an era, a source, or a situation. Noise
+    spread evenly across all four dimensions is the signature of a transcription error.
+
+    ⚠️ **And the caveat stays, because it is not resolved.** 35 is few enough for a person to read, and
+    nobody has. A genuine batting-out-of-order call cannot be told from a scoring error *by a
+    distribution* — both produce exactly this shape. The rule is applied because a constraint true
+    99.99% of the time is a trap rather than a weaker rule: the generator would erase cells the player
+    cannot deduce on the one board in ten thousand that breaks it.
+
+    Excluding them is cheap and reversible; shipping an underivable board is neither.
+    """
+    if not slots:
+        return ()
+    if len(slots) != len(direction.batting):
+        return (
+            Violation(
+                Identity.BATTING_ORDER,
+                f"{len(slots)} slots against {len(direction.batting)} batting rows",
+            ),
+        )
+    if sorted(set(slots)) != list(range(1, LINEUP_SLOTS + 1)):
+        return (Violation(Identity.BATTING_ORDER, f"slots {sorted(set(slots))} are not the nine places"),)
+
+    per_slot: dict[int, int] = {}
+    for row, slot in zip(direction.batting, slots, strict=True):
+        per_slot[slot] = per_slot.get(slot, 0) + row.plate_appearances
+    total = sum(per_slot.values())
+    complete, over = divmod(total, LINEUP_SLOTS)
+
+    broken = [
+        f"slot {slot} has {per_slot[slot]}, the cycle gives {complete + (1 if slot <= over else 0)}"
+        for slot in sorted(per_slot)
+        if per_slot[slot] != complete + (1 if slot <= over else 0)
+    ]
+    if broken:
+        return (Violation(Identity.BATTING_ORDER, f"{total} plate appearances: " + "; ".join(broken)),)
+    return ()
 
 
 def _value(container: object, field: str) -> int:
