@@ -126,9 +126,41 @@ generator code must never reach the VPS.
 **Generated puzzle inventory never goes in Git.** It lives in an ignored folder inside `forge/`.
 
 Commit messages in English, imperative mood, one logical change per commit, prefixed with scope
-(`forge:`, `serve:`, `docs:`). `main` always deployable, protected, CI must pass. Nothing pushed with
-a failing test or coverage under 95%. Commit `uv.lock` — it is the reproducibility guarantee, not a
-build artifact.
+(`forge:`, `serve:`, `docs:`). `main` always deployable. Nothing pushed with a failing test or
+coverage under 95%. Commit `uv.lock` — it is the reproducibility guarantee, not a build artifact.
+
+### ⚠️⚠️ CI runs. `main` is **not** protected, and this paragraph used to say it was.
+
+**CI exists now** — `.github/workflows/ci.yml`, on every push: ruff over `forge/` blocking, the
+`discovery/` ratchet, mypy strict, the suite with the 95% coverage floor, and the browser suite
+headless. On Ubuntu and on Windows, because the laptop is Windows and a redirected stream there is
+cp1252.
+
+**Branch protection does not and cannot exist on this repository.** GitHub gates branch protection
+*and* rulesets behind a paid plan for **private** repositories, and this repository is private
+permanently (§16) because `forge/` holds the generator and the human-solvability guarantee. Both API
+calls return `403 Upgrade to GitHub Pro or make this repository public`. The two ways out are a paid
+plan or publishing the repository, and the second one is not available.
+
+So **CI is a report, not a gate**: nothing stops a red commit reaching `main`. Two things follow, and
+they are not optional.
+
+⚠️ **This section is the correction, not the claim.** For every commit until now this paragraph read
+*"`main` always deployable, protected, CI must pass"* and none of the three was enforced by anything —
+there was no `.github/` directory at all. **The document that defines this project's rules was
+asserting a guarantee it did not have**, which is the exact shape being closed in the code all week,
+sitting in the file the rules come from. A rule stated in the place people go to learn the rules is
+the worst place for one that is false.
+
+⚠️ **`.githooks/pre-push` is the nearest available thing and is deliberately not called protection.**
+It runs what CI runs, before a push to `main`, on the laptop. Enable it with
+`git config core.hooksPath .githooks`. It guards against forgetting and not against intent:
+`git push --no-verify` skips it, it cannot see what the other platform would find, and it is one
+machine checking itself. **Do not let it be described as branch protection anywhere**, including here.
+
+**What would change this:** a GitHub Pro plan on the account. If that happens, the required checks are
+`forge (ubuntu-latest)`, `forge (windows-latest)` and `browser`, and this section gets rewritten to
+say what is then true.
 
 **Pushing is the disaster recovery plan**, not just hygiene: §33 identifies the laptop as a single
 point of failure and GitHub is the backup. Push at the end of every session. The processed Retrosheet

@@ -1,0 +1,48 @@
+#!/bin/sh
+# What branch protection would do, done on the laptop instead, because it cannot be done on the server.
+#
+# GitHub gates branch protection AND rulesets behind a paid plan for private repositories, and this
+# repository is private permanently: `forge/` holds the generator and the human-solvability guarantee,
+# which is trade secret. So `main` cannot be protected server-side, CI cannot be a required check, and
+# CLAUDE.md now says so instead of claiming otherwise.
+#
+# This is the nearest available thing and it is deliberately NOT called protection:
+#
+#   - it runs on the laptop, so it protects against forgetting, not against intent
+#   - `git push --no-verify` skips it entirely
+#   - it cannot see what CI would find on another platform
+#
+# What it does is make "nothing pushed with a failing test or coverage under 95%" a check rather than
+# a habit, on the one machine that exists. Enable it with:
+#
+#     git config core.hooksPath .githooks
+#
+set -e
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+if [ "$branch" != "main" ]; then
+  echo "pre-push: on '$branch', not main. Skipping; CI is the check for a branch."
+  exit 0
+fi
+
+root=$(git rev-parse --show-toplevel)
+cd "$root/forge"
+
+echo "pre-push: main. Running what CI runs, because main is not protected server-side."
+
+echo "  ruff, forge"
+uv run ruff check src scripts tests
+
+echo "  ruff, discovery and tools, against the baseline"
+uv run python ../tools/lint_discovery.py > /dev/null
+
+echo "  mypy"
+uv run mypy src
+
+echo "  tests and the coverage floor"
+uv run pytest --cov --cov-report=term-missing -q
+
+echo "  the browser suite"
+uv run python ../tools/run_browser_tests.py
+
+echo "pre-push: clean."
