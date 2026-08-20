@@ -762,9 +762,24 @@ def check_reveal_agrees(reveal: "Reveal", solution: Board, labels: tuple[str, ..
     batters scored the defence's runs, the offence's staff allowed the same events from the other
     side, and its outs are bounded by the innings the defence batted.
 
-    ⚠️ **It still cannot corroborate a row.** There is no independent source at row granularity, so
-    which batter had the hits and what he was called is checked by nothing. That residual is stated in
-    that function rather than forwarded again.
+    ⚠️⚠️ **The finished boxscore is informative, and it has two halves that are not the same kind of
+    thing.** One was the game: validated to the extreme, four layers plus the publication gate, every
+    cell of it something the player deduced or was given. The other **was not used for the game at
+    all** and is on the page for one reason — a boxscore shows both teams. It is offered as-is.
+
+    So certifying it row by row would expand §22 into a second Retrosheet validator without protecting
+    the guarantee §22 exists for: that half carries no clue and cannot affect uniqueness,
+    derivability, correctness or the player's result. v30-P1-02, retracted on that ground.
+
+    ⚠️ **This docstring previously justified the same conclusion by claiming no row-level source
+    exists, and that was false.** `retroEventsReg` is the play-by-play; recomposing every printed line
+    from it reproduced 114 of 115 rows across the six reference packages exactly. The check is
+    buildable and is not wanted. **A right answer reached through a claim nobody checked is the thing
+    this project keeps finding**, so the reason here is now the scope and not an absence — see
+    `docs/reviews/non-issue.md`.
+
+    What is checked is `check_printed_boxscore_corresponds`: the club totals of the unshared grids
+    against the line score, which comes from a different table.
     """
     printed = reveal.boxscore
     if printed.offense.code != reveal.offense_team or printed.defense.code != reveal.defense_team:

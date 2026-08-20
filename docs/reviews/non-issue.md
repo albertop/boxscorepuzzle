@@ -100,3 +100,58 @@ not. A half-applied fix reads exactly like a whole one.
 **It also closed an open number.** The loader sweep had eight unexplained disagreements with the game
 log, left open that morning rather than explained away. They were this bug, and they went to zero
 with the fix.
+
+
+## v30-P1-02 — row-level certification of the unplayed half. **Retracted, and my first close of it was worse than the retraction**
+
+**The finding as written:** the publication gate can certify a package whose `offense.pitching` and
+`defense.batting` are fabricated, and `Evidence` should carry canonical rows so every one of them is
+compared.
+
+**The real half of it was fixed and stands.** The gate genuinely accepted the all-zero fixture named
+`Not A Real Player`, because `format.py` delegated that half to a check in
+`certify_for_publication` **that did not exist**. `check_printed_boxscore_corresponds` exists now and
+anchors those grids on the line score, which comes from a different table. It draws three refusals on
+the fixture that used to publish.
+
+**What was retracted is the row-level requirement**, and the reason is about scope rather than cost.
+The operator put it plainest:
+
+> The boxscore at the end is informative for whoever played, and it has two halves — one that was
+> validated to the extreme and was used for the game, and one that was not used for the game and is
+> offered as-is simply because a boxscore has to show both teams.
+
+The reviewer's retraction says the same thing in the vocabulary of the guarantee: the unplayed half
+contributes no clue and cannot affect uniqueness, derivability, correctness or the player's result, so
+requiring independent row-level evidence for it would expand §22 into a second Retrosheet validator
+without protecting the puzzle guarantee.
+
+⚠️ **Both readings turn on one fact, and naming it is what makes this reusable: the second half is
+there for the completeness of an object, not as a claim being made.** A check is owed by a claim. The
+first half makes one — *this is the game you just reconstructed* — and it is validated to the extreme.
+The second says only *and here is the rest of the sheet*.
+
+### ⚠️⚠️ The part worth keeping, which is about how I closed it the first time
+
+I closed this finding by writing into two production docstrings that **"there is no independent source
+at row granularity"**. That was false, and I never checked it.
+
+`retroEventsReg` is Retrosheet's play-by-play — `AB_FL`, `H_CD`, `RBI_CT`, `EVENT_CD` per event — and
+recomposing every printed line from it reproduced **114 of 115 rows across the six reference packages
+exactly**; the single miss was a doubleheader the probe could not tell apart, not a disagreement. The
+source exists, the check is buildable, and the sentence that closed the finding was a convenient claim
+about the world rather than a fact I had established.
+
+**The correct outcome and the correct reasoning were not the same thing here**, which is exactly why
+this is written down. Had the reviewer not retracted it independently, the finding would have stayed
+closed on a false premise and nothing would have caught it — the docstring reads like a measurement.
+
+⚠️ A weaker supporting fact, worth stating so nobody rediscovers it as an argument: the event file is
+**not** a second observer. Retrosheet derives the daily totals *from* the events, so a row-level check
+would catch a loader defect, a side swap or a stale join and could never catch a fabricated game. That
+makes the check less valuable than it looks — it does not make it impossible, which is what I claimed.
+
+### What would reopen it
+
+The unplayed half becoming load-bearing: a clue drawn from it, or a share grid that encodes it. Then it
+is inside the boundary and the argument above stops applying.

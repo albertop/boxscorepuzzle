@@ -216,11 +216,23 @@ def check_printed_boxscore_corresponds(
     A fabricated grid, a stale join, a side swap or a partial loader result breaks at least one of
     these. The all-zero fixture broke three.
 
-    ⚠️ **What cannot be checked, stated instead of delegated.** There is **no independent source at row
-    granularity.** `retroGameLogs` carries team totals, not lines, so *which* batter had the hits and
-    *what he was called* is corroborated by nothing — a swap of two rows within a club passes every
-    assertion here. That is a real residual and the honest place for it is this docstring rather than
-    another forward reference to a check somebody else is expected to have written.
+    ⚠️⚠️ **What is not checked, and why the boundary stops here.** A swap of two rows within a club
+    passes every assertion here, and so would a fabricated line whose club totals happen to hold.
+
+    **That is deliberate, and the shape of the finished sheet is the reason.** It has two halves that
+    are not the same kind of thing: one *was* the game and is validated to the extreme, and the other
+    **was not used for the game at all** — it is on the page because a boxscore shows both teams.
+    That half is offered as-is. Certifying it row by row would make §22 a second Retrosheet validator
+    without protecting the guarantee it exists for. v30-P1-02, retracted on that ground.
+
+    ⚠️ **An earlier version of this docstring reached the same conclusion by claiming no row-level
+    source exists.** It was wrong: `retroEventsReg` is the play-by-play, and recomposing each printed
+    line from it reproduced 114 of 115 rows across the six reference packages exactly. The check is
+    buildable and is out of scope, which is a different sentence — and the difference is the one this
+    project keeps paying for. `docs/reviews/non-issue.md` carries the record.
+
+    So this check is the whole of the gate for those grids, and it says so rather than forwarding the
+    rest to a check nobody intends to write.
     """
     # ⚠️ `evidence` is unused and that is a statement, not an oversight: the anchors this check needs
     # are the *line score*, which travels inside the package, and there is no row-level source in

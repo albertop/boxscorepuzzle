@@ -23,10 +23,11 @@ score provides: the defence's batters scored the defence's runs and made its hit
 staff allowed the same events from the other side and recorded the outs the innings imply. Derived
 here rather than typed, for the same reason the shared half is.
 
-⚠️ **The names stay obviously synthetic and are still checked by nothing.** There is no independent
-source at row granularity — `retroGameLogs` carries team totals, not lines — so `INVENTED` marks the
-one thing about these rows that no gate can corroborate, and a test that starts depending on *which*
-fake batter had the hits is depending on nothing.
+⚠️ **The names stay obviously synthetic and no gate looks at them, deliberately.** The unshared grids
+were not used for the game; they are on the finished sheet because a boxscore shows both teams, and
+they are offered as-is — v30-P1-02, retracted on that ground. So `INVENTED` marks the part of these
+rows nothing checks, and a test that starts depending on *which* fake batter had the hits is depending
+on nothing.
 """
 
 from boxscore_package.format import (

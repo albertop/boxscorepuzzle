@@ -5,45 +5,26 @@
 This section is the authoritative current status of the findings below. The original review remains
 in place as the record of what was found before the corrections.
 
-### Open findings
+### Current status
 
-#### v30-P1-01 — The adoption is still declared confirmed without the measurement that distinguishes a tool from an erasure permit
+#### v30-P1-01 — RETRACTED: a causal measurement is research debt, not a product defect
 
-**Locations:** `discovery/batting-order/confirm.py:221`,
-`forge/src/boxscore_forge/lineup_fallback.py:33`, `docs/reviews/batting-order-plan.md:186`
+The original false `causal` label was a real reporting error and is already corrected: the code now
+calls the value `other_steps` and states exactly what it does and does not establish. Requiring a new
+counterfactual experiment after that correction does not identify a broken board, an invalid proof, or
+a player-visible failure. The fallback is conditional, every produced board still passes the existing
+publication proof, and felt difficulty remains subject to the hand-solve launch gate. Whether the
+constraint is best described as a reasoning tool or as permission for additional erasure is a useful
+research question, but not a code-review P1 and not required work. No source change is owed.
 
-The repair correctly renamed `causal` to `other_steps` and now says explicitly that the 346 ordinary
-steps cannot be attributed to the batting-order relation. That fixes the false label, but not the
-decision built on it. The confirmation reports two direct lineup-arithmetic steps in 348 deductions,
-while `_steps()` states that deciding whether the remaining deductions depended on the relation needs
-a counterfactual solve that was not run. Nevertheless, the production module still says all three
-criteria held and that the fallback is adopted.
+#### v30-P1-02 — RETRACTED: the verifier does not owe row-level certification of the unplayed half
 
-The unresolved question is the one adoption depended on: for each gained direction, which cells cease
-to be deducible when the same erasure is solved without the batting-order relation? Until that is
-measured, the evidence supports “little division filler,” not “the relation is a reasoning tool.” It
-does not rule out the alternative that the relation merely permits more erasure and unrelated
-equations do the visible work.
-
-**Required correction:** run and report the per-direction counterfactual dependency measurement, or
-change the production claim from confirmed adoption to a provisional experiment. Do not infer
-causality from `total deductions - division deductions`.
-
-#### v30-P1-02 — Publication certification still corroborates only aggregates, not the complete printed boxscore
-
-**Locations:** `forge/src/boxscore_verify/certify.py:62`,
-`forge/src/boxscore_verify/certify.py:219`, `forge/src/boxscore_verify/certify.py:251`
-
-The new certification closes the original all-zero example: it now requires non-empty grids and
-compares defense batting R/H, offense pitching R/H, and an innings-compatible outs total. It still has
-no independent row-level evidence, and its own contract acknowledges that row swaps pass. More
-importantly, so do fabricated names, row order, AB, RBI, BB, SO, ER, roles, and distributions whenever
-the few checked aggregates are preserved. The certificate therefore still authenticates a “complete
-printed boxscore” it has not corroborated.
-
-**Required correction:** carry canonical row-level boxscore evidence into `Evidence` and compare every
-published reveal row and field, or narrow the certification and product claim to the aggregates that
-are actually corroborated. Shape checks and totals must not be presented as source correspondence.
+**Retraction:** this finding conflated puzzle certification with historical-display fidelity. The
+opposite batting and pitching half is reveal-only: it was not played, contributes no clue, and cannot
+affect uniqueness, derivability, correctness, or the player's result. Requiring independent row-level
+evidence for that half would expand §22 into a second Retrosheet validator without protecting the
+puzzle guarantee. The signed package, reveal shape checks, shared-half agreement, and aggregate
+corroboration are proportionate to this boundary. No source change is required.
 
 #### v30-P3-02 — A browser page error still waits the full two-minute timeout
 
@@ -60,6 +41,8 @@ captured console when `__fatal` is present.
 
 ### Closed findings
 
+- **v30-P1-02 — Retracted.** The unplayed half is reveal-only and does not belong to the puzzle proof.
+- **v30-P1-01 — Retracted.** The remaining causal question is research debt, not a demonstrated product defect.
 - **v30-P1-03 — Closed.** Finished sessions now persist `finishedAt`, restore as sealed, and reopen the
   final reveal without restarting the clock.
 - **v30-P2-01 — Closed.** Digit entry no longer records provisional prefixes as errors; errors are
@@ -69,8 +52,8 @@ captured console when `__fatal` is present.
 
 ### Re-review disposition
 
-The corrections materially improve the implementation, but v30 is not clean: two P1 findings remain
-open and one new P3 tooling defect was found. No additional normal-operation product issue was found
+The corrections materially improve the implementation. No P1 or P2 finding remains open; one P3
+tooling defect remains. No additional normal-operation product issue was found
 in the corrected completion, keypad, reveal, hook, or fallback paths.
 
 ## Findings
