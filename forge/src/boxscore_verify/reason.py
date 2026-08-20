@@ -200,13 +200,28 @@ def _bound_one_relation(relations: tuple[Relation, ...], values: dict[str, int])
             rest_high = sum(max(weight * 0, weight * CELL_CAP) for weight in others)
             window_high = relation.constant - known_part - rest_low
             window_low = relation.constant - known_part - rest_high
+            # ⚠️⚠️ **v28-P2-01: an inequality bounds one side, and which side depends on the sign.**
+            # This computed both ends of a finite window, then for an inequality reset `low` to zero
+            # and left `high` alone. That is right only for a *positive* coefficient, where
+            # `c*x + rest <= k` genuinely caps `x` from above. With a **negative** coefficient the same
+            # relation is a lower bound and says nothing about how large the cell may be, so keeping
+            # the equality-derived `high` collapsed an open range onto one fabricated number.
+            #
+            # `H - AB <= 0` is `AB >= H`. With `H = 0` every non-negative `AB` satisfies it, and this
+            # recorded `AB = 0` — a value the relation does not determine, and wrong on any row with a
+            # hit. `derive_in_view()` could then call a board human-derivable on invented numbers.
+            #
+            # ⚠️ **`narrow()` in this same module has always had the rule right** (see its comment on
+            # the opposite side being left genuinely open). One rule, two implementations, and they
+            # disagreed — so the sides are now derived the same way in both: the bound that always
+            # holds, plus the opposite one **only for an equality**.
             if coefficient > 0:
-                low, high = -(-window_low // coefficient), window_high // coefficient
+                high = window_high // coefficient
+                low = -(-window_low // coefficient) if relation.equality else 0
             else:
-                low, high = -(-window_high // coefficient), window_low // coefficient
+                low = -(-window_high // coefficient)
+                high = window_low // coefficient if relation.equality else CELL_CAP
             low = max(low, 0)
-            if not relation.equality:
-                low = 0
             if low == high:
                 values[cell] = low
                 return True

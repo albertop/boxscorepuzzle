@@ -18,7 +18,7 @@ Those boards are unsolvable, and every total balances on them, which is why no v
 import json
 import sys
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 from typing import Any
 
 import pytest
@@ -79,6 +79,69 @@ def test_the_pdf_renderer_produces_the_canonical_line(case: dict[str, Any]) -> N
         "the case's slot references are not what slot_references() produces for these slots"
     )
     assert build_pack.footnote_line(_board(case), slots) == case["expected"]
+
+
+def _discovery_renderer() -> ModuleType:
+    for extra in (_ROOT / "discovery" / "sample-boards", _ROOT / "discovery" / "difficulty-metrics"):
+        if str(extra) not in sys.path:
+            sys.path.insert(0, str(extra))
+    import render  # noqa: PLC0415
+
+    return render
+
+
+def _loaded(case: dict[str, Any]) -> SimpleNamespace:
+    """The three fields `render.footnote_line` reads, and nothing else.
+
+    ⚠️ A namespace rather than a real `Loaded` because building one needs a database row. What is
+    under test is the *string*, and the string is a function of the footnote rows, the slots and LOB.
+    Anything more would be fixture, not evidence.
+    """
+    notes = [
+        SimpleNamespace(
+            hit_by_pitch=row[0], sacrifice_flies=row[1], sacrifice_hits=row[2], catcher_interference=row[3]
+        )
+        for row in case["footnotes"]
+    ]
+    return SimpleNamespace(
+        slots=_slots(case),
+        direction=SimpleNamespace(
+            batter_footnotes=tuple(notes),
+            team_footnotes=SimpleNamespace(left_on_base=case["left_on_base"]),
+        ),
+    )
+
+
+@pytest.mark.parametrize("case", VECTORS["cases"], ids=lambda c: c["name"])
+def test_the_discovery_renderer_produces_the_canonical_line(case: dict[str, Any]) -> None:
+    """⚠⚠ **v28-P2-03: the third implementation, and it had drifted furthest.**
+
+    `discovery/sample-boards/render.py` built the line from position labels and a truthiness test:
+    `SH: P` where the board says `SH: 2 #9b`. No count, no slot reference, and two rows sharing a
+    position became one entry. Its own docstring says "the board exactly as the player sees it", and
+    every discovery eye-check ran on that — including the batting-order specimens, whose entire
+    purpose is judging by eye whether a deduction feels like work rather than typing.
+
+    Two renderers agreeing was never the property; **all of them agreeing** is. §33 forbids sharing the
+    function across `forge` and `serve`, so the three share this file instead.
+    """
+    render = _discovery_renderer()
+
+    assert render.footnote_line(_loaded(case)) == case["expected"]
+
+
+def test_all_three_renderers_agree_case_for_case() -> None:
+    """⚠️ Stated as one assertion, because two comparisons against a constant can both pass while the
+    renderers differ on a case the file does not contain — and the browser's copy runs in `serve`."""
+    build_pack = _renderer()
+    render = _discovery_renderer()
+    disagreements = [
+        case["name"]
+        for case in VECTORS["cases"]
+        if build_pack.footnote_line(_board(case), _slots(case)) != render.footnote_line(_loaded(case))
+    ]
+
+    assert not disagreements, f"the PDF and discovery renderers differ on {disagreements}"
 
 
 def test_every_case_says_why() -> None:

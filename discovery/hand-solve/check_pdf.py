@@ -88,13 +88,25 @@ def check(pdf: Path, key: Path | None) -> None:
         if re.search(r"\b(19|20)\d{2}\b", visible):
             problems.append(f"page {index} shows a year, which gives away the era")
 
-    if key is not None and key.exists():
-        # The key must hold what the page must not, or the afternoon cannot be read afterwards.
-        with key.open(encoding="utf-8") as handle:
-            columns = next(csv.reader(handle))
-        for column in ("stalls", "board"):
-            if column not in columns:
-                problems.append(f"the key has no {column!r} column, so the ratings cannot be compared")
+    if key is not None:
+        # ⚠️⚠️ **v28-P3-02: `and key.exists()` turned a typo into a silent pass.** Omitting the key is
+        # a deliberate mode; naming one that cannot be read is not. The old branch skipped the check
+        # and let the full success line print, so a pack could be declared checked while the artifact
+        # needed to interpret its ratings was never opened. **The absence of a check reading as the
+        # presence of a passing one** — the same shape as verification that passes when its secret is
+        # missing. `None` stays the only PDF-only mode.
+        if not key.is_file():
+            problems.append(f"the key {key} was named but is not a readable file")
+        else:
+            # The key must hold what the page must not, or the afternoon cannot be read afterwards.
+            with key.open(encoding="utf-8") as handle:
+                header = next(csv.reader(handle), None)
+            if header is None:
+                problems.append(f"the key {key} is empty, so the ratings cannot be compared")
+            else:
+                for column in ("stalls", "board"):
+                    if column not in header:
+                        problems.append(f"the key has no {column!r} column, so the ratings cannot be compared")
 
     if problems:
         raise SystemExit("\n".join(problems))

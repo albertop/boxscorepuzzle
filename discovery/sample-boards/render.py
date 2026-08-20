@@ -25,7 +25,7 @@ import random
 import sys
 from pathlib import Path
 
-from measure import Loaded, load
+from measure import Loaded, load, slot_references
 
 from boxscore_forge.constraints import cell_values, shape_of
 from boxscore_forge.erasure import erasable
@@ -74,6 +74,38 @@ def _cell(values: dict[str, int], key: str, *, as_innings: bool = False) -> str:
     if key not in values:
         return BLANK
     return f"{_innings(values[key]):>3}" if as_innings else f"{values[key]:>3}"
+
+
+def footnote_line(loaded: Loaded) -> str:
+    """`SH: 1 #2, 1 #9b   LOB: 9` — the clue surface the player is actually given.
+
+    ⚠⚠ **v28-P2-03: this printed a position label, once, with no count.** A row with two sacrifice
+    hits in slot `9b` came out `SH: P` where the board says `SH: 2 #9b`: the multiplicity gone, and the
+    reference replaced by a label two rows can share. Every discovery eye-check ran against weaker clues
+    than the product gives — including the batting-order specimens, whose whole purpose is judging by
+    eye whether a deduction feels like work.
+
+    ⚠️ **The renderer's own contract says "the board exactly as the player sees it."** A renderer that
+    says that and does not is worse than one that never claimed it, because a stated contract stops
+    being re-checked. This is the third implementation of one string; §33 forbids `forge` and `serve`
+    sharing the function, so all three answer to `serve/tests/footnote-line-vectors.json` instead.
+
+    Read from the source direction rather than a board, which is safe **only because the footnote line
+    is never erased** (§6): given in full, the two cannot disagree. `build_pack` reads the puzzle board,
+    and it must, since it draws erasable grids around it.
+    """
+    references = slot_references(loaded.slots)
+    parts = []
+    for field, short in FOOTNOTE_LABELS:
+        carriers = [
+            f"{getattr(note, field)} #{references[index]}"
+            for index, note in enumerate(loaded.direction.batter_footnotes)
+            if getattr(note, field)
+        ]
+        if carriers:
+            parts.append(f"{short}: {', '.join(carriers)}")
+    parts.append(f"LOB: {loaded.direction.team_footnotes.left_on_base}")
+    return "   ".join(parts)
 
 
 def render(loaded: Loaded, given: dict[str, int], *, title: str, show_slots: bool = False) -> str:
@@ -126,13 +158,7 @@ def render(loaded: Loaded, given: dict[str, int], *, title: str, show_slots: boo
     lines.append(f"  {'TOTALS':<10}{totals}")
     lines.append("")
 
-    notes = [
-        f"{short}: {', '.join(loaded.labels[i] for i, f in enumerate(direction.batter_footnotes) if getattr(f, field))}"
-        for field, short in FOOTNOTE_LABELS
-        if getattr(direction.footnote_totals, field)
-    ]
-    notes.append(f"LOB: {direction.team_footnotes.left_on_base}")
-    lines.append("  " + "     ".join(notes))
+    lines.append("  " + footnote_line(loaded))
     return "\n".join(lines)
 
 

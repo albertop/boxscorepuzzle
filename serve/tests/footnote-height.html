@@ -42,22 +42,53 @@
     frame.append(renderFootnotes(puzzle, game, () => {}));
     out.append(frame);
     const line = frame.querySelector(".footnotes");
-    const terms = line.querySelectorAll(".cell").length;
-    rows.push({ id: id.slice(0, 8), terms, height: Math.round(line.getBoundingClientRect().height) });
+    // ⚠⚠ **v28-P3-01: this counted `.cell`, and the footnote line has not contained one for months.**
+    // The count was zero for every package, so the table sorted by a constant and preserved manifest
+    // order while its heading said "erased terms" — a column from the retired erasable-footnote UI.
+    // The height numbers were right; the variable they were supposed to be explained by was absent, so
+    // a tall block read as an unexplained package rather than as one carrying many carriers.
+    //
+    // What drives the height is how much text wraps: the number of live categories, and within them
+    // the number of carriers. Both are counted, and the table sorts by carriers.
+    const live = line.querySelectorAll(".term.live");
+    const carriers = [...live].reduce(
+      (total, term) => total + term.querySelector(".who").textContent.split(",").filter((part) => part.trim()).length,
+      0,
+    );
+    rows.push({
+      id: id.slice(0, 8),
+      terms: live.length,
+      carriers,
+      height: Math.round(line.getBoundingClientRect().height),
+    });
   }
 
   const table = document.createElement("table");
   table.innerHTML =
     "<caption>the footnote block at 375px, rendered with the board's own renderer</caption>" +
-    "<tr><th>package</th><th>erased terms</th><th>block height</th><th>share of 812px</th><th>rows of 44px</th></tr>" +
+    "<tr><th>package</th><th>live terms</th><th>carriers</th><th>block height</th>" +
+    "<th>share of 812px</th><th>rows of 44px</th></tr>" +
     rows
-      .sort((a, b) => a.terms - b.terms)
+      .sort((a, b) => a.carriers - b.carriers || a.terms - b.terms)
       .map(
         (r) =>
-          `<tr><td>${r.id}</td><td>${r.terms}</td><td>${r.height}px</td>` +
+          `<tr><td>${r.id}</td><td>${r.terms}</td><td>${r.carriers}</td><td>${r.height}px</td>` +
           `<td>${((r.height / 812) * 100).toFixed(0)}%</td><td>${Math.round(r.height / 44)}</td></tr>`,
       )
       .join("");
   out.prepend(table);
+  // ⚠️ **Non-vacuity, said on the page rather than left to a reader who trusts a column of zeros.**
+  // The defect this replaces was a counter that could only ever return zero, and the page rendered it
+  // without complaint. If every package really carries no live term, the sample cannot show the
+  // relationship the page exists to show, and that is a fact about the sample worth printing.
+  const withTerms = rows.filter((r) => r.terms > 0).length;
+  const note = document.createElement("p");
+  note.textContent =
+    withTerms > 0
+      ? `${withTerms} of ${rows.length} packages carry a live footnote term.`
+      : `NOTHING TO SEE: none of the ${rows.length} packages carries a live footnote term, so height ` +
+        `cannot be related to term count here. Widen the sample before reading this table.`;
+  if (withTerms === 0) note.style.color = "crimson";
+  out.prepend(note);
   globalThis.__heights = rows;
 </script>

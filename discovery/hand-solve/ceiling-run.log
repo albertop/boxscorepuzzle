@@ -1,16 +1,21 @@
-48 gated directions x 9 paths (('column_first', 'random', 'row_first') against seeds (1, 2, 3))
-  10/48 searched, best so far 17
-  20/48 searched, best so far 18
-  30/48 searched, best so far 20
-  40/48 searched, best so far 20
+72 gated directions, erasing to targets [8, 5] with seeds (1, 2, 3, 4, 5)
+restored 104 board-target pairs from ceiling-erasures.json
 
-highest observed, per board, best of 9 paths each (48 boards): [21, 20, 20, 20, 19, 18, 18, 18, 18, 18]
-NOT A CEILING: a greedy walk visits one corner of the space of erasure sets, and stall
-   count is not known to be monotonic in blank count. This is a lower bound from 9 starts.
-convergence: 13 of 48 boards found their best in the second half of the search
-   (27%) — a high share means the search was still improving when it stopped
-chosen (printed order): [20, 19, 21, 20, 20]
-blanks in the batting grid: [35, 21, 20, 23, 22]
-uncertified by layer 3b: 4 of 5
+coverage at 8 stalls: 36 boards (56% of those reaching any target)
+coverage at 5 stalls: 64 boards (100% of those reaching any target)
+chosen (printed order): targets [5, 5, 8, 5, 8]
+   blanks:   [32, 30, 40, 31, 38]
+   pitchers: [4, 4, 6, 3, 3]
+   batters:  [9, 10, 12, 9, 11]
+uncertified by layer 3b: 5 of 5
+certification of the candidates each target was drawn from:
+   8 stalls: 4/38 candidates certified (11%); chosen 0/2
+   5 stalls: 22/66 candidates certified (33%); chosen 0/3
 wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in C:\Users\aperd\Documents\DGLv2\apps\boxscorepuzzle\discovery\hand-solve
+
+THE ONE BOARD WITH A HUMAN VERDICT: WAS201307070
+   measured 19 stalls / 79 blanks under the maximising search, on the scale that counted
+   zeros, and the operator solved it and found it hard. Built the way production builds:
+   target 8: reached with 39 blanks (seed 4)
+   target 5: reached with 33 blanks (seed 2)
 (build_pack's own targets are (5, 7, 9, 11), which are chain rungs and not used here)

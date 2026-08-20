@@ -251,6 +251,38 @@ def audit(chosen: list[Candidate]) -> None:
         raise SystemExit(message)
 
 
+def report_certification(found: list[Reached], chosen: list[Candidate], targets: list[int]) -> None:
+    """Whether "5 of 5 uncertified" is a confound this pack introduced or a fact about the pool.
+
+    ⚠️⚠️ **The pack cannot answer its own question without this.** The primary question is *is 5 stalls
+    already hard*. If every 5-stall board in the pack is one layer 3b refuses, then a verdict of "hard"
+    has two explanations the pack cannot separate: the stall level, or the uncertified status. And 3b
+    failing is itself a difficulty signal — it means the board needs a narrowed range carried from one
+    relation to the next, which is real work for a person.
+
+    ⚠️ **A confound has no signature in the results**, so reading the filled sheets afterwards cannot
+    catch it. It can only be seen here, while the pack is being built. What distinguishes the two cases
+    is the *candidate population*: if almost every board reaching a target is uncertified, then the two
+    labels name one population and selection introduced nothing. If certified candidates existed and
+    were passed over, the pack chose its own confound.
+    """
+    print("certification of the candidates each target was drawn from:")
+    # ⚠️ Certification is only computed when a `Reached` becomes a `Candidate`, so the pool has to be
+    # converted to be counted. `to_candidate` returns None for a board the verifier rejects; those are
+    # not in the drawable pool either, so they are excluded from both sides of the ratio.
+    for target in targets:
+        pool = [candidate for item in found if item.target == target if (candidate := to_candidate(item))]
+        picked = [item for item in chosen if item.target == target]
+        certified = sum(1 for item in pool if item.certified)
+        if not pool:
+            print(f"   {target} stalls: no drawable candidates, which should be impossible here")
+            continue
+        print(
+            f"   {target} stalls: {certified}/{len(pool)} candidates certified "
+            f"({certified / len(pool):.0%}); chosen {sum(1 for c in picked if c.certified)}/{len(picked)}"
+        )
+
+
 def write_key(path: Path, chosen: list[Candidate]) -> None:
     """The stall count, out of git and unopened until every sheet is filled."""
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -402,6 +434,7 @@ def main() -> None:
     print(f"   pitchers: {[_pitchers(c) for c in chosen]}")
     print(f"   batters:  {[len(c.puzzle.batting) for c in chosen]}")
     print(f"uncertified by layer 3b: {sum(1 for c in chosen if not c.certified)} of {len(chosen)}")
+    report_certification(found, chosen, targets)
     print(f"wrote ceiling-boards.pdf, ceiling-solutions.pdf, ceiling-key.csv, ceiling-recording-sheet.csv in {_HERE}")
 
     watched = [item for item in found if item.loaded.game_id == WATCHED]
