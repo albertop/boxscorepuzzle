@@ -7,8 +7,10 @@
  */
 
 import { battingCell, footnoteCell, pitchingCell, sectionOf } from "../../engine/columns.js";
+import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { PackageError, readPackage } from "../../engine/package.js";
+import { browserStorage, createStore } from "../../engine/store.js";
 import { text } from "../../engine/strings.js";
 import {
   applyKey,
@@ -51,7 +53,19 @@ async function loadPuzzle() {
 function boot({ puzzle }) {
   const app = document.getElementById("app");
   app.replaceChildren();
-  const game = createGame(puzzle);
+  // ⚠️ **The session is restored before the board is drawn**, so the player never sees an empty grid
+  // fill itself in. §27: the puzzle stays open all day and saves itself.
+  const store = createStore(browserStorage());
+  const clock = createClock();
+  const game = createGame(puzzle, clock);
+  const saved = store.load(puzzle.id);
+  if (saved !== null) game.restore(saved);
+
+  // ⚠️ **Saved on every change, not on a timer and not on unload.** `beforeunload` does not fire
+  // reliably on a phone — a swiped-away tab is killed, not closed — so anything waiting for it is a
+  // session that survives on a desktop and vanishes on the device the board was designed for.
+  const remember = () => store.save(puzzle.id, game.snapshot());
+
   let selected = null;
 
   const score = document.createElement("div");
@@ -141,12 +155,19 @@ function boot({ puzzle }) {
     if (!selected) return;
     applyKey(game, selected, key);
     repaint();
+    remember();
   });
   app.append(keypad);
+
+  const attention = followAttention({ clock, save: remember, doc: document, target: app });
+  // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is
+  // discarded. Cheap insurance over the save that already happened on the last entry.
+  addEventListener("pagehide", attention.away);
 
   draw();
   globalThis.__game = game;
   globalThis.__puzzle = puzzle;
+  globalThis.__store = store;
 }
 
 try {

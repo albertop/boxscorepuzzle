@@ -14,6 +14,7 @@
  * reconstructed afterwards. Persistence belongs to the shell; the engine hands over a plain object.
  */
 
+import { createClock } from "./clock.js";
 import {
   BATTING_COLUMNS,
   FOOTNOTE_COLUMNS,
@@ -65,17 +66,22 @@ export function describeCells(puzzle) {
 /**
  * A playable game over a validated puzzle.
  *
- * `now` is injected rather than read from the clock, so duration is testable and the engine has no
- * hidden dependency on when it runs (C4, one field over).
+ * ⚠️ **The clock is injected and it is an accumulated duration, not a start time.** This computed
+ * `now() - startedAt`, which is wall-clock from construction — so a player who paused for lunch came
+ * back to a duration including lunch. `docs/serve-flow.md` §5 requires the opposite: only time with the
+ * board open counts, because the number is shared and a number including lunch means nothing.
+ *
+ * The engine still has no hidden dependency on when it runs (C4, one field over), and it knows nothing
+ * about *why* the clock stopped: page visibility and the inactivity timeout are the shell's business.
  */
-export function createGame(puzzle, now = () => Date.now()) {
+export function createGame(puzzle, clock = createClock()) {
   const cells = new Map(describeCells(puzzle).map((cell) => [cell.name, cell]));
   const entries = new Map();
   /** Cells whose first entry was wrong. A set, not a counter: entering the same wrong value twice is
    * one mistake made once, and a counter would make hesitation look like ignorance. */
   const firstWrong = new Set();
   const hinted = new Set();
-  const startedAt = now();
+  /** Frozen at the moment the board was finished, so a record taken later reports the same duration. */
   let finishedAt = null;
 
   const require = (name) => cells.get(name) ?? raise(name);
@@ -168,19 +174,23 @@ export function createGame(puzzle, now = () => Date.now()) {
     /** Every blank filled with its answer. There is no other ending. */
     isSolved: () => [...cells.values()].every((cell) => valueOf(cell.name) === cell.answer),
 
-    finish(at = now()) {
-      finishedAt ??= at;
-      return this.record(at);
+    /** Stop the clock and keep the duration. Calling it twice reports the first ending, not the second. */
+    finish() {
+      if (finishedAt === null) {
+        clock.hold();
+        finishedAt = clock.elapsed();
+      }
+      return this.record();
     },
 
     /**
      * The C7 event record. Present in full from day one even where a field is not yet computed,
      * because storing aggregate state instead loses history that can never be reconstructed.
      */
-    record(at = now()) {
+    record() {
       return {
         puzzle_id: puzzle.id,
-        duration_ms: (finishedAt ?? at) - startedAt,
+        duration_ms: finishedAt ?? clock.elapsed(),
         hints: hinted.size,
         errors: firstWrong.size,
         // ⚠️ Present and null on purpose. What a *player* used is not observable from entries alone —
@@ -191,8 +201,19 @@ export function createGame(puzzle, now = () => Date.now()) {
       };
     },
 
+    /** The clock this game counts on, for a shell that has to stop and start it. */
+    clock,
+
     /** Enough to restore a session, and nothing else. The shell decides where it goes. */
-    snapshot: () => ({ entries: Object.fromEntries(entries), hinted: [...hinted], firstWrong: [...firstWrong] }),
+    snapshot: () => ({
+      entries: Object.fromEntries(entries),
+      hinted: [...hinted],
+      firstWrong: [...firstWrong],
+      // ⚠️ The duration travels with the entries because they are one session. Saved separately they
+      // would be two writes that can disagree, and a board restored with somebody else's clock is a
+      // shared time that is simply wrong.
+      elapsed: clock.elapsed(),
+    }),
 
     restore(saved) {
       entries.clear();
@@ -201,6 +222,9 @@ export function createGame(puzzle, now = () => Date.now()) {
       for (const [name, value] of Object.entries(saved.entries ?? {})) if (cells.has(name)) entries.set(name, value);
       for (const name of saved.hinted ?? []) if (cells.has(name)) hinted.add(name);
       for (const name of saved.firstWrong ?? []) if (cells.has(name)) firstWrong.add(name);
+      // ⚠️ The duration is part of the session, not a separate thing the shell remembers to carry.
+      // Left out, a reload gave the board back with the clock at zero.
+      if (saved.elapsed !== undefined) clock.restore(saved.elapsed);
     },
   };
 }

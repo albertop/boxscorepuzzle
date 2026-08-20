@@ -240,9 +240,18 @@ suite("The game: state, entries and the C7 record", () => {
     equal(game.record().errors, 0, "a hint was counted as a mistake");
   });
 
-  test("the C7 record carries every field, including the ones not yet computed", () => {
-    const game = createGame(puzzle, () => 1000);
-    const record = game.record(4000);
+  test("the C7 record carries every field, including the ones not yet computed", async () => {
+    // ⚠️ The second argument is a **clock**, not a `now`. It used to be `now`, and the duration was
+    // `now() - startedAt` — wall-clock from construction, which counted every minute the tab sat
+    // unwatched. `docs/serve-flow.md` §5 wants only time at the board.
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 1000 };
+    const clock = createClock({ now: () => t.value });
+    const game = createGame(puzzle, clock);
+    clock.run();
+    t.value = 4000;
+
+    const record = game.record();
     equal(Object.keys(record).sort(), ["duration_ms", "errors", "highest_technique", "hints", "puzzle_id", "solved"]);
     equal(record.duration_ms, 3000, "duration is not measured from the injected clock");
     equal(record.puzzle_id, puzzle.id);
@@ -799,6 +808,299 @@ suite("⚠️ The highlight paints over a filled cell", () => {
 
     assert(blanks[1].classList.contains("filled"), "the cell under test is not filled, so it proves nothing");
     assert(chosen !== peered, `a filled selected cell painted as a peer, ${chosen}`);
+  });
+});
+
+suite("⚠️ The clock counts time at the board, not time since the tab opened", () => {
+  // `docs/serve-flow.md` §5: only time with the board open counts, because the number is shared and one
+  // that includes lunch means nothing to the person reading it.
+  //
+  // ⚠️ **The engine used to compute `now() - startedAt`.** That is wall-clock from construction, so a
+  // player who left the tab open overnight came back to a fourteen-hour game. The defect was not that
+  // nobody stopped the clock — there was no clock to stop.
+  const at = (t) => () => t.value;
+
+  test("a held clock counts nothing, and keeps what it counted", async () => {
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 1000 };
+    const clock = createClock({ now: at(t) });
+
+    clock.run();
+    t.value = 4000;
+    equal(clock.elapsed(), 3000, "a running clock did not count");
+    clock.hold();
+    t.value = 999999;
+    equal(clock.elapsed(), 3000, "a held clock kept counting");
+    clock.run();
+    t.value = 1000999;
+    equal(clock.elapsed(), 4000, "resuming did not continue from where it stopped");
+  });
+
+  test("⚠️ the snapshot cannot express a start time", async () => {
+    // Stated as what the shape forbids rather than as what a caller should remember. A snapshot
+    // carrying `since` would let a reload count the hours the tab was closed, which is the whole reason
+    // this module exists — so there is no field that could carry it.
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 5000 };
+    const clock = createClock({ now: at(t) });
+    clock.run();
+    t.value = 8000;
+
+    equal(Object.keys(clock.snapshot()), ["elapsed"]);
+    equal(clock.snapshot().elapsed, 3000);
+  });
+
+  test("running twice does not start a second span", async () => {
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 0 };
+    const clock = createClock({ now: at(t) });
+    clock.run();
+    t.value = 100;
+    clock.run();
+    t.value = 200;
+
+    equal(clock.elapsed(), 200, "a second run() restarted or doubled the span");
+  });
+
+  test("⚠️ a clock that moves backwards adds nothing rather than subtracting", async () => {
+    // System time can move: a manual change, an NTP correction. A negative span would hand the player a
+    // shorter time than they played, which is the one direction the number must not move by accident.
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 10000 };
+    const clock = createClock({ now: at(t) });
+    clock.run();
+    t.value = 4000;
+
+    assert(clock.elapsed() >= 0, `elapsed went negative: ${clock.elapsed()}`);
+    clock.hold();
+    t.value = 5000;
+    clock.run();
+    t.value = 6000;
+    equal(clock.elapsed(), 1000, "the backwards span was not discarded");
+  });
+
+  test("the game reports the clock's duration, and freezes it on finish", async () => {
+    const { createClock } = await import("../engine/clock.js");
+    const t = { value: 0 };
+    const clock = createClock({ now: at(t) });
+    const game = createGame(readPackage(packages[0].raw), clock);
+
+    clock.run();
+    t.value = 7000;
+    equal(game.record().duration_ms, 7000);
+    game.finish();
+    t.value = 999999;
+    equal(game.record().duration_ms, 7000, "the duration moved after the board was finished");
+  });
+});
+
+suite("⚠️ The clock follows the player, not the tab", () => {
+  // `docs/serve-flow.md` §5, and a module rather than fifteen lines in `main.js` — which the suite
+  // cannot import, so a rule written there is unguarded by construction. That has already cost a keypad
+  // control doing something other than what it printed, and a digit cap in one of the two places it was
+  // written.
+  const rig = () => {
+    const listeners = new Map();
+    const on = (kind) => ({
+      hidden: false,
+      addEventListener(event, fn) {
+        listeners.set(`${kind}:${event}`, fn);
+      },
+      removeEventListener(event) {
+        listeners.delete(`${kind}:${event}`);
+      },
+    });
+    const doc = on("doc");
+    const target = on("target");
+    const fire = (key) => listeners.get(key)?.();
+    const timers = [];
+    const setTimer = (fn) => {
+      timers.push(fn);
+      return timers.length;
+    };
+    const clearTimer = () => {};
+    return { doc, target, fire, listeners, timers, setTimer, clearTimer, runIdle: () => timers.at(-1)?.() };
+  };
+
+  const stub = () => {
+    let running = false;
+    let saves = 0;
+    return {
+      clock: { run: () => (running = true), hold: () => (running = false), isRunning: () => running },
+      save: () => (saves += 1),
+      get running() {
+        return running;
+      },
+      get saves() {
+        return saves;
+      },
+    };
+  };
+
+  test("a visible board starts the clock, and a hidden one stops it", async () => {
+    const { followAttention } = await import("../engine/clock.js");
+    const r = rig();
+    const s = stub();
+    followAttention({ clock: s.clock, save: s.save, doc: r.doc, target: r.target, ...r });
+
+    assert(s.running, "the clock did not start on a visible board");
+    r.doc.hidden = true;
+    r.fire("doc:visibilitychange");
+    assert(!s.running, "hiding the page did not stop the clock");
+    r.doc.hidden = false;
+    r.fire("doc:visibilitychange");
+    assert(s.running, "returning did not restart the clock");
+  });
+
+  test("⚠️ a board that opens hidden does not start counting", async () => {
+    // A tab restored into the background on a phone is exactly this, and it is the case a check written
+    // as `on visibilitychange` alone would miss entirely.
+    const { followAttention } = await import("../engine/clock.js");
+    const r = rig();
+    const s = stub();
+    r.doc.hidden = true;
+    followAttention({ clock: s.clock, save: s.save, doc: r.doc, target: r.target, ...r });
+
+    assert(!s.running, "a board opened in a hidden tab started its clock");
+  });
+
+  test("⚠️ silence stops the clock, and touching the board starts it again", async () => {
+    // The second signal. Visibility alone cannot see the tab left open on a desk, which is the case
+    // that produces an absurd shared time.
+    const { followAttention } = await import("../engine/clock.js");
+    const r = rig();
+    const s = stub();
+    followAttention({ clock: s.clock, save: s.save, doc: r.doc, target: r.target, ...r });
+
+    r.runIdle();
+    assert(!s.running, "the idle timeout did not stop the clock");
+    r.fire("target:pointerdown");
+    assert(s.running, "a touch did not resume the clock");
+    r.runIdle();
+    assert(!s.running, "the timeout did not re-arm after activity");
+  });
+
+  test("⚠️ the session is written down at the moment the clock stops", async () => {
+    // What happens next may be the tab being killed rather than closed, and a save waiting for
+    // `beforeunload` is a session that survives on a desktop and vanishes on a phone.
+    const { followAttention } = await import("../engine/clock.js");
+    const r = rig();
+    const s = stub();
+    followAttention({ clock: s.clock, save: s.save, doc: r.doc, target: r.target, ...r });
+
+    equal(s.saves, 0, "starting the clock wrote a session");
+    r.doc.hidden = true;
+    r.fire("doc:visibilitychange");
+    equal(s.saves, 1, "hiding the page did not save");
+    r.runIdle();
+    equal(s.saves, 2, "the idle timeout did not save");
+  });
+
+  test("the timeout is generous, because staring at the board is play", async () => {
+    // §5: a short timeout would discount exactly the thinking the game is about. Asserted as a floor,
+    // not as a number, so tuning it upward does not fail.
+    const { IDLE_MS } = await import("../engine/clock.js");
+
+    assert(IDLE_MS >= 3 * 60 * 1000, `${IDLE_MS}ms is short enough to discount thinking`);
+  });
+});
+
+suite("⚠️ A session survives a reload, and a broken store never stops the game", () => {
+  // `docs/serve-flow.md` §6. ⚠️ **C7 is irreversible**: storing aggregate state instead of the session
+  // loses history that cannot be reconstructed, which is why this exists before anything reads it.
+  const fakeStorage = () => {
+    const held = new Map();
+    return {
+      getItem: (k) => (held.has(k) ? held.get(k) : null),
+      setItem: (k, v) => held.set(k, String(v)),
+      removeItem: (k) => held.delete(k),
+      _held: held,
+    };
+  };
+
+  test("what is saved comes back: entries, mistakes, and the duration", async () => {
+    const { createStore } = await import("../engine/store.js");
+    const { createClock } = await import("../engine/clock.js");
+    const store = createStore(fakeStorage());
+    const puzzle = readPackage(packages[0].raw);
+
+    const t = { value: 0 };
+    const first = createGame(puzzle, createClock({ now: () => t.value }));
+    first.clock.run();
+    const blank = first.blanks()[0];
+    const answer = first.puzzle.solution.batting.flat()[0];
+    first.enter(blank, answer === 0 ? 1 : 0);
+    first.enter(blank, 6);
+    t.value = 12000;
+    store.save(puzzle.id, first.snapshot());
+
+    const second = createGame(puzzle, createClock({ now: () => 0 }));
+    second.restore(store.load(puzzle.id));
+
+    equal(second.value(blank), 6, "the entry did not come back");
+    equal(second.record().errors, first.record().errors, "the mistakes did not come back");
+    equal(second.record().duration_ms, 12000, "the clock came back at zero");
+  });
+
+  test("⚠️ one puzzle, one key — tomorrow carries nothing across", async () => {
+    const { createStore, keyFor } = await import("../engine/store.js");
+    const storage = fakeStorage();
+    const store = createStore(storage);
+
+    store.save("aaaaaaaaaaaaaaaa", { entries: { "batting[0].hits": 1 } });
+    store.save("bbbbbbbbbbbbbbbb", { entries: { "batting[0].hits": 9 } });
+
+    equal(store.load("aaaaaaaaaaaaaaaa").entries["batting[0].hits"], 1);
+    equal(store.load("bbbbbbbbbbbbbbbb").entries["batting[0].hits"], 9);
+    assert(keyFor("aaaaaaaaaaaaaaaa") !== keyFor("bbbbbbbbbbbbbbbb"), "two puzzles share one key");
+    equal(store.load("cccccccccccccccc"), null, "an unplayed puzzle reported a session");
+  });
+
+  test("⚠️ malformed storage reads as absent, never as half a session", async () => {
+    // Half a session applied to the day's board is worse than none: the player meets entries they did
+    // not make, with no way to tell which are theirs.
+    const { createStore, keyFor } = await import("../engine/store.js");
+    const storage = fakeStorage();
+    const store = createStore(storage);
+
+    for (const junk of ["", "{", "null", "[1,2,3]", '"a string"', "7"]) {
+      storage.setItem(keyFor("x"), junk);
+      equal(store.load("x"), null, `${JSON.stringify(junk)} was not treated as absent`);
+    }
+  });
+
+  test("⚠️ a store that throws never reaches the caller", async () => {
+    // §23: with the backend down the game still works, and a full or disabled store is the same class
+    // of failure one layer closer. The failure a player forgives is a lost session, not a dead board.
+    const { createStore } = await import("../engine/store.js");
+    const hostile = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+      removeItem: () => {
+        throw new Error("nope");
+      },
+    };
+    const store = createStore(hostile);
+
+    equal(store.load("x"), null, "a throwing read escaped");
+    equal(store.save("x", { entries: {} }), false, "a throwing write escaped");
+    equal(store.forget("x"), false, "a throwing delete escaped");
+  });
+
+  test("browserStorage() returns something usable even where localStorage is refused", async () => {
+    // ⚠️ Private browsing throws on *access*, not on use, so the reference itself is taken inside a
+    // try. A shell reading it at module scope crashes before drawing anything — the whole board lost to
+    // a setting about saving.
+    const { browserStorage } = await import("../engine/store.js");
+    const storage = browserStorage();
+
+    storage.setItem("boxscorepuzzle.session.v1.probe-test", "1");
+    storage.removeItem("boxscorepuzzle.session.v1.probe-test");
+    assert(typeof storage.getItem === "function", "browserStorage returned nothing usable");
   });
 });
 
