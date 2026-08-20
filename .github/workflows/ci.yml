@@ -1,0 +1,107 @@
+# The suite on every push, so `main` is deployable because it was checked rather than because a
+# document says so.
+#
+# ⚠️⚠️ **CLAUDE.md has claimed "`main` always deployable, protected, CI must pass" since the first
+# commit, and none of it was true — there was no `.github/` at all.** The document that defines this
+# project's rules was asserting a guarantee it did not have, which is the same shape being closed in
+# the code all week, sitting in the file the rules come from.
+#
+# What runs, and why each one is here rather than trusted:
+#
+#   - **ruff over `forge/`, blocking.** It is at zero and it stays at zero.
+#   - **the `discovery/` ratchet.** 199 findings that have never been reported once, because ruff's
+#     config included that tree and no invocation ever pointed at it. See `tools/lint_discovery.py`.
+#   - **mypy strict**, which is what the type annotations are for.
+#   - **pytest with the coverage floor**, taken from `pyproject.toml` so the number lives in one place.
+#   - **the browser suite**, headless, because half the client's contract is the cascade and the DOM.
+
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+# A second push supersedes the first; a queue of stale runs teaches people to ignore the badge.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  forge:
+    # ⚠️ **Both platforms, and Windows is not redundancy.** The laptop is Windows, a redirected stream
+    # there is cp1252, and this project has already lost three hours of compute to a report dying on a
+    # character it printed. A suite that only ever runs on Linux cannot see that class of defect.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: forge
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # pyodbc builds against unixODBC. Nothing in the test suite opens a connection — `load()` imports
+      # pyodbc lazily and only the discovery scripts call it — but the package still has to install.
+      - name: ODBC headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
+        working-directory: .
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # ⚠️ `--frozen`, so the lockfile is the thing being tested. `uv.lock` is committed as the
+      # reproducibility guarantee; a CI run that silently resolved something newer would be testing a
+      # dependency set that exists nowhere else.
+      - name: Install
+        run: uv sync --frozen --group dev
+
+      - name: Lint the forge
+        run: uv run ruff check src scripts tests
+
+      - name: Lint discovery and tools, against the baseline
+        run: uv run python ../tools/lint_discovery.py
+
+      - name: Types
+        run: uv run mypy src
+
+      # The floor is `fail_under = 95` in pyproject.toml. Not repeated here: a threshold spelled in two
+      # places is two thresholds.
+      - name: Tests and coverage
+        run: uv run pytest --cov --cov-report=term-missing
+
+  browser:
+    # The engine's tests assert computed styles, element geometry and the cascade, so they need a real
+    # browser. `tools/run_browser_tests.py` drives the same page a person opens and fails closed on
+    # every way of not finishing.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ODBC headers
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --frozen --group dev
+        working-directory: forge
+
+      - name: Chromium
+        run: uv run playwright install --with-deps chromium
+        working-directory: forge
+
+      - name: Browser suite
+        run: uv run python ../tools/run_browser_tests.py
+        working-directory: forge

@@ -233,6 +233,41 @@ the task and comparing the feeling against the number. It survived several revie
 it was wrong — so **for every metric, ask what the player does when the number goes up.** If the answer
 is "types a zero", the metric is measuring the board rather than the game.
 
+**⚠️⚠️ An instrument can measure its own output instead of the thing it is pointed at, and nothing about
+it is broken.** This is finer than every shape above, and it survived a full pass of checks.
+
+The reveal was rebuilt as a printed boxscore and inspected two ways. The numeric checks asked the
+browser the right questions — is any cell's `scrollWidth` past its `clientWidth`, does any table
+overflow its box, does the document scroll sideways — and answered **no clipped cell, no horizontal
+overflow, on six packages at 375px and at 320px**. All true. Then a text dump of the same panel was
+printed to read by eye, and it looked like a boxscore.
+
+**It looked like a boxscore because the dump was padding the columns itself.** `padEnd(23)` and
+`padStart(5)`, written to make the text line up in a terminal. The page had `padding: 1px 0` on every
+numeric cell and no horizontal separation at all, so a row of single digits rendered as `40 1` — four
+at-bats, no runs, one hit, printed as forty-and-one. And `.clipping-grid td` out-specifies a bare
+`.clipping-who`, so every name in the boxscore sat flush against the at-bats column. **The sheet was
+unreadable and both instruments said it was fine**, because one was asking about overflow — which
+there was none of — and the other was supplying the very property under test.
+
+**The distinguishing feature: the instrument was correct.** The width checks were reading the real
+DOM, in the real browser, at the real viewport, and their answers were true. The dump was reading the
+real DOM too. Neither was a metric that could not vary, a baseline that removed what it was testing, a
+denominator chosen by a heading string, or a working instrument aimed at the wrong question. It was a
+working instrument aimed at the **right** question, whose *rendering* of the answer replaced the
+property being judged.
+
+**The check that exists for this: ask what the instrument adds.** Before trusting a rendered sample,
+name every property of the output that the *harness* is supplying rather than the system — spacing,
+alignment, ordering, colour, truncation. Each one is invisible to that sample by construction. If the
+property under judgement is on the list, the sample cannot judge it, however carefully it is read.
+
+⚠️ **And the corollary, which is the cheap version: a screenshot is not a slower text dump.** Both
+defects were obvious in the first screenshot taken and neither was visible in any number or any dump
+produced before it. `computer{action:"screenshot"}` is the instrument that adds nothing. **Any change
+to how something looks is verified with a picture of it**, not with an assertion about it and not with
+text assembled from it — and that is a step, not a habit.
+
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
 could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*

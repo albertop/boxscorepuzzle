@@ -3944,3 +3944,45 @@ defensible and it is also a decision nobody took.** The two questions are separa
 
 **Not decided here.** Recorded because the reveal now looks like it is missing something, and the next
 person to notice will look in `finish.js`, where there is nothing to find.
+
+## Recorded and not built: the service's real caching contract
+
+The reveal work put a full nginx configuration in `serve/` for about twenty minutes — caching rules,
+rate limiting, security headers, an unprivileged container — and it was **deleted rather than
+disabled**, because the operator's instruction was the development environment and that was production
+infrastructure. What it encoded is worth keeping as two sentences, because both were learned the
+expensive way:
+
+- **`manifest.json` is a pointer and must never be cached, at any layer.** A stale pointer is
+  indistinguishable from a stale build: the client fetches packages from a retired generation and
+  refuses them as the wrong schema, which reads exactly like a code defect. That has cost two
+  debugging sessions.
+- **`<generation>/<id>.json` is immutable and can be cached for a year.** A package at that path can
+  never change; a new one gets a new generation directory (§21).
+
+Two more findings from the twenty minutes, both worth having written down before the VPS exists:
+
+- **nginx builds an absolute `Location` from the port it is listening on.** Behind a published port
+  that came back as `:8080`, which nothing on the host answers, so a redirect from `/` landed on a
+  dead link *from a phone and not from the laptop*. `absolute_redirect off;`. The same applies behind
+  any TLS terminator.
+- **The data directory needs an acceptance list, not an exclusion list.** Two `location` rules for the
+  manifest and the packages, and a `return 404` for everything else under `data/` — otherwise a stray
+  key, an editor backup or a half-written package is served by the catch-all. This is the
+  `EXISTS`-over-an-acceptance-list rule, and it also means `signing-public-key.hex` is not fetchable,
+  which is correct: the client does not verify signatures (`serve-brief.md` §5) and the forge reads
+  that file off the laptop as a pin.
+
+**Not scheduled.** It belongs with the VPS, and nothing about it should be half-built in the meantime.
+
+## The complete boxscore is a package question and is not urgent
+
+The footnote line on the reveal is prefixed with the club it describes — `St. Louis Browns: SH—Balenti.
+LOB—8` — because **the package carries footnotes for one club only.** They belong to the board's
+batting side; the other club has its own and no package holds them. Without the prefix the line would
+read as a statement about both clubs and be silently false about one, which is a label sitting outside
+the arithmetic.
+
+Schema 5 gave the reveal both clubs' batting and pitching. It did **not** give it the other club's
+`HBP/SF/SH/CI` or its left-on-base, so the footnote line cannot cover both. **That is another package
+field if it is ever wanted**, and the prefix is the honest solution until then. Decided: not urgent.

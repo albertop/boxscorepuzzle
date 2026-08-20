@@ -1,0 +1,35 @@
+# The dev server in a container, so the board is reachable from a phone on the same wireless network.
+#
+#     docker compose up -d
+#
+# ⚠️ **No image is built and there is nothing to rebuild.** The official Python image runs
+# `tools/dev_server.py` against a mounted `serve/`, so an edit on the laptop is live on the phone at
+# the next reload. A `Dockerfile` here would buy nothing and cost a rebuild per edit.
+#
+# ⚠️ **No nginx and no production shape.** This is the development environment on a Windows laptop
+# running Docker Desktop, and that is all it is. The service's real caching contract — `manifest.json`
+# never cached, `<generation>/<id>.json` cached for a year — is a VPS decision recorded in
+# `docs/reviews/todo.md`, not something to half-build here. `dev_server.py` caches nothing at all,
+# which is the correct blunt answer for a tree being edited every few seconds.
+
+services:
+  serve:
+    image: python:3.13-alpine
+    container_name: boxscorepuzzle-serve
+    working_dir: /app
+    command: ["python", "tools/dev_server.py", "8080"]
+
+    # ⚠️ **Read-only mounts.** The server only ever reads, and the laptop's tree is the source of
+    # truth: a container that could write into `serve/` is one that can silently disagree with git.
+    volumes:
+      - ./serve:/app/serve:ro
+      - ./tools:/app/tools:ro
+
+    # ⚠️ **`0.0.0.0` on the host side, which is what puts the board on the phone.** Docker Desktop
+    # publishes to every interface on the laptop, so the address to type into a phone is the laptop's
+    # own address on the wireless network — not localhost. 8137 is also what the browser tooling uses,
+    # so there is one address and one server rather than two that can drift.
+    ports:
+      - "0.0.0.0:8137:8080"
+
+    restart: unless-stopped
