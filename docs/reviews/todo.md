@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-three reviews, 98 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-five reviews, 100 findings, none rejected. Nothing is open.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2269,6 +2269,63 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## v25 — verified, none rejected. **Both closed.**
+
+### v25-P2-01 — a malformed saved session could take the board away. **Real, and worse than reported.**
+
+`load()` accepted any object; `restore()` assumed a shape. Reproduced against the running board, and it
+found a third case the review did not name:
+
+| saved | what happened |
+|---|---|
+| `{"entries":{},"hinted":7}` | **`TypeError` before `draw()`** — the shell cleared `#app` and rethrew, so **no board at all** until site data was cleared |
+| `{"entries":"nope"}` | restored quietly; `Object.entries` on a string yields index pairs that match no cell |
+| `{"entries":{"batting[0].hits":"five"}}` | **the string was installed as a cell's value**, past the whole-number rule `enter()` enforces, into a board that would draw it |
+
+⚠️ **The two silent ones are the worse pair by this project's own standard.** A crash is noticed; a
+poisoned board is not, and it lasts.
+
+⚠️⚠️ **And the claim that failed was mine, in a comment I had written an hour earlier.** `store.load()`
+promised that "malformed storage reads as absent, never as an error and never as a partial session" —
+a statement about the *session*, made by a function that only knows about *bytes*. **The claim was
+broader than the check**, which is the shape this project keeps paying for. The comment now promises
+what it can: parseability.
+
+**`isSession()` lives in `game.js`**, because it is that type's shape and a key-value store should not
+know what a session looks like. Two boundaries, one rule.
+
+⚠️ **And `restore()` was not atomic.** It cleared its three maps and *then* repopulated, so a shape that
+threw part-way left the game **emptier than it found it** — the player's work gone and no session to put
+back. It refuses before clearing now, and refuses rather than throwing, because §23 makes the store
+optional and no caller should have to wrap a restore to keep the board alive.
+
+Twelve malformed shapes are vectors; reverting the guard turns fourteen tests red.
+
+### v25-P3-01 — the ledger still described the state before the work. **Fixed.**
+
+*What is actually left* said `snapshot()` and `restore()` were called by nothing, that there was no
+`localStorage` anywhere and no clock wired. All true when written, all false by the time it was read.
+
+⚠️ **The useful half of the finding is not that it was stale.** Other names in the same item —
+`finish()`, `record()`, the reveal — genuinely remain unwired, so **one unchecked sentence was covering
+a finished seam and an unbuilt consumer at once.** A ledger is only worth keeping when those two are not
+the same line. Split by actual status.
+
+## v24 — no findings.
+
+A clean pass over v23's fixes: the accessible name is derived from the same rendered value as the
+visible cell on every `paint()`, and the thirds rule lives in the importable `applyKey()` path with the
+disabled controls mirroring it.
+
+⚠️ **It records a residual risk worth keeping in view.** The DOM tests read attributes and rendered
+values; **no real screen reader has ever been pointed at this board.** That is a validation gap rather
+than a defect, and it belongs with the fifty-board hand-solve as a thing only a person can close. Both
+are the same shape: an instrument agreeing with itself is not the same as the experience being right.
+
+⚠️ **This review was committed without being read** — it arrived untracked and went in with `git add -A`
+during the persistence commit. Recorded because a review that nobody read is indistinguishable from one
+that found nothing, and only the file's own contents tell them apart.
+
 ## v23 — verified, none rejected. **Both closed.**
 
 Both reproduced in the running board before anything was changed, in one pass.
@@ -2714,17 +2771,27 @@ common-author risk does not touch.
 
 ### `serve` — the engine is ahead of the shell
 
-8. **Built in the engine and called by nothing.** `snapshot()`, `restore()`, `isSolved()`, `finish()`,
-   `record()` and `hint()` all exist and are tested; the phone calls none of them. Three consequences:
+8. **Half of this is now built, and the halves have to be told apart.**
 
-   - ⚠⚠ **Nothing survives a reload.** No `localStorage` anywhere. §23 says the puzzle stays open all
-     day and saves itself; C7 says events are stored locally first, and **C7 is irreversible** — storing
-     aggregate state loses history that cannot be reconstructed. The piece is written and not plugged in.
-     This is the one that makes the current build a demo rather than a game.
-   - **Nothing happens on solving.** The `reveal` block ships in every package and **is drawn nowhere** —
-     names, teams, date, the real boxscore of §7.
-   - **No timer.** §26 wants it running for everyone, silently. `record(at)` accepts the clock; nobody
-     passes one.
+   ✅ **Done.** The session survives a reload: `store.js` keyed one-puzzle-one-key, restored before the
+   board is drawn, saved on every entry and at the moment the clock stops. The clock is an accumulated
+   duration that excludes hidden and idle spans (`clock.js`, `followAttention()`), and it is invisible
+   during play as §26 and `docs/serve-flow.md` §4 require. A malformed saved session is refused
+   atomically and costs nothing but the session.
+
+   ⬜ **Still unwired, and the reason it is one item is that they are one screen.** `isSolved()`,
+   `finish()` and `record()` exist and nothing calls them: **nothing happens when the board is
+   finished.** The `reveal` block ships in every package and **is drawn nowhere** — names, teams, date,
+   the real boxscore of §7. That is the game's payoff and it is the single thing the player never
+   receives.
+
+   ⬜ **The C7 record is computed and goes nowhere.** It travels inside the snapshot, so it survives a
+   reload; there is no endpoint to upload it to, because `serve/` has none. ⚠️ **C7 is irreversible** —
+   storing aggregate state instead of the event record loses history that cannot be reconstructed — so
+   the shape being right already is the part that mattered.
+
+   ⬜ **`hint()` is dead by decision, not by omission.** `docs/serve-flow.md` §3: there are none, because
+   §22 guarantees no board needs one. It stays in the engine as a seam and no interface should call it.
 
 9. **Seams §C requires in v1 and that do not exist:** C6 routes (`/p/<id>` canonical, `/today` — today
    it is `?p=`), C4 a loader that decides the day (there is no calendar; it takes `manifest.puzzles[0]`,

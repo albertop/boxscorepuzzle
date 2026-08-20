@@ -58,8 +58,10 @@ function boot({ puzzle }) {
   const store = createStore(browserStorage());
   const clock = createClock();
   const game = createGame(puzzle, clock);
-  const saved = store.load(puzzle.id);
-  if (saved !== null) game.restore(saved);
+  // ⚠️ A refused session is discarded rather than left to be re-read on every visit. Nothing here waits
+  // on it: `restore` returns false and the player gets today's board, empty, which is the outcome §23
+  // asks for when anything about persistence goes wrong.
+  if (!game.restore(store.load(puzzle.id))) store.forget(puzzle.id);
 
   // ⚠️ **Saved on every change, not on a timer and not on unload.** `beforeunload` does not fire
   // reliably on a phone — a swiped-away tab is killed, not closed — so anything waiting for it is a

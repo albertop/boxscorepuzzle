@@ -64,6 +64,43 @@ export function describeCells(puzzle) {
 }
 
 /**
+ * Is this a session this game could have written?
+ *
+ * ⚠️ **Local storage is untrusted input.** It survives across versions of this code, it is editable by
+ * hand, and a tab killed mid-write can leave half a value. `restore()` used to assume the shape and
+ * `{"entries":{},"hinted":7}` threw `TypeError` from `for...of` over a number — before `draw()`, so the
+ * shell cleared the board and rethrew, and **the player got no board at all until they cleared site
+ * data.** That is worse than losing a session: the store exists to be optional, and this made it a boot
+ * dependency.
+ *
+ * ⚠️ **And the two shapes that did not throw were worse.** `entries: "nope"` restored quietly, because
+ * `Object.entries` on a string yields index pairs that match no cell. `{"batting[0].hits": "five"}`
+ * installed the *string* as a cell's value — past the whole-number rule `enter()` enforces, into a board
+ * that would then draw it. A silent poisoning is harder to notice than a crash and lasts longer.
+ *
+ * The rule lives here rather than in the store because it is this type's shape. A key-value store should
+ * not know what a session looks like, and if it did there would be two definitions of one thing.
+ */
+export function isSession(saved) {
+  if (saved === null || typeof saved !== "object" || Array.isArray(saved)) return false;
+
+  const { entries, hinted, firstWrong, elapsed } = saved;
+  if (entries !== undefined) {
+    if (entries === null || typeof entries !== "object" || Array.isArray(entries)) return false;
+    // The same rule `enter()` applies. A cell holds a whole number or it holds nothing.
+    for (const value of Object.values(entries)) {
+      if (!Number.isInteger(value) || typeof value === "boolean" || value < 0) return false;
+    }
+  }
+  for (const names of [hinted, firstWrong]) {
+    if (names === undefined) continue;
+    if (!Array.isArray(names) || names.some((name) => typeof name !== "string")) return false;
+  }
+  if (elapsed !== undefined && (!Number.isFinite(elapsed) || elapsed < 0)) return false;
+  return true;
+}
+
+/**
  * A playable game over a validated puzzle.
  *
  * ⚠️ **The clock is injected and it is an accumulated duration, not a start time.** This computed
@@ -215,7 +252,18 @@ export function createGame(puzzle, clock = createClock()) {
       elapsed: clock.elapsed(),
     }),
 
+    /**
+     * Put a saved session back, or refuse it. **Returns whether anything was restored.**
+     *
+     * ⚠️ **Checked before anything is cleared.** This wiped the three maps and then repopulated them, so
+     * a shape that threw part-way left the game *emptier than it found it* — the player's board gone and
+     * no session to put back. Atomic now: a bad session leaves a game that is exactly as it was.
+     *
+     * ⚠️ **It refuses rather than throwing.** The store is optional by design (§23) and a caller must
+     * never have to wrap a restore to keep the board alive.
+     */
     restore(saved) {
+      if (!isSession(saved)) return false;
       entries.clear();
       hinted.clear();
       firstWrong.clear();
@@ -225,6 +273,7 @@ export function createGame(puzzle, clock = createClock()) {
       // ⚠️ The duration is part of the session, not a separate thing the shell remembers to carry.
       // Left out, a reload gave the board back with the clock at zero.
       if (saved.elapsed !== undefined) clock.restore(saved.elapsed);
+      return true;
     },
   };
 }

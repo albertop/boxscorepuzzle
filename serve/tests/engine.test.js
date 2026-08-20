@@ -894,6 +894,84 @@ suite("⚠️ The clock counts time at the board, not time since the tab opened"
   });
 });
 
+suite("⚠️ A malformed saved session never costs the player their board", () => {
+  // ⚠️ **Local storage is untrusted input**: it outlives versions of this code, it is editable by hand,
+  // and a tab killed mid-write leaves half a value. The store's own comment used to promise that
+  // "malformed storage reads as absent" — a claim about the *session* made by a function that only
+  // knows about *bytes*. The claim was broader than the check, which is the shape this project keeps
+  // paying for.
+  const game = () => createGame(readPackage(packages[0].raw));
+
+  const malformed = [
+    { why: "kills the board: for...of over a number", saved: { entries: {}, hinted: 7, firstWrong: [], elapsed: 0 } },
+    { why: "the same, one field over", saved: { entries: {}, firstWrong: 42 } },
+    { why: "silent: Object.entries on a string yields index pairs", saved: { entries: "nope" } },
+    { why: "silent and worse: a string installed as a cell value", saved: { entries: { "batting[0].hits": "five" } } },
+    { why: "a fractional cell value is not a cell value", saved: { entries: { "batting[0].hits": 1.5 } } },
+    { why: "true is an integer to nobody", saved: { entries: { "batting[0].hits": true } } },
+    { why: "a negative count is not a count", saved: { entries: { "batting[0].hits": -1 } } },
+    { why: "names must be names", saved: { hinted: [1, 2] } },
+    { why: "a duration cannot run backwards", saved: { elapsed: -5 } },
+    { why: "nor be a word", saved: { elapsed: "ages" } },
+    { why: "an array is not a session", saved: [1, 2, 3] },
+    { why: "and neither is null", saved: null },
+  ];
+
+  for (const { why, saved } of malformed) {
+    test(`refused: ${why}`, () => {
+      const g = game();
+      const blanks = g.blanks().length;
+      let threw = null;
+
+      try {
+        equal(g.restore(saved), false, "a malformed session was accepted");
+      } catch (error) {
+        threw = error;
+      }
+
+      equal(threw, null, `restore threw instead of refusing: ${threw?.message}`);
+      equal(g.blanks().length, blanks, "a refused session still changed the board");
+    });
+  }
+
+  test("⚠️ a refusal leaves the game exactly as it was, not emptier", async () => {
+    // `restore()` cleared its three maps and *then* repopulated, so a shape that threw part-way left
+    // the player's board gone and no session to put back. The check happens before anything is cleared.
+    const g = game();
+    const blank = g.blanks()[0];
+    g.enter(blank, 4);
+
+    equal(g.restore({ entries: {}, hinted: 7 }), false);
+    equal(g.value(blank), 4, "a refused session wiped work the player had already done");
+  });
+
+  test("a well-formed session is still accepted, so the guard is not refusing everything", () => {
+    const g = game();
+    const blank = g.blanks()[0];
+
+    equal(g.restore({ entries: { [blank]: 3 }, hinted: [], firstWrong: [], elapsed: 900 }), true);
+    equal(g.value(blank), 3);
+    equal(g.record().duration_ms, 900);
+  });
+
+  test("an absent session is a refusal, not a crash", () => {
+    // What `store.load()` returns when there is nothing there, handed straight to `restore()` by the
+    // shell. It has to be the ordinary case rather than one the caller checks for.
+    equal(game().restore(null), false);
+    equal(game().restore(undefined), false);
+  });
+
+  test("⚠️ names that no longer exist are dropped, not refused", async () => {
+    // The board changes shape between generations. A session naming a cell that is gone is stale, not
+    // malformed — refusing it would throw away a perfectly good session over one obsolete key.
+    const g = game();
+    const blank = g.blanks()[0];
+
+    equal(g.restore({ entries: { [blank]: 2, "batting[99].hits": 5 } }), true);
+    equal(g.value(blank), 2, "the live entry was lost with the dead one");
+  });
+});
+
 suite("⚠️ The clock follows the player, not the tab", () => {
   // `docs/serve-flow.md` §5, and a module rather than fifteen lines in `main.js` — which the suite
   // cannot import, so a rule written there is unguarded by construction. That has already cost a keypad

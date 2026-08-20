@@ -51,11 +51,16 @@ export function createStore(storage) {
     },
 
     /**
-     * The saved session, or `null`.
+     * The stored object, or `null` if there is nothing readable there.
      *
-     * ⚠️ **Malformed storage reads as absent, never as an error and never as a partial session.** The
-     * board this restores into is the day's puzzle; half a session applied to it would be worse than
-     * none, because the player would meet entries they did not make and no way to tell.
+     * ⚠️ **This guarantees parseability, not shape**, and the difference cost a dead board. The comment
+     * here used to promise that "malformed storage reads as absent" — a claim about the *session*, made
+     * by a function that only knows about *bytes*. It let `{"entries":{},"hinted":7}` through, and
+     * `game.restore()` threw on it before the board was drawn.
+     *
+     * A key-value store should not know what a session looks like; `isSession()` in `game.js` owns that,
+     * because it is that type's shape. What this promises is narrower and true: a quota error, a
+     * disabled store or a half-written value reads as nothing at all.
      */
     load(puzzleId) {
       const raw = read(keyFor(puzzleId));
