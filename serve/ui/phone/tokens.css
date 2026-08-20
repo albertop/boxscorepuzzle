@@ -94,3 +94,14 @@
   --header-ground: #1f362e;
   --header-ink: #ffffff;
 }
+
+/* ---- the line score's narrow-device breakpoint -------------------------------------------------
+   359px, i.e. below the 375px the board is designed to. **Measured, not chosen**: on the real page at
+   320px, a fourteen-inning line score at 13px leaves under a pixel between a two-digit R and a
+   two-digit H — `11 16 2` reads as `1116 2`. At 11px the gap is 2.9px and they separate, which is what
+   makes a fourteen-inning cap possible on the smallest device still in use.
+
+   ⚠️ Not a custom property, because a media query condition is evaluated before the cascade and
+   cannot read one. It is documented here, where presentation constants live, and spelled once in
+   `board.css`. §33 keeps it out of `forge/` entirely: the inning cap it supports is a domain fact and
+   lives in `boxscore_domain`, but a viewport width is presentation and the forge must not know it. */

@@ -1,0 +1,186 @@
+<meta charset="utf-8" />
+<!-- ⚠️ Without this the layout viewport is a desktop width and the narrow-device media query never
+     fires, so a measurement page would report the phone breakpoint as not working when it does. -->
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>how many innings fit</title>
+<!-- ⚠⚠ **`fonts.css` first, and it was missing.** Without it this page draws in a fallback face while the product draws in IBM Plex Sans Condensed, which is narrower — so every width measured here was wrong and every board rendered for judgement was the wrong typeface. Nothing in the output said so: the boards looked like boards. The neighbouring instrument, `footnote-height.html`, had it right, which is how the difference was found. -->
+<link rel="stylesheet" href="../ui/phone/fonts.css" />
+<link rel="stylesheet" href="../ui/phone/tokens.css" />
+<link rel="stylesheet" href="../ui/phone/board.css" />
+<style>
+  /* ⚠⚠ Neither `font-family` nor horizontal `padding` here: the first redraws every board in the
+     wrong typeface (`board.css` sets the face on `html, body` and this sheet comes after it), and the
+     second made a 320px device box hold 288px of content. Both made the numbers wrong without making
+     the page look wrong. */
+  body {
+    margin: 0;
+    padding: 16px 0;
+    background: #f4f5f7;
+  }
+  h2 {
+    font-size: 15px;
+    margin: 24px 0 8px;
+  }
+  p {
+    font-size: 13px;
+    max-width: 60ch;
+    line-height: 1.5;
+  }
+  table.report {
+    border-collapse: collapse;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    background: #fff;
+    margin-bottom: 8px;
+  }
+  table.report th,
+  table.report td {
+    border: 1px solid #ccd;
+    padding: 3px 7px;
+    text-align: center;
+  }
+  table.report td.yes {
+    background: #e6f4ea;
+  }
+  table.report td.no {
+    background: #fce8e6;
+    color: #8a1c12;
+  }
+  /* The phone, at the width being argued about. Nothing here may change the board's own metrics. */
+  .device {
+    width: 375px;
+    background: var(--paper);
+    margin: 0 0 14px;
+    box-shadow: 0 1px 4px #0002;
+  }
+  .device.narrow {
+    width: 320px;
+  }
+  .device-label {
+    font-size: 11px;
+    padding: 4px 8px;
+    color: #556;
+    background: #eef;
+  }
+</style>
+<div id="out"></div>
+<script type="module">
+  import { renderLineScore } from "../ui/phone/board.js";
+
+  const out = document.getElementById("out");
+
+  // ⚠️ The header numbers are what widen the table, not the scores: innings 10 upward are two
+  // characters. So the worst case is not a high-scoring game, it is a long one.
+  //
+  // R and H are given two digits deliberately. A twelve-inning game reaching double-figure runs and
+  // hits is ordinary, and a measurement made on `4 7 1` would report a width the product does not have.
+  const scoreFor = (innings) => ({
+    offense_by_inning: Array.from({ length: innings }, (_, i) => (i % 4 === 3 ? 2 : i % 3)),
+    defense_by_inning: Array.from({ length: innings }, (_, i) => (i % 5 === 4 ? 1 : 0)),
+    offense_runs: 11,
+    offense_hits: 16,
+    offense_errors: 2,
+    defense_runs: 9,
+    defense_hits: 14,
+    defense_errors: 1,
+  });
+
+  /**
+   * Does this line score fit, and if not, how.
+   *
+   * ⚠️ Three separate failures, reported separately. Overflow is the obvious one. A cell whose text is
+   * wider than the cell is the one that matters most and is invisible in a screenshot at a glance —
+   * `table-layout: fixed` will happily clip or wrap rather than grow. And a row taller than one line
+   * means something wrapped, which is the same defect seen from the side.
+   */
+  const measure = (host, innings, fontSize) => {
+    const frame = document.createElement("div");
+    frame.className = "linescore";
+    frame.style.fontSize = "";
+    host.append(frame);
+    const table = renderLineScore(scoreFor(innings), false);
+    table.style.fontSize = `${fontSize}px`;
+    frame.append(table);
+
+    const cells = [...table.querySelectorAll("th, td")];
+    const overflow = table.scrollWidth - frame.clientWidth;
+    // +1 for sub-pixel rounding: a cell reported one pixel over at a fractional layout width is not a
+    // clipped digit, and treating it as one would move the answer by a whole inning.
+    const clipped = cells.filter((cell) => cell.scrollWidth > cell.clientWidth + 1);
+    const lineHeight = Math.max(...cells.map((cell) => cell.getBoundingClientRect().height));
+    const singleRow = Math.min(...cells.map((cell) => cell.getBoundingClientRect().height));
+    const wrapped = lineHeight > singleRow + 1;
+
+    const verdict = overflow <= 0 && clipped.length === 0 && !wrapped;
+    host.removeChild(frame);
+    return { fits: verdict, overflow: Math.max(0, Math.round(overflow)), clipped: clipped.length, wrapped };
+  };
+
+  const INNINGS = [9, 10, 11, 12, 13, 14, 15, 16];
+  const SIZES = [13, 12, 11, 10, 9, 8];
+
+  for (const width of [375, 320]) {
+    const host = document.createElement("div");
+    host.className = width === 375 ? "device" : "device narrow";
+    host.style.position = "absolute";
+    host.style.left = "-9999px";
+    document.body.append(host);
+
+    const heading = document.createElement("h2");
+    heading.textContent = `${width}px — innings against font size`;
+    out.append(heading);
+
+    const report = document.createElement("table");
+    report.className = "report";
+    let html = `<tr><th>innings ↓ / size →</th>${SIZES.map((s) => `<th>${s}px</th>`).join("")}</tr>`;
+    const largest = {};
+    for (const innings of INNINGS) {
+      html += `<tr><th>${innings}</th>`;
+      for (const size of SIZES) {
+        const r = measure(host, innings, size);
+        if (r.fits) largest[size] = Math.max(largest[size] ?? 0, innings);
+        const why = r.fits ? "fits" : r.clipped ? `${r.clipped} clipped` : r.wrapped ? "wraps" : `+${r.overflow}px`;
+        html += `<td class="${r.fits ? "yes" : "no"}">${why}</td>`;
+      }
+      html += "</tr>";
+    }
+    html += `<tr><th>largest that fits</th>${SIZES.map((s) => `<th>${largest[s] ?? "&lt;9"}</th>`).join("")}</tr>`;
+    report.innerHTML = html;
+    out.append(report);
+    host.remove();
+    globalThis.__linescore = globalThis.__linescore || {};
+    globalThis.__linescore[width] = largest;
+  }
+
+  // ⚠️⚠️ **The rendered boards, which are the actual answer.** A table of pass/fail says a width was
+  // not exceeded; it cannot say whether a digit is comfortable to read on a phone held at arm's
+  // length. §6 calls the line score the puzzle's anchor and it is consulted constantly, so "fits" and
+  // "works" are different questions and only one of them is arithmetic.
+  const gallery = document.createElement("h2");
+  gallery.textContent = "drawn at 375px — judge these, not the table";
+  out.append(gallery);
+
+  for (const [innings, size] of [
+    [9, 13],
+    [12, 13],
+    [12, 12],
+    [14, 13],
+    [14, 12],
+    [14, 11],
+    [16, 11],
+  ]) {
+    const device = document.createElement("div");
+    device.className = "device";
+    const label = document.createElement("div");
+    label.className = "device-label";
+    label.textContent = `${innings} innings at ${size}px`;
+    device.append(label);
+    const frame = document.createElement("div");
+    frame.className = "linescore";
+    const table = renderLineScore(scoreFor(innings), false);
+    table.style.fontSize = `${size}px`;
+    frame.append(table);
+    device.append(frame);
+    out.append(device);
+  }
+</script>

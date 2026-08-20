@@ -1,0 +1,162 @@
+<meta charset="utf-8" />
+<!-- ⚠️ Without this the layout viewport is a desktop width, the narrow-device media query never fires,
+     and a measurement page reports the phone breakpoint as broken when it works. An earlier version of
+     this page also carried `padding: 16px` on the body, so a 320px "device" was 288px of content and
+     every figure came out about a pixel tight. The device boxes below set their own width and the body
+     adds nothing horizontal. -->
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>how many innings fit — the renders</title>
+<!-- ⚠⚠ **`fonts.css` first, and it was missing.** Without it this page draws in a fallback face while the product draws in IBM Plex Sans Condensed, which is narrower — so every width measured here was wrong and every board rendered for judgement was the wrong typeface. Nothing in the output said so: the boards looked like boards. The neighbouring instrument, `footnote-height.html`, had it right, which is how the difference was found. -->
+<link rel="stylesheet" href="../ui/phone/fonts.css" />
+<link rel="stylesheet" href="../ui/phone/tokens.css" />
+<link rel="stylesheet" href="../ui/phone/board.css" />
+<style>
+  /* ⚠⚠ **This must not set `font-family`.** `board.css` puts the product's face on `html, body`, and
+     this stylesheet comes after it — so a `font-family: system-ui` here silently redrew every board in
+     the wrong typeface. IBM Plex Sans Condensed is narrower, so the measured gaps came out about a
+     pixel tight and the boards rendered for judgement were not the boards. Nothing in the output said
+     so; they looked like boards. The page's own chrome scopes its face to `.note` instead. */
+  body {
+    margin: 0;
+    padding: 0;
+    background: #e9ebee;
+  }
+  .note {
+    font: 500 11px/1.5 system-ui;
+    color: #33383f;
+    padding: 10px 10px 4px;
+  }
+  .note b {
+    color: #11151a;
+  }
+  .note .gap {
+    color: #5a6270;
+  }
+  /* The device is the only thing that sets a width. Its content is the real board's markup and the
+     real board's stylesheet — nothing here may alter the metrics being judged. */
+  .device {
+    background: var(--paper);
+    box-shadow: 0 1px 3px #0003;
+    margin: 0 0 6px 10px;
+  }
+  .w375 {
+    width: 375px;
+  }
+  .w320 {
+    width: 320px;
+  }
+  /* ⚠️ **The variant, expressed as a parameter of the real renderer and not a second one.** R and H
+     hold two digits and E holds one; today all three take the same share as an inning, which spends
+     width on a block that is read once per column rather than scanned. The separator is the 1px rule
+     that already exists — what changes is that the block stops claiming an inning's width each. */
+  .tight-rhe .linescore .rhe {
+    width: 19px;
+  }
+  .tight-rhe .linescore .rhe:last-child {
+    width: 14px;
+  }
+</style>
+<div id="out"></div>
+<script type="module">
+  import { renderLineScore } from "../ui/phone/board.js";
+
+  // A real long game rather than a filled array: runs spread thin, double-figure R and H. The block is
+  // what binds, so a score of `4 7 1` would report a width the product does not have.
+  const scoreFor = (n) => ({
+    offense_by_inning: Array.from({ length: n }, (_, i) => (i === 3 ? 2 : i === 9 ? 1 : i % 3 === 0 ? 1 : 0)),
+    defense_by_inning: Array.from({ length: n }, (_, i) => (i === 1 ? 3 : i === 7 ? 1 : 0)),
+    offense_runs: 11,
+    offense_hits: 16,
+    offense_errors: 2,
+    defense_runs: 9,
+    defense_hits: 14,
+    defense_errors: 1,
+  });
+
+  const range = document.createRange();
+  const gapOf = (table) => {
+    let worst = Infinity;
+    let at = "";
+    for (const cell of table.querySelectorAll("th, td")) {
+      if (cell.cellIndex === 0) continue;
+      range.selectNodeContents(cell);
+      const slack = cell.getBoundingClientRect().width - range.getBoundingClientRect().width;
+      if (slack < worst) {
+        worst = slack;
+        at = cell.textContent;
+      }
+    }
+    return { gap: worst, at };
+  };
+
+  const out = document.getElementById("out");
+
+  const draw = (innings, width, tight, caption) => {
+    const device = document.createElement("div");
+    device.className = `device w${width}${tight ? " tight-rhe" : ""}`;
+    const frame = document.createElement("div");
+    frame.className = "linescore";
+    const table = renderLineScore(scoreFor(innings), false);
+    frame.append(table);
+    device.append(frame);
+
+    const note = document.createElement("div");
+    note.className = "note";
+    out.append(note, device);
+    // Measured after layout, from the table that is actually on the page.
+    const { gap, at } = gapOf(table);
+    const size = getComputedStyle(table).fontSize;
+    // ⚠️ The number lives in its own element so the second pass can replace it by identity rather than
+    // by pattern. A regex over `innerHTML` was tried and silently matched nothing: entities written in
+    // are read back as characters, so `&ldquo;` never appears again and the stale figure survived
+    // beside a correct board — the page disagreeing with itself, which is worse than either error.
+    const figure = document.createElement("span");
+    figure.className = "measured";
+    figure.textContent = `${gap.toFixed(1)}px at “${at}”`;
+    note.innerHTML =
+      `<b>${innings} innings · ${width}px · ${size}${tight ? " · narrow R/H/E" : ""}</b> ` +
+      `<span class="gap">— tightest gap <span class="slot"></span>. ${caption}</span>`;
+    note.querySelector(".slot").replaceWith(figure);
+  };
+
+  // ⚠⚠ **Only the cases whose device width matches this viewport.** The narrow-device rule is a
+  // media query, and a media query keys off the viewport rather than off a box inside it — so a 320px
+  // device drawn on a 400px page renders at 13px and shows a board the product never draws. The
+  // alternative was copying `font-size: 11px` into this page, which is a second copy of the rule and
+  // the exact defect that gave three renderers three different footnote lines. Open it twice instead.
+  const viewport = document.documentElement.clientWidth;
+  const CASES = [
+    [12, 375, false, "the length the operator solved on paper."],
+    [12, 375, true, "same board, R/H/E no longer claiming an inning's width each."],
+    [14, 375, false, "the proposed cap, as the board draws it today."],
+    [14, 375, true, "the proposed cap with the narrower block."],
+    [15, 375, false, "one past the cap — where the header row starts reading as a digit run."],
+    [12, 320, false, "smallest device in use."],
+    [14, 320, false, "the cap on the smallest device — the tightest case in the product."],
+    [14, 320, true, "the same, with the narrower block."],
+    [15, 320, false, "past the cap on the smallest device."],
+  ];
+  const shown = CASES.filter(([, width]) => width === viewport);
+  const heading = document.createElement("div");
+  heading.className = "note";
+  heading.innerHTML = shown.length
+    ? `<b>viewport ${viewport}px</b> <span class="gap">— drawn at the size this width actually gets. ` +
+      `Open at ${CASES.map((c) => c[1]).filter((w, i, a) => a.indexOf(w) === i).join("px and ")}px to see both.</span>`
+    : `<b>viewport ${viewport}px</b> <span class="gap">— no case is drawn at this width. Resize to 375 or 320.</span>`;
+  out.append(heading);
+  for (const [innings, width, tight, caption] of shown) {
+    draw(innings, width, tight, caption);
+  }
+
+  // ⚠⚠ **Measured again after the webfont arrives, because the first pass is a lie.** The captions
+  // above are written while the boards are still drawn in the fallback face; IBM Plex Sans Condensed
+  // is narrower, so every gap printed synchronously is about a pixel tight. The board on screen was
+  // already correct by the time anyone looked — only the number beside it was stale, which is the worse
+  // of the two failures: a page whose picture and whose figure disagree, with nothing saying which.
+  await document.fonts.ready;
+  for (const figure of document.querySelectorAll(".measured")) {
+    const device = figure.closest(".note").nextElementSibling;
+    const { gap, at } = gapOf(device.querySelector("table"));
+    figure.textContent = `${gap.toFixed(1)}px at “${at}”`;
+  }
+</script>

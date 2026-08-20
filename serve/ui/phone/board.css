@@ -146,6 +146,23 @@ html, body {
 /* ⚠️ A half-inning that was never played. Not a zero — the home side leading after the top of the
    ninth does not bat, and printing 0 there states a fact that did not happen. */
 .linescore td.unplayed { color: var(--scoreboard-dim); opacity: .7; }
+/* ⚠⚠ **The smallest device in use cannot hold a long game at 13px.** Measured with the real renderer:
+   at 320px a fourteen-inning line score at 13px leaves under a pixel between a two-digit R and a
+   two-digit H, and `11 16 2` reads as `1116 2`. At 11px the gap is 2.9px and they separate again.
+
+   The line score is read-only — no 44px touch target applies — so it is the one element that may go
+   below the grid's size. It may not go further: 10px would buy a fifteenth inning and, set beside the
+   same board at 11px, reads as diminished rather than small. §6 makes this the anchor the player
+   returns to constantly, so that is where the line was drawn.
+
+   ⚠️ The breakpoint is documented in `tokens.css` beside the other presentation constants. It is a
+   literal here because a media query cannot read a custom property — the condition is evaluated before
+   the cascade. It was briefly written into `boxscore_domain` instead, which is the §33 boundary itself:
+   a viewport width is presentation and the forge must not know it. The inning *cap* it supports is a
+   domain fact and does live there. */
+@media (max-width: 359px) {
+  .linescore table { font-size: 11px; }
+}
 
 /* ---- the board ------------------------------------------------------------------------------- */
 

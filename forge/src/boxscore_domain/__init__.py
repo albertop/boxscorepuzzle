@@ -169,3 +169,71 @@ enter the pool, so it stays `PROVISIONAL` until the pre-registered confirmation 
 distribution actually splits — or until the hand-solve pack closes the question above it, in which case
 this constant is deleted rather than measured.
 """
+
+# ---------------------------------------------------------------------------------------------------
+# The line score's width (§2, §6)
+# ---------------------------------------------------------------------------------------------------
+
+MAX_INNINGS: Final = 14
+"""The longest game the board can draw. **Measured in the browser, on the real page, with the real renderer.**
+
+⚠️ **This is the one place the screen genuinely decides.** The grid's column budget was argued from
+width twice and retired twice, because the board scrolls and the totals stay pinned — width was never
+the real limit there. Here it is: **the line score is one piece and cannot be split**, and §6 makes it
+the puzzle's anchor, consulted constantly. An anchor that has to be scrolled stops being one.
+
+**What was measured.** The tightest cell in the table at every inning count, at 375px and 320px —
+where "tightest" is the whitespace left around the glyph once the fixed layout has divided the width.
+The binding cell is **not** an inning header: it is a **two-digit R or H in the body**, which is
+ordinary in a long game. The gap between two numbers is that slack, and below about 3px they stop
+reading as two numbers — `11 16 2` becomes `1116 2`.
+
+| innings | 375px @ 13px | 320px @ 11px |
+|---|---|---|
+| 9 | 11.6px | 9.1px |
+| 12 | 6.4px | 4.9px |
+| 13 | 5.2px | 3.9px |
+| **14** | **4.0px** | **2.9px** |
+| 15 | 3.0px | 2.1px — merged |
+| 16 | 2.1px — merged | — |
+
+**Where the line was drawn, and it is a judgement rather than an arithmetic result.** Fourteen was read
+off rendered boards, not off the table: at 320px its header row is tight but every pair separates,
+while **at fifteen the row reads as one run of digits** and the R/H block closes up. Fourteen is the
+largest count that works at *both* widths, so it is the cap. At 375px fifteen would still be readable;
+the smallest device decides, because it is the same puzzle.
+
+⚠⚠ **Three separate ways the instrument disagreed with the product, none visible in its output.**
+Every one produced boards that looked like boards and numbers that looked like numbers.
+
+1. The page carried `padding: 16px` on its body, so a 320px "device" held 288px of content.
+2. It set `font-family: system-ui` on `body` — and `board.css` puts the product's face on `html, body`,
+   so **every board was drawn in the wrong typeface.** IBM Plex Sans Condensed is narrower; the gaps
+   came out about a pixel tight and the boards rendered for judgement were not the boards. The page
+   also never linked `fonts.css`. The neighbouring instrument, `footnote-height.html`, had both right,
+   which is how the difference was found.
+3. Its captions were computed synchronously, before the webfont arrived, so the printed figure was
+   stale beside a correct board — **the page disagreeing with itself**, which is worse than either
+   error alone because nothing says which half to believe.
+
+The figures above are from the corrected page and agree with the running application, measured
+independently. **An earlier draft of this constant said 13 on the strength of the broken page.**
+
+⚠️ **Neither the side column nor the R/H/E block can pay for a fifteenth inning.** The side column is
+52px and holds `AWAY`, which is 39.5px at 13px plus 8px of padding — 44px already clips it, so
+narrowing needs a different label and that is a separate decision.
+
+The R/H/E block was measured as a variant of the real renderer rather than argued about. Giving it
+less than an inning's width **moves the problem instead of solving it**: at 320px and 14 innings the
+block goes from 2.9px to 7.1px while the inning headers fall from 2.9px to 2.4px. And it cannot be
+taken from `E` alone — errors reach **11**, in 7 sides across the whole 1910-2029 window, so a
+one-digit column would silently clip a real board. `R` and `H` genuinely need two digits: hits reach
+33. **The block is already at its minimum.**
+
+**What the pool loses, as context and not as justification** — the cap is set by the screen and these
+figures did not move it. Of 200,452 gated directions, games of **15 or more are 232, or 0.12%**. The
+whole 11-to-14 band is under 1%. For scale, capping at 9 would cost 6.26%.
+
+⚠️ **A twelve-inning game is not an edge case to be justified — it is baseball**, and §2 commits to the
+canonical format. A board that only ever showed nine innings would teach the player to expect nine.
+"""
