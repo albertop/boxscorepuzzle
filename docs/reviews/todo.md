@@ -2828,16 +2828,40 @@ comfortably, and the board he actually solved was **twice as erased as anything 
 
 Not review findings — the things the repairs unblocked, and what each one is waiting on.
 
-### The one thing waiting on a person
+### Waiting on a person, and only a person
 
-**Solving the five boards.** The pack is built and printed (two at 8 stalls, three at 5, one with six
-pitchers, 30–40 blanks each). Everything below in *Waiting on the hand-solve* is blocked on it, and
-nothing else in this file is blocked on anything.
+**1. Solving the five boards.** The pack is built and printed (two at 8 stalls, three at 5, one with six
+pitchers, 30–40 blanks each). Everything under *Waiting on the hand-solve* is blocked on it.
 
 ⚠️ **It is not a review step.** Layer 3 propagates intervals to fixed point across forty-odd
 simultaneous relations, which is stronger than any person, so a board can pass it and be underivable by
 hand. Solving by hand is the only verification of human derivability that exists, and the only check the
 common-author risk does not touch.
+
+**2. Reading the five batting-order exceptions.** They are listed in full in
+`discovery/batting-order/result.log`. ⚠️ **The distinction that matters cannot come from the
+distribution**: a real batting-out-of-order call is a fact about baseball, a scoring error is a fact
+about the data, and both look identical as a rate. Five games is a morning's reading, and the answer
+changes what the pool rule *means* rather than whether it works.
+
+**3. Pointing a real screen reader at the board** (v24's residual risk). The DOM tests read attributes;
+nothing has ever read the board aloud. ⚠️ Same shape as the two above: **an instrument agreeing with
+itself is not the same as the experience being right.**
+
+### Decisions the measurements are now waiting on
+
+**The batting-order pool rule.** 5 of 100,226 directions break the cycle. Adopting the rule makes the
+constraint exact and costs those five; not adopting it means the solver never gets the constraint, since
+a rule true 99.995% of the time is a trap rather than a weaker rule. **Nothing is implemented either
+way.** What it buys is bounded and measured: 75.1% of batting rows are alone in their slot and would be
+determined outright by the team's PA total; the rest get a sum.
+
+⚠️ **The winner bias, which nobody chose and nothing had recorded.** §5's zero-density gate selects the
+**winning team's offense 84% of the time** — more runs means fewer zeros. So every board the generator
+ships is overwhelmingly a winning batting line, and the losing team's board is rare by construction.
+Whether that matters is a §31 question about what the player meets, and it is **not** a defect to fix
+quietly: the gate is doing exactly what it was designed to do, and this is a consequence of it that was
+never stated. Found by disbelieving a number that came out of an unrelated correction.
 
 ### Waiting on the hand-solve
 
