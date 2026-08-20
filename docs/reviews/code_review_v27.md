@@ -1,4 +1,4 @@
-# Code Review v27 - Fifth Pass
+# Code Review v27 - Sixth Pass
 
 ## Scope
 
@@ -13,7 +13,53 @@ This review concentrates on the batting-order work added after v26:
 
 The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
 
-## Fifth-Pass Findings
+## Sixth-Pass Findings
+
+### v27-P2-11 - The paired ceiling table discards the one-arm reaches that define a ceiling difference
+
+- **Persona:** Statistician-methodologist / Data scientist
+- **Severity:** P2
+- **Location:** `discovery/batting-order/arms.py:367`
+- **Description:** `_ceiling()` is built only from `_pairs()` at each target. `_pairs()` retains a row only when both arms reached that same target, so a walk that reaches 8 stalls under the treatment but only 6 under the baseline contributes neither its treated 8 nor its failed baseline 8. The loop then takes maxima over the surviving common-target snapshots and labels them the stall ceiling. Those snapshots are first crossings of the configured targets, not the maximum stalls observed over the completed erasure walk.
+- **Impact:** The table can report equal ceilings after censoring the exact treatment gains or losses it is meant to summarize. The persisted run already shows 73 `on_total_erasable` target-8 reaches against 53 for `off`; at least 20 treated target-8 rows have no possible baseline target-8 counterpart and therefore cannot affect this ceiling table. Coverage reports that difference correctly, but the later paired ceiling summary can contradict or conceal it.
+- **Reproduction:** Take any key that reached target 8 only under `on_total_erasable`. `_pairs(rows, "on_total_erasable", 8)` drops it. If both arms reached target 6, `_ceiling()` retains only their target-6 snapshots and may assign both a maximum near 6, even though one arm demonstrably continued to 8. A walk that continued beyond the largest configured target is also capped at its first target-8 snapshot rather than its actual terminal maximum.
+- **Recommended fix and rationale:** Track the maximum stall count reached during the full accepted erasure walk for every `(game, offense, seed, arm)`, persist it independently of target reach, and pair those values by walk without requiring equal target success. Aggregate to direction only after computing the paired walk-level deltas. Alternatively, rename the current output to describe its actual value, but it cannot answer the ceiling question without retaining the terminal maximum.
+
+### v27-P3-12 - The specimen selector does not enforce the contrast promised by its own rule
+
+- **Persona:** Test engineer / UX evidence reviewer
+- **Severity:** P3
+- **Location:** `discovery/batting-order/arms.py:435`
+- **Description:** The intended specimen set is cases using lineup arithmetic plus one deliberate contrast, but `if uses_lineup or not contrast` accepts every lineup-positive board even before a contrast has been found. If the first three eligible seed-one boards use lineup arithmetic, `chosen` fills to `SPECIMEN_BOARDS` and the later contrast can never enter. There is no final assertion that the declared composition or even the requested count was achieved.
+- **Impact:** A normal rerun with a different sample order can silently produce an eye-check containing only treatment-positive examples while the output still cites `SPECIMEN_RULE` as the selection rule. The current artifact happens to contain a contrast, but the safeguard depends on data order rather than enforcing the evidence mix it claims.
+- **Reproduction:** Let the first three seed-one boards have `uses_lineup=True`. Each satisfies the condition at lines 435-448, `len(chosen)` reaches three, and all later boards are skipped. The summary then prints `3 of 3 ... use lineup arithmetic` beside a rule that says there should be one contrast.
+- **Recommended fix and rationale:** Collect lineup-positive and lineup-negative candidates separately, then deterministically choose the required quota only after measurement; fail clearly unless both pools can satisfy it. This turns the specimen rule from a comment about the current artifact into a postcondition of every rerun.
+
+## Sixth-Pass Disposition
+
+- `v27-P2-09` is resolved. The mutation sweep runs an untouched baseline first, treats only pytest exit 1 as a killed mutant, and reports infrastructure statuses as broken rather than caught.
+- `v27-P2-10` is resolved for blanks, PA techniques, and families: those tables now join by direction and seed within each target, while coverage deliberately remains unpaired.
+- The persisted artifact contains 2,160 uniquely keyed rows: 48 directions, three seeds, three arms, and five targets, with no duplicate trial key found in the reviewed summary.
+- The current specimen file uses explicit page separators and includes treatment-visible pages plus a contrast, but the selector does not guarantee that composition on the next run (`v27-P3-12`).
+- The remaining analytical defect is isolated to the ceiling summary (`v27-P2-11`); it does not invalidate the unpaired coverage table or the correctly paired per-target tables.
+- The verifier's value-aware lineup step remains pending in `todo.md` and is not duplicated here.
+
+## Sixth-Pass Persona Summary
+
+- **Software architect:** No new production solver or verifier-rule defect found.
+- **Security engineer:** No practical security regression found.
+- **Performance engineer:** No practical runtime or memory regression found.
+- **Test engineer:** The mutation harness is now fail-closed; the specimen quota still lacks a postcondition.
+- **Data scientist:** The persisted rows are complete and pairable, but no terminal per-walk ceiling is retained.
+- **Statistician/methodologist:** Per-target pairing is fixed; censoring one-arm reaches makes the ceiling comparison invalid.
+- **UX/API contract reviewer:** The rendered evidence is readable, but future selection is not guaranteed to include its promised contrast.
+- **Solo-maintainer pragmatist:** Both remaining fixes are local to `arms.py`; no broader redesign is needed.
+
+## Sixth-Pass Verdict
+
+Two new practical findings remain: **one P2** (`v27-P2-11`) and **one P3** (`v27-P3-12`). No new P0 or P1 finding was identified. Both fifth-pass findings are resolved, and no new production defect was found; the open work is confined to accurately reporting the experiment's ceiling and enforcing the declared specimen mix.
+
+## Resolved Fifth-Pass Findings
 
 ### v27-P2-09 - The mutation sweep treats an already-failing suite as ten successful guards
 
@@ -35,7 +81,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** Consider a `(game, offense, seed)` that reaches target 8 only under `on_total_erasable`. Its target-8 row contributes to that arm's blanks median and technique totals, while no counterpart contributes to `off`. Whenever the coverage table differs between arms, the later tables are mechanically summarizing different populations; pooling targets adds a second unequal weighting.
 - **Recommended fix and rationale:** Keep the coverage table unpaired, because failure to reach is its outcome. For treatment-effect tables, join rows by `(game, offense, seed, target)`, retain keys reached by both compared arms, and report paired deltas separately per target. If an overall technique summary is still useful, aggregate equal-weight paired results rather than raw cells from differently composed reached sets. This uses the pairing fields added for the experiment's stated comparison and isolates treatment from survivorship.
 
-## Fifth-Pass Disposition
+## Fifth-Pass Disposition (superseded)
 
 - `v27-P2-08` is resolved. The test now has propagation deduce the companion PA, then asserts that lineup arithmetic depends on it and advances depth by one.
 - The verifier regression now also asserts the semantic fields its structural comparison could not see: the spread constant and `equality=False`.
@@ -44,7 +90,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - The persisted arm rows are now pairable, but `v27-P2-10` remains in the built-in analysis that consumes them.
 - The verifier's lack of a value-aware lineup step remains explicitly pending in `todo.md` and is not duplicated as a finding.
 
-## Fifth-Pass Persona Summary
+## Fifth-Pass Persona Summary (superseded)
 
 - **Software architect:** No new defect found in the generator/verifier rule boundary or dependency graph.
 - **Security engineer:** No practical security regression found in the changed surface.
@@ -55,7 +101,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **UX/API contract reviewer:** No shipped API or user-facing contract regression found.
 - **Solo-maintainer pragmatist:** Both fixes are local to the two new research scripts and require no broader refactor.
 
-## Fifth-Pass Verdict
+## Fifth-Pass Verdict (superseded)
 
 Two new practical findings remain: **two P2s** (`v27-P2-09` and `v27-P2-10`). No new P0, P1, or P3 finding was identified. The fourth-pass regression gap is closed, and no new production solver defect was found; the remaining risk is that the new validation and analysis scripts can report stronger evidence than they have established.
 

@@ -2393,6 +2393,32 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## ⚠⚠ OPEN — the batting-order recommendation was given, reversed under one push, and both
+versions were overstated
+
+**Full record: `docs/reviews/batting-order-reversal.md`.** The operator asked for it because he could
+no longer tell whether an answer came from evidence or from him pushing, and that objection is correct.
+
+The short version, for anyone reading only this file:
+
+- **No measurement was re-run between the two recommendations.** `arms.json` is byte-identical. Only
+  the partition changed.
+- **Position 1 (do not adopt)** rested on a pooled table that mixes two populations answering different
+  questions, plus **one board selected by sorting descending on the very phenomenon being judged** —
+  and that board was not even in the target-8 set. The deciding partition was in the file the whole
+  time and **was not run before the recommendation was given**. That is the defect, and it does not
+  depend on anyone's motives.
+- **Position 2 (adopt where the board needs it)** was then overstated in the direction the pressure
+  pointed: `+11 −2` was best-of-three bookkeeping (per seed it is +5 to +9, and one seed loses six),
+  and `9 of 11` is `10 of 15` counted per walk.
+- **The position the evidence supports is neither.** The gained subgroup is **eleven directions**, and
+  that is not enough to spend a second verifier implementation on. The next step is a larger,
+  **pre-registered** sample of that subgroup — not an implementation.
+
+⚠️ **Nothing measured here touches human derivability.** Layer 3 has the batting-order *relations* but
+no value-producing lineup move, so any board leaning on the constraint is currently refused as
+underivable.
+
 ## ⚠⚠ v27 fifth pass — two P2s, and the first one is the worst finding in this review
 
 ### v27-P2-09: the mutation sweep had the exact defect it was built to catch
