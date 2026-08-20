@@ -144,8 +144,35 @@ html, body {
 /* The separator between the last inning and R, which is where a printed line score puts one. */
 .linescore .rhe-rule { border-left: 1px solid var(--scoreboard-rule); }
 /* ⚠️ A half-inning that was never played. Not a zero — the home side leading after the top of the
-   ninth does not bat, and printing 0 there states a fact that did not happen. */
-.linescore td.unplayed { color: var(--scoreboard-dim); opacity: .7; }
+   ninth does not bat, and printing 0 there states a fact that did not happen.
+
+   ⚠⚠ **This is a given, and it was below the legibility floor.** The `x` makes the home side's outs 24
+   rather than 27, which feeds the global identity directly — a marker the player cannot read is a lost
+   given, not a faint decoration. It rendered at **2.21:1** against the scoreboard ground, where a
+   played digit gets 4.51:1 and WCAG's floor for any content is 3.0. The dim colour was half of it and
+   `opacity: .7` was the other half.
+
+   ⚠⚠ **A dimmed-but-accessible variant does not exist on this ground, and the arithmetic says so.**
+   Against `--fenway` (luminance 0.164), **pure black reaches only 4.27:1** — so nothing darker than the
+   panel can pass 4.5 at all. Going lighter, a neutral grey must be `#f5f5f5` or brighter, which is the
+   digit's own brightness. `--scoreboard-dim` at full opacity still only reaches 2.95:1. **The only
+   compliant marker is one as bright as a digit**, so it is distinguished by weight instead of by
+   dimming — and by being a letter among numerals, which no amount of contrast confuses.
+
+   Full contrast costs nothing in meaning here: the dimming was saying "this is not a value", and the
+   glyph already says that unambiguously.
+
+   ⚠⚠ **The same defect is still on the inning header numbers, and it is not fixed here.** They carry
+   `--scoreboard-dim` too and render at **2.95:1** — under both floors, on twelve-odd cells rather than
+   one, and they are what tells the player which inning a column is. It was left alone because the fix
+   is a decision about the panel's colour rather than about this rule.
+
+   **There is a clean one:** darken `--fenway` to 75% of itself, `rgb(62,90,81)`. Today's dim colour
+   then reaches **4.52:1** and the values reach **6.91:1**, so the whole hierarchy survives — dim
+   headers, bright values — with everything above the floor. If that is taken, this rule can go back to
+   `--scoreboard-dim` and recover the marker's original visual intent, because at that ground the dim
+   colour is compliant. Recorded so the option is not lost with the reasoning that found it. */
+.linescore td.unplayed { color: var(--scoreboard-ink); font-weight: 400; }
 /* ⚠⚠ **The smallest device in use cannot hold a twelve-inning game at 13px.** Measured with the real
    renderer and the real typeface: at 320px a twelve-inning line score at 13px leaves 2.7px between a
    two-digit R and a two-digit H, which is where `11 16 2` starts reading as `1116 2`. At 11px the gap

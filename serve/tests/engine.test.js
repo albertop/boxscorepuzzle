@@ -1302,3 +1302,79 @@ suite("⚠️⚠️ The stylesheet's rules survive being parsed, not merely bein
     }
   });
 });
+
+suite("⚠️⚠️ The half-inning marker is a given, so it has to be legible", () => {
+  // ⚠️⚠️ **The `x` says the home side did not bat.** That makes their outs 24 rather than 27 and feeds
+  // the global identity directly, so a marker the player cannot read is a **lost given, not a faint
+  // decoration**. It shipped at 2.21:1 against the scoreboard ground — below WCAG's 3.0 floor for any
+  // content, let alone 4.5 for text this size — from a dim colour and `opacity: .7` together.
+  //
+  // ⚠️ **A dimmed-but-accessible variant does not exist on this ground.** Against `--fenway`, pure
+  // black reaches only 4.27:1, so nothing darker than the panel can pass; a neutral grey must be
+  // `#f5f5f5` or brighter, which is the digit's own brightness. The marker is therefore as bright as a
+  // digit and distinguished by weight — and by being a letter among numerals.
+  const FLOOR = 4.5;
+
+  const channels = (value) => value.match(/\d+(\.\d+)?/g).map(Number);
+  const luminance = ([r, g, b]) =>
+    0.2126 * chan(r) + 0.7152 * chan(g) + 0.0722 * chan(b);
+  const chan = (value) => {
+    const v = value / 255;
+    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  };
+  const flatten = (fg, bg, alpha) => fg.map((v, i) => v * alpha + bg[i] * (1 - alpha));
+  const contrast = (a, b) => {
+    const [hi, lo] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  const drawn = async (innings) => {
+    const { renderLineScore } = await import("../ui/phone/board.js");
+    // ⚠️ The home side one half-inning short, or no marker is drawn at all and the test passes on a
+    // board that never contained its subject.
+    const table = renderLineScore(
+      {
+        offense_by_inning: Array.from({ length: innings }, () => 1),
+        defense_by_inning: Array.from({ length: innings - 1 }, () => 0),
+        offense_runs: 11, offense_hits: 16, offense_errors: 2,
+        defense_runs: 9, defense_hits: 14, defense_errors: 1,
+      },
+      false,
+    );
+    const frame = document.createElement("div");
+    frame.className = "linescore";
+    frame.append(table);
+    document.body.append(frame);
+    return { table, frame };
+  };
+
+  test("the not-played marker meets the contrast floor, and so does a played digit", async () => {
+    const { table, frame } = await drawn(12);
+    const marker = table.querySelector("td.unplayed");
+    const played = table.querySelector("td.value");
+
+    assert(marker, "no not-played marker was rendered, so this test proves nothing");
+
+    const ground = channels(getComputedStyle(table).backgroundColor);
+    const effective = (cell) =>
+      flatten(channels(getComputedStyle(cell).color), ground, Number(getComputedStyle(cell).opacity));
+    const markerRatio = contrast(effective(marker), ground);
+    const playedRatio = contrast(effective(played), ground);
+    frame.remove();
+
+    assert(markerRatio >= FLOOR, `the x renders at ${markerRatio.toFixed(2)}:1, under ${FLOOR}`);
+    assert(playedRatio >= FLOOR, `a played digit renders at ${playedRatio.toFixed(2)}:1, under ${FLOOR}`);
+  });
+
+  test("the marker is still not mistakable for a value", async () => {
+    // ⚠️ The other half. Raising the contrast by making the marker identical to a digit would pass the
+    // test above and lose the distinction the dimming was carrying.
+    const { table, frame } = await drawn(12);
+    const marker = getComputedStyle(table.querySelector("td.unplayed"));
+    const played = getComputedStyle(table.querySelector("td.value"));
+    const differs = marker.fontWeight !== played.fontWeight || marker.color !== played.color;
+    frame.remove();
+
+    assert(differs, "the not-played marker is drawn exactly like a played value");
+  });
+});
