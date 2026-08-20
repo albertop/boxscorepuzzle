@@ -2877,6 +2877,18 @@ No browser fingerprinting.
 
 Per game: puzzle identifier, date, duration, whether completed, hints used, errors, and the highest technique required.
 
+⚠️ **Events from players without an account are inside "the minimum to operate", not outside it.** They
+upload under the device UUID §11 already creates. The reason is not convenience: **without them the
+retention numbers would describe subscribers only**, and the retention of people who do not pay is what
+decides whether this grows at all (§20). Measuring only the people who already converted is measuring the
+answer to the wrong question.
+
+⚠️ **And the account link has to be possible from the start.** The event carries the device UUID always,
+and the account identifier when one exists; on registration, that device's events are attributed to the
+account **without dropping the UUID**, since the same device may keep being used signed out. Retrofitting
+this means losing every pre-registration event or reconstructing an association nobody recorded. It costs
+one column now. Full reasoning in `docs/serve-flow.md`.
+
 **The filled cells are not stored.** They aren't needed: percentiles, streaks, and difficulty calibration all come from aggregates.
 
 **Preferences**
@@ -2915,9 +2927,9 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [ ] ⚠️ **Layer 3 does not verify human derivability.** It runs interval propagation to a fixed point over forty-odd simultaneous relations, which is stronger than any person. Measured: at a chain target of 13, only **71%** of published boards also certify under one-relation-at-a-time solving. The true figure for a human is somewhere between 71% and 100% and is currently unknown (§22)
 - [ ] **Whether layer 3b becomes a gate.** Decided by the fifty-board hand-solve rather than by further measurement — two solvers already bracket the answer and neither of them is a player. For: 29% is inside the 30% discard §22 calls free. Against: the weak solver is a caricature in the other direction (§22)
 - [ ] **The fifty-board hand-solve is a launch gate, not a review step.** It is the only real verification of human derivability that exists, and the only check the common-author risk does not touch. Boards, solutions, key and recording sheet are built in `discovery/hand-solve/` (§22)
-- [ ] Error handling: progressive reveal already forces row validation; still to define whether there's an error limit and what happens on failure
-- [ ] What exactly a hint is: reveal a cell, flag a contradiction, or suggest a technique?
-- [x] ~~Saving, pausing, resuming~~ — **resolved:** the puzzle stays open all day and saves itself (§27)
+- [x] ~~Error handling~~ — **resolved (August 2026): validation only on *done*, and never *where* or *how many*** (`docs/serve-flow.md`). Immediate marking and a wrong-cell count were both considered and both rejected for one reason: they turn the board into an oracle. Unlike sudoku this board can tell instantly that a value breaks an identity, so marking makes probing beat deducing — and a count is worse, because changing one cell and watching the number is a binary search over the board. Unlimited attempts, and **no error limit is available at all**: §27 forbids a fail state. The disincentive is the clock
+- [x] ~~What exactly a hint is~~ — **resolved (August 2026): there are none** (`docs/serve-flow.md`). §22 guarantees every published board is solvable without a single guess, so *stuck with no way forward* is a state that cannot occur — **a board that needed a hint means the guarantee failed**, and the fix is the generator. The consequence is that the only exit from being stuck is to give up, which §27's free grace day, streak insurance and non-disappearing puzzle already cover
+- [x] ~~Saving, pausing, resuming~~ — **resolved:** the puzzle stays open all day and saves itself (§27), and **the mechanics are now written** (`docs/serve-flow.md`): `localStorage` rather than cookies, holding the filled cells, the accumulated time and the event record. ⚠️ **An accumulated duration, never a start timestamp** — the clock pauses, so a start time would count the pause
 - [ ] What time the puzzle rolls over: local midnight or UTC
 - [x] ~~What breaks the streak and whether there's grace~~ — **resolved:** midnight close for streak purposes, free monthly grace day, streak insurance in the paid tier (§27)
 - [x] ~~Weekly difficulty curve~~ — **resolved, revised, and now scaled:** an arc rather than a ramp, running **chain 5 to chain 13** rather than to 20. The metric bands close above 15, and boards reaching 17 are the emptiest ones the gate let through — the hardest day was re-selecting what admission removed. At 13 a minority family route survives, so Saturday has two flavours rather than one (§31)
@@ -2932,7 +2944,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Level 100**
 
 - [x] ~~Can you lose?~~ — **resolved:** §27
-- [x] ~~Does time matter?~~ — **resolved:** §26
+- [x] ~~Does time matter?~~ — **resolved:** §26, and **what the clock counts is now written** (`docs/serve-flow.md`): page visibility plus a deliberately generous inactivity timeout, because staring at a deduction board without touching it *is* play. ⚠️ **Invisible until the end** — §26 says a running clock changes how the game is played, and §2's audience is exactly who a climbing counter drives away. Not tamper-proof, and does not need to be: the time is shared between friends, not ranked
 - [x] ~~Is there a social layer?~~ — **resolved:** §26
 - [x] ~~Does novelty run out?~~ — **resolved:** §31
 - [x] ~~Seasonality~~ — **resolved:** §25
@@ -2943,7 +2955,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 - [x] ~~The anti-goals~~ — **resolved:** §1
 - [x] ~~What the product is in a year~~ — **resolved:** §30
 - [x] ~~Brand and domain~~ — **resolved:** §24
-- [ ] What gets measured to know it's working *(better resolved near launch)*
+- [x] ~~What gets measured to know it's working~~ — **decided in design, built in no part** (`docs/serve-flow.md`). C7's record already gives starts, completions, duration, errors and technique, and therefore **which days people abandon**, which is the honest difficulty signal. Owed: retention at 1, 7 and 30 days (§20), streak-break-and-never-return (§27), and conversion. Nothing beyond what will actually be read — §35's minimum-to-operate applies to analytics too
 - [ ] **Accessibility as a product decision.** A grid of numbers with correct semantics is surprisingly playable with a screen reader — one of the few games a blind person could play in full. Could be a differentiator, not just compliance
 
 **Data**
@@ -2969,7 +2981,7 @@ Per game: puzzle identifier, date, duration, whether completed, hints used, erro
 **Business and operations**
 
 - [ ] Final pricing and the free/paid line
-- [ ] Retention metrics
+- [x] ~~Retention metrics~~ — **specified, not built** (`docs/serve-flow.md` §8). Day 1, day 7, day 30; streak distribution and the break-and-vanish rate; conversion once there is a paywall
 - [ ] Privacy, terms, refunds, and data deletion — full inventory in §34
 - [ ] Retention policy: how long an inactive account is kept (§35)
 - [ ] Accessibility: screen readers, color blindness, touch targets

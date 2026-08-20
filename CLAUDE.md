@@ -6,6 +6,10 @@ A daily puzzle where the player reconstructs the boxscore of a real Major League
 
 **Engine brief: `docs/serve-brief.md`. Read it before touching `serve/`.** It is the standing direction for the client — one puzzle and three interfaces, a core that knows nothing about screens, phone first — and it is where `serve` decisions get recorded as they are taken, rather than in commit messages.
 
+**Player flow: `docs/serve-flow.md`. Read it with the brief.** The brief says how the engine is shaped; this says **what the game does** — the landing page, what happens on an error, why there are no hints, what the clock counts and when it is visible, what persists and where, the reveal at the end, and what gets measured. It carries the SQLite decision with its two invalidating conditions, and it closes the §36 items that had been open for months rather than deciding beside them.
+
+⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
+
 Status: design complete at the "what and why" level. Implementation starting.
 
 ---
