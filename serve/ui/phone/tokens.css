@@ -96,10 +96,14 @@
 }
 
 /* ---- the line score's narrow-device breakpoint -------------------------------------------------
-   359px, i.e. below the 375px the board is designed to. **Measured, not chosen**: on the real page at
-   320px, a fourteen-inning line score at 13px leaves under a pixel between a two-digit R and a
-   two-digit H — `11 16 2` reads as `1116 2`. At 11px the gap is 2.9px and they separate, which is what
-   makes a fourteen-inning cap possible on the smallest device still in use.
+   359px, i.e. below the 375px the board is designed to. **Measured, not chosen**: at 320px a
+   twelve-inning line score at 13px leaves 2.7px between a two-digit R and a two-digit H — where
+   `11 16 2` starts reading as `1116 2`. At 11px the gap is 4.9px and they separate comfortably.
+
+   ⚠️ **This is the exception to "the board is identical on all screens" and it is deliberate.** It is
+   type size, not content — every cell, every clue and every given is the same. Eleven innings would
+   need no exception at all (4.0px at 13px on 320px); twelve does. The cap and this rule were decided
+   together.
 
    ⚠️ Not a custom property, because a media query condition is evaluated before the cascade and
    cannot read one. It is documented here, where presentation constants live, and spelled once in

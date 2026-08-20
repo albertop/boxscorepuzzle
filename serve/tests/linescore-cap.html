@@ -62,9 +62,14 @@
 
   // A real long game rather than a filled array: runs spread thin, double-figure R and H. The block is
   // what binds, so a score of `4 7 1` would report a width the product does not have.
+  // ⚠⚠ **The home side is one half-inning short, so the not-played marker is drawn.** Every earlier
+  // version of this page gave both sides equal-length arrays, so no `x` was ever rendered and the
+  // character was never measured — while a proposal was on the table that it was the binding
+  // constraint. It is not: at 14 innings on 320px the glyph is 5.1px in a 14.8px column. But a page
+  // arguing about a character it does not draw is the footnote-renderer defect again.
   const scoreFor = (n) => ({
     offense_by_inning: Array.from({ length: n }, (_, i) => (i === 3 ? 2 : i === 9 ? 1 : i % 3 === 0 ? 1 : 0)),
-    defense_by_inning: Array.from({ length: n }, (_, i) => (i === 1 ? 3 : i === 7 ? 1 : 0)),
+    defense_by_inning: Array.from({ length: n - 1 }, (_, i) => (i === 1 ? 3 : i === 7 ? 1 : 0)),
     offense_runs: 11,
     offense_hits: 16,
     offense_errors: 2,
@@ -126,14 +131,13 @@
   // the exact defect that gave three renderers three different footnote lines. Open it twice instead.
   const viewport = document.documentElement.clientWidth;
   const CASES = [
-    [12, 375, false, "the length the operator solved on paper."],
-    [12, 375, true, "same board, R/H/E no longer claiming an inning's width each."],
-    [14, 375, false, "the proposed cap, as the board draws it today."],
-    [14, 375, true, "the proposed cap with the narrower block."],
-    [15, 375, false, "one past the cap — where the header row starts reading as a digit run."],
-    [12, 320, false, "smallest device in use."],
-    [14, 320, false, "the cap on the smallest device — the tightest case in the product."],
-    [14, 320, true, "the same, with the narrower block."],
+    [12, 375, false, "THE CAP. Note the x in the last column: the home side did not bat."],
+    [11, 375, false, "eleven — the largest that needs no type-size exception at 320px."],
+    [13, 375, false, "one past the cap."],
+    [15, 375, false, "where the header row starts reading as a digit run."],
+    [12, 320, false, "THE CAP on the smallest device, at 11px. The x has 11.7px of room."],
+    [11, 320, false, "eleven at 320px — this one also holds at 13px, which twelve does not."],
+    [13, 320, false, "one past the cap on the smallest device."],
     [15, 320, false, "past the cap on the smallest device."],
   ];
   const shown = CASES.filter(([, width]) => width === viewport);

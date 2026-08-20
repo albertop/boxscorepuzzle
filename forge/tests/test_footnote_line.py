@@ -98,9 +98,7 @@ def _loaded(case: dict[str, Any]) -> SimpleNamespace:
     Anything more would be fixture, not evidence.
     """
     notes = [
-        SimpleNamespace(
-            hit_by_pitch=row[0], sacrifice_flies=row[1], sacrifice_hits=row[2], catcher_interference=row[3]
-        )
+        SimpleNamespace(hit_by_pitch=row[0], sacrifice_flies=row[1], sacrifice_hits=row[2], catcher_interference=row[3])
         for row in case["footnotes"]
     ]
     return SimpleNamespace(

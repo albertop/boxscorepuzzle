@@ -1239,3 +1239,66 @@ suite("C11: no user-facing string is in code", () => {
     useCatalog(CATALOGS.en);
   });
 });
+
+suite("⚠️⚠️ The stylesheet's rules survive being parsed, not merely being written", () => {
+  // ⚠️⚠️ **A stylesheet fails by doing nothing.** The line score's narrow-device rule was silently dead
+  // twice in one afternoon: first an edit closed a comment block early, so the prose that followed
+  // parsed as CSS and the parser discarded everything up to the next recoverable token — including the
+  // rule. Then the note written to explain that closed the comment again, because it quoted the very
+  // character pair that ends a CSS comment. **Prose about CSS syntax, inside CSS, is executable.**
+  //
+  // Neither raised anything. The file contained the rule both times; `document.styleSheets` did not,
+  // and the page simply drew a twelve-inning board at full size on a 320px screen — the one case the
+  // rule exists for. Reading the source and believing it is what failed, so this asks the parser.
+  const REQUIRED = [
+    ["board.css", "(max-width: 359px)", "the line score's narrow-device size (§6, MAX_INNINGS)"],
+    ["board.css", "(prefers-color-scheme: dark)", "the dark theme"],
+  ];
+
+  test("every media rule the board depends on is present after parsing", async () => {
+    for (const [file, condition, why] of REQUIRED) {
+      const text = await (await fetch(`../ui/phone/${file}`, { cache: "reload" })).text();
+      const style = document.createElement("style");
+      style.textContent = text;
+      document.head.append(style);
+      const conditions = [...style.sheet.cssRules]
+        .filter((rule) => rule.type === CSSRule.MEDIA_RULE)
+        .map((rule) => rule.conditionText);
+      style.remove();
+
+      assert(
+        conditions.includes(condition),
+        `${file} lost ${condition} — ${why}. The parser kept ${conditions.length} media rules: ` +
+          `${conditions.join(", ") || "none"}. Look for a comment closed early.`,
+      );
+    }
+  });
+
+  test("no rule is lost anywhere in a stylesheet, whatever the cause", async () => {
+    // ⚠️ The check above names two rules and would not notice a third going missing. This one is
+    // blind to *which* rule: it counts what the parser kept against what the file declares, so a
+    // truncated stylesheet fails even when the survivor list looks reasonable.
+    for (const file of ["board.css", "tokens.css"]) {
+      const text = await (await fetch(`../ui/phone/${file}`, { cache: "reload" })).text();
+      const style = document.createElement("style");
+      style.textContent = text;
+      document.head.append(style);
+      const kept = style.sheet.cssRules.length;
+      style.remove();
+
+      // Every top-level block in the source, with comments removed so their braces do not count.
+      const stripped = text.replace(/\/\*[\s\S]*?\*\//g, "");
+      let depth = 0;
+      let declared = 0;
+      for (const char of stripped) {
+        if (char === "{") {
+          if (depth === 0) declared += 1;
+          depth += 1;
+        } else if (char === "}") depth -= 1;
+      }
+
+      assert(depth === 0, `${file} has unbalanced braces once comments are stripped (${depth})`);
+      equal(kept, declared, `${file}: the parser kept ${kept} top-level rules of ${declared} declared`);
+    }
+  });
+});
