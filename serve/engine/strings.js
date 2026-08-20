@@ -79,6 +79,30 @@ const en = {
   "keypad.fraction_denominator": "3",
 
   "package.unreadable": "This puzzle could not be read.",
+
+  // ---- finishing -------------------------------------------------------------------------------
+  "done.check": "Check",
+  // ⚠⚠ **The board never says which cells are wrong, or how many.** Marking turns probing into a
+  // better strategy than deducing; a count is a binary search over the board. Both were rejected in
+  // `serve-flow.md` and this is the sentence that has to survive somebody deciding to be helpful.
+  //
+  // So one sentence for every wrong board, whatever is wrong with it. It says the board does not
+  // balance -- which is a fact about the whole -- and offers nothing to bisect.
+  "done.not_yet": "It doesn't balance yet.",
+  // Shown when blanks remain. Distinct from the above because *incomplete* and *wrong* are different
+  // states and a player who has not finished is not being told they made a mistake.
+  "done.incomplete": "There are still empty cells.",
+
+  // ---- the reveal ------------------------------------------------------------------------------
+  "reveal.title": "Solved",
+  "reveal.time": "Your time",
+  "reveal.errors": "Mistakes",
+  // ⚠️ The clock is invisible during play (§26) and appears here for the first time. The label says
+  // whose time it is, because the comparison against other players is the paid feature and this is
+  // not it.
+  "reveal.at": "at",
+  "reveal.versus": "vs",
+  "reveal.close": "Back to the board",
 };
 
 let table = en;

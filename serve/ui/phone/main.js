@@ -11,6 +11,7 @@ import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { PackageError, readPackage } from "../../engine/package.js";
 import { browserStorage, createStore } from "../../engine/store.js";
+import { checkBoard, renderReveal } from "./finish.js";
 import { text } from "../../engine/strings.js";
 import {
   applyKey,
@@ -160,6 +161,45 @@ function boot({ puzzle }) {
     remember();
   });
   app.append(keypad);
+
+  // ⚠⚠ **The end of the game, and until now there was not one.** A player could fill every cell and
+  // nothing happened — no verdict, no ending, and the `reveal` block shipped in every package and was
+  // drawn nowhere. That is the product's payoff and it was the one thing never delivered.
+  const verdict = document.createElement("p");
+  verdict.className = "verdict";
+  // Announced rather than merely painted: a player using a screen reader gets the same answer, and it
+  // is the only answer the board is allowed to give.
+  verdict.setAttribute("role", "status");
+  verdict.setAttribute("aria-live", "polite");
+
+  const done = document.createElement("button");
+  done.type = "button";
+  done.className = "done";
+  done.textContent = text("done.check");
+  done.addEventListener("click", () => {
+    const result = checkBoard(game);
+    // ⚠️ **The clock keeps running on a wrong board, and there is no attempt limit.** §27: no fail
+    // state. What a mistake costs is time, which is what gets measured and shared — a limit would add
+    // a fail state through the back door and stopping the clock would make errors free.
+    if (result.state !== "solved") {
+      verdict.textContent = result.message;
+      verdict.dataset.state = result.state;
+      return;
+    }
+    verdict.textContent = "";
+    delete verdict.dataset.state;
+    // ⚠️ `finish()` before the reveal is drawn, so the time shown is the time at the moment the board
+    // was completed rather than however long the animation took.
+    const record = game.finish();
+    remember();
+    app.classList.add("solved");
+    app.append(renderReveal(puzzle, record));
+  });
+
+  const footer = document.createElement("div");
+  footer.className = "footer";
+  footer.append(verdict, done);
+  app.append(footer);
 
   const attention = followAttention({ clock, save: remember, doc: document, target: app });
   // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is

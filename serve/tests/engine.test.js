@@ -1375,3 +1375,160 @@ suite("⚠️⚠️ The half-inning marker is a given, so it has to be legible",
   // ⚠️ The contrast test above stays, because it is about the panel rather than about the marker. If
   // the scoreboard's colours ever move, every cell on it is checked — the `x` included, for free.
 });
+
+suite("⚠️⚠️ The end of the game, and what the board may never say", () => {
+  // ⚠️⚠️ **The board never says which cells are wrong, or how many.** Both were considered and both
+  // were rejected in `serve-flow.md`, for reasons about the game rather than about taste: marking the
+  // wrong cells makes probing beat deducing, and counting them is a binary search over the board.
+  //
+  // These are the tests that have to survive somebody deciding to be helpful. They assert what the
+  // message must NOT contain, which is the only form that catches a well-meant improvement.
+
+  const solvedGame = async (raw) => {
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const puzzle = readPackage(raw);
+    const game = createGame(puzzle);
+    return { puzzle, game };
+  };
+
+  test("an unfinished board is called unfinished, not wrong", async () => {
+    // ⚠️ Two states, not one. A player who has not finished has not made a mistake, and telling them
+    // they have is both false and discouraging at the only moment they might stop.
+    const { checkBoard } = await import("../ui/phone/finish.js");
+    const { game } = await solvedGame(packages[0].raw);
+
+    const result = checkBoard(game);
+
+    equal(result.state, "incomplete");
+    assert(result.message.length > 0, "an incomplete board got no message");
+  });
+
+  test("a full but wrong board gets one sentence and it names nothing", async () => {
+    const { checkBoard } = await import("../ui/phone/finish.js");
+    const { game } = await solvedGame(packages[0].raw);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    const blanks = game.blanks();
+    // Every cell right except one, which is the case a marking implementation would give away.
+    blanks.forEach((name, index) => game.enter(name, answers.get(name) + (index === 0 ? 1 : 0)));
+
+    const result = checkBoard(game);
+
+    equal(result.state, "wrong");
+    for (const name of blanks) {
+      assert(!result.message.includes(name), `the verdict names the cell ${name}`);
+      const column = name.split(".")[1];
+      assert(!result.message.includes(column), `the verdict names the column ${column}`);
+    }
+    assert(!/\d/.test(result.message), `the verdict contains a number: ${result.message}`);
+  });
+
+  test("the same sentence whatever is wrong, and however much", async () => {
+    // ⚠️ **One message for one wrong cell and for thirty.** A message that varied with the number of
+    // mistakes is a count wearing a different hat — the player reads two runs and subtracts.
+    const { checkBoard } = await import("../ui/phone/finish.js");
+    const one = await solvedGame(packages[0].raw);
+    const many = await solvedGame(packages[0].raw);
+    const answers = new Map(one.game.cells().map((cell) => [cell.name, cell.answer]));
+    const blanks = one.game.blanks();
+
+    blanks.forEach((name, index) => one.game.enter(name, answers.get(name) + (index === 0 ? 1 : 0)));
+    blanks.forEach((name) => many.game.enter(name, answers.get(name) + 1));
+
+    equal(checkBoard(one.game).message, checkBoard(many.game).message);
+  });
+
+  test("a solved board is solved and carries no message to display", async () => {
+    const { checkBoard } = await import("../ui/phone/finish.js");
+    const { game } = await solvedGame(packages[0].raw);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+
+    const result = checkBoard(game);
+
+    equal(result.state, "solved");
+    equal(result.message, "");
+  });
+
+  test("⚠️ the clock does not stop for a wrong board, and there is no attempt limit", async () => {
+    // §27: no fail state. What a mistake costs is time, which is what gets measured and shared. A
+    // limit would add a fail state through the back door and stopping the clock would make errors free.
+    const { checkBoard } = await import("../ui/phone/finish.js");
+    const { createClock } = await import("../engine/clock.js");
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+
+    let now = 0;
+    // ⚠️ `run()`, because a clock is created held and the shell starts it through `followAttention`.
+    // The first version of this test omitted it and failed reporting *the clock stopped: 0ms* — which
+    // was true and was about the test rather than the code. Checked against the running application
+    // before changing anything: it starts the clock on load and it advances.
+    const clock = createClock({ now: () => now });
+    clock.run();
+    const game = createGame(readPackage(packages[0].raw), clock);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    game.blanks().forEach((name, index) => game.enter(name, answers.get(name) + (index === 0 ? 1 : 0)));
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      now += 1000;
+      equal(checkBoard(game).state, "wrong", "an attempt was refused");
+    }
+
+    assert(clock.elapsed() >= 5000, `the clock stopped: ${clock.elapsed()}ms`);
+  });
+});
+
+suite("⚠️ The reveal, which is the payoff and was drawn nowhere", () => {
+  test("it draws the names, the teams, the date and the time", async () => {
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const { renderReveal } = await import("../ui/phone/finish.js");
+
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+    const panel = renderReveal(puzzle, game.finish());
+
+    // ⚠️ The reveal block passes through the reader in snake_case while every other field is mapped.
+    // Reading it as camelCase renders an empty heading with no error, on the one screen nobody had
+    // seen — so this asserts the content rather than the presence of an element.
+    const heading = panel.querySelector(".reveal-game").textContent;
+    assert(heading.includes(puzzle.reveal.offense_team), `no offense team in ${heading}`);
+    assert(heading.includes(puzzle.reveal.defense_team), `no defense team in ${heading}`);
+    assert(heading.includes(puzzle.reveal.played_on), `no date in ${heading}`);
+
+    equal(panel.querySelectorAll(".reveal-batters li").length, puzzle.puzzle.batting.length);
+    equal(panel.querySelectorAll(".reveal-pitchers li").length, puzzle.puzzle.pitching.length);
+    assert(
+      panel.querySelector(".reveal-batters li").textContent.includes(puzzle.reveal.batter_names[0]),
+      "the first batter's name is missing",
+    );
+    assert(panel.querySelector(".reveal-time-figure").textContent.length > 0, "no time shown");
+  });
+
+  test("⚠️ the position label stays beside the name", async () => {
+    // The player spent the game thinking of that row as `CF`. A list of names with no labels cannot be
+    // mapped onto the board they just filled.
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const { renderReveal } = await import("../ui/phone/finish.js");
+
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const row = renderReveal(puzzle, game.record()).querySelector(".reveal-batters li");
+
+    equal(row.querySelector(".reveal-label").textContent, puzzle.labels[0]);
+    equal(row.querySelector(".reveal-name").textContent, puzzle.reveal.batter_names[0]);
+  });
+
+  test("a duration renders as minutes and seconds, and past an hour gains one", async () => {
+    const { formatDuration } = await import("../ui/phone/finish.js");
+
+    equal(formatDuration(0), "0:00");
+    equal(formatDuration(9_000), "0:09");
+    equal(formatDuration(62_000), "1:02");
+    equal(formatDuration(3_600_000), "1:00:00");
+    equal(formatDuration(3_661_000), "1:01:01");
+  });
+});
