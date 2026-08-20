@@ -10,10 +10,15 @@ that one side invented and the other inherited, and inheriting a mistake is prec
 guarding against. Arrays fix the column order and nothing else; each side names cells however it
 likes internally.
 
-**Two halves, and only one of them travels.** `puzzle` is what a player receives — erased cells are
-null. `source` is the boxscore it was made from, which the forge keeps so that §22's fourth layer can
-solve the published half from scratch and compare. **`source` must be stripped before serving**;
-`published()` does that and is the only thing that should ever reach the VPS.
+**Two halves, and both of them travel.** `puzzle` is what a player receives — erased cells are null.
+`solution` is the completed board, which §22's fourth layer solves the published half against, and which
+the client needs to validate an entry with the backend down (§23).
+
+⚠️ **This paragraph said the opposite, in the same file as the code that reversed it.** It described a
+field called `source` being *stripped before serving*, while `published()` twenty pages down carries a
+warning explaining why it no longer removes the solution. Two places, one file, contradicting each other
+— and the field had also been renamed. What `published()` actually removes is the metadata that would
+give the game away.
 
 Innings pitched are stored as **outs**, not as the `x.y` the board displays. Every value in the
 format is an integer, and one of §3's cross-team identities is stated in outs: the outs made by the
@@ -28,6 +33,19 @@ from typing import Any, Final, Self
 
 SCHEMA_VERSION: Final = 4
 """What this code writes.
+
+⚠️ **Version 4 was tightened once, in place, and here is the test that allowed it.** As first cut it
+left `solution` optional and `left_on_base` nullable on this side while the browser required both, and
+it parsed the answer board with the puzzle's nullable rule — so a null answer under a visible blank was
+accepted by both readers, and the cell then read blank *and* counted as correct while entering any
+number was wrong.
+
+Tightening a version in place is what this docstring argues against one paragraph down, so the reason
+has to be re-derived rather than carried across. **The test used: does the change alter the status of
+any artifact that exists?** Every schema-4 file in the repository — both generations, twelve packages —
+is accepted before and after. No document changes meaning, so `schema: 4` does not come to mean two
+things, which is the whole hazard the version rule exists to prevent. Had one file flipped, this would
+have been schema 5.
 
 ⚠️ **Version 4 exists because version 3 could describe a board nobody can finish.** It allowed a
 per-batter footnote cell to be null, which was right while those cells were erasable. They are given
@@ -163,9 +181,21 @@ def _rows(raw: object, width: int, where: str, *, complete: bool = False) -> tup
     if complete:
         for index, row in enumerate(rows):
             if any(cell is None for cell in row):
-                message = f"{where}[{index}] has a blank; the footnote line is given in full from schema 4"
+                # Names the position rather than one of the rules that reach here: `complete` covers
+                # the footnote line and the whole answer board, and naming the wrong rule sends the
+                # reader to the wrong contract.
+                message = f"{where}[{index}] has a blank and must be given"
                 raise PackageError(message)
     return rows
+
+
+def _required(raw: dict[str, Any], field: str) -> object:
+    """The field, or a refusal naming it. Absent and null are one answer here: both mean *not given*."""
+    value = raw.get(field)
+    if value is None:
+        message = f"the package has no {field}"
+        raise PackageError(message)
+    return value
 
 
 def _whole_number(raw: object, where: str) -> int:
@@ -264,7 +294,13 @@ class Board:
     batting_totals: tuple[int | None, ...]
     footnotes: tuple[tuple[int | None, ...], ...]
     footnote_totals: tuple[int | None, ...]
-    left_on_base: int | None
+    left_on_base: int
+    """Never erased: without it the board cannot express the global identity at all (§6).
+
+    ⚠️ **This was `int | None` while the browser reader required a whole number**, so the forge could
+    build and sign a board the client refused at boot — the producer/consumer split schema 4 was cut to
+    remove, inside schema 4.
+    """
     pitching: tuple[tuple[int | None, ...], ...]
     pitching_totals: tuple[int | None, ...]
     line_score: LineScore
@@ -282,27 +318,41 @@ class Board:
         }
 
     @classmethod
-    def from_json(cls, raw: object) -> Self:
+    def from_json(cls, raw: object, *, complete: bool = False) -> Self:
+        """A board. **`complete` is the answer board, where no cell may be missing.**
+
+        ⚠️ **Two profiles, because one nullable rule for both was wrong in a way the player meets.**
+        A puzzle carries blanks in the batting and pitching grids and their totals; an answer board
+        carries none anywhere. Parsed with one rule, a null answer under a visible blank was accepted
+        by both readers — and then `isCorrect` returned true for a cell still drawn empty, while
+        entering any number was necessarily wrong. **Reproduced before this was written**: the cell
+        read blank, counted as correct, and rejected `0`.
+
+        Both readers now refuse it, which is the point: a rule enforced on one side is a rule the two
+        sides disagree about.
+        """
         if not isinstance(raw, dict):
             message = f"a board is {type(raw).__name__}, expected an object"
             raise PackageError(message)
-        batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting")
+        batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting", complete=complete)
+        # Complete in both profiles: the footnote line is given in full from schema 4.
         footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes", complete=True)
         if len(footnotes) != len(batting):
             message = f"{len(footnotes)} footnote rows against {len(batting)} batting rows"
             raise PackageError(message)
-        left_on_base = raw.get("left_on_base")
         return cls(
             batting=batting,
-            batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals"),
+            batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals", complete=complete),
             footnotes=footnotes,
             # The footnote TOTALS row is never erased — the row identity does not close without it —
             # so a null in it is
             # malformed rather than difficult.
             footnote_totals=_cells(raw.get("footnote_totals"), len(FOOTNOTE_COLUMNS), "footnote_totals", complete=True),
-            left_on_base=None if left_on_base is None else _whole_number(left_on_base, "left_on_base"),
-            pitching=_rows(raw.get("pitching"), len(PITCHING_COLUMNS), "pitching"),
-            pitching_totals=_cells(raw.get("pitching_totals"), len(PITCHING_COLUMNS), "pitching_totals"),
+            left_on_base=_whole_number(raw.get("left_on_base"), "left_on_base"),
+            pitching=_rows(raw.get("pitching"), len(PITCHING_COLUMNS), "pitching", complete=complete),
+            pitching_totals=_cells(
+                raw.get("pitching_totals"), len(PITCHING_COLUMNS), "pitching_totals", complete=complete
+            ),
             line_score=LineScore.from_json(raw.get("line_score", {})),
         )
 
@@ -387,8 +437,15 @@ class Package:
 
     puzzle_id: str
     puzzle: Board
-    solution: Board | None = None
-    """The completed board. Ships with the puzzle — see `Reveal` for why, and §9 for the trade."""
+    solution: Board
+    """The completed board. Ships with the puzzle — see `Reveal` for why, and §9 for the trade.
+
+    ⚠️ **Required, and it defaulted to `None`.** The client cannot validate an entry without it, which
+    §23 makes non-negotiable: with the backend down the board still has to be playable. So a package
+    without one is not a package with a field missing — it is a puzzle nobody can play. The browser
+    reader always said so; this side did not, and the gap let the forge build, sign and publish a
+    document the browser refused at boot.
+    """
 
     labels: tuple[str, ...] = ()
     """One per batting row: the **bare** position the man entered at — `CF`, `SS`, `P`.
@@ -517,8 +574,7 @@ class Package:
         # Unconditional: `__post_init__` refuses a package without it, so a document missing the field
         # is one this code did not write.
         document["offense_is_home"] = self.offense_is_home
-        if self.solution is not None:
-            document["solution"] = self.solution.as_json()
+        document["solution"] = self.solution.as_json()
         if self.reveal is not None:
             document["reveal"] = self.reveal.as_json()
         if self.signature is not None:
@@ -547,7 +603,9 @@ class Package:
             return cls(
                 puzzle_id=_matching(raw.get("puzzle_id"), PUZZLE_ID, "puzzle_id"),
                 puzzle=puzzle,
-                solution=Board.from_json(raw["solution"]) if raw.get("solution") is not None else None,
+                # ⚠️ `complete=True`: an answer board with a hole is worse than a missing one, because
+                # both readers accepted it and the cell then read blank *and* counted as correct.
+                solution=Board.from_json(_required(raw, "solution"), complete=True),
                 # Required, not defaulted: a document without them is not a v3 document.
                 labels=tuple(_strings(raw.get("labels"), "labels")),
                 pitcher_labels=tuple(_strings(raw.get("pitcher_labels"), "pitcher_labels")),

@@ -234,8 +234,8 @@ export function renderFootnotes(puzzle, game) {
 
     // ⚠️ **`<count> #<slot>`, and the count prints even when it is one.** The old form printed the
     // term total and then bare slot references — `SH: 2` was a *slot*, not a count, and a row carrying
-    // two of one term could not be expressed at all. Measured over the admissible pool: 10,207 of
-    // 373,917 directions carry such a row (2.73%, 5.25% in the 1910s). Those boards cannot be solved:
+    // two of one term could not be expressed at all. Measured over the gated pool: 4,040 of 100,742
+    // directions carry such a row (4.01%, 8.31% in the 1920s). Those boards cannot be solved:
     // `PA = AB + BB + HBP + SF + SH + CI` has no other route to the value, and every total still
     // balances, which is why nothing in the four layers saw it.
     //

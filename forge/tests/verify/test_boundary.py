@@ -295,6 +295,7 @@ class TestAPackageCannotContradictItself:
     def test_a_package_without_references_is_refused(self, board: Board) -> None:
         with pytest.raises(PackageError, match="needs one slot reference"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -305,6 +306,7 @@ class TestAPackageCannotContradictItself:
     def test_a_version_this_code_cannot_read_is_refused(self, board: Board) -> None:
         with pytest.raises(PackageError, match="cannot be schema"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -318,6 +320,7 @@ class TestAPackageCannotContradictItself:
         # The property the field exists for. One per row, or a footnote names a row that is not there.
         with pytest.raises(PackageError, match="slot references for"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -331,6 +334,7 @@ class TestAPackageCannotContradictItself:
         # Here it is simply the wrong length, which is what it is.
         with pytest.raises(PackageError, match="slot references for"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -342,6 +346,7 @@ class TestAPackageCannotContradictItself:
     def test_a_matching_package_is_accepted(self, board: Board) -> None:
         # A guard that refuses everything would satisfy all four tests above.
         package = Package(
+            solution=board,
             labels=("C",) * len(board.batting),
             pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",
@@ -367,6 +372,7 @@ class TestAPackageCannotContradictItself:
         if schema is None:
             assert (
                 Package(
+                    solution=board,
                     labels=("C",) * len(board.batting),
                     pitcher_labels=("C",) * len(board.pitching),
                     puzzle_id="000000000000000f",
@@ -380,6 +386,7 @@ class TestAPackageCannotContradictItself:
 
         with pytest.raises(PackageError, match="a package cannot be schema"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -392,6 +399,7 @@ class TestAPackageCannotContradictItself:
     def test_the_one_schema_this_code_writes_round_trips(self, board: Board) -> None:
         # A guard that refuses every schema would satisfy the test above.
         document = Package(
+            solution=board,
             labels=("C",) * len(board.batting),
             pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",
@@ -418,6 +426,7 @@ class TestAPackageCannotContradictItself:
 
         with pytest.raises(PackageError, match="slot_references is str"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -439,6 +448,7 @@ class TestAPackageCannotContradictItself:
 
         with pytest.raises(PackageError, match="slot_references is list"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -452,6 +462,7 @@ class TestAPackageCannotContradictItself:
         # constructor while `from_json` converts is one contract, and refusing them everywhere would
         # be a package this code can write and not read.
         document = Package(
+            solution=board,
             labels=("C",) * len(board.batting),
             pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",
@@ -485,6 +496,7 @@ class TestConstructionAndParsingApplyTheSameRule:
 
         with pytest.raises(PackageError):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -528,6 +540,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
 
         with pytest.raises(PackageError, match="expected a string"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -543,6 +556,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
 
         with pytest.raises(PackageError, match="slot reference 2 is 3"):
             Package(
+                solution=board,
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
@@ -554,6 +568,7 @@ class TestBothConstructionPathsRefuseTheSameThings:
     def test_json_refuses_it_too(self, board: Board) -> None:
         # The other path, so the two cannot drift into different contracts again.
         document = Package(
+            solution=board,
             labels=("C",) * len(board.batting),
             pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",

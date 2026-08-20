@@ -95,8 +95,11 @@ def check_mathematics(package: Package, evidence: Evidence, secret: Ed25519Publi
 def check_board_is_possible(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """Could this have been a baseball game — the class of check `verify()` cannot make."""
     del evidence, secret
-    board = package.solution or package.puzzle
-    return [f"implausible board: {fault.what}" for fault in faults(board)]
+    # ⚠️ **`package.solution or package.puzzle` fell back to a board full of blanks.** Plausibility
+    # asks whether this could have been a game, and half the cells being unknown is not an answer to
+    # that — the fallback made the check weaker exactly when the solution was missing, which is when it
+    # was most needed. The solution is required now, so there is nothing to fall back to.
+    return [f"implausible board: {fault.what}" for fault in faults(package.solution)]
 
 
 def check_reveal_is_complete(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
@@ -151,7 +154,7 @@ def check_independent_correspondence(
     never published on the strength of the checks that did run.
     """
     del secret
-    board = package.solution or package.puzzle
+    board = package.solution
     score = board.line_score
     refusals: list[str] = []
     for what, on_the_board, official in (
@@ -173,7 +176,9 @@ def check_independent_correspondence(
     at_bats = board.batting_totals[BATTING_COLUMNS.index("at_bats")]
     if at_bats is not None and at_bats != evidence.official_at_bats:
         refusals.append(f"at-bats disagree with the game log: {at_bats} against {evidence.official_at_bats}")
-    if board.left_on_base is not None and board.left_on_base != evidence.official_left_on_base:
+    # The `is not None` guard here meant *compare only if we were given one*. LOB is always given now,
+    # so the comparison against the game log always runs — which is what it was for.
+    if board.left_on_base != evidence.official_left_on_base:
         refusals.append(
             f"runners left on base disagree with the game log: "
             f"{board.left_on_base} against {evidence.official_left_on_base}"

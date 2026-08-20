@@ -2260,6 +2260,81 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## v21 — verified, none rejected. **Both closed.**
+
+### v21-P1-01 — schema 4 did not require the solution it needs. **Real, and reproduced.**
+
+Three shapes, all confirmed in the browser before anything was changed:
+
+| document | Python | browser |
+|---|---|---|
+| no `solution` | builds, signs, serialises, re-parses | **refuses at boot** |
+| `left_on_base` null | accepts | refuses |
+| a null answer under a visible blank | accepts | **accepts** |
+
+The third is the one the player meets. `batting[0].at_bats` came back **blank and counted as correct**,
+and entering `0` was **not** correct — a cell simultaneously unanswerable and done. Fill the rest and the
+board reports solved with a hole in it.
+
+⚠️ **The first two are the producer/consumer split schema 4 was cut to remove, inside schema 4.** That
+is worth more than the fix: cutting a version does not by itself make the two sides agree, and the
+document arguing for the cut carried an optional field on one side and a required one on the other.
+
+**Fixed as two board profiles**, in `__post_init__`, in `from_json`, and in the browser reader: a puzzle
+may be blank in the batting and pitching grids and their totals; an answer board may not be blank
+anywhere; the footnote line and LOB are given in both. Four shared conformance vectors, all five
+mutations verified refused in the browser with the real package still accepted.
+
+⚠️ **Tightened in place rather than cut as version 5, and the reason was re-derived rather than
+carried.** The test used: **does the change alter the status of any artifact that exists?** Twelve
+schema-4 packages across two generations, accepted before and after. Nothing changes meaning, so
+`schema: 4` does not come to mean two things. Had one file flipped it would have been version 5.
+
+**What the type change then surfaced.** mypy found **seven branches in the verifier** that existed for
+the missing-solution case and could no longer be reached. Each was read before deletion, because a dead
+branch can carry a live rule:
+
+- `certify.py` had `package.solution or package.puzzle` in two places — **a fallback onto a board full
+  of blanks.** Plausibility asks whether this could have been a game, and half the cells being unknown
+  is not an answer; the fallback made the check weakest exactly when it was most needed.
+- The LOB comparison against the game log was guarded by `is not None`, so it **only ran when a value
+  happened to be there**. It always runs now.
+- `_structure_faults`' erased-LOB fault moved to the parse boundary. Written down, because deleting a
+  fault and enforcing it earlier look identical in a diff.
+- `to_board` now **refuses** to erase LOB instead of obliging. §6 never erases it and `erasable()` never
+  offers it, so the request could only come from a test — and the adapter built a board both readers
+  reject at their boundary, three layers from the cause.
+
+And the module docstring said `published()` strips the solution while `published()`'s own docstring
+explained why it no longer does — two places in one file, contradicting each other, with the field
+renamed as well.
+
+### v21-P2-01 — my instrument reported a gated pool without applying the gate. **Real, and the numbers were wrong.**
+
+⚠⚠ **The docstring said it plainly and the query did not do it.** It read "counted against the pool the
+board actually draws from — the zero-density gate, the roster caps and the provenance rule", printed
+`gate applied downstream (30%)`, and imported `ZERO_DENSITY_GATE` **only to put in a label.** Its `shape`
+CTE computed roster sizes and none of the twelve zero counts the gate divides by.
+
+Second defect in the same report: `total_many` summed the per-term counts, so a row carrying two
+different repeated terms was counted twice.
+
+**Re-measured with the loader's own cohort. The corrected figures are worse, not better:**
+
+| | published | measured |
+|---|---|---|
+| directions affected | 2.73% | **4.01%** |
+| worst decade | 5.25% (1910s) | **8.31% (1920s)**, 8.02% (1910s) |
+| best decade | 1.52% | 2.02% |
+
+The gate removes low-scoring games, and less offence means fewer sacrifices — so the defect is *more*
+common in the pool that ships than in the database at large. **The decision is unchanged and better
+supported.** Sixteen copied figures replaced across six files, with a sweep asserting none survives.
+
+**Fixed at the cause, not with another assertion.** `SHAPE_CTE` and `zero_density_clause()` are hoisted
+out of the loader, and the instrument takes both. There is one cohort definition now, so a measurement
+and the generator cannot describe different pools again.
+
 ## ⚠⚠ The reveal read the wrong table, and the wrong column of the right one
 
 **Found by the operator asking whether `dbo.regPeople` was used anywhere.** It was, in two places, and
@@ -2314,7 +2389,7 @@ table was replaced. It forbids `dbo.regPeople` now — the join, not the word. S
 as every over-broad check recorded here: a rule that cannot distinguish its subject from a mention of
 its subject.
 
-## ⚠⚠ The footnote line could not say *two*, and 2.73% of the pool was unsolvable
+## ⚠⚠ The footnote line could not say *two*, and 4.01% of the pool was unsolvable
 
 **Found by a person reading a printed page**, which is the only thing that has ever found this class of
 defect here. The line printed `SH: 2` — a *slot reference* that reads as a count. `9a` and `1, 9b`
@@ -2328,15 +2403,15 @@ sacrifices in slot 2*.
 
 | term | rows with more than one | of the rows carrying it | max |
 |---|---|---|---|
-| sacrifice_hits | 7,231 | 4.69% | 4 |
-| hit_by_pitch | 1,748 | 1.88% | 3 |
-| sacrifice_flies | 1,431 | 1.56% | 3 |
-| catcher_interference | 11 | 0.61% | 2 |
+| sacrifice_hits | 2,833 | 5.61% | 4 |
+| hit_by_pitch | 611 | 2.03% | 3 |
+| sacrifice_flies | 707 | 2.00% | 3 |
+| catcher_interference | 5 | 0.87% | 2 |
 
 ⚠️ **The denominator that decides is directions, not rows.** One unreadable row breaks the whole board,
 so a per-row rate understates the damage by the number of rows on a board — 0.27% of rows reads like a
-rounding error. **10,207 of 373,917 admissible directions carry at least one: 2.73%.** It clusters where
-the pool is thinnest: **5.25% in the 1910s** against 1.52% in the 2020s, because the sacrifice was a
+rounding error. **4,040 of 100,742 admissible directions carry at least one: 4.01%.** It clusters where
+the pool is thinnest: **8.31% in the 1920s and 8.02% in the 1910s** against 2.02% in the 2020s, because the sacrifice was a
 dead-ball-era habit.
 
 Those boards cannot be solved. `PA = AB + BB + HBP + SF + SH + CI` has no other route to the value, and

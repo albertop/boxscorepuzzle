@@ -11,7 +11,7 @@ the package conformance vectors. What it forbids is the two disagreeing.
 
 ⚠️ **The format change is a correctness fix, not a tidy-up.** `SH: 2` was a slot reference that reads
 as a count, and a row carrying two of one term could not be expressed at all. Over the admissible pool,
-**10,207 of 373,917 directions carry at least one such row — 2.73%**, rising to 5.25% in the 1910s.
+**4,040 of 100,742 directions carry at least one such row — 4.01%**, rising to 8.31% in the 1920s.
 Those boards are unsolvable, and every total balances on them, which is why no validation layer saw it.
 """
 

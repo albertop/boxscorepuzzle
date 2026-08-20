@@ -27,6 +27,30 @@ became read-only, and the fix was never carried up — a rule applied outward an
 apart in one file. A shared conformance vector now covers the per-batter cell; sixteen vectors covered
 the total and none covered this.
 
+⚠️ **Version 4 was tightened once, in place, and the test that allowed it is recorded here.**
+
+As first cut it left `solution` optional and `left_on_base` nullable on the Python side while the
+browser required both — so the forge could build, sign and publish a document the browser refused at
+boot. And it parsed the answer board with the puzzle's nullable rule, so a **null answer under a visible
+blank** was accepted by both readers: the cell read blank, `isCorrect` returned true for it, and
+entering any number was necessarily wrong. Reproduced in the browser before the fix was written.
+
+Tightening a version in place is what this document argues against. The reason therefore had to be
+re-derived rather than carried across, and the test used was: **does the change alter the status of any
+artifact that exists?** Every schema-4 file in the repository — both generations, twelve packages — is
+accepted before and after. Nothing changes meaning, so `schema: 4` does not come to mean two things,
+which is the hazard the version rule exists to prevent. **Had one file flipped, this would have been
+version 5.**
+
+There are two board profiles now:
+
+| | may be null |
+|---|---|
+| **puzzle** | the batting and pitching grids, and their totals rows |
+| **answer** | nothing, anywhere |
+
+The footnote line and `left_on_base` are given in both.
+
 ⚠️ **Cutting a version is still cheap and that is still the point.** Nothing is published, the six
 reference packages are regenerated on demand, and there is nothing to migrate. A version scheme first
 exercised under pressure is one that gets skipped.
@@ -69,7 +93,7 @@ really does, so the two cannot drift.
 | `schema` | integer | no | kept | Always `4` here. A reader that sees anything else must refuse the file — including `3`, which may carry a footnote blank no interface can draw. |
 | `puzzle_id` | string | no | kept | Opaque, 16 hex characters. Derived from the game and the batting team, **never** the Retrosheet id, and it encodes neither team nor date (§7, §21). |
 | `puzzle` | board | no | kept | What the player is handed. `null` in a grid cell is a blank to fill. |
-| `solution` | board | yes | **kept** | The completed board. Ships deliberately — see below. |
+| `solution` | board | no | **kept** | The completed board. Ships deliberately — see below. |
 | `labels` | list of strings | no | kept | One per batting row: the **bare** fielding position the man entered at — `CF`, `SS`, `P`. **Never suffixed.** Two rows may read `CF`; `slot_references` is what identifies a row, and a suffix would number by position while the indentation groups by slot, which are different partitions (§7). |
 | `pitcher_labels` | list of strings | no | kept | `SP`, then `RP-1` onwards in order of appearance from the substitution record. Never a bare `P`, which the batting section already uses. |
 | `slot_references` | list of strings | **no** | kept | One per batting row, in row order: `9` where a lineup slot holds one row, `9a`/`9b` where it is shared. **The string the board draws and the footnote line prints** — the client never derives it. Pitching rows carry none: those are the opposing team's pitchers and have no place in this batting order. |
@@ -86,7 +110,7 @@ really does, so the two cannot drift.
 | `batting_totals` | row, 6 wide | yes | The totals line, erasable like any row. |
 | `footnotes` | list of rows, 4 wide | no | `HBP, SF, SH, CI`, one row per batter. ⚠️ **Never erased, and this is what version 4 changes.** The cells were open in version 3 and the pool run closed them: coverage is identical either way because 96% of the pool's terms are zero. A `null` here is a blank the player is asked for and given no way to enter, so the reader refuses it (§5, §6). |
 | `footnote_totals` | row, 4 wide | **no** | Never erased; a null here is malformed rather than difficult. |
-| `left_on_base` | integer | yes | The team footnote. Without it the global identity cannot be expressed at all. |
+| `left_on_base` | integer | no | The team footnote. Without it the global identity cannot be expressed at all. |
 | `pitching` | list of rows, 6 wide | yes | `IP, H, R, ER, BB, SO`, **innings held as outs**. |
 | `pitching_totals` | row, 6 wide | yes | |
 | `line_score` | object | no | The board's anchor: shown complete, never erased (§6). Every field required. |

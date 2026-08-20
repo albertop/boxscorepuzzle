@@ -142,9 +142,10 @@ def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     never erased, so a puzzle that erased one is malformed rather than hard, and a puzzle whose line
     score disagrees with its source is not a puzzle about that game at all.
     """
-    if package.solution is None:
-        return Rejection(Layer.IDENTITIES, Fault.MALFORMED, "no solution to verify the puzzle against")
-
+    # ⚠️ The "no solution" rejection that stood here is gone with the optional field. **The rule did
+    # not move to nowhere**: `Package` requires a solution and `from_json` refuses a document without
+    # one, so this layer can no longer be reached by that route. Deleted rather than left as a branch
+    # nothing can enter — a check that cannot fire is indistinguishable from one that is broken.
     faults = _structure_faults(package.puzzle, package.solution)
     if faults:
         return Rejection(Layer.IDENTITIES, Fault.MALFORMED, "; ".join(faults))
@@ -230,8 +231,7 @@ def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     one that catches a puzzle which is perfectly consistent and about a different game — a given cell
     quietly altered after generation, for instance.
     """
-    if package.solution is None:  # pragma: no cover - layer 1 already rejected this
-        return Rejection(Layer.END_TO_END, Fault.MALFORMED, "no source boxscore to compare against")
+    # Same as layer 2: a package without a solution cannot be constructed or parsed any more.
     board = package.puzzle
     try:
         found = solutions(relations(board), all_cells(board), values_of(board), limit=1)
@@ -276,8 +276,9 @@ def _structure_faults(puzzle: Board, source: Board) -> list[str]:
     # and no way to separate them, which is a broken puzzle rather than a hard one.
     if any(value is None for value in puzzle.footnote_totals):
         faults.append("a footnote total is erased, and §6 gives the footnote line complete")
-    if puzzle.left_on_base is None:
-        faults.append("left on base is erased, and without it the global identity cannot be expressed")
+    # ⚠️ **The erased-LOB fault moved to the parse boundary, it did not disappear.** `left_on_base`
+    # is `int` now and both readers refuse a null, so a board reaching this function has one. Worth
+    # naming because deleting a fault and enforcing it earlier look identical in a diff.
     return faults
 
 

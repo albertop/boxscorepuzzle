@@ -62,7 +62,10 @@ function rows(raw, width, where, { complete = false } = {}) {
       // cells above it have exactly the same property now that the line is read-only, and the fix was
       // applied to the row underneath and not to the rows over it — a rule applied outward and not
       // inward, thirty lines apart. Measured on the retained generation: 14 of 33 blanks unreachable.
-      if (complete && value === null) fail(`${where}[${index}][${column}] is null; the footnote line is given`);
+      // The message names the position, not one of the rules that reach here: `complete` now
+      // covers the footnote line and the whole answer board, and a message naming the wrong one
+      // sends the reader to the wrong contract.
+      if (complete && value === null) fail(`${where}[${index}][${column}] is null and must be given`);
       return cell(value, `${where}[${index}][${column}]`);
     });
   });
@@ -78,7 +81,7 @@ function totals(raw, width, where, { complete = false } = {}) {
     // term whose total is unknown — so the cell existed, had to be filled, and had nowhere to be filled
     // from. The unsolvable-board defect again, reached from the schema side. §6 says that row is never
     // erased; the client now says so too.
-    if (complete && value === null) fail(`${where}[${column}] is null; this row is never erased`);
+    if (complete && value === null) fail(`${where}[${column}] is null and must be given`);
     return cell(value, `${where}[${column}]`);
   });
 }
@@ -108,19 +111,28 @@ function lineScore(raw) {
   return score;
 }
 
-function board(raw, where) {
+/**
+ * A board. **`complete` is the answer board, where no cell anywhere may be missing.**
+ *
+ * ⚠️ **Two profiles, because one nullable rule for both was wrong in a way the player meets.** A puzzle
+ * carries blanks in the batting and pitching grids and their totals; an answer board carries none. Read
+ * with one rule, a null answer under a visible blank was accepted by both readers — and `isCorrect()`
+ * then returned true for a cell still drawn empty, while entering any number was necessarily wrong.
+ * Reproduced before this was written: the cell read blank, counted as correct, and rejected `0`.
+ */
+function board(raw, where, { complete = false } = {}) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) fail(`${where} is not an object`);
-  const batting = rows(raw.batting, BATTING_COLUMNS.length, `${where}.batting`);
-  const pitching = rows(raw.pitching, PITCHING_COLUMNS.length, `${where}.pitching`);
+  const batting = rows(raw.batting, BATTING_COLUMNS.length, `${where}.batting`, { complete });
+  const pitching = rows(raw.pitching, PITCHING_COLUMNS.length, `${where}.pitching`, { complete });
   const footnotes = rows(raw.footnotes, FOOTNOTE_COLUMNS.length, `${where}.footnotes`, { complete: true });
   if (footnotes.length !== batting.length) {
     fail(`${where}.footnotes has ${footnotes.length} rows and batting has ${batting.length}`);
   }
   return {
     batting,
-    battingTotals: totals(raw.batting_totals, BATTING_COLUMNS.length, `${where}.batting_totals`),
+    battingTotals: totals(raw.batting_totals, BATTING_COLUMNS.length, `${where}.batting_totals`, { complete }),
     pitching,
-    pitchingTotals: totals(raw.pitching_totals, PITCHING_COLUMNS.length, `${where}.pitching_totals`),
+    pitchingTotals: totals(raw.pitching_totals, PITCHING_COLUMNS.length, `${where}.pitching_totals`, { complete }),
     footnotes,
     footnoteTotals: totals(raw.footnote_totals, FOOTNOTE_COLUMNS.length, `${where}.footnote_totals`, {
       complete: true,
@@ -173,7 +185,9 @@ export function readPackage(raw) {
     fail(`puzzle_id is ${JSON.stringify(raw.puzzle_id)}, expected sixteen hex characters`);
   }
   const puzzle = board(raw.puzzle, "puzzle");
-  const solution = board(raw.solution, "solution");
+  // ⚠️ `complete: true`. An answer board with a hole is worse than a missing one — a missing one is
+  // refused on the line above, while a holed one was accepted by both readers.
+  const solution = board(raw.solution, "solution", { complete: true });
   if (solution.batting.length !== puzzle.batting.length || solution.pitching.length !== puzzle.pitching.length) {
     fail("the solution does not have the same shape as the puzzle");
   }

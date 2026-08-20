@@ -20,7 +20,7 @@ from boxscore_package.signing import verify as verify_signature
 from boxscore_verify import reason
 from boxscore_verify.reason import UndecidedError, solutions
 from boxscore_verify.rules import all_cells, relations, values_of
-from boxscore_verify.verify import UNSIGNED, Fault, Layer, Verdict, tally, verify
+from boxscore_verify.verify import UNSIGNED, Fault, Verdict, tally, verify
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
 _KEY = Ed25519PrivateKey.generate()
@@ -121,6 +121,7 @@ class TestTheFormatSurvivesDisk:
         # the whole point of seam C2's versioning.
         path = tmp_path / "future.json"
         document = Package(
+            solution=board,
             labels=("C",) * len(board.batting),
             pitcher_labels=("C",) * len(board.pitching),
             puzzle_id="000000000000000f",
@@ -207,22 +208,23 @@ class TestItSaysWhenItCannotAnswer:
 
 
 class TestMalformedPackages:
-    def test_a_package_with_no_source_cannot_be_verified(self, board: Board) -> None:
-        verdict = verify(
-            Package(
+    def test_a_package_with_no_solution_cannot_be_built_at_all(self, board: Board) -> None:
+        """⚠️ **This asserted that a *layer* rejected it, which was the weaker statement.**
+
+        The field defaulted to `None`, so the forge could build one, sign it and serialise it without a
+        `solution` key — and the browser refused the result at boot, because its reader always required
+        the field. That is the producer/consumer split schema 4 was cut to remove, inside schema 4. The
+        field is required now, so there is nothing left for a layer to reject.
+        """
+        with pytest.raises(TypeError, match="solution"):
+            Package(  # type: ignore[call-arg]
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
                 puzzle_id="000000000000000f",
                 puzzle=board,
                 slot_references=refs(board),
                 offense_is_home=True,
-            ),
-            secret=UNSIGNED,
-        )
-
-        assert verdict.rejection is not None
-        assert verdict.rejection.layer is Layer.IDENTITIES
-        assert verdict.rejection.fault is Fault.MALFORMED
+            )
 
     def test_a_source_with_a_hole_in_it_is_malformed(self, board: Board, blank: Blank) -> None:
         # The source is the original boxscore, so a gap in it means the pipeline lost something
@@ -274,36 +276,32 @@ class TestMalformedPackages:
         assert verdict.rejection.fault is Fault.MALFORMED
         assert "batting rows" in verdict.rejection.detail
 
-    def test_an_erased_left_on_base_is_malformed(self, board: Board) -> None:
-        # Without LOB the global identity cannot be expressed at all (§6), so the board is not a
-        # harder puzzle — it is a puzzle missing one of its four families.
-        without = package_format.Board(
-            batting=board.batting,
-            batting_totals=board.batting_totals,
-            footnotes=board.footnotes,
-            footnote_totals=board.footnote_totals,
-            left_on_base=None,
-            pitching=board.pitching,
-            pitching_totals=board.pitching_totals,
-            line_score=board.line_score,
-        )
+    def test_an_erased_left_on_base_is_refused_where_untyped_data_enters(self, board: Board, tmp_path: Path) -> None:
+        """Without LOB the global identity cannot be expressed at all (§6): not a harder puzzle, a
+        puzzle missing one of its four families.
 
-        verdict = verify(
-            Package(
-                labels=("C",) * len(without.batting),
-                pitcher_labels=("C",) * len(without.pitching),
-                puzzle_id="000000000000000f",
-                puzzle=without,
-                solution=board,
-                slot_references=refs(without),
-                offense_is_home=True,
-            ),
-            secret=UNSIGNED,
-        )
+        ⚠️ **The check moved from the verifier to the parse boundary, and that is not a downgrade — but
+        it is a change worth stating.** `left_on_base` is `int` now, so an in-process board carrying
+        `None` is one the type forbids and mypy refuses to build. What the type cannot police is
+        untyped data, and that is exactly where this now fails: `read()` on a document whose
+        `left_on_base` is null. A verifier branch guarding against a value the type excludes is a
+        branch nothing can reach, and this project treats those as broken rather than free.
+        """
+        document = Package(
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("C",) * len(board.pitching),
+            puzzle_id="000000000000000f",
+            puzzle=board,
+            solution=board,
+            slot_references=refs(board),
+            offense_is_home=True,
+        ).as_json()
+        document["puzzle"]["left_on_base"] = None
+        file = tmp_path / "no-lob.json"
+        file.write_text(json.dumps(document), encoding="utf-8")
 
-        assert verdict.rejection is not None
-        assert verdict.rejection.fault is Fault.MALFORMED
-        assert "left on base" in verdict.rejection.detail
+        with pytest.raises(PackageError, match="left_on_base"):
+            read(file)
 
     def test_a_line_score_that_disagrees_with_the_source(self, board: Board) -> None:
         score = board.line_score
@@ -413,12 +411,17 @@ class TestTheTally:
                 ),
                 secret=UNSIGNED,
             ),
+            # ⚠️ **The malformed one, and it used to be malformed by having no solution at all.** That
+            # is no longer constructible, so the third verdict silently became a second acceptance and
+            # the tally asserted 1 where 2 was true. A *holed* solution still reaches layer 2, which is
+            # what this verdict is for: the tally has to distinguish layers, not only count failures.
             verify(
                 Package(
                     labels=("C",) * len(board.batting),
                     pitcher_labels=("C",) * len(board.pitching),
                     puzzle_id="000000000000000c",
                     puzzle=board,
+                    solution=blank(board, {"batting": [(0, 3)]}),
                     slot_references=refs(board),
                     offense_is_home=True,
                 ),

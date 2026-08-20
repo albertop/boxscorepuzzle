@@ -14,9 +14,15 @@ Counted per **row**, not per slot: `slot_references()` gives each batting row it
 `9b`), so attribution is already row-level. A slot holding a starter and a substitute with one sacrifice
 each is two rows with one apiece and is not this case.
 
-⚠️ Counted against the pool the board actually draws from — the zero-density gate, the roster caps and
-the provenance rule — rather than against every row in the database, because a rate over rows nobody
-will ever see is not the rate that matters.
+⚠️ **Counted against the pool the board actually draws from**, because a rate over rows nobody will
+ever see is not the rate that matters. That means §5's zero-density gate, the roster caps and the
+provenance rule — and the first version of this file **said exactly that while applying only the caps.**
+It printed `gate applied downstream` and imported the gate constant to put in a label. The figures it
+published described a cohort it had never measured, and they reached five other files before a review
+compared its CTE with the loader's.
+
+The cohort is not reimplemented here any more. `SHAPE_CTE` and `zero_density_clause()` come from the
+loader, so the measurement and the generator cannot describe different pools.
 
 Read-only against DGL. Run from `forge/`.
 """
@@ -29,7 +35,7 @@ _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
-from measure import ACCEPTED_SOURCES, CONNECTION, CONTRIBUTED  # noqa: E402
+from measure import ACCEPTED_SOURCES, CONNECTION, CONTRIBUTED, SHAPE_CTE, zero_density_clause  # noqa: E402
 
 from boxscore_domain import BATTER_CAP, PITCHER_CAP, ZERO_DENSITY_GATE  # noqa: E402
 
@@ -44,11 +50,7 @@ def main() -> None:
     # pool accepts. The zero-density half of the gate needs both sides, so it is applied as a join on
     # the shape table exactly as `load()` does.
     query = f"""
-    WITH shape AS (
-      SELECT GAME_ID, TEAM_ID,
-             SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
-             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers
-      FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID),
+    {SHAPE_CTE},
     admissible AS (
       SELECT o.GAME_ID, o.TEAM_ID
       FROM shape o
@@ -57,12 +59,14 @@ def main() -> None:
       CROSS APPLY (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p
                    WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
                    ORDER BY p.source_type) AS prov
-      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP})
+      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP}
+        {zero_density_clause(ZERO_DENSITY_GATE)})
     SELECT COUNT(*) AS rows_total,
            COUNT(DISTINCT a.GAME_ID) AS games,
            {", ".join(f"SUM(CASE WHEN d.{col} > 1 THEN 1 ELSE 0 END) AS many_{name}" for name, col in TERMS.items())},
            {", ".join(f"SUM(CASE WHEN d.{col} > 0 THEN 1 ELSE 0 END) AS any_{name}" for name, col in TERMS.items())},
-           {", ".join(f"MAX(d.{col}) AS max_{name}" for name, col in TERMS.items())}
+           {", ".join(f"MAX(d.{col}) AS max_{name}" for name, col in TERMS.items())},
+           SUM(CASE WHEN {" OR ".join(f"d.{col} > 1" for col in TERMS.values())} THEN 1 ELSE 0 END) AS affected_rows
     FROM admissible a
     JOIN dbo.retroDailyReg d ON d.GAME_ID = a.GAME_ID AND d.TEAM_ID = a.TEAM_ID
     WHERE {CONTRIBUTED.replace("B_", "d.B_")}
@@ -78,29 +82,26 @@ def main() -> None:
         message = "no admissible batting rows at all; the filters in this script are wrong"
         raise SystemExit(message)
 
-    print(f"caps {BATTER_CAP} batters / {PITCHER_CAP} pitchers, gate applied downstream ({ZERO_DENSITY_GATE:.0%})")
+    print(f"caps {BATTER_CAP} batters / {PITCHER_CAP} pitchers, zero-density gate {ZERO_DENSITY_GATE:.0%} APPLIED")
     print(f"{rows_total:,} batting rows across {found['games']:,} admissible games")
     print("")
     print("term                  rows with >1   share of all rows   share of rows carrying the term   max")
-    total_many = 0
     for name in TERMS:
         many, carrying, top = found[f"many_{name}"], found[f"any_{name}"], found[f"max_{name}"]
-        total_many += many
         of_carrying = f"{100.0 * many / carrying:.2f}%" if carrying else "n/a"
         print(f"  {name:<20} {many:>10,}   {100.0 * many / rows_total:>16.4f}%   {of_carrying:>31}   {top:>3}")
     print("")
-    print(f"rows that cannot be read from the current format: {total_many:,} of {rows_total:,}")
-    print(f"   {100.0 * total_many / rows_total:.4f}% of admissible batting rows")
+    # ⚠️ **One OR, not a sum of the per-term counts.** Summing them counted a row carrying two
+    # different repeated terms twice, so the numerator could exceed the number of rows it described.
+    affected = found["affected_rows"]
+    print(f"rows that cannot be read from the current format: {affected:,} of {rows_total:,}")
+    print(f"   {100.0 * affected / rows_total:.4f}% of admissible batting rows")
 
     # ⚠️ **The denominator that decides.** One unreadable row breaks the whole board, so the rate per
     # row understates the damage by the number of rows on a board. A per-row figure would have made
     # this look like a rounding error; the per-direction figure is what the pool actually loses.
     per_board = f"""
-    WITH shape AS (
-      SELECT GAME_ID, TEAM_ID,
-             SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
-             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers
-      FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID),
+    {SHAPE_CTE},
     admissible AS (
       SELECT o.GAME_ID, o.TEAM_ID, g.SEASON
       FROM shape o
@@ -109,7 +110,8 @@ def main() -> None:
       CROSS APPLY (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p
                    WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
                    ORDER BY p.source_type) AS prov
-      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP})
+      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP}
+        {zero_density_clause(ZERO_DENSITY_GATE)})
     SELECT (a.SEASON/10)*10 AS decade, COUNT(*) AS directions,
            SUM(CASE WHEN x.affected > 0 THEN 1 ELSE 0 END) AS broken
     FROM admissible a

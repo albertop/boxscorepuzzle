@@ -23,6 +23,14 @@ from boxscore_forge.identities import BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHIN
 from boxscore_package.format import Board, LineScore
 
 
+def _given(value: int | None) -> int:
+    """Left on base, which §6 never erases. A `None` here is a generator that changed its mind."""
+    if value is None:
+        message = "left on base was erased; §6 gives it, and without it the global identity cannot be expressed"
+        raise ValueError(message)
+    return value
+
+
 def to_board(direction: Direction, erased: frozenset[str] | None = None) -> Board:
     """The board as the player meets it. `erased` names cells the generator's way.
 
@@ -49,9 +57,15 @@ def to_board(direction: Direction, erased: frozenset[str] | None = None) -> Boar
             row("footnotes", index, note, FOOTNOTE_COLUMNS) for index, note in enumerate(direction.batter_footnotes)
         ),
         footnote_totals=totals("footnote_totals", direction.footnote_totals, FOOTNOTE_COLUMNS),
-        left_on_base=cell(
-            f"team_footnotes.{TEAM_FOOTNOTE_FIELDS[0]}",
-            getattr(direction.team_footnotes, TEAM_FOOTNOTE_FIELDS[0]),
+        # ⚠️ **Refused rather than passed through as `None`.** `cell()` returns `None` for an erased
+        # cell, and LOB is not in the erasable set — so this is unreachable today. It is written because
+        # the day somebody adds LOB to that set, the producer stops here instead of building a board
+        # both readers refuse at their boundary, which is a failure three layers further from the cause.
+        left_on_base=_given(
+            cell(
+                f"team_footnotes.{TEAM_FOOTNOTE_FIELDS[0]}",
+                getattr(direction.team_footnotes, TEAM_FOOTNOTE_FIELDS[0]),
+            )
         ),
         pitching=tuple(row("pitching", index, line, PITCHING_COLUMNS) for index, line in enumerate(direction.pitching)),
         pitching_totals=totals("pitching_totals", direction.pitching_totals, PITCHING_COLUMNS),

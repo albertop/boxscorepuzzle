@@ -32,7 +32,12 @@
     "line renders as read-only text, so such a cell is a blank the game demands and the UI cannot",
     "supply. `totals` already carried a `complete` guard written for exactly this defect one row lower",
     "down, and it was never applied to the rows above it. The vector below is what stops the two",
-    "readers disagreeing about it again."
+    "readers disagreeing about it again.",
+    "",
+    "\u26a0\ufe0f Four vectors below are the profile split. Schema 4 parsed the puzzle and the answer board with",
+    "one nullable rule, and left `solution` and `left_on_base` optional on the Python side while the",
+    "browser required both. A puzzle carries blanks in the batting and pitching grids and their totals;",
+    "an answer board carries none anywhere, and LOB is given in both."
   ],
   "vectors": [
     {
@@ -109,6 +114,50 @@
       ],
       "expect": "reject",
       "because": "the line renders as read-only text, so this blank is one the player is asked for and given no way to enter \u2014 the reader accepted it and 14 of one retained board's 33 blanks were unreachable"
+    },
+    {
+      "name": "no solution at all",
+      "mutate": [
+        [
+          "solution",
+          null
+        ]
+      ],
+      "expect": "reject",
+      "because": "the client cannot validate an entry without one (\u00a723), and Python defaulted it to None while the browser always required it \u2014 the forge could build, sign and publish a document the browser refused at boot"
+    },
+    {
+      "name": "a null cell in the answer board",
+      "mutate": [
+        [
+          "solution.batting[0][0]",
+          null
+        ]
+      ],
+      "expect": "reject",
+      "because": "both readers accepted it and the cell then read blank AND counted as correct, while entering any number was wrong \u2014 an answer board with a hole is worse than a missing one"
+    },
+    {
+      "name": "a null total in the answer board",
+      "mutate": [
+        [
+          "solution.batting_totals[0]",
+          null
+        ]
+      ],
+      "expect": "reject",
+      "because": "the puzzle's totals row IS erasable and the answer's is not; one nullable rule for both boards is what let the hole through"
+    },
+    {
+      "name": "left on base absent from the puzzle",
+      "mutate": [
+        [
+          "puzzle.left_on_base",
+          null
+        ]
+      ],
+      "expect": "reject",
+      "because": "without it the board cannot express the global identity at all (\u00a76); Python typed it int | None while the browser required a whole number"
     },
     {
       "name": "a null batting total",

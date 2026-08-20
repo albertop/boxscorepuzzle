@@ -494,8 +494,8 @@ suite("⚠️ The footnote line, against the strings the PDF renderer also runs"
   // two disagreeing.
   //
   // ⚠️ **And the format change is a correctness fix.** `SH: 2` was a slot reference that reads as a
-  // count, so a row carrying two of one term could not be expressed. 10,207 of 373,917 admissible
-  // directions carry such a row — 2.73%, and 5.25% in the 1910s. Those boards cannot be solved, and
+  // count, so a row carrying two of one term could not be expressed. 4,040 of 100,742 admissible
+  // directions carry such a row — 4.01%, and 8.31% in the 1920s. Those boards cannot be solved, and
   // every total balances on them.
   const cases = vectors_footnote.cases;
 

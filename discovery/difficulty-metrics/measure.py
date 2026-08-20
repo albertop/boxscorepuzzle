@@ -83,6 +83,62 @@ TAIL_TRIM = 3
 SEED = 20260817
 
 
+SHAPE_CTE: Final = f"""    WITH shape AS (
+      SELECT GAME_ID, TEAM_ID,
+             -- Only rows that actually batted. See the note on the batting query below.
+             SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
+             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers,
+             SUM(CASE WHEN {CONTRIBUTED} THEN
+               CASE WHEN B_PA=0 THEN 1 ELSE 0 END + CASE WHEN B_AB=0 THEN 1 ELSE 0 END +
+               CASE WHEN B_R=0 THEN 1 ELSE 0 END + CASE WHEN B_H=0 THEN 1 ELSE 0 END +
+               CASE WHEN B_BB=0 THEN 1 ELSE 0 END + CASE WHEN B_SO=0 THEN 1 ELSE 0 END
+               ELSE 0 END) AS batting_zeros,
+             SUM(CASE WHEN P_G=1 THEN
+               CASE WHEN P_OUT=0 THEN 1 ELSE 0 END + CASE WHEN P_H=0 THEN 1 ELSE 0 END +
+               CASE WHEN P_R=0 THEN 1 ELSE 0 END + CASE WHEN P_ER=0 THEN 1 ELSE 0 END +
+               CASE WHEN P_BB=0 THEN 1 ELSE 0 END + CASE WHEN P_SO=0 THEN 1 ELSE 0 END
+               ELSE 0 END) AS pitching_zeros,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_PA ELSE 0 END) AS t_pa,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_AB ELSE 0 END) AS t_ab,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_R ELSE 0 END) AS t_r,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_H ELSE 0 END) AS t_h,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_BB ELSE 0 END) AS t_bb,
+             SUM(CASE WHEN {CONTRIBUTED} THEN B_SO ELSE 0 END) AS t_so,
+             SUM(CASE WHEN P_G=1 THEN P_OUT ELSE 0 END) AS t_out,
+             SUM(CASE WHEN P_G=1 THEN P_H ELSE 0 END) AS t_ph,
+             SUM(CASE WHEN P_G=1 THEN P_R ELSE 0 END) AS t_pr,
+             SUM(CASE WHEN P_G=1 THEN P_ER ELSE 0 END) AS t_per,
+             SUM(CASE WHEN P_G=1 THEN P_BB ELSE 0 END) AS t_pbb,
+             SUM(CASE WHEN P_G=1 THEN P_SO ELSE 0 END) AS t_pso
+      FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID)"""
+"""The per-team shape every cohort query needs: roster sizes **and the twelve zero counts §5's
+gate divides by.**
+
+⚠️ **Hoisted after an instrument reimplemented a partial copy of it.**
+`discovery/footnote-multiplicity` computed only the roster counts and applied only the caps, then
+printed `gate applied downstream (30%)` while its docstring said the figures were counted against
+"the pool the board actually draws from — the zero-density gate, the roster caps and the provenance
+rule". The gate was in neither of its queries. It published a prevalence for a cohort it had never
+measured, and the number reached five other files before a review caught it.
+
+One predicate, one place. An instrument wanting the pool's cohort takes these two strings.
+"""
+
+
+def zero_density_clause(gate: float) -> str:
+    """§5's gate as a SQL predicate, over `SHAPE_CTE`'s aliases `o` (offense) and `d` (defense)."""
+    return f"""
+      AND CAST(o.batting_zeros + d.pitching_zeros
+        + CASE WHEN o.t_pa=0 THEN 1 ELSE 0 END + CASE WHEN o.t_ab=0 THEN 1 ELSE 0 END
+        + CASE WHEN o.t_r=0 THEN 1 ELSE 0 END + CASE WHEN o.t_h=0 THEN 1 ELSE 0 END
+        + CASE WHEN o.t_bb=0 THEN 1 ELSE 0 END + CASE WHEN o.t_so=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_out=0 THEN 1 ELSE 0 END + CASE WHEN d.t_ph=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_pr=0 THEN 1 ELSE 0 END + CASE WHEN d.t_per=0 THEN 1 ELSE 0 END
+        + CASE WHEN d.t_pbb=0 THEN 1 ELSE 0 END + CASE WHEN d.t_pso=0 THEN 1 ELSE 0 END AS float)
+        / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < {gate}
+    """
+
+
 def full_name(nickname: str | None, last: str | None) -> str:
     """A player's name for the final reveal (§7): **the name he was known by, plus the surname.**
 
@@ -337,46 +393,10 @@ def load(
     """
     import pyodbc  # noqa: PLC0415
 
-    gate_clause = f"""
-      AND CAST(o.batting_zeros + d.pitching_zeros
-        + CASE WHEN o.t_pa=0 THEN 1 ELSE 0 END + CASE WHEN o.t_ab=0 THEN 1 ELSE 0 END
-        + CASE WHEN o.t_r=0 THEN 1 ELSE 0 END + CASE WHEN o.t_h=0 THEN 1 ELSE 0 END
-        + CASE WHEN o.t_bb=0 THEN 1 ELSE 0 END + CASE WHEN o.t_so=0 THEN 1 ELSE 0 END
-        + CASE WHEN d.t_out=0 THEN 1 ELSE 0 END + CASE WHEN d.t_ph=0 THEN 1 ELSE 0 END
-        + CASE WHEN d.t_pr=0 THEN 1 ELSE 0 END + CASE WHEN d.t_per=0 THEN 1 ELSE 0 END
-        + CASE WHEN d.t_pbb=0 THEN 1 ELSE 0 END + CASE WHEN d.t_pso=0 THEN 1 ELSE 0 END AS float)
-        / (6.0 * (o.batters + 1) + 6.0 * (d.pitchers + 1)) < {gate}
-    """
+    gate_clause = zero_density_clause(gate)
     accepted = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
     query = f"""
-    WITH shape AS (
-      SELECT GAME_ID, TEAM_ID,
-             -- Only rows that actually batted. See the note on the batting query below.
-             SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
-             SUM(CASE WHEN P_G=1 THEN 1 ELSE 0 END) AS pitchers,
-             SUM(CASE WHEN {CONTRIBUTED} THEN
-               CASE WHEN B_PA=0 THEN 1 ELSE 0 END + CASE WHEN B_AB=0 THEN 1 ELSE 0 END +
-               CASE WHEN B_R=0 THEN 1 ELSE 0 END + CASE WHEN B_H=0 THEN 1 ELSE 0 END +
-               CASE WHEN B_BB=0 THEN 1 ELSE 0 END + CASE WHEN B_SO=0 THEN 1 ELSE 0 END
-               ELSE 0 END) AS batting_zeros,
-             SUM(CASE WHEN P_G=1 THEN
-               CASE WHEN P_OUT=0 THEN 1 ELSE 0 END + CASE WHEN P_H=0 THEN 1 ELSE 0 END +
-               CASE WHEN P_R=0 THEN 1 ELSE 0 END + CASE WHEN P_ER=0 THEN 1 ELSE 0 END +
-               CASE WHEN P_BB=0 THEN 1 ELSE 0 END + CASE WHEN P_SO=0 THEN 1 ELSE 0 END
-               ELSE 0 END) AS pitching_zeros,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_PA ELSE 0 END) AS t_pa,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_AB ELSE 0 END) AS t_ab,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_R ELSE 0 END) AS t_r,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_H ELSE 0 END) AS t_h,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_BB ELSE 0 END) AS t_bb,
-             SUM(CASE WHEN {CONTRIBUTED} THEN B_SO ELSE 0 END) AS t_so,
-             SUM(CASE WHEN P_G=1 THEN P_OUT ELSE 0 END) AS t_out,
-             SUM(CASE WHEN P_G=1 THEN P_H ELSE 0 END) AS t_ph,
-             SUM(CASE WHEN P_G=1 THEN P_R ELSE 0 END) AS t_pr,
-             SUM(CASE WHEN P_G=1 THEN P_ER ELSE 0 END) AS t_per,
-             SUM(CASE WHEN P_G=1 THEN P_BB ELSE 0 END) AS t_pbb,
-             SUM(CASE WHEN P_G=1 THEN P_SO ELSE 0 END) AS t_pso
-      FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID)
+    {SHAPE_CTE}
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END AS offense_is_home,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_LOB_CT ELSE g.AWAY_LOB_CT END AS lob,

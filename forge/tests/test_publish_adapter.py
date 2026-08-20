@@ -60,10 +60,17 @@ class TestEverySectionHonoursTheErasedSet:
 
         assert board.footnote_totals[FOOTNOTE_COLUMNS.index("hit_by_pitch")] is None
 
-    def test_the_team_footnote(self, cubs_at_braves_1968: Direction) -> None:
-        board = to_board(cubs_at_braves_1968, frozenset({team_footnote_cell("left_on_base")}))
+    def test_the_team_footnote_is_the_one_section_that_refuses(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ **The adapter used to honour this, and honouring it was the defect.**
 
-        assert board.left_on_base is None
+        §6 never erases left on base — without it the board cannot express the global identity at all —
+        and `erasable()` does not offer the cell, so a request to erase it cannot arrive from the
+        generator. It arrived from a test, and the adapter obliged, producing a board both readers
+        refuse at their boundary. **Refusing here names the cause; refusing three layers out names a
+        symptom.**
+        """
+        with pytest.raises(ValueError, match="left on base was erased"):
+            to_board(cubs_at_braves_1968, frozenset({team_footnote_cell("left_on_base")}))
 
 
 class TestNothingElseChanges:
