@@ -580,3 +580,58 @@ class TestBothConstructionPathsRefuseTheSameThings:
 
         with pytest.raises(PackageError):
             Package.from_json(document)
+
+
+class TestTheInningCapIsAGateAndNotANote:
+    """⚠️⚠️ `MAX_INNINGS` was decided, recorded, and enforced nowhere.
+
+    The number came from a width measurement and went into the constants module, and for a while that
+    was the whole of it: nothing rejected a longer board, so the generator could still build one and
+    the cap was a note. **An incomplete gate looks like a gate and is not one.**
+
+    Checked at the package boundary because that is the seam every board crosses on its way out. A
+    filter in the sampler would bound what the generator draws from; it would not stop a board reaching
+    a player. And the pool query cannot count innings anyway — Retrosheet writes a ten-run inning as
+    `(10)`, so the string length is not the count.
+    """
+
+    @staticmethod
+    def _line_score(innings: int) -> dict:
+        return {
+            "offense_by_inning": [0] * innings,
+            "defense_by_inning": [0] * innings,
+            "offense_runs": 0,
+            "offense_hits": 0,
+            "offense_errors": 0,
+            "defense_runs": 0,
+            "defense_hits": 0,
+            "defense_errors": 0,
+        }
+
+    def test_a_board_longer_than_the_cap_is_refused(self) -> None:
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore, PackageError  # noqa: PLC0415
+
+        with pytest.raises(PackageError, match=f"more than the {MAX_INNINGS} the board can draw"):
+            LineScore.from_json(self._line_score(MAX_INNINGS + 1))
+
+    def test_a_board_at_the_cap_is_accepted(self) -> None:
+        """⚠️ The other half, or a gate that refuses everything would pass the test above."""
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore  # noqa: PLC0415
+
+        score = LineScore.from_json(self._line_score(MAX_INNINGS))
+
+        assert len(score.offense_by_inning) == MAX_INNINGS
+
+    def test_the_two_sides_are_checked_separately(self) -> None:
+        # ⚠️ The home side is often one half-inning short, so the two lists differ in length and a
+        # check reading only the first would miss a long game whose offense batted fewer times.
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore, PackageError  # noqa: PLC0415
+
+        raw = self._line_score(MAX_INNINGS)
+        raw["defense_by_inning"] = [0] * (MAX_INNINGS + 1)
+
+        with pytest.raises(PackageError, match="defense_by_inning"):
+            LineScore.from_json(raw)

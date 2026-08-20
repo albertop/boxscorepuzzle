@@ -107,6 +107,32 @@ The findings below come from source inspection and direct traces through the rel
   using their eye check. Shared data preserves independent implementations without allowing the visible
   contract to drift.
 
+### v28-P2-04 - The staging table keeps a staging-only constraint name and blocks the next rebuild
+
+- **Persona:** Software architect / data-integrity reviewer / solo-maintainer
+- **Severity:** P2
+- **Location:** `discovery/retrosheet-coverage/load_provenance.ps1:145`, `discovery/retrosheet-coverage/load_provenance.ps1:179`
+- **Description:** The corrected provenance loader creates the staging table with an explicitly named
+  default constraint, `DF_retroGameProvenanceStaging_loaded_at`, and then renames the table to
+  `retroGameProvenance`. SQL Server renames the table but not its dependent constraint, so the canonical
+  table retains that staging-only constraint name. On the next normal rebuild, `CREATE TABLE
+  dbo.retroGameProvenanceStaging` tries to create another constraint with the same schema-level object
+  name and fails before any rows can be staged.
+- **Impact:** The transactional correction protects the existing canonical table, and the catch block
+  rolls back and rethrows, so this does not corrupt provenance. It does, however, make the rebuild
+  workflow succeed at most once: every later refresh fails deterministically until the constraint is
+  manually renamed or removed. That contradicts the script's stated contract that the derived table is
+  rebuildable from the Retrosheet zips.
+- **Reproduction:** Run the corrected loader successfully once. The renamed canonical table now owns a
+  default constraint named `DF_retroGameProvenanceStaging_loaded_at`. Run the loader again against the
+  same valid input; line 145 attempts to create that name a second time and SQL Server rejects the
+  staging-table statement. The transaction rolls back, but no refresh occurs.
+- **Recommended fix and rationale:** Do not explicitly name the staging table's default constraint;
+  declare the column with `DEFAULT SYSUTCDATETIME()` and let SQL Server assign a unique name. Alternatively,
+  give every staging generation a unique table and constraint name and remove it through the same
+  transaction. Rehearse two consecutive successful swaps on throwaway tables, because a one-run test
+  cannot exercise an object name retained by the first rename.
+
 ### v28-P3-01 - The footnote-height instrument reports zero terms for every package
 
 - **Persona:** UX and API-contract reviewer / test engineer
@@ -169,20 +195,22 @@ The findings below come from source inspection and direct traces through the rel
   active visual specimens remain a different observation surface from the product (`v28-P2-03`).
 - **UX/API-contract reviewer:** The shipped browser and PDF footnote contract agrees through shared
   vectors. Discovery views and the height instrument have not fully migrated to it.
-- **Solo-maintainer pragmatist:** Fix the three P2s before making another layer 3b or batting-order
+- **Solo-maintainer pragmatist:** Fix the four P2s before making another layer 3b or batting-order
   decision. The two P3s are small, local repairs and do not justify broader refactoring.
 
 ## Verdict
 
-No P0 or P1 finding was identified. The full review found **three P2 findings and two P3 findings**.
+No P0 or P1 finding was identified. The full review found **four P2 findings and two P3 findings**.
 The publication core, package boundary, signature flow, strong verifier, and current browser game engine
 show no new practical correctness defect from this pass. The immediate risk is instead that research
 evidence can certify unsupported weak-solver deductions or show a clue surface different from the one
-being judged, while the provenance rebuild has an avoidable destructive failure mode.
+being judged, while the provenance rebuild has both an avoidable destructive failure mode in its original
+form and a deterministic repeat-run failure in its corrected form.
 
 Recommended order:
 
 1. Correct the weak solver and rerun layer 3b evidence.
 2. Make the provenance rebuild validate and commit atomically.
-3. Bring discovery footnotes onto the canonical visible contract and regenerate the batting-order specimens.
-4. Repair the two fail-open/stale measurement checks.
+3. Remove the staging constraint-name collision and rehearse two consecutive provenance swaps.
+4. Bring discovery footnotes onto the canonical visible contract and regenerate the batting-order specimens.
+5. Repair the two fail-open/stale measurement checks.

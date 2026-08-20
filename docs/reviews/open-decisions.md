@@ -63,9 +63,6 @@ visual intent.
 
 - **Layer 3b figures are void** and need re-running once the hand-solve pack is done — including the
   33% certified reported for the pack. They came from the predicate fixed in `a73bbc1`.
-- **Where `MAX_INNINGS` is enforced.** It is recorded but `eligibility()` does not filter on it, so the
-  generator could still produce a 16-inning board. ⚠️ The inning count is **not** `LEN()` of the line
-  score: Retrosheet writes a ten-run inning as `(10)`.
 - **No `.github/`** — no CI, no coverage floor on push, no branch protection, and ruff's
   `extend-include` claims `discovery/` is linted while nothing points ruff at it (194 findings never
   reported).

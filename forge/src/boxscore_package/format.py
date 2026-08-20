@@ -31,6 +31,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Final, Self
 
+from boxscore_domain import MAX_INNINGS
+
 SCHEMA_VERSION: Final = 4
 """What this code writes.
 
@@ -252,6 +254,19 @@ def _whole_number(raw: object, where: str) -> int:
 def _innings(raw: object, where: str) -> tuple[int, ...]:
     if not isinstance(raw, list):
         message = f"{where} is {type(raw).__name__}, expected a list of innings"
+        raise PackageError(message)
+    # ⚠⚠ **The inning cap enforced where it cannot be bypassed.** `MAX_INNINGS` was decided from a
+    # width measurement and recorded, and for a while that was all: nothing rejected a longer board, so
+    # the generator could still build one and the cap was a note rather than a gate. **An incomplete
+    # gate looks like a gate and is not one.**
+    #
+    # Checked at the package boundary rather than in the sampler, because this is the seam every board
+    # crosses on its way out — §22's rule that validation happens at the boundary and fails closed. A
+    # filter in `load()` would bound what the *generator draws from*; it would not stop a board reaching
+    # a player, and the pool query cannot count innings anyway (Retrosheet writes a ten-run inning as
+    # `(10)`, so the string length is not the count).
+    if len(raw) > MAX_INNINGS:
+        message = f"{where} has {len(raw)} innings, more than the {MAX_INNINGS} the board can draw (§6)"
         raise PackageError(message)
     return tuple(_whole_number(value, f"{where}[{index}]") for index, value in enumerate(raw))
 
