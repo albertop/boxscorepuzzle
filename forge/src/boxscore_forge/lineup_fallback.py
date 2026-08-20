@@ -22,18 +22,30 @@ down. On the eleven directions that reach eight stalls *only* with it on, nine c
 all. **So the constraint is worth something exactly where the board cannot get there without it, and
 costs something everywhere else.** Trying the ordinary path first is what separates the two.
 
-⚠️ **What this module does not establish.**
+**What the verifier can do, which is what made adoption possible.** `lineup_values()` in
+`boxscore_verify/reason.py` is the independent, value-producing step §22 requires, and **every layer
+that can speak about the batting order reads it** — identities, uniqueness, derivability, the weak
+solver and end-to-end. Layers 2 and 4 did not for one commit, which meant a board unique *because of*
+the batting order was refused as ambiguous before layer 3 ever ran: adoption that was true in the
+imports and false in the outcome. `test_lineup_fallback_is_adopted.py` takes a real fallback board
+through the publication gate, and reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`.
+
+⚠️ **What this module does NOT establish.**
 
 - **n = 11.** The whole case rests on eleven directions out of forty-eight, ten qualifying walks out of
   fifteen, in a subgroup that was **not pre-registered**. A subgroup chosen after seeing the aggregate
-  is a known way to manufacture a result, and this one has not survived a confirmation run.
-- **The verifier can now replay it.** `lineup_values()` in `boxscore_verify/reason.py` is the
-  independent, value-producing step §22 requires, and **all five layers read the lineup**. Layers 2
-  and 4 did not for one commit, which meant a board unique *because of* the batting order was
-  refused as ambiguous before layer 3 ever ran — adoption that was true in the imports and false in
-  the outcome. `test_lineup_fallback_is_adopted.py` now takes a real fallback board through every
-  layer, and reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`.
+  is a known way to manufacture a result, and this one **has not survived a confirmation run**.
+- **Every figure above predates the verifier's step**, so it describes what the generator produces
+  rather than what can ship. `discovery/batting-order/confirm.py` is the re-run and it has not been
+  run.
+- **That eight stalls corresponds to felt difficulty.** Nothing here measures a person. The one human
+  verdict on record is the operator's, in `batting-order-reversal.md`, and it is about the constraint
+  making boards harder to hold in the head rather than about any stall count.
 - **The filler ratio's unit is itself provisional.** See `division_against_chain`.
+
+⚠⚠ **The bullet above about the verifier sat inside this list for a commit** — a positive claim filed
+under *does not establish*, because its text was replaced without checking the heading it lived under.
+v29-P3-01. **A list is a claim about every item in it**, and editing one item is editing that claim.
 """
 
 from boxscore_domain import LINEUP_DIVISION_SHARE_CAP
@@ -59,8 +71,21 @@ def division_against_chain(puzzle: Puzzle) -> float:
     unit is on the list the pre-registered confirmation run has to settle**, together with whether the
     threshold belongs at 0.20 at all.
 
-    Zero on every board the production path produces, because `LINEUP_ARITHMETIC` cannot fire without
-    a batting order on the shape.
+    ⚠⚠ **This said "zero on every board the production path produces", and adoption made that false**
+    — v29-P3-01. It was true while the constraint was fenced off: `LINEUP_ARITHMETIC` cannot fire
+    without a batting order on the shape, and production never put one there. **Now the fallback does,
+    on exactly the boards the plain path could not reach**, and this function exists to put a ceiling
+    on how much of their chain those steps may be. A sentence claiming the value is always zero, inside
+    the function whose whole purpose is to bound a non-zero one, is the contradiction the reviewer
+    named.
+
+    What is true now: **zero on every board the *plain* attempt produced**, which is most of them,
+    because no batting order reached the shape. Non-zero is possible only on a fallback board, and
+    `LINEUP_DIVISION_SHARE_CAP` is what decides how much is too much.
+
+    ⚠️ Both halves of this docstring's correction are the same defect: text that was accurate when
+    written and silently false after a decision changed around it. **A statement is not made safe by
+    having been checked once.**
     """
     chain = puzzle.solution.chain_length
     if chain == 0:

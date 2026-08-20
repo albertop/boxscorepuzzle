@@ -152,7 +152,10 @@ class TestAFallbackBoardActuallyPublishes:
     the shape of every check in this project that turned out to be watching the wrong thing.
 
     So this test takes the one path that matters: a board the plain erasure **cannot** reach, produced
-    by the fallback, through **all five layers** and the publication gate.
+    by the fallback, through the arithmetic layers **and the publication gate**.
+
+    ⚠️ Not "all five layers": this run is unsigned, so the signature layer is deliberately skipped and
+    the phrase would claim something the test does not check.
     """
 
     SLOTS = (1, 2, 3, 4, 5, 6, 7, 8, 9)

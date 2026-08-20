@@ -242,3 +242,21 @@ As a result, a fallback board can reach and pass every arithmetic layer and stil
 ### Updated verdict
 
 Do not run or interpret `confirm.py` yet. The direction denominator is repaired, but **v29-P1-02 makes the publication result structurally zero or gate-refused until the package includes its reveal**. After that repair, the remaining source issue is the non-blocking stale adoption comment in `lineup_fallback.py` from **v29-P3-01**. The unresolved product question about whether eight stalls corresponds to felt difficulty remains outside this code defect.
+
+---
+
+## Re-check after the reveal correction (2026-08-20)
+
+**v29-P1-02 is closed.** `confirm.py` now builds its reveal through the production writer's `reveal_for()` function, so the measurement and production paths share the same reveal contract. Importing that writer does not execute generation: its side effects are limited to imports and path setup, while `main()` remains guarded.
+
+The new `_preflight()` is also correctly placed before the expensive loop. It submits an unerased package to both the arithmetic verifier and `certify_for_publication()` and aborts loudly if the instrument cannot publish the trivial control. That directly prevents the missing-reveal failure from being recorded as a treatment result.
+
+**No new P1 or P2 finding was found in the files changed for this correction.** The only code-review item still open from v29 is the non-blocking stale adoption statement in `lineup_fallback.py` under **v29-P3-01**. Separately, the experiment still cannot establish that eight stalls corresponds to human-perceived difficulty; that is an outstanding product-validation question rather than a defect in this correction.
+
+---
+
+## Final re-check of v29-P3-01 (2026-08-20)
+
+**v29-P3-01 is closed.** The `division_against_chain()` documentation now states the actual production contract: plain-path boards carry no lineup-arithmetic deductions, fallback boards may carry them, and `LINEUP_DIVISION_SHARE_CAP` bounds how much is accepted. This removes the last contradiction between the adopted fallback and its source documentation.
+
+**No v29 code-review findings remain open.** The separate human-validation question about whether eight stalls corresponds to felt difficulty is still unresolved, but it is not a source-code defect and does not reopen this review.

@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-nine reviews (three passes on the last), 135 findings, none rejected — including the first
+**Twenty-nine reviews (five passes on the last), 135 findings, none rejected — including the first
 two **P1**s, and both were in the instrument built to check a decision rather than in the product. v28 was a full-tree review rather than a delta:
 six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
 which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
@@ -227,7 +227,39 @@ reviewer's reproduction exactly.
 is the better answer and the more specific message: it names the slots instead of reporting a stalled
 solve.
 
-### v29-P3-01: the source disagreed with itself about whether this is adopted
+### ⚠⚠ v29-P3-01: the source disagreed with itself, and closing it took four passes
+
+`lineup_fallback.py` opened with **`EXPERIMENTAL. NOT ADOPTED. NOTHING HERE MAY REACH PUBLICATION`**
+for one commit after `write_reference_puzzles.py` started calling it. `erasure.py` said passing slots
+was experimental. `open-decisions.md` — the file named for open decisions — recorded both the
+constraint and the verifier step as not adopted.
+
+⚠️ **This is not stale prose in an archived review.** It is the module contract anyone reads before
+touching the file, and it said the opposite of what the caller said. **A later correction could have
+undone the adoption while honestly following the repository.**
+
+⚠⚠ **It took four passes to close, and each pass found a *different* sentence that had been true when
+written.** That is the finding, not the individual sentences:
+
+| pass | what was still false |
+|---|---|
+| first | the module header, `erasure.py`'s parameter docstring, `open-decisions.md` |
+| second | `boxscore_domain`'s section header, `erasure.py`'s `noqa` comment |
+| third | a bullet saying **the verifier can now replay it**, sitting inside a list headed *what this module does NOT establish* |
+| fourth | `division_against_chain` claiming the value is **zero on every board production produces** |
+
+The third is a structural version of the defect rather than a wording one: the bullet's *text* was
+correct and its *position* made it a denial. **A list is a claim about every item in it**, and editing
+one item edits that claim — which is not visible while editing the item.
+
+The fourth is the sharpest. The sentence said the ratio is always zero, **inside the function whose
+entire purpose is to put a ceiling on a non-zero one**. It was true while the constraint was fenced
+off, and adoption falsified it without touching the line.
+
+✅ **The general form:** a statement is not made safe by having been checked once. Every one of these
+was accurate when written and silently false after a decision moved around it.
+
+### v29-P3-01, as originally found
 
 `lineup_fallback.py` opened with **`EXPERIMENTAL. NOT ADOPTED. NOTHING HERE MAY REACH PUBLICATION`**
 for one commit after `write_reference_puzzles.py` started calling it. `erasure.py` said passing slots
