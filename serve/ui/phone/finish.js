@@ -22,8 +22,8 @@
  * lose. It is still in the C7 event record, where it is a measurement rather than a message.
  */
 
-import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS } from "../../engine/columns.js";
-import { text } from "../../engine/strings.js";
+import { FOOTNOTE_COLUMNS, PRINTED_BATTING, PRINTED_PITCHING } from "../../engine/columns.js";
+import { fill, text } from "../../engine/strings.js";
 import { renderLineScore } from "./board.js";
 
 /** `mm:ss`, or `h:mm:ss` past an hour. The first thing the player sees of a clock they never saw run. */
@@ -53,26 +53,36 @@ export function checkBoard(game) {
 /** Innings held as outs, printed the way a boxscore prints them. */
 const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;
 
+/** `1913-08-17` as a reader reads it. The month names are the catalogue's, not this file's. */
+function longDate(iso) {
+  const [year, month, day] = iso.split("-");
+  return fill("date.long", {
+    month: text(`month.${Number(month)}`),
+    day: String(Number(day)),
+    year,
+  });
+}
+
 /**
  * The boxscore the player just reconstructed, laid out the way a newspaper printed one.
  *
- * ⚠️⚠️ **This replaced a results card, and the difference is the whole point.** The payoff is not being
- * told *Solved* — it is seeing the object, whole, with the names that were withheld while it was being
- * worked out (§7). A list of positions and surnames down the left is a legend; a boxscore is a boxscore.
+ * ⚠️⚠️ **This replaced a results card, and then replaced the first attempt at replacing it.** The first
+ * attempt put the board's own six columns in monospace with the names attached down the left, and that
+ * is a legend, not a boxscore — the player is shown the thing they just filled in, relabelled. A
+ * printed boxscore is a different object and schema 5 exists to carry one: **both clubs**, **runs
+ * batted in**, and the clubs' **real names** instead of `SLA`.
+ *
+ * **The layout is the modern printed one**: the two batting grids, visitor first; the footnote line;
+ * then the pitchers of both clubs in one block, which is where a newspaper puts them.
  *
  * **Monospace, because that is what a printed boxscore used.** The columns then align by themselves
  * rather than by a grid, and it puts visible distance between the reveal and the board's modern face —
  * the player is looking at a clipping, not at the thing they were just typing into.
  *
  * ⚠️ **No aged-paper texture and no newsprint ground.** At 375px there is no room for decoration, and a
- * textured background lowers contrast exactly where the player wants to read names. If the columns,
- * the monospace and the rules read as a clipping, nothing else is needed.
+ * textured background lowers contrast exactly where the player wants to read names.
  */
 export function renderReveal(puzzle, record) {
-  // ⚠️ **`snake_case`, because the reveal passes through the reader untouched.** `readPackage` maps
-  // every other field into the client's own shape and deliberately does not map this one, so writing
-  // `reveal.offenseTeam` here reads `undefined` and renders an empty heading — with no error, on the
-  // one screen nobody had ever seen. Checked against a real package rather than assumed.
   const reveal = puzzle.reveal;
   const panel = document.createElement("div");
   panel.className = "reveal";
@@ -106,54 +116,7 @@ export function renderReveal(puzzle, record) {
   clipping.className = "clipping";
   sheet.append(clipping);
 
-  if (reveal) {
-    const heading = document.createElement("p");
-    heading.className = "clipping-head";
-    // `AWAY vs HOME at DATE`, composed from the catalogue rather than written as a sentence, so a
-    // language that orders it differently changes the strings and not this file.
-    heading.textContent =
-      `${reveal.offense_team} ${text("reveal.versus")} ${reveal.defense_team} ` +
-      `${text("reveal.at")} ${reveal.played_on}`;
-    clipping.append(heading);
-  }
-
-  const score = document.createElement("div");
-  score.className = "linescore";
-  score.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
-  clipping.append(score);
-
-  // ⚠⚠ **`solution`, not `puzzle`.** The first version drew `puzzle.puzzle`, which is the board *with
-  // its blanks* — so the finished boxscore printed `null` in every cell the player had just filled in,
-  // and every pitcher's innings read `0.0`. It threw nothing and the panel looked structurally right;
-  // only reading the rendered text showed it. The reveal is the completed object by definition, and
-  // the completed object is `solution`. The line score above is the same either way: §6 gives it
-  // complete and never erases it.
-  const done = puzzle.solution;
-
-  clipping.append(
-    grid({
-      team: reveal?.offense_team ?? "",
-      columns: BATTING_COLUMNS,
-      rows: done.batting,
-      totals: done.battingTotals,
-      names: reveal?.batter_names ?? [],
-      labels: puzzle.labels,
-      className: "clipping-batting",
-    }),
-  );
-  clipping.append(
-    grid({
-      team: reveal?.defense_team ?? "",
-      columns: PITCHING_COLUMNS,
-      rows: done.pitching,
-      totals: done.pitchingTotals,
-      names: reveal?.pitcher_names ?? [],
-      labels: puzzle.pitcherLabels,
-      className: "clipping-pitching",
-      innings: true,
-    }),
-  );
-  clipping.append(footnoteBlock(puzzle));
+  if (reveal) clipping.append(...clippingFor(puzzle, reveal));
 
   const close = document.createElement("button");
   close.type = "button";
@@ -166,73 +129,189 @@ export function renderReveal(puzzle, record) {
 }
 
 /**
- * One half of the clipping: a team, its rows, and its totals under a rule.
+ * The clipping itself, as a list of blocks.
+ *
+ * ⚠️ **Visitor first, everywhere.** A printed boxscore puts the club that bats first on top — line
+ * score, batting grids, pitchers. `offenseIsHome` is the only thing that says which club that is, and
+ * it is in the package precisely because a client cannot infer it: a square line score determines
+ * nothing, and four of the six reference packages are nine innings and nine.
+ */
+function clippingFor(puzzle, reveal) {
+  const score = puzzle.solution.lineScore;
+  const home = puzzle.offenseIsHome ? reveal.boxscore.offense : reveal.boxscore.defense;
+  const visitor = puzzle.offenseIsHome ? reveal.boxscore.defense : reveal.boxscore.offense;
+  const homeRuns = puzzle.offenseIsHome ? score.offense_runs : score.defense_runs;
+  const visitorRuns = puzzle.offenseIsHome ? score.defense_runs : score.offense_runs;
+
+  const heading = document.createElement("p");
+  heading.className = "clipping-head";
+  // ⚠️ **The winner is named first**, which is how a result line is written and is not the same as
+  // visitor-first. A tie is impossible in a completed game, so there is no third case to handle — and
+  // if one ever arrives the order simply follows the line score, which is a true statement either way.
+  heading.textContent =
+    homeRuns > visitorRuns
+      ? `${clubName(home)} ${homeRuns}${text("reveal.score_separator")}${clubName(visitor)} ${visitorRuns}`
+      : `${clubName(visitor)} ${visitorRuns}${text("reveal.score_separator")}${clubName(home)} ${homeRuns}`;
+
+  const date = document.createElement("p");
+  date.className = "clipping-date";
+  date.textContent = longDate(reveal.playedOn);
+
+  const line = document.createElement("div");
+  line.className = "linescore";
+  // ⚠️ **The real renderer with the labels as a parameter, never a second line score.** A comparison
+  // page written with its own grid twice showed something other than what it was evaluating. Here the
+  // labels change and nothing else does: during play the rows are `AWAY` and `HOME` because the player
+  // has no clubs, and here they are the clubs, because the player has just earned them.
+  line.append(renderLineScore(puzzle.solution.lineScore, puzzle.offenseIsHome, sideLabels(reveal)));
+
+  const notes = footnoteBlock(puzzle, reveal);
+
+  return [heading, date, line, battingGrid(visitor), battingGrid(home), notes, pitchingGrid(visitor, home)];
+}
+
+/** `St. Louis Browns`. Two fields in the package so a narrow row can print the city alone. */
+const clubName = (side) => `${side.city} ${side.nickname}`;
+
+/**
+ * What the line score's two rows are called, once the player has the clubs.
+ *
+ * ⚠⚠ **The three-letter code, and the first version of this said the city on the strength of a claim
+ * I had not measured.** The label column is 52px. Measured against the reference set with the real
+ * font: the widest **city is 82px** (Philadelphia) and the widest **nickname 67px** (Guardians), so
+ * neither fits, and `Boston` alone overflowed by 5px in the first render. The **code is 30px at its
+ * widest** and fits with room left over. Widening the column instead would take the width out of the
+ * innings, which is worse at nine and breaks at the twelve `MAX_INNINGS` allows.
+ *
+ * ⚠️ **And `SLA` here is not the `SLA` schema 5 removed.** That argument was about a *heading* whose
+ * only naming of the club was the code. Here both clubs are printed in full in the result line
+ * directly above and in the batting grids directly below, in the same visitor-then-home order, so the
+ * code is a key into names on the same screen twice rather than a name. **A justification is scoped
+ * and does not travel** — re-derived here rather than carried across, which is the rule this nearly
+ * broke in the opposite direction.
+ */
+const sideLabels = (reveal) => ({
+  offense: reveal.boxscore.offense.code,
+  defense: reveal.boxscore.defense.code,
+});
+
+/**
+ * One club's batting, headed by its name, ruled above the totals.
  *
  * ⚠️ A real `<table>` rather than padded text. Monospace makes the columns *look* like a printed
  * boxscore; a table makes them *be* columns, so a screen reader gets rows and headers instead of one
  * run-on line, and a long name pushes its own column rather than shearing the alignment of the rest.
+ *
+ * ⚠️ **The totals are summed here, and this is the one place in the product where that is right.**
+ * Everywhere else a total is loaded from an independent source, because a total summed from the rows
+ * it verifies verifies nothing — that defect is on the record. Here there is nothing to verify: the
+ * package's own totals cover the board's six columns for one club, and this grid has `RBI` and a club
+ * the board never carried. A totals row is arithmetic over what is printed above it, so it is computed
+ * from what is printed above it.
  */
-function grid({ team, columns, rows, totals, names, labels, className, innings = false }) {
+function battingGrid(side) {
   const table = document.createElement("table");
-  table.className = `clipping-grid ${className}`;
-
-  const head = document.createElement("tr");
-  const teamCell = document.createElement("th");
-  teamCell.className = "clipping-team";
-  teamCell.scope = "col";
-  teamCell.textContent = team;
-  head.append(teamCell);
-  for (const column of columns) {
-    const cell = document.createElement("th");
-    cell.scope = "col";
-    cell.textContent = text(`column.${column}`);
-    head.append(cell);
-  }
-  table.append(head);
-
-  rows.forEach((row, index) => {
-    const line = document.createElement("tr");
-    const who = document.createElement("td");
-    who.className = "clipping-who";
-    // Name then position, lower case, which is how a printed boxscore wrote it. The label is what the
-    // player solved against, so keeping it beside the name is what lets them map one onto the other.
-    who.textContent = `${names[index] ?? ""} ${(labels[index] ?? "").toLowerCase()}`.trim();
-    line.append(who);
-    row.forEach((value, column) => {
-      const cell = document.createElement("td");
-      cell.textContent = innings && column === 0 ? inningsOf(value) : String(value);
-      line.append(cell);
-    });
-    table.append(line);
-  });
-
-  const totalsRow = document.createElement("tr");
-  totalsRow.className = "clipping-totals";
-  const totalsLabel = document.createElement("td");
-  totalsLabel.className = "clipping-who";
-  totalsLabel.textContent = text("board.totals");
-  totalsRow.append(totalsLabel);
-  totals.forEach((value, column) => {
-    const cell = document.createElement("td");
-    cell.textContent = innings && column === 0 ? inningsOf(value) : String(value);
-    totalsRow.append(cell);
-  });
-  table.append(totalsRow);
-
+  table.className = "clipping-grid clipping-batting";
+  table.append(headRow(clubName(side), PRINTED_BATTING));
+  for (const row of side.batting) table.append(playerRow(row, PRINTED_BATTING));
+  table.append(totalsRow(side.batting, PRINTED_BATTING));
   return table;
 }
 
 /**
- * The footnote block, below the grids, as printed boxscores carry it.
+ * Both clubs' pitchers in one block, which is where a newspaper puts them.
  *
- * ⚠️ Named carriers rather than slot references. During play the line says `SH: 1 #2` because the
+ * ⚠️ **No totals row here, deliberately.** A pitching block covering two clubs has nothing a total
+ * would mean: adding one club's innings to the other's produces the number of half-innings played,
+ * which is arithmetic that is true and says nothing. The batting grids get totals because each covers
+ * one club.
+ */
+function pitchingGrid(visitor, home) {
+  const table = document.createElement("table");
+  table.className = "clipping-grid clipping-pitching";
+  table.append(headRow(text("printed.pitchers"), PRINTED_PITCHING));
+  for (const side of [visitor, home]) {
+    table.append(clubRow(clubName(side), PRINTED_PITCHING.length));
+    for (const row of side.pitching) table.append(playerRow(row, PRINTED_PITCHING, { innings: true }));
+  }
+  return table;
+}
+
+function headRow(name, columns) {
+  const row = document.createElement("tr");
+  const first = document.createElement("th");
+  first.className = "clipping-team";
+  first.scope = "col";
+  first.textContent = name;
+  row.append(first);
+  for (const column of columns) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = text(`printed.${column}`);
+    row.append(cell);
+  }
+  return row;
+}
+
+/** A club's name inside the shared pitching block, spanning the row. */
+function clubRow(name, width) {
+  const row = document.createElement("tr");
+  row.className = "clipping-club";
+  const cell = document.createElement("th");
+  cell.scope = "rowgroup";
+  cell.colSpan = width + 1;
+  cell.textContent = name;
+  row.append(cell);
+  return row;
+}
+
+function playerRow(row, columns, { innings = false } = {}) {
+  const line = document.createElement("tr");
+  const who = document.createElement("td");
+  who.className = "clipping-who";
+  // Name then position, lower case, which is how a printed boxscore wrote it. The label is what the
+  // player solved against, so keeping it beside the name is what lets them map one onto the other.
+  who.textContent = `${row.name} ${row.label.toLowerCase()}`.trim();
+  line.append(who);
+  for (const column of columns) {
+    const cell = document.createElement("td");
+    cell.textContent = innings && column === "outs" ? inningsOf(row[column]) : String(row[column]);
+    line.append(cell);
+  }
+  return line;
+}
+
+function totalsRow(rows, columns) {
+  const line = document.createElement("tr");
+  line.className = "clipping-totals";
+  const label = document.createElement("td");
+  label.className = "clipping-who";
+  label.textContent = text("board.totals");
+  line.append(label);
+  for (const column of columns) {
+    const cell = document.createElement("td");
+    cell.textContent = String(rows.reduce((sum, row) => sum + row[column], 0));
+    line.append(cell);
+  }
+  return line;
+}
+
+/**
+ * The footnote line, below the batting grids, as printed boxscores carry it.
+ *
+ * ⚠️ **Prefixed with the club, because the package carries footnotes for one club only.** They belong
+ * to the board's batting side; the other club has its own and no package holds them. An unprefixed
+ * line would read as a statement about both clubs and be silently false about one — a label sitting
+ * outside the arithmetic, which is exactly the kind nothing arithmetic can catch.
+ *
+ * ⚠️ **Named carriers rather than slot references.** During play the line says `SH: 1 #2` because the
  * player has no names; here they do, and a printed boxscore wrote `Sacrifice hit — Shotton`. The slot
  * reference existed to point at a row without naming anyone, and that reason is gone at this point.
  */
-function footnoteBlock(puzzle) {
+function footnoteBlock(puzzle, reveal) {
   const block = document.createElement("p");
   block.className = "clipping-notes";
-  const names = puzzle.reveal?.batter_names ?? [];
+  const names = reveal.boxscore.offense.batting.map((row) => row.name);
   const parts = [];
 
   // The footnote line is given in full and never erased (§6), so puzzle and solution agree here — but
@@ -244,10 +323,15 @@ function footnoteBlock(puzzle) {
       const count = row[index];
       if (count > 0) carriers.push(count > 1 ? `${names[batter] ?? ""} ${count}` : (names[batter] ?? ""));
     });
-    if (carriers.length > 0) parts.push(`${text(`column.${column}`)} — ${carriers.join(", ")}`);
+    if (carriers.length > 0) {
+      parts.push(`${text(`column.${column}`)}${text("printed.note_separator")}${carriers.join(", ")}`);
+    }
   });
-  parts.push(`${text("board.left_on_base")} — ${puzzle.solution.leftOnBase}`);
+  parts.push(`${text("board.left_on_base")}${text("printed.note_separator")}${puzzle.solution.leftOnBase}`);
 
-  block.textContent = parts.join(".  ");
+  const prefix = document.createElement("span");
+  prefix.className = "clipping-notes-team";
+  prefix.textContent = fill("printed.notes_for", { team: clubName(reveal.boxscore.offense) });
+  block.append(prefix, ` ${parts.join(".  ")}`);
   return block;
 }

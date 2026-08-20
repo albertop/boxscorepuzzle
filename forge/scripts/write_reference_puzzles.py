@@ -31,7 +31,7 @@ from measure import Loaded, load, slot_references  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
-from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
+from boxscore_package.format import Package, PrintedBoxscore, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 
@@ -92,8 +92,27 @@ def reveal_for(loaded: Loaded) -> Reveal:
         offense_team=loaded.offense_team,
         defense_team=loaded.defense_team,
         played_on=f"{loaded.game_id[3:7]}-{loaded.game_id[7:9]}-{loaded.game_id[9:11]}",
+        # ⚠️ **From the loader and never assembled here.** The printed sheet restates the board's own
+        # numbers for the half they share, and `check_reveal_agrees` refuses a package where the two
+        # disagree — so a second assembly here would be a second definition of the boxscore with a
+        # guard standing between them, which is the arrangement that guard exists to make unnecessary.
+        boxscore=required_boxscore(loaded),
         card="",
     )
+
+
+def required_boxscore(loaded: Loaded) -> PrintedBoxscore:
+    """The printed sheet, or a refusal that names the board.
+
+    ⚠️ **Fails rather than defaults.** `Loaded.printed` is `None` only when the loader could not name
+    a club, and it drops those directions — so `None` here means the loader and this writer disagree
+    about what a loaded direction contains. An empty boxscore substituted quietly would ship a reveal
+    with no sheet in it and no error anywhere, which is the absence of a check reading as a passing one.
+    """
+    if loaded.printed is None:
+        message = f"{loaded.game_id} {loaded.offense_team} came back from the loader with no printed boxscore"
+        raise SystemExit(message)
+    return loaded.printed
 
 
 def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None:
@@ -319,6 +338,32 @@ def _publish(staging: Path, expected: int, key: Ed25519PrivateKey, out: Path) ->
     return generation
 
 
+def refuse_second_direction(games: dict[str, str], game_id: str, name: str) -> None:
+    """One game, one puzzle — stated about the batch that was actually written.
+
+    ⚠⚠ **From schema 5 the reveal prints both clubs**, and the other club's half is the other
+    direction of that game, which §5 makes a second board. Publishing both hands the second one away
+    inside the first one's reveal. The pool is 400,000+ directions, so spending a whole game on each
+    board costs nothing measurable.
+
+    ⚠️ **`claim` already refuses a repeated game, and that is not this check.** `claim` decides what
+    goes into the candidate list; this decides what may be published. A rule applied during selection
+    is not a check performed at the boundary — a caller assembling a batch another way bypasses the
+    first and never learns it did. Same rule, two places, on purpose: one filters and one refuses.
+
+    ⚠️ **And it has nowhere better to live yet.** The calendar is what will really own this, because
+    the rule is about everything ever published rather than about one batch, and there is no calendar.
+    Recorded in CLAUDE.md so the obligation is waiting when it is built.
+    """
+    if game_id in games:
+        message = (
+            f"{name} and {games[game_id]} are both directions of {game_id}. From schema 5 each "
+            "reveal prints both clubs, so publishing both gives one of the two puzzles away."
+        )
+        raise SystemExit(message)
+    games[game_id] = name
+
+
 def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
     """The key this batch is signed with, and the only directory it is allowed to write.
 
@@ -404,6 +449,7 @@ def main() -> None:
     # the six are actually different rather than six copies of the easiest rung.
     written = 0
     taken: set[int] = set()
+    games: dict[str, str] = {}
     for loaded in wanted:
         if written == REFERENCE_BOARDS:
             break
@@ -434,6 +480,8 @@ def main() -> None:
         if "game_id" in restored.metadata:
             message = f"{path.name} still carries game_id after publishing"
             raise SystemExit(message)
+
+        refuse_second_direction(games, loaded.game_id, path.name)
 
         written += 1
         print(

@@ -26,6 +26,22 @@ export const PITCHING_COLUMNS = ["outs", "hits", "runs", "earned_runs", "walks",
  */
 export const FOOTNOTE_COLUMNS = ["hit_by_pitch", "sacrifice_flies", "sacrifice_hits", "catcher_interference"];
 
+/**
+ * The columns a **printed boxscore** carries, which are not the columns the board plays with.
+ *
+ * `AB R H RBI` is what a newspaper set, plus the two the player deduced. ⚠️ **`PA` is absent and `RBI`
+ * is present, and that is the whole reason the reveal is worth drawing.** §6 spends a board column on
+ * `PA` because `PA` is what breaks the constraint forest; `RBI` earns none of that — no cross-team
+ * counterpart, no place in the row identity — which is exactly why it is the one number on the
+ * finished sheet the puzzle never asked for.
+ *
+ * ⚠️ **Here rather than in the reader or the renderer, because both need it and one list is the
+ * point.** They are the keys of `reveal.boxscore.*.batting` and `.pitching` in schema 5, so the order
+ * is part of the format the same way the board's is.
+ */
+export const PRINTED_BATTING = ["ab", "r", "h", "rbi", "bb", "so"];
+export const PRINTED_PITCHING = ["outs", "h", "r", "er", "bb", "so"];
+
 export const battingCell = (row, column) => `batting[${row}].${column}`;
 export const battingTotalCell = (column) => `batting_totals.${column}`;
 export const footnoteCell = (row, column) => `footnotes[${row}].${column}`;

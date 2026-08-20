@@ -27,14 +27,39 @@ offense equal the outs recorded by the opposing pitchers.
 
 import json
 import re
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any, Final, Self
 
 from boxscore_domain import MAX_INNINGS
 
-SCHEMA_VERSION: Final = 4
+SCHEMA_VERSION: Final = 5
 """What this code writes.
+
+⚠️ **Version 5 exists because the reveal became a boxscore instead of a legend.** Version 4's
+`reveal` carried the names of the rows the board drew and nothing else, so the finished screen could
+only redraw the board the player had just filled in with names attached. A printed boxscore is a
+different object: it has both clubs, it has runs batted in, and it names the teams rather than
+abbreviating them.
+
+**The board is unchanged and this is deliberate.** §6 is a screen budget for the *playing* board and
+nothing here touches it — `puzzle`, `solution`, `labels` and `slot_references` are byte-identical to
+what version 4 wrote. The new block is display-only, feeds no deduction, and is read by nothing the
+four validation layers depend on.
+
+⚠⚠ **And it is a version rather than a tightening, by the test one paragraph down.** Every schema-4
+file in the repository would be *rejected* by this reader, because `reveal.boxscore` is required
+whenever a reveal is present. A document that used to be valid and now is not is exactly the case that
+must not reuse a number.
+
+⚠⚠ **It carries a rule the calendar has to keep, and the package cannot.** The reveal now prints
+both clubs, and the other club's half **is the other puzzle of that game** — §5 makes a game up to two
+boards, one per direction. Publishing both directions of one game hands the second one away in the
+first one's reveal. The decision taken with this version is **one game, one puzzle**: the pool is
+400,000+ directions, so spending a whole game on each board costs nothing measurable. `write` cannot
+enforce it — it sees one package and the rule is about a set — so it is enforced where sets are
+assembled and asserted in `write_reference_puzzles.py`. **When the calendar is built it inherits the
+obligation**, and there is a note in CLAUDE.md saying so.
 
 ⚠️ **Version 4 was tightened once, in place, and here is the test that allowed it.** As first cut it
 left `solution` optional and `left_on_base` nullable on this side while the browser required both, and
@@ -427,6 +452,186 @@ means the loose half is the hole. An id that reveals nothing beside a metadata b
 
 
 @dataclass(frozen=True, slots=True)
+class PrintedBatter:
+    """One batting line as a newspaper set it: **AB R H RBI**, plus the two the player deduced.
+
+    ⚠️ **`RBI` is here and not on the board, and that is the point.** §6 gives the board six columns
+    and `PA` takes one of them because `PA` is what breaks the constraint forest. `RBI` earns none of
+    that — it has no cross-team counterpart and no place in the row identity — which is exactly why it
+    is worth printing at the end: it is the one number on the finished sheet the puzzle never asked
+    for, so the reveal tells the player something instead of repeating what they worked out.
+
+    ⚠️ **`PA` is not here.** It is a column of the board, not of a boxscore; no newspaper printed it.
+    """
+
+    name: str
+    position: str
+    at_bats: int
+    runs: int
+    hits: int
+    runs_batted_in: int
+    walks: int
+    strikeouts: int
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "position": self.position,
+            "ab": self.at_bats,
+            "r": self.runs,
+            "h": self.hits,
+            "rbi": self.runs_batted_in,
+            "bb": self.walks,
+            "so": self.strikeouts,
+        }
+
+    @classmethod
+    def from_json(cls, raw: object, where: str) -> Self:
+        row = _object(raw, where)
+        return cls(
+            name=_text(_required(row, "name"), f"{where}.name"),
+            position=_text(_required(row, "position"), f"{where}.position"),
+            at_bats=_whole_number(_required(row, "ab"), f"{where}.ab"),
+            runs=_whole_number(_required(row, "r"), f"{where}.r"),
+            hits=_whole_number(_required(row, "h"), f"{where}.h"),
+            runs_batted_in=_whole_number(_required(row, "rbi"), f"{where}.rbi"),
+            walks=_whole_number(_required(row, "bb"), f"{where}.bb"),
+            strikeouts=_whole_number(_required(row, "so"), f"{where}.so"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PrintedPitcher:
+    """One pitching line, in the order the men appeared. `outs`, not innings — see `_innings`."""
+
+    name: str
+    role: str
+    outs: int
+    hits: int
+    runs: int
+    earned_runs: int
+    walks: int
+    strikeouts: int
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "role": self.role,
+            "outs": self.outs,
+            "h": self.hits,
+            "r": self.runs,
+            "er": self.earned_runs,
+            "bb": self.walks,
+            "so": self.strikeouts,
+        }
+
+    @classmethod
+    def from_json(cls, raw: object, where: str) -> Self:
+        row = _object(raw, where)
+        return cls(
+            name=_text(_required(row, "name"), f"{where}.name"),
+            role=_text(_required(row, "role"), f"{where}.role"),
+            outs=_whole_number(_required(row, "outs"), f"{where}.outs"),
+            hits=_whole_number(_required(row, "h"), f"{where}.h"),
+            runs=_whole_number(_required(row, "r"), f"{where}.r"),
+            earned_runs=_whole_number(_required(row, "er"), f"{where}.er"),
+            walks=_whole_number(_required(row, "bb"), f"{where}.bb"),
+            strikeouts=_whole_number(_required(row, "so"), f"{where}.so"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PrintedSide:
+    """One club's half of the printed sheet: who it is, who batted, who pitched.
+
+    ⚠️ **`city` and `nickname` are separate and both are required.** A boxscore is headed *St. Louis
+    Browns*, not *SLA*; the three-letter code is Retrosheet's key, and a player who has just earned the
+    answer should not be handed an abbreviation. They are two fields rather than one string because the
+    narrow places on a phone print the city alone — a line score has ten numeric columns at 375px and no
+    room for a nickname — and a renderer that had to split a joined string would be guessing where the
+    city ends.
+
+    Both non-empty, and there is no ambiguous case to arbitrate: **`retroTeams` resolves 2,892 of 2,901
+    team-seasons in the pool to exactly one row, and the nine that fail resolve to *zero* rather than to
+    two** — all Negro League and exhibition clubs whose season windows do not cover the game. So the
+    only failure is an absent name, and the loader drops that direction rather than shipping a board
+    whose reveal cannot name the club.
+
+    `code` is kept: it is what the puzzle id derives from, and it is what a curious player looks the
+    game up with.
+    """
+
+    code: str
+    city: str
+    nickname: str
+    batting: tuple[PrintedBatter, ...]
+    pitching: tuple[PrintedPitcher, ...]
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "code": self.code,
+            "city": self.city,
+            "nickname": self.nickname,
+            "batting": [row.as_json() for row in self.batting],
+            "pitching": [row.as_json() for row in self.pitching],
+        }
+
+    @classmethod
+    def from_json(cls, raw: object, where: str) -> Self:
+        side = _object(raw, where)
+        code = _text(_required(side, "code"), f"{where}.code")
+        city = _text(_required(side, "city"), f"{where}.city")
+        nickname = _text(_required(side, "nickname"), f"{where}.nickname")
+        # ⚠️ Fail closed on a blank rather than fall back to the code. A reveal headed `SLA` is the
+        # thing this version exists to remove, and a renderer that silently substituted the
+        # abbreviation would make the absence invisible — the absence of a name reading as the
+        # presence of a poor one.
+        for value, name in ((code, "code"), (city, "city"), (nickname, "nickname")):
+            if not value.strip():
+                message = f"{where}.{name} is blank; a printed boxscore has to name the club"
+                raise PackageError(message)
+        return cls(
+            code=code,
+            city=city,
+            nickname=nickname,
+            batting=tuple(
+                PrintedBatter.from_json(row, f"{where}.batting[{index}]")
+                for index, row in enumerate(_list(_required(side, "batting"), f"{where}.batting"))
+            ),
+            pitching=tuple(
+                PrintedPitcher.from_json(row, f"{where}.pitching[{index}]")
+                for index, row in enumerate(_list(_required(side, "pitching"), f"{where}.pitching"))
+            ),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PrintedBoxscore:
+    """Both clubs, complete — the object the player reconstructed half of.
+
+    ⚠️⚠️ **`offense` and `defense` name the *puzzle's* sides, not the game's.** The offence is the club
+    whose batting the board carried; the defence is the club whose pitching it carried. Each side here
+    holds **both** its batting and its pitching, so `offense.pitching` and `defense.batting` are the
+    half the board never showed. Named after the puzzle rather than after home and away so that one
+    vocabulary runs through the package — `offense_is_home` already means this.
+    """
+
+    offense: PrintedSide
+    defense: PrintedSide
+
+    def as_json(self) -> dict[str, Any]:
+        return {"offense": self.offense.as_json(), "defense": self.defense.as_json()}
+
+    @classmethod
+    def from_json(cls, raw: object, where: str = "reveal.boxscore") -> Self:
+        block = _object(raw, where)
+        return cls(
+            offense=PrintedSide.from_json(_required(block, "offense"), f"{where}.offense"),
+            defense=PrintedSide.from_json(_required(block, "defense"), f"{where}.defense"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class Reveal:
     """What the player earns: the names, the teams, the date, and the card (§7, §29).
 
@@ -444,6 +649,18 @@ class Reveal:
     offense_team: str
     defense_team: str
     played_on: str
+    boxscore: PrintedBoxscore
+    """The complete printed sheet, both clubs. **Required from schema 5.**
+
+    ⚠️ **It repeats the board's numbers, and the repetition is checked rather than trusted.** The
+    offence's `AB R H BB SO` and the defence's whole pitching line are already in `solution`, so this
+    is two places holding one set of facts — the shape every serious defect in this project has had.
+    The alternative was a block carrying only the *new* half, leaving the renderer to stitch a printed
+    sheet from two sources with different row orders, which trades a checkable duplication for an
+    unchecked join. So it is duplicated on purpose and `check_reveal_agrees` asserts the two agree
+    cell by cell on every column they share, at the boundary, for every package written or read.
+    """
+
     card: str = ""
 
     def as_json(self) -> dict[str, Any]:
@@ -453,6 +670,7 @@ class Reveal:
             "offense_team": self.offense_team,
             "defense_team": self.defense_team,
             "played_on": self.played_on,
+            "boxscore": self.boxscore.as_json(),
             "card": self.card,
         }
 
@@ -467,6 +685,7 @@ class Reveal:
             offense_team=_text(raw.get("offense_team"), "reveal.offense_team"),
             defense_team=_text(raw.get("defense_team"), "reveal.defense_team"),
             played_on=_text(raw.get("played_on"), "reveal.played_on"),
+            boxscore=PrintedBoxscore.from_json(_required(raw, "boxscore")),
             card=_text(raw.get("card", ""), "reveal.card"),
         )
 
@@ -478,11 +697,124 @@ def _text(raw: object, where: str) -> str:
     return raw
 
 
+def _object(raw: object, where: str) -> dict[str, Any]:
+    """A JSON object, refused at the boundary rather than three layers later as a `TypeError`."""
+    if not isinstance(raw, dict):
+        message = f"{where} is {type(raw).__name__}, expected an object"
+        raise PackageError(message)
+    return raw
+
+
+def _list(raw: object, where: str) -> list[Any]:
+    if not isinstance(raw, list):
+        message = f"{where} is {type(raw).__name__}, expected a list"
+        raise PackageError(message)
+    return raw
+
+
 def _strings(raw: object, where: str) -> list[str]:
     if not isinstance(raw, list):
         message = f"{where} is {type(raw).__name__}, expected a list of strings"
         raise PackageError(message)
     return [_text(value, f"{where}[{index}]") for index, value in enumerate(raw)]
+
+
+_PRINTED_BATTING: Final = tuple(
+    column for column in BATTING_COLUMNS if column in {entry.name for entry in fields(PrintedBatter)}
+)
+_PRINTED_PITCHING: Final = tuple(
+    column for column in PITCHING_COLUMNS if column in {entry.name for entry in fields(PrintedPitcher)}
+)
+"""The columns the board and the printed sheet both carry, **derived rather than listed.**
+
+Spelling them would be a third copy of the column order, and the order is a decision §6 already took
+once. `plate_appearances` drops out of the first by itself, because `PrintedBatter` has no such field —
+a boxscore does not print it — and every pitching column survives the second, because the two lines
+happen to agree. A future column changes one dataclass and this follows.
+"""
+
+
+def check_reveal_agrees(reveal: "Reveal", solution: Board, labels: tuple[str, ...], roles: tuple[str, ...]) -> None:
+    """The printed sheet and the board must say the same thing about the half they share.
+
+    ⚠️⚠️ **This is the guard that makes the duplication safe, and without it schema 5 is a defect.**
+    `reveal.boxscore.offense.batting` restates every batting column the board carries except `PA`, and
+    `reveal.boxscore.defense.pitching` restates the whole pitching line. Two places holding one set of
+    facts, with nothing checking they agree, is the shape of every serious defect this project has
+    found. So they are checked — cell by cell, on every column they share, at the one boundary every
+    package crosses in both directions.
+
+    **It also checks the names and the labels**, which are duplicated the same way: `batter_names`
+    and the printed rows both carry who batted, `labels` and the printed rows both carry where he
+    played. A reveal whose two halves disagree about a row is exactly how a footnote ends up attributed
+    to the wrong man while every total still balances.
+
+    ⚠️ **What it deliberately does not check: the other half.** `offense.pitching` and
+    `defense.batting` appear nowhere else in the package, so there is nothing to compare them against
+    and no assertion here could tell a real one from a fabricated one. That is the layer-4 problem in
+    miniature and it belongs to `certify_for_publication`, against the game log — not here.
+    """
+    printed = reveal.boxscore
+    if printed.offense.code != reveal.offense_team or printed.defense.code != reveal.defense_team:
+        message = (
+            f"reveal names {reveal.offense_team} against {reveal.defense_team} and its boxscore names "
+            f"{printed.offense.code} against {printed.defense.code}"
+        )
+        raise PackageError(message)
+
+    _check_rows(
+        printed.offense.batting,
+        solution.batting,
+        BATTING_COLUMNS,
+        _PRINTED_BATTING,
+        names=reveal.batter_names,
+        labels=labels,
+        label_field="position",
+        where="reveal.boxscore.offense.batting",
+    )
+    _check_rows(
+        printed.defense.pitching,
+        solution.pitching,
+        PITCHING_COLUMNS,
+        _PRINTED_PITCHING,
+        names=reveal.pitcher_names,
+        labels=roles,
+        label_field="role",
+        where="reveal.boxscore.defense.pitching",
+    )
+
+
+def _check_rows(  # noqa: PLR0913
+    printed: tuple[Any, ...],
+    board: tuple[tuple[int | None, ...], ...],
+    columns: tuple[str, ...],
+    shared: tuple[str, ...],
+    *,
+    names: tuple[str, ...],
+    labels: tuple[str, ...],
+    label_field: str,
+    where: str,
+) -> None:
+    """One grid of the printed sheet against the board's own, row for row."""
+    if len(printed) != len(board):
+        message = f"{where} has {len(printed)} rows and the board has {len(board)}"
+        raise PackageError(message)
+    for index, (row, board_row) in enumerate(zip(printed, board, strict=True)):
+        for column in shared:
+            mine = getattr(row, column)
+            theirs = board_row[columns.index(column)]
+            if mine != theirs:
+                message = f"{where}[{index}].{column} is {mine} and the board says {theirs}"
+                raise PackageError(message)
+        if index < len(names) and row.name != names[index]:
+            message = f"{where}[{index}].name is {row.name!r} and the reveal names {names[index]!r}"
+            raise PackageError(message)
+        if index < len(labels) and getattr(row, label_field) != labels[index]:
+            message = (
+                f"{where}[{index}].{label_field} is {getattr(row, label_field)!r} "
+                f"and the board's label is {labels[index]!r}"
+            )
+            raise PackageError(message)
 
 
 @dataclass(frozen=True, slots=True)
@@ -582,6 +914,11 @@ class Package:
         _check_labels(self.pitcher_labels, len(self.puzzle.pitching), "pitcher_labels")
         if self.schema is not None:
             _check_schema(self.schema, "a package cannot be schema")
+        # ⚠️ Here rather than in `from_json`, because `from_json` calls this constructor and a check
+        # placed only on the parse path would let the forge build and sign a package its own reader
+        # refuses. That asymmetry is what schema 4's own docstring records going wrong once already.
+        if self.reveal is not None:
+            check_reveal_agrees(self.reveal, self.solution, self.labels, self.pitcher_labels)
 
     @property
     def written_as(self) -> int:

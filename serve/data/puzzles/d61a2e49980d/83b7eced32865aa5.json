@@ -239,6 +239,236 @@
    "Bert Whaling",
    "Otto Hess"
   ],
+  "boxscore": {
+   "defense": {
+    "batting": [
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 0,
+      "name": "Possum Whitted",
+      "position": "SS",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Rebel Oakes",
+      "position": "CF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 0,
+      "name": "Charley O'Leary",
+      "position": "2B",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Ted Cather",
+      "position": "RF",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 3,
+      "bb": 1,
+      "h": 0,
+      "name": "Ed Konetchy",
+      "position": "1B",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 3,
+      "bb": 0,
+      "h": 0,
+      "name": "Lee Magee",
+      "position": "LF",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 2,
+      "bb": 0,
+      "h": 0,
+      "name": "Larry McLean",
+      "position": "C",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Palmer Hildebrand",
+      "position": "C",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 2,
+      "bb": 1,
+      "h": 0,
+      "name": "Mike Mowrey",
+      "position": "3B",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 3,
+      "bb": 0,
+      "h": 0,
+      "name": "Bill Doak",
+      "position": "P",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     }
+    ],
+    "city": "St. Louis",
+    "code": "SLN",
+    "nickname": "Cardinals",
+    "pitching": [
+     {
+      "bb": 6,
+      "er": 4,
+      "h": 11,
+      "name": "Bill Doak",
+      "outs": 27,
+      "r": 8,
+      "role": "SP",
+      "so": 7
+     }
+    ]
+   },
+   "offense": {
+    "batting": [
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 1,
+      "name": "Rabbit Maranville",
+      "position": "SS",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 1,
+      "name": "Bris Lord",
+      "position": "RF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 3,
+      "bb": 2,
+      "h": 0,
+      "name": "Joe Connolly",
+      "position": "LF",
+      "r": 1,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 0,
+      "name": "Fred Smith",
+      "position": "3B",
+      "r": 1,
+      "rbi": 0,
+      "so": 2
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 3,
+      "name": "Bill Sweeney",
+      "position": "2B",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Hap Myers",
+      "position": "1B",
+      "r": 2,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 1,
+      "name": "Les Mann",
+      "position": "CF",
+      "r": 1,
+      "rbi": 1,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 3,
+      "name": "Bert Whaling",
+      "position": "C",
+      "r": 1,
+      "rbi": 3,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Otto Hess",
+      "position": "P",
+      "r": 1,
+      "rbi": 2,
+      "so": 1
+     }
+    ],
+    "city": "Boston",
+    "code": "BSN",
+    "nickname": "Braves",
+    "pitching": [
+     {
+      "bb": 2,
+      "er": 0,
+      "h": 2,
+      "name": "Otto Hess",
+      "outs": 27,
+      "r": 0,
+      "role": "SP",
+      "so": 5
+     }
+    ]
+   }
+  },
   "card": "",
   "defense_team": "SLN",
   "offense_team": "BSN",
@@ -247,8 +477,8 @@
   ],
   "played_on": "1913-08-01"
  },
- "schema": 4,
- "signature": "84163a2c1091c38f7502ed72ee13b72b4820561df411f4763b3de909acae728b54d8846082f12cfe1660660f5cc52d1826d07e4bd0c5e7f81bf3f23eb2139f0c",
+ "schema": 5,
+ "signature": "1017ae2400d12f66d19e7bd340d9dcee51adca1ff485e9db2312c68d87212fe39b84e270e442c507aefc1646d46b8e487c274e957ffdd6923439617771f9120c",
  "slot_references": [
   "1",
   "2",

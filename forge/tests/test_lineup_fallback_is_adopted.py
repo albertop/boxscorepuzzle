@@ -250,8 +250,8 @@ class TestAFallbackBoardActuallyPublishes:
         # the first version for two reasons that are entirely correct — an arbitrary `puzzle_id` that
         # no evidence implies, and a missing reveal — and a test that worked around those by not
         # calling the gate is exactly what v29-P2-02 was about.
-        from boxscore_package.format import Reveal  # noqa: PLC0415
         from boxscore_verify.expected_id import expected_puzzle_id  # noqa: PLC0415
+        from tests.reveals import reveal_for  # noqa: PLC0415
 
         package = Package(
             puzzle_id=expected_puzzle_id(GAME, OFFENSE),
@@ -260,12 +260,11 @@ class TestAFallbackBoardActuallyPublishes:
             labels=("C",) * len(direction.batting),
             pitcher_labels=("SP",) * len(direction.pitching),
             slot_references=tuple(str(slot) for slot in slots),
-            reveal=Reveal(
-                batter_names=("A Batter",) * len(direction.batting),
-                pitcher_names=("A Pitcher",) * len(direction.pitching),
-                offense_team=OFFENSE,
-                defense_team="BBB",
-                played_on="1968-08-08",
+            reveal=reveal_for(
+                to_board(direction, None),
+                labels=("C",) * len(direction.batting),
+                pitcher_labels=("SP",) * len(direction.pitching),
+                offense=OFFENSE,
             ),
             offense_is_home=True,
         )

@@ -1,0 +1,762 @@
+{
+ "labels": [
+  "LF",
+  "RF",
+  "CF",
+  "SS",
+  "2B",
+  "3B",
+  "1B",
+  "C",
+  "P"
+ ],
+ "metadata": {
+  "batters": 9,
+  "blanks": 17,
+  "chain_length": 6,
+  "difficulty_model": "stalls",
+  "families": [
+   "column_sum",
+   "row_identity"
+  ],
+  "note": "reference data for serve, not inventory",
+  "pitchers": 3,
+  "seed": 6,
+  "stalls": 1,
+  "target_stalls": 1
+ },
+ "offense_is_home": false,
+ "pitcher_labels": [
+  "SP",
+  "RP-1",
+  "RP-2"
+ ],
+ "puzzle": {
+  "batting": [
+   [
+    6,
+    null,
+    0,
+    1,
+    1,
+    null
+   ],
+   [
+    6,
+    null,
+    3,
+    null,
+    0,
+    0
+   ],
+   [
+    null,
+    null,
+    2,
+    1,
+    2,
+    1
+   ],
+   [
+    5,
+    4,
+    3,
+    2,
+    null,
+    0
+   ],
+   [
+    5,
+    4,
+    1,
+    2,
+    null,
+    null
+   ],
+   [
+    5,
+    null,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    5,
+    3,
+    2,
+    2,
+    null,
+    0
+   ],
+   [
+    5,
+    null,
+    1,
+    1,
+    1,
+    2
+   ],
+   [
+    5,
+    5,
+    null,
+    0,
+    0,
+    1
+   ]
+  ],
+  "batting_totals": [
+   null,
+   40,
+   13,
+   15,
+   7,
+   4
+  ],
+  "footnote_totals": [
+   0,
+   0,
+   1,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 8,
+  "line_score": {
+   "defense_by_inning": [
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    2,
+    0,
+    0
+   ],
+   "defense_errors": 1,
+   "defense_hits": 11,
+   "defense_runs": 5,
+   "offense_by_inning": [
+    1,
+    0,
+    3,
+    0,
+    0,
+    5,
+    1,
+    2,
+    1
+   ],
+   "offense_errors": 1,
+   "offense_hits": 15,
+   "offense_runs": 13
+  },
+  "pitching": [
+   [
+    null,
+    9,
+    10,
+    10,
+    7,
+    3
+   ],
+   [
+    3,
+    3,
+    2,
+    null,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    null,
+    1,
+    0,
+    1
+   ]
+  ],
+  "pitching_totals": [
+   27,
+   15,
+   13,
+   11,
+   7,
+   4
+  ]
+ },
+ "puzzle_id": "9f42acb60c536afd",
+ "reveal": {
+  "batter_names": [
+   "Charlie Jamieson",
+   "Joe Connolly",
+   "Tris Speaker",
+   "Joe Sewell",
+   "Riggs Stephenson",
+   "Rube Lutzke",
+   "Frank Brower",
+   "Steve O'Neill",
+   "Joe Shaute"
+  ],
+  "boxscore": {
+   "defense": {
+    "batting": [
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Wally Gerber",
+      "position": "SS",
+      "r": 0,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Homer Ezzell",
+      "position": "3B",
+      "r": 1,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 1,
+      "name": "Jack Tobin",
+      "position": "RF",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 2,
+      "name": "Ken Williams",
+      "position": "LF",
+      "r": 0,
+      "rbi": 2,
+      "so": 0
+     },
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 1,
+      "name": "Marty McManus",
+      "position": "2B",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 2,
+      "bb": 1,
+      "h": 1,
+      "name": "Hank Severeid",
+      "position": "C",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Pat Collins",
+      "position": "C",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "Baby Doll Jacobson",
+      "position": "CF",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "Dutch Schliebner",
+      "position": "1B",
+      "r": 1,
+      "rbi": 0,
+      "so": 2
+     },
+     {
+      "ab": 2,
+      "bb": 0,
+      "h": 0,
+      "name": "Dave Danforth",
+      "position": "P",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Bill Whaley",
+      "position": "PH",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Syl Simon",
+      "position": "PH",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     }
+    ],
+    "city": "St. Louis",
+    "code": "SLA",
+    "nickname": "Browns",
+    "pitching": [
+     {
+      "bb": 7,
+      "er": 10,
+      "h": 9,
+      "name": "Dave Danforth",
+      "outs": 21,
+      "r": 10,
+      "role": "SP",
+      "so": 3
+     },
+     {
+      "bb": 0,
+      "er": 0,
+      "h": 3,
+      "name": "George Grant",
+      "outs": 3,
+      "r": 2,
+      "role": "RP-1",
+      "so": 0
+     },
+     {
+      "bb": 0,
+      "er": 1,
+      "h": 3,
+      "name": "Charlie Root",
+      "outs": 3,
+      "r": 1,
+      "role": "RP-2",
+      "so": 1
+     }
+    ]
+   },
+   "offense": {
+    "batting": [
+     {
+      "ab": 5,
+      "bb": 1,
+      "h": 1,
+      "name": "Charlie Jamieson",
+      "position": "LF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 6,
+      "bb": 0,
+      "h": 4,
+      "name": "Joe Connolly",
+      "position": "RF",
+      "r": 3,
+      "rbi": 3,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 2,
+      "h": 1,
+      "name": "Tris Speaker",
+      "position": "CF",
+      "r": 2,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 2,
+      "name": "Joe Sewell",
+      "position": "SS",
+      "r": 3,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "Riggs Stephenson",
+      "position": "2B",
+      "r": 1,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 2,
+      "name": "Rube Lutzke",
+      "position": "3B",
+      "r": 1,
+      "rbi": 3,
+      "so": 0
+     },
+     {
+      "ab": 3,
+      "bb": 2,
+      "h": 2,
+      "name": "Frank Brower",
+      "position": "1B",
+      "r": 2,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 1,
+      "name": "Steve O'Neill",
+      "position": "C",
+      "r": 1,
+      "rbi": 1,
+      "so": 2
+     },
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 0,
+      "name": "Joe Shaute",
+      "position": "P",
+      "r": 0,
+      "rbi": 2,
+      "so": 1
+     }
+    ],
+    "city": "Cleveland",
+    "code": "CLE",
+    "nickname": "Guardians",
+    "pitching": [
+     {
+      "bb": 2,
+      "er": 3,
+      "h": 11,
+      "name": "Joe Shaute",
+      "outs": 27,
+      "r": 5,
+      "role": "SP",
+      "so": 2
+     }
+    ]
+   }
+  },
+  "card": "",
+  "defense_team": "SLA",
+  "offense_team": "CLE",
+  "pitcher_names": [
+   "Dave Danforth",
+   "George Grant",
+   "Charlie Root"
+  ],
+  "played_on": "1923-10-01"
+ },
+ "schema": 5,
+ "signature": "d5e428eadc90c4073b19a69a594ddb94b6928454e5f3da11e3c3031bcf209c48a1e5f77a2699b468550ced173b525c94c440ff15d60e35d366d820e811ba530f",
+ "slot_references": [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9"
+ ],
+ "solution": {
+  "batting": [
+   [
+    6,
+    5,
+    0,
+    1,
+    1,
+    0
+   ],
+   [
+    6,
+    6,
+    3,
+    4,
+    0,
+    0
+   ],
+   [
+    6,
+    4,
+    2,
+    1,
+    2,
+    1
+   ],
+   [
+    5,
+    4,
+    3,
+    2,
+    1,
+    0
+   ],
+   [
+    5,
+    4,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    5,
+    5,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    5,
+    3,
+    2,
+    2,
+    2,
+    0
+   ],
+   [
+    5,
+    4,
+    1,
+    1,
+    1,
+    2
+   ],
+   [
+    5,
+    5,
+    0,
+    0,
+    0,
+    1
+   ]
+  ],
+  "batting_totals": [
+   48,
+   40,
+   13,
+   15,
+   7,
+   4
+  ],
+  "footnote_totals": [
+   0,
+   0,
+   1,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 8,
+  "line_score": {
+   "defense_by_inning": [
+    0,
+    0,
+    0,
+    0,
+    3,
+    0,
+    2,
+    0,
+    0
+   ],
+   "defense_errors": 1,
+   "defense_hits": 11,
+   "defense_runs": 5,
+   "offense_by_inning": [
+    1,
+    0,
+    3,
+    0,
+    0,
+    5,
+    1,
+    2,
+    1
+   ],
+   "offense_errors": 1,
+   "offense_hits": 15,
+   "offense_runs": 13
+  },
+  "pitching": [
+   [
+    21,
+    9,
+    10,
+    10,
+    7,
+    3
+   ],
+   [
+    3,
+    3,
+    2,
+    0,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    1,
+    1,
+    0,
+    1
+   ]
+  ],
+  "pitching_totals": [
+   27,
+   15,
+   13,
+   11,
+   7,
+   4
+  ]
+ }
+}

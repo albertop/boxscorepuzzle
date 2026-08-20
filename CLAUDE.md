@@ -513,11 +513,35 @@ correlating with the wrong target is not a reason to keep a filter.*
 
 **Each game can yield up to two puzzles**, one per direction (A's offense vs B's pitching, and vice versa). A game may qualify in one direction and not the other. Count the pool by direction, not by game.
 
+⚠️⚠️ **But only one of the two may ever be published — see *One game, one puzzle* below.** The pool is
+counted by direction; the *calendar* spends a whole game per board. Both statements are true and they
+are about different things, which is why they sit together.
+
 ### Calendar construction
 
 Difficulty is tied to the day of the week — easy Monday, hard Saturday (§31). The calendar must classify by level and shape the week. Within a level, vary which techniques are required so no two Tuesdays open the same way.
 
 The VPS holds **five months of forward inventory** at all times; alert below three (§33).
+
+#### ⚠️⚠️ One game, one puzzle — mandatory, and the calendar is the only thing that can enforce it
+
+**Never publish both directions of the same game.** From package schema 5 the reveal prints the
+**complete boxscore, both clubs** — which is the whole reason it is worth drawing — and the other
+club's half **is the other direction's board**. Publishing both gives the second one away, entirely,
+inside the first one's reveal, before it is played.
+
+**It costs nothing.** The pool is 400,000+ directions; spending a whole game on each board is not a
+measurable loss of inventory.
+
+⚠️ **No package can enforce this and no validation layer can see it.** A file cannot know what else
+was published — this is a property of the *set*, which is what a calendar is. `write` refuses nothing
+here; `write_reference_puzzles.refuse_second_direction` asserts it over a batch, which is the whole of
+the enforcement that exists today. **The calendar inherits the obligation the moment it is built**, and
+it inherits it over everything ever published rather than over one batch. A calendar that does not
+carry this check is not a calendar with a missing feature; it is one that leaks puzzles.
+
+⚠️ Related but not the same as §21's rule that the calendar extends and never rewrites. That is about
+a date not changing once played. This is about two dates never drawing on one game.
 
 ---
 

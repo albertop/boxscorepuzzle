@@ -1478,7 +1478,7 @@ suite("⚠️⚠️ The end of the game, and what the board may never say", () =
   });
 });
 
-suite("⚠️ The reveal is the boxscore the player reconstructed, not a results card", () => {
+suite("⚠️ The reveal is a printed boxscore, not the board with names attached", () => {
   const finished = async (raw) => {
     const { createGame } = await import("../engine/game.js");
     const { readPackage } = await import("../engine/package.js");
@@ -1490,89 +1490,222 @@ suite("⚠️ The reveal is the boxscore the player reconstructed, not a results
     return { puzzle, panel: renderReveal(puzzle, game.finish()) };
   };
 
+  /** The clubs in printing order — visitor first, which is what a line score and a boxscore both use. */
+  const sides = (puzzle) => {
+    const box = puzzle.reveal.boxscore;
+    return puzzle.offenseIsHome
+      ? { visitor: box.defense, home: box.offense }
+      : { visitor: box.offense, home: box.defense };
+  };
+
+  const grids = (panel) => [...panel.querySelectorAll(".clipping-batting")];
+
   test("⚠⚠ every cell carries a value, because it draws the solution and not the puzzle", async () => {
-    // ⚠⚠ **The first version drew `puzzle.puzzle`, which is the board with its blanks.** The finished
+    // ⚠⚠ **An early version drew `puzzle.puzzle`, which is the board with its blanks.** The finished
     // boxscore printed `null` in every cell the player had just filled and every pitcher's innings
     // read `0.0`. Nothing threw and the panel looked structurally right; only reading the rendered
     // text showed it. This asserts the content of the grid rather than its shape.
     for (const { raw } of packages) {
       const { panel } = await finished(raw);
-      const grid = panel.querySelector(".clipping-batting");
 
-      for (const cell of grid.querySelectorAll("td")) {
+      for (const cell of panel.querySelectorAll(".clipping-grid td")) {
         assert(cell.textContent.trim().length > 0, "an empty cell in the finished boxscore");
         assert(!cell.textContent.includes("null"), `a null in the finished boxscore: ${cell.textContent}`);
+        assert(!cell.textContent.includes("undefined"), `an undefined: ${cell.textContent}`);
       }
     }
   });
 
+  test("⚠️ both clubs are printed, which is what makes it a boxscore rather than a legend", async () => {
+    // The whole point of schema 5. A single batting grid is the board relabelled; two is a boxscore.
+    for (const { raw } of packages) {
+      const { puzzle, panel } = await finished(raw);
+      const { visitor, home } = sides(puzzle);
+
+      equal(grids(panel).length, 2, "the reveal does not print both clubs");
+      // ⚠️ Visitor first, and asserted against `offenseIsHome` rather than against the package's field
+      // order. The package stores offence and defence; the printing order is visitor and home, and
+      // assuming the two coincide is how the board once claimed the batting team was away.
+      const [first, second] = grids(panel).map((g) => g.querySelector(".clipping-team").textContent);
+      assert(first.includes(visitor.city), `${first} is not the visiting club`);
+      assert(second.includes(home.city), `${second} is not the home club`);
+    }
+  });
+
+  test("⚠️ the clubs are named in full, never by their three-letter key", async () => {
+    for (const { raw } of packages) {
+      const { puzzle, panel } = await finished(raw);
+      const { visitor } = sides(puzzle);
+      const heading = panel.querySelector(".clipping-head").textContent;
+
+      assert(heading.includes(`${visitor.city} ${visitor.nickname}`), `no club name in ${heading}`);
+      // The code belongs on the line score, where 52px is all there is, and nowhere else.
+      const named = panel.querySelector(".clipping-batting .clipping-team").textContent;
+      assert(!named.includes(visitor.code), `the batting grid is headed by a code: ${named}`);
+    }
+  });
+
+  test("⚠️ the winner is named first, which is not the same as the visitor being first", async () => {
+    for (const { raw } of packages) {
+      const { puzzle, panel } = await finished(raw);
+      const score = puzzle.solution.lineScore;
+      const box = puzzle.reveal.boxscore;
+      const winner = score.offense_runs > score.defense_runs ? box.offense : box.defense;
+      const heading = panel.querySelector(".clipping-head").textContent;
+
+      assert(heading.startsWith(`${winner.city} ${winner.nickname}`), `${heading} does not lead with the winner`);
+      assert(heading.includes(String(Math.max(score.offense_runs, score.defense_runs))), `no score in ${heading}`);
+    }
+  });
+
+  test("the date reads as a date rather than as a field", async () => {
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const printed = panel.querySelector(".clipping-date").textContent;
+
+    assert(!printed.includes(puzzle.reveal.playedOn), `the reveal prints the ISO date: ${printed}`);
+    assert(printed.includes(puzzle.reveal.playedOn.slice(0, 4)), `no year in ${printed}`);
+  });
+
+  test("⚠️ the line score is labelled with the clubs, drawn by the board's own renderer", async () => {
+    // ⚠️ A *parameter* of `renderLineScore`, never a copy of it: a comparison page written with its
+    // own grid twice showed something other than what it was evaluating. During play the rows say
+    // AWAY and HOME because the player has no clubs; here they say which clubs.
+    for (const { raw } of packages) {
+      const { puzzle, panel } = await finished(raw);
+      const labels = [...panel.querySelectorAll(".linescore td.side")].map((c) => c.textContent);
+      const { visitor, home } = sides(puzzle);
+
+      equal(labels, [visitor.code, home.code], "the reveal's line score is not labelled with the clubs");
+    }
+  });
+
+  test("⚠️ runs batted in are shown — the one column the board never asked for", async () => {
+    // The reason the reveal is worth drawing at all: it tells the player something instead of
+    // repeating what they worked out. If this heading goes missing the reveal is a summary again.
+    const { puzzle, panel } = await finished(packages[0].raw);
+    // Scoped to one grid: the selector without a scope matches the header row of both clubs and
+    // returns twelve headings, which is a test failing on its own selector rather than on the code.
+    const headings = [...grids(panel)[0].querySelectorAll("tr:first-child th")].map((c) => c.textContent);
+
+    equal(headings.slice(1), ["AB", "R", "H", "RBI", "BB", "SO"]);
+    assert(!headings.includes("PA"), "PA is a board column and belongs on no boxscore");
+    // And it carries real values, not a column of zeros.
+    const rbi = puzzle.reveal.boxscore.offense.batting.reduce((sum, row) => sum + row.rbi, 0);
+    assert(rbi > 0, "the fixture cannot show this: nobody drove in a run");
+  });
+
+  test("both grids carry every row of their club and a totals line", async () => {
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const { visitor, home } = sides(puzzle);
+
+    // Header, one row per player, totals.
+    equal(grids(panel)[0].querySelectorAll("tr").length, visitor.batting.length + 2);
+    equal(grids(panel)[1].querySelectorAll("tr").length, home.batting.length + 2);
+    equal(panel.querySelectorAll(".clipping-batting .clipping-totals").length, 2);
+  });
+
+  test("⚠️ the totals are the sum of the rows printed above them", async () => {
+    // ⚠️ **The one place in this product where summing from the rows is right, and it is worth saying
+    // why.** A total loaded from the rows it verifies verifies nothing — that defect is on the record.
+    // Here there is nothing to verify: the package's totals cover six board columns for one club, and
+    // this grid has RBI and a club the board never carried. So the test computes it the same way the
+    // renderer does, which makes it a check that the arithmetic ran rather than a check of the source.
+    for (const { raw } of packages) {
+      const { puzzle, panel } = await finished(raw);
+      const { visitor } = sides(puzzle);
+      const totals = [...grids(panel)[0].querySelectorAll(".clipping-totals td")]
+        .slice(1)
+        .map((cell) => Number(cell.textContent));
+      const columns = ["ab", "r", "h", "rbi", "bb", "so"];
+
+      equal(
+        totals,
+        columns.map((column) => visitor.batting.reduce((sum, row) => sum + row[column], 0)),
+      );
+    }
+  });
+
+  test("⚠️ the batting totals still agree with the line score, which is an independent source", async () => {
+    // The check that would catch a fabricated half. `offense.batting` is verified against the board on
+    // the forge; the *other* club's is verified nowhere — and the line score, which comes from the
+    // game table rather than from these rows, is the one thing here that can speak about it.
+    for (const { raw } of packages) {
+      const { puzzle } = await finished(raw);
+      const score = puzzle.solution.lineScore;
+      const box = puzzle.reveal.boxscore;
+
+      equal(box.offense.batting.reduce((sum, row) => sum + row.r, 0), score.offense_runs, "offensive runs");
+      equal(box.offense.batting.reduce((sum, row) => sum + row.h, 0), score.offense_hits, "offensive hits");
+      equal(box.defense.batting.reduce((sum, row) => sum + row.r, 0), score.defense_runs, "defensive runs");
+      equal(box.defense.batting.reduce((sum, row) => sum + row.h, 0), score.defense_hits, "defensive hits");
+    }
+  });
+
+  test("both clubs' pitchers are in one block, grouped and headed", async () => {
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const { visitor, home } = sides(puzzle);
+    const block = panel.querySelector(".clipping-pitching");
+    const clubs = [...block.querySelectorAll(".clipping-club th")].map((c) => c.textContent);
+
+    equal(clubs, [`${visitor.city} ${visitor.nickname}`, `${home.city} ${home.nickname}`]);
+    // Every pitcher of both clubs, and no totals row — a total across two clubs counts half-innings.
+    equal(
+      block.querySelectorAll("tr").length - 1 - clubs.length,
+      visitor.pitching.length + home.pitching.length,
+    );
+    assert(!block.querySelector(".clipping-totals"), "a totals row across two clubs means nothing");
+  });
+
   test("the innings column prints thirds rather than outs", async () => {
     const { puzzle, panel } = await finished(packages[0].raw);
-    const first = panel.querySelector(".clipping-pitching tr:nth-child(2) td:nth-child(2)");
-    const outs = puzzle.solution.pitching[0][0];
+    const first = panel.querySelector(".clipping-pitching tr:nth-child(3) td:nth-child(2)");
+    const { visitor } = sides(puzzle);
+    const outs = visitor.pitching[0].outs;
 
     equal(first.textContent, `${Math.floor(outs / 3)}.${outs % 3}`);
-  });
-
-  test("both grids carry every row and a totals line", async () => {
-    const { puzzle, panel } = await finished(packages[0].raw);
-    // Header, one row per player, and totals.
-    equal(
-      panel.querySelectorAll(".clipping-batting tr").length,
-      puzzle.solution.batting.length + 2,
-    );
-    equal(
-      panel.querySelectorAll(".clipping-pitching tr").length,
-      puzzle.solution.pitching.length + 2,
-    );
-    assert(panel.querySelector(".clipping-batting .clipping-totals"), "no batting totals line");
-    assert(panel.querySelector(".clipping-pitching .clipping-totals"), "no pitching totals line");
-  });
-
-  test("the totals line matches the package's own totals", async () => {
-    // ⚠️ Against the package rather than against a sum of the rows above: a totals row computed here
-    // would be a second place encoding the same rule, and it would agree with itself while disagreeing
-    // with the boxscore.
-    const { puzzle, panel } = await finished(packages[0].raw);
-    const cells = [...panel.querySelectorAll(".clipping-batting .clipping-totals td")].slice(1);
-
-    equal(
-      cells.map((cell) => Number(cell.textContent)),
-      [...puzzle.solution.battingTotals],
-    );
-  });
-
-  test("it names the teams and the date", async () => {
-    // ⚠️ The reveal block passes through the reader in snake_case while every other field is mapped.
-    // Reading it as camelCase renders an empty heading with no error, on the one screen nobody had
-    // seen -- so this asserts the content rather than the presence of an element.
-    const { puzzle, panel } = await finished(packages[0].raw);
-    const heading = panel.querySelector(".clipping-head").textContent;
-
-    assert(heading.includes(puzzle.reveal.offense_team), `no offense team in ${heading}`);
-    assert(heading.includes(puzzle.reveal.defense_team), `no defense team in ${heading}`);
-    assert(heading.includes(puzzle.reveal.played_on), `no date in ${heading}`);
   });
 
   test("⚠️ each row carries the name the player earned and the position they solved against", async () => {
     // Both, not the name alone: the player spent the game thinking of that row as `cf`, and a list of
     // names with no positions cannot be mapped onto the board they just filled.
     const { puzzle, panel } = await finished(packages[0].raw);
+    const { visitor } = sides(puzzle);
     const first = panel.querySelector(".clipping-batting tr:nth-child(2) .clipping-who").textContent;
 
-    assert(first.includes(puzzle.reveal.batter_names[0]), `no name in "${first}"`);
-    assert(first.includes(puzzle.labels[0].toLowerCase()), `no position in "${first}"`);
+    assert(first.includes(visitor.batting[0].name), `no name in "${first}"`);
+    // ⚠️ `label`, not `position`. The package says `position` for a batter and `role` for a
+    // pitcher; the reader maps both to one name so the renderer draws one kind of row. Reading the
+    // package's spelling here got `undefined`, which is the snake_case bug in miniature.
+    assert(first.includes(visitor.batting[0].label.toLowerCase()), `no position in "${first}"`);
   });
 
-  test("the footnote block names carriers rather than slot references", async () => {
-    // During play the line says `SH: 1 #2` because the player has no names. Here they do, and a
-    // printed boxscore wrote `Sacrifice hit -- Shotton`. The reference existed to point at a row
-    // without naming anyone, and that reason is gone at this point.
+  test("⚠️ the footnote line names its club, because the package carries one club's footnotes", async () => {
+    // The other club has its own and no package holds them. An unprefixed line would read as a
+    // statement about both and be silently false about one — a label sitting outside the arithmetic.
     const { puzzle, panel } = await finished(packages[0].raw);
     const notes = panel.querySelector(".clipping-notes").textContent;
+    const offense = puzzle.reveal.boxscore.offense;
 
+    assert(notes.startsWith(`${offense.city} ${offense.nickname}`), `the footnotes name no club: ${notes}`);
     assert(notes.includes(puzzle.solution.leftOnBase.toString()), "LOB is missing from the footnotes");
     assert(!notes.includes("#"), `the reveal still prints a slot reference: ${notes}`);
+  });
+
+  test("⚠️ the footnote carriers are named, not numbered", async () => {
+    // During play the line says `SH: 1 #2` because the player has no names. Here they do, and a
+    // printed boxscore wrote `Sacrifice hit—Shotton`. The slot reference existed to point at a row
+    // without naming anyone, and that reason is gone at this point.
+    const withFootnote = packages.find(({ raw }) =>
+      raw.solution.footnotes.some((row) => row.some((value) => value > 0)),
+    );
+    assert(withFootnote, "no reference package carries a live footnote; this test cannot fire");
+    const { puzzle, panel } = await finished(withFootnote.raw);
+    const notes = panel.querySelector(".clipping-notes").textContent;
+    const carrier = puzzle.reveal.boxscore.offense.batting[
+      puzzle.solution.footnotes.findIndex((row) => row.some((value) => value > 0))
+    ];
+
+    assert(notes.includes(carrier.name), `${carrier.name} carries a footnote and is not named: ${notes}`);
   });
 
   test("⚠⚠ the mistake count is not shown", async () => {
@@ -1594,6 +1727,7 @@ suite("⚠️ The reveal is the boxscore the player reconstructed, not a results
 
     equal(record.errors, 3, "the event record lost the mistakes");
     assert(!panel.querySelector(".reveal-errors"), "the reveal shows a mistake count");
+    assert(!panel.textContent.includes("3 mistakes"), "the reveal counts mistakes");
   });
 
   test("a duration renders as minutes and seconds, and past an hour gains one", async () => {

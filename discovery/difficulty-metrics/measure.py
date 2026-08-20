@@ -48,8 +48,14 @@ from boxscore_forge.identities import (  # noqa: E402
     PITCHING_COLUMNS,
     find_violations,
 )
-from boxscore_forge.solver import Solution, solve  # noqa: E402
 from boxscore_domain import BATTER_CAP, PITCHER_CAP, ZERO_DENSITY_GATE  # noqa: E402
+from boxscore_forge.solver import Solution, solve  # noqa: E402
+from boxscore_package.format import (  # noqa: E402
+    PrintedBatter,
+    PrintedBoxscore,
+    PrintedPitcher,
+    PrintedSide,
+)
 
 CONTRIBUTED = (
     "B_G = 1 AND (B_PA > 0 OR B_R > 0 OR B_H > 0 OR B_BB > 0"
@@ -291,6 +297,17 @@ class Loaded:
     """Home runs charged to each pitcher. The offense's total and this one are the same events, which
     is the cross-team link a home-run column would add."""
 
+    printed: PrintedBoxscore | None = None
+    """**Both clubs' complete boxscore**, for the reveal and for nothing else.
+
+    ⚠️ **It is not part of `direction` and must never become part of it.** `direction` is the board:
+    every field in it enters an identity, an erasure and four validation layers. This is display data —
+    it feeds no deduction, and putting it in the model would widen what §22 has to verify in order to
+    change what a screen looks like.
+
+    `None` when the club could not be named for that season; the loader drops those directions.
+    """
+
 
 FIELDING_CODE: Final = {1: "P", 2: "C", 3: "1B", 4: "2B", 5: "3B", 6: "SS", 7: "LF", 8: "CF", 9: "RF"}
 """Retrosheet's `SUB_FLD_CD`, for the nine positions on the field. 10 is DH, 11 PH, 12 PR."""
@@ -403,6 +420,90 @@ def _pitcher_labels(started: list[int]) -> tuple[str, ...]:
             relievers += 1
             labels.append(f"RP-{relievers}")
     return tuple(labels)
+
+
+TEAM_NAME_QUERY: Final = """
+SELECT city, nickname FROM dbo.retroTeams
+WHERE team = ? AND ? BETWEEN firstSeason AND lastSeason
+"""
+"""The club's real name, which is what a boxscore is headed with.
+
+⚠️ **The season is part of the key and dropping it is wrong, not merely imprecise.** A three-letter
+code is a *franchise slot*, and `retroTeams` carries one row per era: `MIL` is the Braves and then the
+Brewers, `WAS` the Senators and then the Nationals. A lookup on the code alone returns whichever row
+came first.
+
+⚠️ **Exactly one row or the direction is dropped, and there is no fallback to the code.** Measured
+over every team-season the pool can draw: **2,892 of 2,901 resolve to exactly one row, and the nine
+that fail resolve to zero** — Negro League and exhibition clubs whose season windows do not cover the
+game they appear in. So the ambiguous case does not exist and only the absent one does; falling back
+to `SLA` would put the abbreviation back on the one screen schema 5 exists to take it off, and it
+would do it silently.
+"""
+
+_CITY_SPELLINGS: Final = {"St.Louis": "St. Louis"}
+"""⚠️ One club, spelled two ways in one table. `retroTeams` holds both `St. Louis` and `St.Louis`, and
+the 1913 Browns get the second. It reads as a typo on a page whose whole job is to look printed.
+Corrected by exact match on the known bad spelling rather than by a rule about periods, because
+`Ft. Wayne` and `Harrisburg - St. Louis` are correct as they stand and a general rule would touch them.
+"""
+
+
+def team_name(connection: object, cache: dict, code: str, season: int) -> tuple[str, str] | None:
+    """`(city, nickname)`, or nothing when the table cannot name the club for that season."""
+    key = (code, season)
+    if key not in cache:
+        cursor = connection.cursor()  # type: ignore[attr-defined]
+        rows = cursor.execute(TEAM_NAME_QUERY, code, season).fetchall()
+        found = rows[0] if len(rows) == 1 else None
+        cache[key] = None if found is None else (_CITY_SPELLINGS.get(found[0], found[0]), found[1])
+    result: tuple[str, str] | None = cache[key]
+    return result
+
+
+def _printed_side(code: str, city: str, nickname: str, batting_rows: list, pitching_rows: list) -> PrintedSide:
+    """One club's half of the printed sheet, from the same rows the board is built from.
+
+    ⚠️ **The same queries and the same helpers, with the team ids swapped.** The defence's batting and
+    the offence's pitching are not a second kind of data — they are the other direction of the same
+    game, and reading them any other way would be a second definition of *who batted* and *where he
+    played*. `_position` and `_pitcher_labels` decide those once, for both clubs.
+    """
+    return PrintedSide(
+        code=code,
+        city=city,
+        nickname=nickname,
+        batting=tuple(
+            PrintedBatter(
+                name=full_name(r[12], r[13]),
+                position=position,
+                at_bats=r[2],
+                runs=r[3],
+                hits=r[4],
+                runs_batted_in=r[14],
+                walks=r[5],
+                strikeouts=r[6],
+            )
+            for r, position in zip(
+                batting_rows,
+                _batting_labels([_position(r[11], r[16], r[17], r[19]) for r in batting_rows]),
+                strict=True,
+            )
+        ),
+        pitching=tuple(
+            PrintedPitcher(
+                name=full_name(p[7], p[8]),
+                role=role,
+                outs=p[0],
+                hits=p[1],
+                runs=p[2],
+                earned_runs=p[3],
+                walks=p[4],
+                strikeouts=p[5],
+            )
+            for p, role in zip(pitching_rows, _pitcher_labels([p[6] for p in pitching_rows]), strict=True)
+        ),
+    )
 
 
 def _parse_line_score(text: str) -> tuple[int, ...]:
@@ -603,6 +704,9 @@ def load(
 
     loaded: list[Loaded] = []
     rejected: Counter[str] = Counter()
+    # One lookup per team-season rather than per direction: a stratified draw returns many games from
+    # the same club and the table is small.
+    team_names: dict[tuple[str, int], tuple[str, str] | None] = {}
     with pyodbc.connect(CONNECTION) as connection:
         cursor = connection.cursor()
         # Stratified by decade on purpose. The pool is not spread evenly across eras, and a sample
@@ -641,6 +745,22 @@ def load(
             batting_rows = _rows(connection, rows_query, game_id, offense)
             pitching_rows = _rows(connection, pitch_query, game_id, defense)
             if not batting_rows or not pitching_rows:
+                continue
+            # ⚠️ **The other direction of the same game, for the reveal only.** The board never sees
+            # these rows; the printed sheet at the end of the game does. Same two queries with the team
+            # ids swapped, so *who batted* and *where he played* keep one definition across both clubs.
+            defense_batting_rows = _rows(connection, rows_query, game_id, defense)
+            offense_pitching_rows = _rows(connection, pitch_query, game_id, offense)
+            offense_name = team_name(connection, team_names, offense, season)
+            defense_name = team_name(connection, team_names, defense, season)
+            if not defense_batting_rows or not offense_pitching_rows:
+                rejected["the other direction has no rows to print"] += 1
+                continue
+            if offense_name is None or defense_name is None:
+                # Schema 5 heads the reveal with the club's real name and there is no fallback: see
+                # `TEAM_NAME_QUERY`. A direction whose club cannot be named is dropped here rather than
+                # shipped with an abbreviation on the one screen that exists to remove it.
+                rejected["retroTeams cannot name a club for that season"] += 1
                 continue
             batting = tuple(
                 BattingLine(plate_appearances=r[1], at_bats=r[2], runs=r[3], hits=r[4], walks=r[5], strikeouts=r[6])
@@ -715,6 +835,10 @@ def load(
                     tuple(r[14] for r in batting_rows),
                     tuple(r[15] for r in batting_rows),
                     tuple(p[9] for p in pitching_rows),
+                    PrintedBoxscore(
+                        offense=_printed_side(offense, *offense_name, batting_rows, offense_pitching_rows),
+                        defense=_printed_side(defense, *defense_name, defense_batting_rows, pitching_rows),
+                    ),
                 )
             )
     if rejected:

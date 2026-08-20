@@ -525,9 +525,13 @@ td.label.substitute { padding-left: 14px; }
   font-variant-numeric: tabular-nums;
   margin-bottom: 12px;
 }
+/* ⚠⚠ **The padding is what separates one number from the next, and without it they read as one.**
+   With `padding: 1px 0` a row of single digits printed `40 1  0 0 0` — four at-bats, no runs and a
+   hit, rendered as forty-and-one. **Every width measurement passed**: nothing was clipped, nothing
+   overflowed, no cell scrolled. The check that found it was looking at the screen. */
 .clipping-grid th,
 .clipping-grid td {
-  padding: 1px 0;
+  padding: 1px 0 1px 7px;
   text-align: right;
   white-space: nowrap;
 }
@@ -541,16 +545,20 @@ td.label.substitute { padding-left: 14px; }
   padding-top: 2px;
   font-weight: 700;
 }
-.clipping-team,
-.clipping-who {
+/* ⚠️ **`.clipping-grid` in front, because `.clipping-grid td` out-specifies a bare `.clipping-who`.**
+   Two classes beat one, so the right-alignment meant for the numbers won and every name in the
+   boxscore sat flush against its at-bats column. Correct rules, correct classes, and the cascade
+   deciding against both — the same shape as the filled cell that lost its highlight to `.cell.blank`. */
+.clipping-grid .clipping-team,
+.clipping-grid .clipping-who {
   text-align: left;
   width: 99%;
-  padding-right: 6px;
+  padding: 1px 6px 1px 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.clipping-team {
+.clipping-grid .clipping-team {
   font-weight: 700;
   letter-spacing: 0.04em;
 }
@@ -558,11 +566,33 @@ td.label.substitute { padding-left: 14px; }
 /* Below the grids, as printed boxscores carry it. Named carriers rather than slot references — the
    reference existed to point at a row without naming anyone, and that reason is gone here. */
 .clipping-notes {
-  margin: 0;
+  margin: 0 0 12px;
   padding-top: 8px;
   border-top: 1px solid var(--rule-strong);
   font-size: 10.5px;
   line-height: 1.5;
+}
+.clipping-notes-team {
+  font-weight: 700;
+}
+
+/* The date under the result line. A reveal is written for a reader, so the date reads as one. */
+.clipping-date {
+  margin: 0 0 10px;
+  color: var(--rule-strong);
+}
+
+/* A club's name inside the shared pitching block. Ruled above, so the two clubs read as two groups
+   rather than as one list — which is what a newspaper's extra leading did. */
+.clipping-club th {
+  text-align: left;
+  padding: 6px 0 1px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.clipping-club:not(:first-of-type) th {
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
 }
 
 .reveal-close {

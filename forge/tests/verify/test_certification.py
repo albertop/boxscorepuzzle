@@ -64,7 +64,7 @@ def good_evidence(board: Board) -> Evidence:
 
 
 def package_for(board: Board) -> Package:
-    from boxscore_package.format import Reveal  # noqa: PLC0415
+    from tests.reveals import reveal_for  # noqa: PLC0415
 
     return Package(
         slot_references=refs(board),
@@ -75,12 +75,14 @@ def package_for(board: Board) -> Package:
         solution=board,
         labels=tuple("C" for _ in board.batting),
         pitcher_labels=tuple("SP" for _ in board.pitching),
-        reveal=Reveal(
-            batter_names=tuple("A Batter" for _ in board.batting),
-            pitcher_names=tuple("A Pitcher" for _ in board.pitching),
-            offense_team="AAA",
-            defense_team="BBB",
-            played_on="1968-08-08",
+        # Derived from the board, because from schema 5 the reveal restates its numbers and the
+        # constructor refuses a package where the two disagree. See `tests/reveals.py` for why that
+        # makes this file no evidence about the agreement check.
+        reveal=reveal_for(
+            board,
+            labels=tuple("C" for _ in board.batting),
+            pitcher_labels=tuple("SP" for _ in board.pitching),
+            offense=OFFENSE,
         ),
         offense_is_home=True,
     )

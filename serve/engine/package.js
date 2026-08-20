@@ -15,11 +15,17 @@
  * takes parsed JSON and returns a puzzle; a loader decides which one.
  */
 
-import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS } from "./columns.js";
+import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS, PRINTED_BATTING, PRINTED_PITCHING } from "./columns.js";
 
 export class PackageError extends Error {}
 
-const READABLE = [4];
+const READABLE = [5];
+// ⚠️ **5, because the reveal became a boxscore and version 4 cannot carry one.** Its `reveal` held the
+// names of the rows the board drew, so the finished screen could only redraw the board the player had
+// just filled in with names attached. A printed boxscore has both clubs, runs batted in, and the
+// clubs' real names rather than three-letter codes. Every version-4 file changes status under this
+// reader — it stops being readable — which is exactly the case that must not reuse a number.
+//
 // ⚠️ **4, not 3, because version 3 could describe a board nobody can finish.** A per-batter footnote
 // cell was nullable there, which was right while those cells were erasable; they are given now and the
 // line renders as read-only text. The reader accepted the null, the game counted it as a blank the
@@ -217,6 +223,101 @@ export function readPackage(raw) {
     // about the game, and a client that recomputed it would be the second place encoding one rule.
     slotReferences: slotReferences(raw.slot_references, puzzle.batting.length),
     metadata: raw.metadata,
-    reveal: raw.reveal ?? null,
+    reveal: reveal(raw.reveal, puzzle),
   };
 }
+
+/**
+ * The reveal, **checked and renamed like every other field.**
+ *
+ * ⚠️⚠️ **This used to be `raw.reveal ?? null` — passed through untouched, in `snake_case`, while the
+ * rest of the package was mapped.** It was defensible while the block was opaque to the engine and
+ * nothing read it. Nothing read it because it was drawn nowhere; the moment it was drawn, the
+ * exception became one client holding two naming conventions, and it cost a bug the same day:
+ * `reveal.offenseTeam` reads `undefined`, renders an empty heading, throws nothing, and does it on the
+ * one screen a player reaches once. Two spellings of one field with nothing checking they agree is
+ * this project's named failure shape, and the fix is one convention rather than a comment warning
+ * about two.
+ *
+ * ⚠️ **And it is validated here rather than trusted.** From schema 5 this block is a whole boxscore
+ * the finished screen draws directly. A malformed one would print `undefined` down a column at the
+ * moment the player finishes — the same defect as the null cells, reached from the reveal side. §22:
+ * validate at the boundary, so a bad package is a controlled rejection rather than a `TypeError`
+ * three layers later.
+ */
+function reveal(raw, board) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    fail(`reveal is ${JSON.stringify(raw)}, expected an object`);
+  }
+  // ⚠️ **Counted against the board, never against itself.** The first version of this passed
+  // `raw.batter_names.length` as the expected length, which is a check that cannot fail — the
+  // condition this project has written down as indistinguishable from a broken check. One name per
+  // row is the property the field exists for: a short list is rows the reveal cannot name.
+  const batters = board.batting.length;
+  const pitchers = board.pitching.length;
+  return {
+    batterNames: strings(raw.batter_names, batters, "reveal.batter_names"),
+    pitcherNames: strings(raw.pitcher_names, pitchers, "reveal.pitcher_names"),
+    offenseTeam: text(raw.offense_team, "reveal.offense_team"),
+    defenseTeam: text(raw.defense_team, "reveal.defense_team"),
+    playedOn: text(raw.played_on, "reveal.played_on"),
+    card: raw.card ?? "",
+    boxscore: {
+      // ⚠️ **The half the board also carries is counted against the board.** `offense.batting` is
+      // the batting grid with runs batted in added, and `defense.pitching` is the pitching grid; the
+      // forge refuses a package where they disagree, and the client counts the rows rather than
+      // assuming the forge ran. The other half — `offense.pitching`, `defense.batting` — is on no
+      // board, so `null` here means *no row count to check against* rather than *do not check*.
+      offense: printedSide(raw.boxscore?.offense, "reveal.boxscore.offense", batters, null),
+      defense: printedSide(raw.boxscore?.defense, "reveal.boxscore.defense", null, pitchers),
+    },
+  };
+}
+
+/** One club of the printed sheet: who it is, who batted, who pitched. */
+function printedSide(raw, where, batters, pitchers) {
+  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
+    fail(`${where} is ${JSON.stringify(raw)}, expected an object`);
+  }
+  // ⚠️ **A blank name is refused, never replaced by the code.** Falling back to `SLA` would put the
+  // abbreviation back on the one screen schema 5 exists to take it off, and it would do it silently.
+  return {
+    code: nonEmpty(raw.code, `${where}.code`),
+    city: nonEmpty(raw.city, `${where}.city`),
+    nickname: nonEmpty(raw.nickname, `${where}.nickname`),
+    batting: printedRows(raw.batting, `${where}.batting`, PRINTED_BATTING, "position", batters),
+    pitching: printedRows(raw.pitching, `${where}.pitching`, PRINTED_PITCHING, "role", pitchers),
+  };
+}
+
+function printedRows(raw, where, columns, labelField, expected) {
+  if (!Array.isArray(raw)) fail(`${where} is ${JSON.stringify(raw)}, expected a list of rows`);
+  if (expected !== null && raw.length !== expected) {
+    fail(`${where} has ${raw.length} rows and the board has ${expected}`);
+  }
+  if (raw.length === 0) fail(`${where} is empty; a printed boxscore has rows`);
+  return raw.map((row, index) => {
+    const at = `${where}[${index}]`;
+    if (typeof row !== "object" || row === null) fail(`${at} is ${JSON.stringify(row)}, expected an object`);
+    const line = { name: text(row.name, `${at}.name`), label: text(row[labelField], `${at}.${labelField}`) };
+    for (const column of columns) {
+      if (!isWholeNumber(row[column])) {
+        fail(`${at}.${column} is ${JSON.stringify(row[column])}, expected a whole number`);
+      }
+      line[column] = row[column];
+    }
+    return line;
+  });
+}
+
+const text = (value, where) => {
+  if (typeof value !== "string") fail(`${where} is ${JSON.stringify(value)}, expected a string`);
+  return value;
+};
+
+const nonEmpty = (value, where) => {
+  const found = text(value, where);
+  if (!found.trim()) fail(`${where} is blank; a printed boxscore has to name the club`);
+  return found;
+};

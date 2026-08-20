@@ -13,7 +13,8 @@ from pathlib import Path
 
 import pytest
 
-from boxscore_package.format import SCHEMA_VERSION, Board, Package, Reveal
+from boxscore_package.format import SCHEMA_VERSION, Board, Package
+from tests.reveals import reveal_for
 
 _DOCS = Path(__file__).resolve().parents[3] / "docs"
 DOCUMENTS = {SCHEMA_VERSION: _DOCS / f"package-format-v{SCHEMA_VERSION}.md"}
@@ -55,12 +56,10 @@ def a_package(board: Board, *, version: int = SCHEMA_VERSION) -> Package:
         solution=board,
         labels=("C",) * len(board.batting),
         pitcher_labels=("SP",) * len(board.pitching),
-        reveal=Reveal(
-            batter_names=("Somebody",) * len(board.batting),
-            pitcher_names=("Somebody",) * len(board.pitching),
-            offense_team="AAA",
-            defense_team="BBB",
-            played_on="1968-08-08",
+        reveal=reveal_for(
+            board,
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("SP",) * len(board.pitching),
         ),
         metadata={"chain_target": 9, "game_id": "ATL196808080", "season": 1968},
         signature="deadbeef",

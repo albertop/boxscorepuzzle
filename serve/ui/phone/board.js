@@ -28,7 +28,7 @@ const el = (tag, className, content) => {
 
 /* ---- line score ------------------------------------------------------------------------------ */
 
-export function renderLineScore(score, offenseIsHome) {
+export function renderLineScore(score, offenseIsHome, labels = null) {
   const innings = Math.max(score.offense_by_inning.length, score.defense_by_inning.length);
   const table = el("table");
   const head = el("tr");
@@ -69,9 +69,14 @@ export function renderLineScore(score, offenseIsHome) {
     return row;
   };
 
+  // ⚠️ **A parameter of this renderer, never a second line score.** During play the rows are `AWAY`
+  // and `HOME`, because the player has no clubs yet (§7). On the reveal they are the clubs, because the
+  // player has just earned them — and a reveal drawn by a *copy* of this function is how a comparison
+  // page came to show something other than what it was evaluating, twice. The labels change; nothing
+  // else does.
   const offense = () =>
     side(
-      text(offenseIsHome ? "side.home" : "side.away"),
+      labels ? labels.offense : text(offenseIsHome ? "side.home" : "side.away"),
       score.offense_by_inning,
       score.offense_runs,
       score.offense_hits,
@@ -79,7 +84,7 @@ export function renderLineScore(score, offenseIsHome) {
     );
   const defense = () =>
     side(
-      text(offenseIsHome ? "side.away" : "side.home"),
+      labels ? labels.defense : text(offenseIsHome ? "side.away" : "side.home"),
       score.defense_by_inning,
       score.defense_runs,
       score.defense_hits,

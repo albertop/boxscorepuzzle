@@ -99,9 +99,56 @@ const en = {
   // ⚠️ The clock is invisible during play (§26) and appears here for the first time. The label says
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
-  "reveal.at": "at",
-  "reveal.versus": "vs",
   "reveal.close": "Back to the board",
+  // ⚠️ `reveal.at` and `reveal.versus` are gone. They composed `SLA vs BOS at 1913-08-17` — a heading
+  // that named the clubs by their Retrosheet keys and dated the game the way a database does. From
+  // schema 5 the package carries the real names, and the heading is a result line: winner first, the
+  // way a newspaper set it.
+  "reveal.score_separator": ", ",
+  "reveal.batting_columns": "AB R H RBI BB SO",
+  "reveal.pitching_columns": "IP H R ER BB SO",
+  // Not drawn from these — the renderer reads the column list — but a translator needs to see the
+  // canonical order somewhere, and the headings below are what actually appear.
+  "printed.ab": "AB",
+  "printed.r": "R",
+  "printed.h": "H",
+  "printed.rbi": "RBI",
+  "printed.bb": "BB",
+  "printed.so": "SO",
+  "printed.outs": "IP",
+  "printed.er": "ER",
+  "printed.pitchers": "Pitching",
+  // ⚠️ The footnote line is prefixed with the club it describes, because the package carries footnotes
+  // for **one** club: they belong to the board's batting side and the other half of the game has its
+  // own, which no package holds. A line printed without the prefix would read as a statement about
+  // both clubs and be silently false about one of them.
+  // ⚠️ A colon, not a dash. The terms below already use a dash — `SH—Balenti` — and the first version
+  // used one here too, so the line read `St. Louis Browns — SH—Balenti`: two dashes doing two
+  // different jobs in eight characters. Found by reading the rendered line, which is the only way this
+  // kind of thing is ever found.
+  "printed.notes_for": "{team}:",
+  // What a printed boxscore put between a term and its carriers: `Sacrifice hit—Shotton`. Tight, with
+  // no spaces, because the line is a run-on and the separator is what breaks it into readable pieces.
+  "printed.note_separator": "—",
+
+  // ---- dates -----------------------------------------------------------------------------------
+  // ⚠️ Month names rather than `1913-08-17`. The reveal is the one screen written for a reader rather
+  // than for a parser, and an ISO date on it reads as a field that escaped. Keyed by number so the
+  // renderer indexes rather than parses, and so a language that orders the parts differently changes
+  // `date.long` alone.
+  "date.long": "{month} {day}, {year}",
+  "month.1": "January",
+  "month.2": "February",
+  "month.3": "March",
+  "month.4": "April",
+  "month.5": "May",
+  "month.6": "June",
+  "month.7": "July",
+  "month.8": "August",
+  "month.9": "September",
+  "month.10": "October",
+  "month.11": "November",
+  "month.12": "December",
 };
 
 let table = en;
@@ -117,6 +164,20 @@ let table = en;
 export function text(key) {
   if (!Object.hasOwn(table, key)) throw new Error(`no string for ${key}`);
   return table[key];
+}
+
+/**
+ * A string with its placeholders filled. **An unfilled placeholder throws**, like an unknown key.
+ *
+ * ⚠️ Same reasoning as `text`: a template that ships with `{month}` still in it is a catalogue that
+ * stopped being complete without telling anyone, and it renders as something a reader will read as a
+ * bug in the data rather than in the copy. The absence of a value must not read as the presence of one.
+ */
+export function fill(key, values) {
+  return text(key).replace(/\{(\w+)\}/g, (_, name) => {
+    if (!Object.hasOwn(values, name)) throw new Error(`no value for {${name}} in ${key}`);
+    return values[name];
+  });
 }
 
 export function keys() {
