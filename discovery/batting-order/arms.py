@@ -65,7 +65,10 @@ SLOTS = 9
 SPECIMEN_BOARDS = 3
 SPECIMEN_TARGET = 5
 SPECIMEN_ARMS = ("off", "on_total_erasable")
+SPECIMEN_RULE = "⚠️ chosen for lineup arithmetic, plus one contrast board that uses none"
+BASELINE = "off"
 NEWLINE = chr(10)
+PAGE_BREAK = NEWLINE * 2 + "=" * 100 + NEWLINE * 2
 
 
 @dataclass(frozen=True, slots=True)
@@ -252,9 +255,48 @@ def _median(values: list[int]) -> float:
     return statistics.median(values) if values else 0.0
 
 
-def _report(rows: list[Row]) -> None:
+def _key(row: Row) -> tuple[str, str, int]:
+    """One walk: a direction and a seed. `target` is not in the key; it selects the table."""
+    return (row.game, row.offense, row.seed)
+
+
+def _pairs(rows: list[Row], arm: str, target: int) -> list[tuple[Row, Row]]:
+    """The walks `arm` and the baseline **both** reached at this target, paired.
+
+    ⚠⚠ **v27-P2-10: `Row` was made pairable and the report did not pair.** Each table selected
+    reached rows per arm independently, and *reachability is changed by the treatment* — so the arms
+    contributed different directions, different seeds and different target mixtures to figures printed
+    side by side. A walk that reaches 8 stalls only under `on_total_erasable` put its blanks into that
+    arm's median with no counterpart in `off`. Any difference could then be **which trials survived**
+    rather than the constraint, and the artifact already held the fields needed to remove it.
+
+    Coverage stays unpaired, because failing to reach *is* its outcome. Everything else is a treatment
+    effect and is measured only on walks both arms completed.
+    """
+    baseline = {_key(row): row for row in rows if row.arm == BASELINE and row.target == target and row.reached}
+    treated = {_key(row): row for row in rows if row.arm == arm and row.target == target and row.reached}
+    return [(baseline[key], treated[key]) for key in sorted(baseline.keys() & treated.keys())]
+
+
+def _moved(deltas: list[int]) -> str:
+    """How many items moved, which way, and by how much.
+
+    ⚠️ **The per-item count, not only the median.** "Nothing moved" read off a median is not a null
+    result: two walks moving in opposite directions leave every summary statistic untouched. A
+    comparison that cannot say how many individual items changed is not a comparison.
+    """
+    if not deltas:
+        return f"{'no pairs':>30}"
+    up = sum(1 for delta in deltas if delta > 0)
+    down = sum(1 for delta in deltas if delta < 0)
+    return f"{f'{_median(deltas):+.1f} ({up} up, {down} dn, {len(deltas) - up - down} =)':>30}"
+
+
+def _coverage(rows: list[Row]) -> None:
     print("")
-    print("=== COVERAGE: SHARE OF BOARD-AND-SEED TRIALS REACHING EACH TARGET ===")
+    print("=== COVERAGE: SHARE OF WALKS REACHING EACH TARGET (unpaired, on purpose) ===")
+    print("  Failing to reach a target IS this table's outcome, so it is the one table that must not be")
+    print("  restricted to walks both arms completed. Every table below it is paired.")
     print(f"  {'target':<8}" + "".join(f"{arm:>20}" for arm in ARMS))
     for target in TARGETS:
         line = f"  {target:<8}"
@@ -264,55 +306,106 @@ def _report(rows: list[Row]) -> None:
             line += f"{f'{got}/{len(here)} ({100.0 * got / max(len(here), 1):.0f}%)':>20}"
         print(line)
 
-    print("")
-    print("=== BLANKS AT EACH TARGET, AND HOW MANY OF THEM ARE PA CELLS (medians, reached only) ===")
-    print(f"  {'target':<8}" + "".join(f"{arm:>20}" for arm in ARMS))
-    for target in TARGETS:
-        line = f"  {target:<8}"
-        for arm in ARMS:
-            here = [row for row in rows if row.arm == arm and row.target == target and row.reached]
-            line += f"{f'{_median([r.blanks for r in here]):.0f} ({_median([r.pa_blanks for r in here]):.0f} PA)':>20}"
-        print(line)
 
+def _blanks(rows: list[Row], arm: str) -> None:
     print("")
-    print("=== HOW THE ERASED PA CELLS WERE REACHED - the question that separates filler from work ===")
+    print(f"  --- blanks, paired ({arm} minus {BASELINE}) ---")
+    print(f"  {'target':<8}{'pairs':>7}{'blanks delta':>30}{'PA blanks delta':>30}")
+    for target in TARGETS:
+        pairs = _pairs(rows, arm, target)
+        blanks = [treated.blanks - base.blanks for base, treated in pairs]
+        pa_blanks = [treated.pa_blanks - base.pa_blanks for base, treated in pairs]
+        print(f"  {target:<8}{len(pairs):>7}{_moved(blanks)}{_moved(pa_blanks)}")
+
+
+def _techniques(rows: list[Row], arm: str) -> None:
+    print("")
+    print("  --- how the erased PA cells were reached, on those same pairs ---")
     print("  lineup = read the total, divide by nine, write it down. Filler: the cheapest move there is.")
     print("  bounding = the cell was cornered by the board. That is the reasoning the constraint may buy.")
-    print(f"  {'arm':<20}{'lineup':>12}{'propagation':>14}{'bounding':>12}{'share bounding':>16}")
-    for arm in ARMS:
-        here = [row for row in rows if row.arm == arm and row.reached]
-        filler = sum(row.pa_by_lineup for row in here)
-        prop = sum(row.pa_by_propagation for row in here)
-        bound = sum(row.pa_by_bounding for row in here)
-        total = filler + prop + bound
-        share = f"{100.0 * bound / total:.1f}%" if total else "n/a"
-        print(f"  {arm:<20}{filler:>12,}{prop:>14,}{bound:>12,}{share:>16}")
-
-    print("")
-    print("=== FAMILIES THE SOLUTION NEEDED (share of reached trials) ===")
-    for arm in ARMS:
-        here = [row for row in rows if row.arm == arm and row.reached]
-        counted: Counter = Counter()
-        for row in here:
-            for family in row.families.split(","):
-                if family:
-                    counted[family] += 1
-        parts = ", ".join(f"{name} {100.0 * count / len(here):.0f}%" for name, count in sorted(counted.items()))
-        print(f"  {arm:<20} {parts}")
-
-    print("")
-    print("=== STALL CEILING PER BOARD (best reached, medians) ===")
-    for arm in ARMS:
-        ceilings = [
-            max(
-                (row.stalls for row in rows if row.arm == arm and (row.game, row.offense) == board and row.reached),
-                default=0,
+    print(f"  {'target':<8}{'pairs':>7}{BASELINE + ' l/p/b':>24}{arm + ' l/p/b':>24}{'bounding share':>20}")
+    for target in TARGETS:
+        pairs = _pairs(rows, arm, target)
+        if not pairs:
+            print(f"  {target:<8}{0:>7}{'no pairs':>24}")
+            continue
+        sides = [
+            (
+                sum(pair[index].pa_by_lineup for pair in pairs),
+                sum(pair[index].pa_by_propagation for pair in pairs),
+                sum(pair[index].pa_by_bounding for pair in pairs),
             )
-            # By direction, not by game: a game is two boards and merging them would average a
-            # winning offence with a losing one.
-            for board in {(row.game, row.offense) for row in rows}
+            for index in (0, 1)
         ]
-        print(f"  {arm:<20} median {_median(ceilings):.0f}, max {max(ceilings, default=0)}")
+        shares = [
+            f"{100.0 * bound / (line + prop + bound):.1f}%" if (line + prop + bound) else "n/a"
+            for line, prop, bound in sides
+        ]
+        cells = "".join(f"{f'{line}/{prop}/{bound}':>24}" for line, prop, bound in sides)
+        print(f"  {target:<8}{len(pairs):>7}{cells}{f'{shares[0]} -> {shares[1]}':>20}")
+
+
+def _families(rows: list[Row], arm: str) -> None:
+    print("")
+    print("  --- families needed, on those same pairs (share of paired walks) ---")
+    for target in TARGETS:
+        pairs = _pairs(rows, arm, target)
+        if not pairs:
+            continue
+        line = f"  {target:<8}{len(pairs):>7}   "
+        for index, label in ((0, BASELINE), (1, arm)):
+            counted: Counter = Counter()
+            for pair in pairs:
+                for family in pair[index].families.split(","):
+                    if family:
+                        counted[family] += 1
+            shown = " ".join(f"{name[:6]} {100.0 * count / len(pairs):.0f}%" for name, count in sorted(counted.items()))
+            line += f"{label}: {shown}   "
+        print(line)
+
+
+def _ceiling(rows: list[Row], arm: str) -> None:
+    # By direction, not by game: a game is two boards and merging them would average a winning offence
+    # with a losing one. Only directions both arms reached somewhere contribute.
+    best: dict[tuple[str, str], list[int]] = {}
+    for target in TARGETS:
+        for base, treated in _pairs(rows, arm, target):
+            here = best.setdefault((base.game, base.offense), [0, 0])
+            here[0] = max(here[0], base.stalls)
+            here[1] = max(here[1], treated.stalls)
+    print("")
+    print("  --- stall ceiling per direction, on directions both arms reached ---")
+    print(
+        f"  {len(best)} directions   {BASELINE} median {_median([v[0] for v in best.values()]):.0f}"
+        f"   {arm} median {_median([v[1] for v in best.values()]):.0f}"
+        f"   paired delta {_moved([v[1] - v[0] for v in best.values()]).strip()}"
+    )
+
+
+def _report(rows: list[Row]) -> None:
+    _coverage(rows)
+    for arm in ARMS:
+        if arm == BASELINE:
+            continue
+        print("")
+        print(f"=== {arm.upper()} AGAINST {BASELINE.upper()}, PAIRED BY DIRECTION AND SEED ===")
+        _blanks(rows, arm)
+        _techniques(rows, arm)
+        _families(rows, arm)
+        _ceiling(rows, arm)
+
+
+def report_only() -> None:
+    """Re-read `arms.json` and print the tables again, without re-measuring anything.
+
+    ⚠️ The rows are the expensive half and they are written before any formatting, precisely so a
+    defect in the *report* costs a second of reading rather than an afternoon of solving. v27-P2-10 was
+    exactly that defect, and this is why the run that hit it did not have to be repeated.
+    """
+    saved = json.loads((_HERE / "arms.json").read_text(encoding="utf-8"))
+    rows = [Row(**row) for row in saved]
+    print(f"re-reporting {len(rows)} rows from arms.json - nothing was re-measured")
+    _report(rows)
 
 
 def main() -> None:
@@ -328,19 +421,43 @@ def main() -> None:
     print("One canonical walk per (direction, seed), FILTERED per arm - never re-ordered.")
 
     rows: list[Row] = []
-    pages: list[str] = []
+    chosen: list[tuple[Loaded, dict, bool]] = []
+    contrast = False
     for number, loaded in enumerate(sample, start=1):
         for seed in SEEDS:
             measured, specimens = _measure(loaded, seed)
             rows.extend(measured)
-            if number <= SPECIMEN_BOARDS and seed == SEEDS[0]:
-                pages.extend(_specimen_pages(loaded, specimens))
+            # ⚠⚠ **Chosen for what is being judged, not by draw order.** The first run rendered the
+            # first three boards and all three happened to use no lineup arithmetic at all — an
+            # eye-check on boards where the treatment does nothing, while 73% of reached walks in the
+            # same run used it. A sample meant to show a phenomenon has to contain it. One board that
+            # uses none is kept deliberately, so the contrast is visible rather than assumed.
+            if seed == SEEDS[0] and len(chosen) < SPECIMEN_BOARDS:
+                # ⚠️ `SPECIMEN_ARMS`, not "any arm but the baseline". Written the second way first, it
+                # would pick a board because `on_total_given` used lineup arithmetic while the arm
+                # actually drawn on the page used none -- selecting for a phenomenon the reader
+                # cannot see. The filter has to name the arm that gets rendered.
+                drawn = [arm for arm in SPECIMEN_ARMS if arm != BASELINE]
+                uses_lineup = any(
+                    row.pa_by_lineup > 0
+                    for row in measured
+                    if row.arm in drawn and row.target == SPECIMEN_TARGET and row.reached
+                )
+                if uses_lineup or not contrast:
+                    contrast = contrast or not uses_lineup
+                    chosen.append((loaded, specimens, uses_lineup))
         if number % 5 == 0:
             print(f"  {number}/{len(sample)} measured", flush=True)
 
+    pages = [page for loaded, specimens, _ in chosen for page in _specimen_pages(loaded, specimens)]
     # ⚠️ Written before the report, and meant to be read before the report is believed.
-    (_HERE / "specimens.txt").write_text((NEWLINE * 2).join(pages), encoding="utf-8", newline=NEWLINE)
+    # ⚠️ A page break the internal blank lines cannot imitate: joining on two newlines made the
+    # boundary between one board and the next identical to the one between a board and its own
+    # solution path, so the file could not be split back into pages by eye or by code.
+    (_HERE / "specimens.txt").write_text(PAGE_BREAK.join(pages), encoding="utf-8", newline=NEWLINE)
+    using = sum(1 for _, _, uses in chosen if uses)
     print(f"wrote {len(pages)} rendered boards to specimens.txt - READ THESE BEFORE TRUSTING THE NUMBERS")
+    print(f"  {using} of {len(chosen)} chosen boards use lineup arithmetic ({SPECIMEN_RULE})")
 
     # Persisted before formatting: the rows are the expensive half and everything below can fail.
     (_HERE / "arms.json").write_text(
@@ -362,4 +479,10 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    # ⚠️ `--report-only` re-reads the persisted rows. It exists because a report can be wrong while the
+    # measurement is fine, and re-solving 48 directions to fix a formatting decision is how a chain of
+    # measurements starts.
+    if "--report-only" in sys.argv[1:]:
+        report_only()
+    else:
+        main()

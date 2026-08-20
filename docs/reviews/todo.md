@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (four passes on the last), 113 findings, none rejected. Two are open and stated
+**Twenty-seven reviews (five passes on the last), 115 findings, none rejected. Two are open and stated
 below, and a third was found and fixed while watching a run — all three without a reviewer, which is
 the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
@@ -21,6 +21,7 @@ kept being wrong was the apparatus measuring it, and no two were wrong the same 
 | v27 second | the corrected model was exact and **deduced nothing** — 0 of 9 — and no test could see it |
 | v27 third | the inversion survived **one property away** from where it was fixed |
 | v27 fourth | the guard named *a deduced companion is an edge* **never created one** |
+| v27 fifth | the sweep built to catch blind guards **was one**, and the report never paired |
 
 ⚠️ **Four of the seven were invisible in output that looked entirely reasonable.** That is the shape
 this project keeps meeting and it has a new member: *a model can be exactly right and have no
@@ -2391,6 +2392,55 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## ⚠⚠ v27 fifth pass — two P2s, and the first one is the worst finding in this review
+
+### v27-P2-09: the mutation sweep had the exact defect it was built to catch
+
+`caught` was `returncode != 0`, and the sweep **never checked that the unmutated suite passes**. One
+unrelated failing test, a collection error, a bad flag — anything making pytest non-zero for its own
+reasons — and all ten mutations report `CAUGHT` from that same failure, `failures` stays empty, and the
+script prints its strongest possible result while proving nothing about any mutation.
+
+⚠️ **A tool written to stop guards that cannot fail, that could not fail.** It was written in the same
+hour as the rule *check your own guard by asking what change it would let through* — and that question
+was not asked of the checker. The rule was applied one level down and not at the level it was written.
+
+Closed two ways, and **verified by planting the failure**: a green baseline runs first and the sweep
+aborts without it; and the exit code is *read* rather than tested for truthiness, since pytest returns
+`1` for "a test failed" and `2`–`5` for interrupted, internal error, usage error and no-tests-collected
+— states where the mutation was never judged at all, now reported as `BROKEN` rather than counted as a
+success. With an always-failing test planted, the sweep aborts and exits 1; before the fix it printed
+*all 10 claims are guarded*.
+
+### v27-P2-10: `Row` was made pairable and the report did not pair
+
+Each table selected reached rows per arm independently, and **reachability is changed by the
+treatment** — so the arms contributed different directions, seeds and target mixtures to figures
+printed side by side. A walk reaching 8 stalls only under `on_total_erasable` put its blanks into that
+arm's median with no counterpart in `off`. Any difference could have been *which trials survived*.
+
+Coverage stays unpaired — failing to reach **is** its outcome. Every other table is now restricted to
+walks both arms completed, keyed by direction and seed, reporting the paired delta **with the per-item
+count**: how many went up, down and unchanged, because two walks moving opposite ways leave every
+median untouched.
+
+⚠️ **The run did not have to be repeated.** `arms.json` is written before any formatting, so a defect
+in the report cost a second of re-reading. `--report-only` now exists for exactly that.
+
+### ⚠⚠ And two more found by doing the eye-check the rules require
+
+**The specimens were drawn by position in the sample, so all three showed boards where the treatment
+does nothing.** 73% of reached walks in that run used lineup arithmetic; the three rendered used none.
+A sample meant to show a phenomenon has to contain it. Selection is now by whether the *drawn arm* used
+it, keeping one contrast board deliberately.
+
+**And the first version of that filter said `arm != BASELINE`**, which includes `on_total_given` — an
+arm that is never drawn. It would have picked boards for a phenomenon the reader cannot see on the
+page. Caught by rendering and looking, one commit after the fix it was part of.
+
+⚠️ Also: pages were joined on two newlines, the same separator a board uses before its own solution
+path, so the file could not be split back into pages by eye or by code. Now an explicit rule.
 
 ## ⚠⚠ v27 fourth pass — and the change of method it forced
 

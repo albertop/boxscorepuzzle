@@ -1,4 +1,4 @@
-# Code Review v27 - Fourth Pass
+# Code Review v27 - Fifth Pass
 
 ## Scope
 
@@ -13,7 +13,53 @@ This review concentrates on the batting-order work added after v26:
 
 The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
 
-## Fourth-Pass Finding
+## Fifth-Pass Findings
+
+### v27-P2-09 - The mutation sweep treats an already-failing suite as ten successful guards
+
+- **Persona:** Test engineer / Solo-maintainer pragmatist
+- **Severity:** P2
+- **Location:** `discovery/batting-order/mutation_sweep.py:99`
+- **Description:** The sweep never establishes that the unmodified suite passes. For each mutation it defines `caught` as any non-zero pytest return code and reports that as success. An unrelated failing test, a collection failure, or another persistent pytest error therefore makes every mutation print `CAUGHT`; `failures` remains empty and the script exits successfully with the claim that all ten behaviors are guarded.
+- **Impact:** The new tool can produce its strongest possible green result while proving nothing about any mutation. This is a direct false-positive in the safeguard introduced to stop plausible-looking but blind tests, and it can happen in this single-developer workflow whenever the sweep is launched before the ordinary suite has been brought back to green.
+- **Reproduction:** Add or retain one unrelated always-failing forge test, then run `mutation_sweep.py`. Every mutated subprocess returns non-zero because of that same baseline failure, so lines 108-111 classify all ten mutations as caught and the final process exits zero.
+- **Recommended fix and rationale:** Run the identical pytest command once against the untouched tree and abort unless it returns zero. For mutant runs, count pytest's ordinary test-failure result as a killed mutation, but treat interruption, internal error, usage error, and no-tests-collected statuses as sweep failures and print their captured output. A green baseline is the minimum evidence required before a red mutant says anything about the mutation.
+
+### v27-P2-10 - The arm report records pairing keys but still compares different survivor populations
+
+- **Persona:** Statistician-methodologist / Data scientist
+- **Severity:** P2
+- **Location:** `discovery/batting-order/arms.py:273`, `discovery/batting-order/arms.py:282`
+- **Description:** `Row` now records `(game, offense, seed, target)`, which makes trials pairable, but `_report()` does not use that key. The blanks table independently selects reached rows for each arm, and the PA-technique table independently selects every reached row while also pooling all targets. Reachability is itself changed by the treatment, so the arms can contribute different directions, seeds, and target mixtures to the figures being compared.
+- **Impact:** A difference in median blanks or bounding share can be caused by which trials survived in an arm rather than by the batting-order treatment on the same walk. The report can therefore attribute a cohort-composition effect to the constraint, even though the expensive artifact now contains exactly the fields needed to remove that confound.
+- **Reproduction:** Consider a `(game, offense, seed)` that reaches target 8 only under `on_total_erasable`. Its target-8 row contributes to that arm's blanks median and technique totals, while no counterpart contributes to `off`. Whenever the coverage table differs between arms, the later tables are mechanically summarizing different populations; pooling targets adds a second unequal weighting.
+- **Recommended fix and rationale:** Keep the coverage table unpaired, because failure to reach is its outcome. For treatment-effect tables, join rows by `(game, offense, seed, target)`, retain keys reached by both compared arms, and report paired deltas separately per target. If an overall technique summary is still useful, aggregate equal-weight paired results rather than raw cells from differently composed reached sets. This uses the pairing fields added for the experiment's stated comparison and isolates treatment from survivorship.
+
+## Fifth-Pass Disposition
+
+- `v27-P2-08` is resolved. The test now has propagation deduce the companion PA, then asserts that lineup arithmetic depends on it and advances depth by one.
+- The verifier regression now also asserts the semantic fields its structural comparison could not see: the spread constant and `equality=False`.
+- The generator and verifier batting-order implementations reviewed here express the same cyclic bound in their respective inequality conventions; no new production-solver defect was found.
+- The retained mutation sweep is directionally valuable, but `v27-P2-09` must be closed before its all-green summary is trustworthy.
+- The persisted arm rows are now pairable, but `v27-P2-10` remains in the built-in analysis that consumes them.
+- The verifier's lack of a value-aware lineup step remains explicitly pending in `todo.md` and is not duplicated as a finding.
+
+## Fifth-Pass Persona Summary
+
+- **Software architect:** No new defect found in the generator/verifier rule boundary or dependency graph.
+- **Security engineer:** No practical security regression found in the changed surface.
+- **Performance engineer:** No practical runtime or memory regression found; the concerns are validity guards, not speed.
+- **Test engineer:** The new mutation harness can false-pass without a green baseline (`v27-P2-09`).
+- **Data scientist:** The raw rows preserve the identifiers needed for valid paired analysis.
+- **Statistician/methodologist:** The current report ignores those identifiers and compares unequal survivor sets (`v27-P2-10`).
+- **UX/API contract reviewer:** No shipped API or user-facing contract regression found.
+- **Solo-maintainer pragmatist:** Both fixes are local to the two new research scripts and require no broader refactor.
+
+## Fifth-Pass Verdict
+
+Two new practical findings remain: **two P2s** (`v27-P2-09` and `v27-P2-10`). No new P0, P1, or P3 finding was identified. The fourth-pass regression gap is closed, and no new production solver defect was found; the remaining risk is that the new validation and analysis scripts can report stronger evidence than they have established.
+
+## Resolved Fourth-Pass Finding
 
 ### v27-P2-08 - The regression named for a deduced shared-slot dependency never creates one
 
@@ -25,7 +71,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** In the setup at lines 282-289, neither shared-row PA is ever present in `solution.deductions`; the only assertion is that both remain absent. Revert only the companion contribution to `leaned_on` in `solver.py`: this test's result and assertion are unchanged because no dependency edge is ever produced.
 - **Recommended fix and rationale:** Build a fixture where row identity first deduces one shared-slot companion's PA from its batting components, then lineup arithmetic derives the other row from the known slot total. Assert that the lineup step contains that deduced companion in `depends_on` and that its depth is one greater than the deepest deduced input. Keep the current unsplittable-sum scenario as a separate test. This makes the regression guard fail for the exact graph defect it claims to close.
 
-## Fourth-Pass Disposition
+## Fourth-Pass Disposition (superseded)
 
 - `v27-P2-06` is fixed in production: shared-slot lineup moves now return known companions and `_next_step` includes deduced companions, while consistently excluding givens, from the dependency graph.
 - `v27-P2-07` is fixed: `bounding_steps` now counts `Technique.BOUNDING` directly rather than deriving it from `trivial_steps`.
@@ -33,7 +79,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - `discovery/batting-order/arms.log` is currently empty, so it provides no completed experimental result to assess in this pass.
 - The verifier's inability to replay `LINEUP_ARITHMETIC` is already recorded as pending product work in `todo.md`; it is not duplicated as a review finding.
 
-## Fourth-Pass Persona Summary
+## Fourth-Pass Persona Summary (superseded)
 
 - **Software architect:** The lineup dependency transport and direct bounding metric now match the intended model.
 - **Security engineer:** No practical security regression found in the changed surface.
@@ -44,7 +90,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **UX/API contract reviewer:** No shipped API or user-facing contract regression found.
 - **Solo-maintainer pragmatist:** Fix the single test gap; no broader refactor is warranted.
 
-## Fourth-Pass Verdict
+## Fourth-Pass Verdict (superseded)
 
 One new practical finding remains: **one P2** (`v27-P2-08`). No new P0, P1, or P3 finding was identified. The two third-pass production defects are resolved; the open item is a narrowly scoped regression-coverage hole in the exact shared-slot provenance case.
 
