@@ -83,6 +83,7 @@ class Row:
     stalls: int
     chain: int
     families: str
+    pa_by_lineup: int
     pa_by_propagation: int
     pa_by_bounding: int
 
@@ -118,22 +119,28 @@ def _offered(arm: str, walk: list[str]) -> list[str]:
     return list(walk)
 
 
-def _pa_techniques(solution: Solution, erased: set[str]) -> tuple[int, int]:
-    """How the erased PA cells were reached.
+def _pa_techniques(solution: Solution, erased: set[str]) -> tuple[int, int, int]:
+    """How the erased PA cells were reached: filler, arithmetic, or reasoning.
 
-    ⚠️ **This is the question that separates filler from difficulty.** If they fall to propagation the
-    moment the total is known, the constraint bought arithmetic. If they need bounding, it bought
-    reasoning.
+    ⚠️⚠️ **Three buckets, because two put the answer in the wrong one.** This counted anything that was
+    not `BOUNDING` as propagation — and every deduction reached through an inequality *is* `BOUNDING`,
+    so the cyclic step would have been recorded as reasoning. That is the precise inversion of the
+    distinction this experiment exists to draw: reading one number and dividing by nine is the cheapest
+    move on the board, and it would have been counted as the most expensive.
+
+    `LINEUP_ARITHMETIC` is now its own technique, so the total-visible arm can be seen for what it is.
     """
-    propagation = bounding = 0
+    lineup = propagation = bounding = 0
     for step in solution.deductions:
         if step.cell not in erased or not step.cell.endswith(PA_COLUMN):
             continue
-        if step.technique is Technique.BOUNDING:
+        if step.technique is Technique.LINEUP_ARITHMETIC:
+            lineup += 1
+        elif step.technique is Technique.BOUNDING:
             bounding += 1
         else:
             propagation += 1
-    return propagation, bounding
+    return lineup, propagation, bounding
 
 
 def _stalls(solution: Solution) -> int:
@@ -175,7 +182,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
         for target in TARGETS:
             solution = best.get(target)
             got = best_erased.get(target, set())
-            propagation, bounding = _pa_techniques(solution, got) if solution else (0, 0)
+            lineup, propagation, bounding = _pa_techniques(solution, got) if solution else (0, 0, 0)
             rows.append(
                 Row(
                     game=loaded.game_id,
@@ -191,9 +198,8 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
                     pa_blanks=sum(1 for cell in got if cell.endswith(PA_COLUMN)),
                     stalls=_stalls(solution) if solution else 0,
                     chain=solution.chain_length if solution else 0,
-                    families=",".join(sorted(family.value for family in solution.families_used))
-                    if solution
-                    else "",
+                    families=",".join(sorted(family.value for family in solution.families_used)) if solution else "",
+                    pa_by_lineup=lineup,
                     pa_by_propagation=propagation,
                     pa_by_bounding=bounding,
                 )
@@ -229,15 +235,17 @@ def _report(rows: list[Row]) -> None:
 
     print("")
     print("=== HOW THE ERASED PA CELLS WERE REACHED - the question that separates filler from work ===")
-    print("  If they fall to propagation the moment the total is known, the constraint bought arithmetic.")
-    print("  If they need bounding, it bought reasoning.")
-    print(f"  {'arm':<20}{'PA by propagation':>20}{'PA by bounding':>18}{'share bounding':>16}")
+    print("  lineup = read the total, divide by nine, write it down. Filler: the cheapest move there is.")
+    print("  bounding = the cell was cornered by the board. That is the reasoning the constraint may buy.")
+    print(f"  {'arm':<20}{'lineup':>12}{'propagation':>14}{'bounding':>12}{'share bounding':>16}")
     for arm in ARMS:
         here = [row for row in rows if row.arm == arm and row.reached]
+        filler = sum(row.pa_by_lineup for row in here)
         prop = sum(row.pa_by_propagation for row in here)
         bound = sum(row.pa_by_bounding for row in here)
-        share = f"{100.0 * bound / (prop + bound):.1f}%" if prop + bound else "n/a"
-        print(f"  {arm:<20}{prop:>20,}{bound:>18,}{share:>16}")
+        total = filler + prop + bound
+        share = f"{100.0 * bound / total:.1f}%" if total else "n/a"
+        print(f"  {arm:<20}{filler:>12,}{prop:>14,}{bound:>12,}{share:>16}")
 
     print("")
     print("=== FAMILIES THE SOLUTION NEEDED (share of reached trials) ===")
@@ -256,11 +264,7 @@ def _report(rows: list[Row]) -> None:
     for arm in ARMS:
         ceilings = [
             max(
-                (
-                    row.stalls
-                    for row in rows
-                    if row.arm == arm and (row.game, row.offense) == board and row.reached
-                ),
+                (row.stalls for row in rows if row.arm == arm and (row.game, row.offense) == board and row.reached),
                 default=0,
             )
             # By direction, not by game: a game is two boards and merging them would average a
@@ -300,6 +304,12 @@ def main() -> None:
     print("NOTE: the comparison that answers the question is `off` against `on_total_erasable`.")
     print("  `on_total_given` is there so the choice about the total is visible rather than assumed:")
     print("  with the total given the nine slots follow from one number and the player types filler.")
+    print("")
+    print("NOT MEASURED HERE: whether these boards pass the verifier's layer 3. The constraint is in the")
+    print("  generator's solver and in the verifier's RELATIONS, but the verifier has no twin of the")
+    print("  lineup step - its solver narrows intervals, which cannot reach the cyclic distribution. So")
+    print("  a board leaning on the constraint would be refused as underivable. Said rather than left")
+    print("  implied: no number below is a claim about derivability.")
 
 
 if __name__ == "__main__":

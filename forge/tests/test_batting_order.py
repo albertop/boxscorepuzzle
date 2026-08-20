@@ -16,7 +16,7 @@ the last test here is the one that makes that sharing answerable.
 
 import pytest
 
-from boxscore_forge.constraints import BoardShape, batting_cell, inequalities
+from boxscore_forge.constraints import BoardShape, batting_cell, batting_total_cell, inequalities
 from boxscore_forge.identities import Identity
 from boxscore_package.format import Board, LineScore
 from boxscore_verify.rules import relations
@@ -180,6 +180,69 @@ class TestTheChainAloneIsNotTheRule:
 
         assert self._accepts(slots, (5, 4, 4, 4, 4, 4, 4, 4, 1, 3))
         assert not self._accepts(slots, (6, 4, 4, 4, 4, 4, 4, 4, 1, 3))
+
+
+class TestTheSolverActuallyReachesIt:
+    """⚠️⚠️ **A model can be exactly right and deduce nothing, and satisfaction tests cannot see it.**
+
+    Every test above asks whether a vector *satisfies* the relations. None of them asked the solver
+    anything — and the solver could not reach the distribution at all. With a total of 39 every slot's
+    domain is `0..39`, each adjacent inequality compares intervals that already overlap, and the fixed
+    point leaves all nine untouched: **0 of 9 deduced**, from relations that describe the feasible set
+    perfectly.
+
+    These call `solve()`. That is the difference between testing the mathematics and testing the
+    consequence the experiment was named for.
+    """
+
+    @staticmethod
+    def _pa(shape: BoardShape, total: int) -> tuple:
+        from boxscore_forge.solver import solve  # noqa: PLC0415
+
+        solution = solve(shape, {batting_total_cell("plate_appearances"): total})
+        cells = [batting_cell(index, "plate_appearances") for index in range(shape.batter_count)]
+        return tuple(solution.values.get(cell) for cell in cells), solution
+
+    def _shape(self, slots: tuple[int, ...]) -> BoardShape:
+        return BoardShape(**{**_SHAPE, "batter_count": len(slots)}, slots=slots)
+
+    def test_a_total_with_a_remainder_determines_all_nine(self) -> None:
+        got, _ = self._pa(self._shape(tuple(range(1, 10))), 39)
+
+        assert got == (5, 5, 5, 4, 4, 4, 4, 4, 4)
+
+    def test_a_total_divisible_by_nine_determines_all_nine(self) -> None:
+        got, _ = self._pa(self._shape(tuple(range(1, 10))), 36)
+
+        assert got == (4,) * 9
+
+    def test_a_shared_slot_is_left_as_a_sum_rather_than_split(self) -> None:
+        """⚠️ Two open rows in one slot are a **sum**, and splitting it would be a guess.
+
+        This is the hypothesis's own warning arriving in the solver: the constraint is about the slot,
+        so a slot holding two men constrains two cells without fixing either.
+        """
+        got, _ = self._pa(self._shape((1, 2, 3, 4, 5, 6, 7, 8, 9, 9)), 39)
+
+        assert got[:8] == (5, 5, 5, 4, 4, 4, 4, 4), "the single-row slots were not settled"
+        assert got[8:] == (None, None), "the solver split a shared slot instead of leaving the sum"
+
+    def test_it_is_recorded_as_the_cheapest_technique_and_not_the_dearest(self) -> None:
+        """⚠️ Every inequality deduction is `BOUNDING`, so without its own technique this arithmetic
+        would have been counted as a stall — inverting the distinction the experiment exists to draw."""
+        from boxscore_forge.solver import Technique  # noqa: PLC0415
+
+        _, solution = self._pa(self._shape(tuple(range(1, 10))), 39)
+        pa = {batting_cell(index, "plate_appearances") for index in range(9)}
+        used = {step.technique for step in solution.deductions if step.cell in pa}
+
+        assert used == {Technique.LINEUP_ARITHMETIC}
+
+    def test_production_deduces_none_of_them_because_it_passes_no_slots(self) -> None:
+        # The containment, asserted rather than assumed: nothing changes for the shipped generator.
+        got, _ = self._pa(BoardShape(**_SHAPE), 39)
+
+        assert got == (None,) * 9
 
 
 class TestAnIncompleteLineupIsRefused:

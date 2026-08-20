@@ -86,6 +86,7 @@ def candidates(*, gated: bool, provenance: str = "") -> str:
         built = built.replace(original, provenance)
     return built
 
+
 SLOTS = 9
 EXAMPLES = 25
 """How many exceptions of each kind to print in full. The counts are complete; this bounds the listing.
@@ -338,8 +339,7 @@ def main() -> None:
         )
         # ⚠️ Wider, and labelled as not-the-pool. More evidence about baseball; none about what ships.
         _report(
-            "UNGATED - the same rules WITHOUT the zero-density gate. NOT the production pool:"
-            " structural evidence only",
+            "UNGATED - the same rules WITHOUT the zero-density gate. NOT the production pool: structural evidence only",
             _rows(cursor, gated=False),
         )
 

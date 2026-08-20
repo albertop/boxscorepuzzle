@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (one re-reviewed), 109 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-seven reviews (two re-reviewed), 110 findings, none rejected. One is open and stated below.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2268,6 +2268,47 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## ⚠⚠ v27 second pass: the model was exact and **deduced nothing**
+
+**Measured, not argued: with the total given, the solver reached 0 of 9 slots.**
+
+The corrected relations describe the feasible set perfectly — monotone, spread of one. And interval
+propagation cannot *reach* it. With a total of 39 every slot's domain is `0..39`, each adjacent
+inequality compares two intervals that already overlap, and the fixed point leaves all nine untouched.
+
+⚠⚠ **A model can be exactly right and deduce nothing, and every test I wrote was blind to it.** They
+asked whether a vector *satisfies* the relations. None of them called `solve()`. **Satisfaction tests
+cannot establish solver behaviour** — that is the whole finding, and it is a new shape for this file:
+not a wrong rule, not two places disagreeing, but a correct rule with no operational consequence and a
+test suite that could not tell.
+
+⚠️ **And the classification would have inverted the answer.** Every deduction reached through an
+inequality is `BOUNDING`, and `arms.py` read bounding-PA as *reasoning* and everything else as *filler*.
+So even had the intervals cornered a cell, the total-visible arm would have recorded reading-one-number-
+and-dividing-by-nine as a **stall** — the exact opposite of the distinction the experiment exists to
+draw.
+
+**Both fixed together, because they are one question.** `Technique.LINEUP_ARITHMETIC` is a third
+technique, ordered *first* as the cheapest move on the board, and `_lineup_moves()` does the arithmetic
+directly: `divmod(total, 9)`, then a slot with one open row has that row. A slot with two open rows is
+left as a **sum** rather than split, which is the hypothesis's own warning arriving in the solver.
+
+The tests call `solve()` now, including the containment: **production passes no slots and deduces none
+of them.**
+
+### ⚠⚠ Open, and stated rather than worked around: the verifier cannot follow
+
+The constraint is in the verifier's **relations**, so it will *reject* a board that breaks the cycle. It
+has **no twin of the lineup step**, because its solver narrows intervals and intervals cannot reach the
+cyclic distribution — the same wall, on the other side of §22.
+
+**So a board erased leaning on this constraint would be refused by layer 3 as underivable.** The arms
+run therefore measures stalls, blanks, coverage, technique and families, and **says nothing about
+derivability**. That limit is printed in the run's own output rather than left for a reader to infer.
+
+Closing it means an independent value-aware step in `boxscore_verify`, written from the rule rather than
+from the generator's copy. **Not built, and not needed until the operator decides the constraint ships.**
 
 ## ⚠⚠ v27: what I implemented was monotonicity, not the batting order
 

@@ -29,19 +29,43 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from boxscore_forge.bounds import narrow
-from boxscore_forge.constraints import BoardShape, Equation, constrained_cells, equations
+from boxscore_forge.constraints import (
+    BoardShape,
+    Equation,
+    batting_cell,
+    batting_total_cell,
+    constrained_cells,
+    equations,
+)
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import FAMILY_OF, Family, Identity
 
 
 class Technique(StrEnum):
-    """The first axis. Ordered: bounding is only reached for when propagation has stopped."""
+    """The first axis. Ordered easiest first: each is reached only when the ones before it are dry."""
+
+    LINEUP_ARITHMETIC = "lineup_arithmetic"
+    """Read the team's plate-appearance total, divide by nine, write the slot down.
+
+    ⚠️ **Its own technique because it is the *easiest* move on the board, and it would otherwise have
+    been recorded as the hardest.** Every deduction reached through an inequality is `BOUNDING`, so the
+    cyclic step would have counted as a stall — inverting the exact distinction the batting-order
+    experiment exists to draw. Four turns of nine and a remainder is not reasoning; it is arithmetic a
+    player does once and then applies nine times without looking at the board.
+
+    ⚠️ **This is why the constraint's worth depends on the PA total being erased.** With the total
+    given, those nine cells are typed rather than deduced.
+    """
 
     PROPAGATION = "propagation"
     BOUNDING = "bounding"
 
 
-_TECHNIQUE_ORDER: tuple[Technique, ...] = (Technique.PROPAGATION, Technique.BOUNDING)
+_TECHNIQUE_ORDER: tuple[Technique, ...] = (
+    Technique.LINEUP_ARITHMETIC,
+    Technique.PROPAGATION,
+    Technique.BOUNDING,
+)
 
 # How much of the tail to ignore when reading frontier width. A solution narrows by exhaustion as it
 # runs out of cells, not by difficulty: the last step always has one move because one cell is left,
@@ -389,6 +413,25 @@ def _next_step(
     # ⚠️ Measured over the phase that supplied the move, not over the whole board. Search cost is
     # how much of what the player scanned led nowhere, so counting relations they had not reached for
     # yet inflates the cost of every move found without them.
+    # ⚠️ **Before propagation, because it is cheaper than a subtraction.** Reading one number and
+    # dividing by nine is the first thing a player does once the total is visible; taking it later would
+    # credit propagation for work this did.
+    lineup = _lineup_moves(shape, values)
+    if lineup:
+        cell, value = lineup[0]
+        return Deduction(
+            cell=cell,
+            value=value,
+            technique=Technique.LINEUP_ARITHMETIC,
+            from_identity=Identity.BATTING_ORDER,
+            depth=1 + depths.get(batting_total_cell("plate_appearances"), 0),
+            frontier=len(lineup),
+            depends_on=frozenset({batting_total_cell("plate_appearances")}),
+            equations_live=0,
+            equations_solvable=0,
+            known_terms_combined=None,
+        )
+
     available = _propagation_moves(system, values)
     scanned = system if available else system + global_equations
     if not available:
@@ -462,6 +505,49 @@ def _propagation_moves(system: tuple[Equation, ...], values: Mapping[str, int]) 
         if len(unknowns) == 1 and unknowns[0] not in moves:
             moves[unknowns[0]] = equation
     return sorted(moves.items())
+
+
+def _lineup_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[str, int]]:
+    """Slots that the team's plate-appearance total settles outright.
+
+    ⚠️⚠️ **The relations alone are exact and inert, which is the whole reason this exists.**
+    Monotonicity plus a spread of one describes the feasible set perfectly, and interval propagation
+    cannot *reach* it: with a total of 39 every slot's domain is `0..39`, each adjacent inequality
+    compares two intervals that already overlap, and the fixed point leaves all nine untouched.
+    **Measured rather than assumed — the solver deduced 0 of 9.**
+
+    A model can be exactly right and deduce nothing, and **satisfaction tests cannot tell those apart**
+    because they never ask the solver anything. The tests written for the relations checked that valid
+    vectors satisfy them and impossible ones do not; none called `solve()`.
+
+    So the arithmetic is done directly. `divmod(total, 9)` gives every slot's sum, and a slot with one
+    unknown row left has that row's value.
+
+    ⚠️ **Nothing at all without slots**, which keeps production exactly as it was.
+    """
+    if not shape.slots:
+        return []
+    total = values.get(batting_total_cell("plate_appearances"))
+    if total is None:
+        return []
+
+    rows_in: dict[int, list[int]] = {}
+    for index, slot in enumerate(shape.slots):
+        rows_in.setdefault(slot, []).append(index)
+
+    base, over = divmod(total, len(rows_in))
+    found: list[tuple[str, int]] = []
+    for position, slot in enumerate(sorted(rows_in), start=1):
+        wanted = base + 1 if position <= over else base
+        cells = [batting_cell(index, "plate_appearances") for index in rows_in[slot]]
+        unknown = [cell for cell in cells if cell not in values]
+        # One row still open: the slot's total less the rest. Two open rows are a sum the ordinary
+        # machinery can carry, and splitting it here would be a guess.
+        if len(unknown) == 1:
+            value = wanted - sum(values[cell] for cell in cells if cell in values)
+            if value >= 0:
+                found.append((unknown[0], value))
+    return found
 
 
 def _bounding_moves(

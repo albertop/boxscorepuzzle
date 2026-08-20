@@ -1,4 +1,4 @@
-# Code Review v27
+# Code Review v27 - Second Pass
 
 ## Scope
 
@@ -13,7 +13,45 @@ This review concentrates on the batting-order work added after v26:
 
 The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
 
-## Findings
+## Second-Pass Finding
+
+### v27-P1-05: The interval solver cannot realize the exact deduction the corrected cyclic model promises
+
+- **Persona:** Kakuro / Logic-Puzzle Reviewer
+- **Priority:** P1
+- **Location:** `forge/src/boxscore_forge/constraints.py:390`, `forge/src/boxscore_forge/constraints.py:421`, `forge/src/boxscore_forge/bounds.py:67`, `forge/src/boxscore_forge/bounds.py:103`, `discovery/batting-order/arms.py:154`
+- **Description:** The first-pass repair now describes the correct feasible set: adjacent slot sums are monotone and slot 1 can exceed slot 9 by at most one. However, the solver propagates independent intervals rather than correlated integer solutions. Given only a known PA total, the column-sum equation, monotonic chain, and spread bound do not narrow any individual slot to the quotient/remainder prediction. The tests prove that valid vectors satisfy the relations and impossible vectors do not; they never call `narrow()` or `solve()` to prove the documented operational consequence that a known total determines all nine slot sums. There is a second measurement mismatch at the same boundary: all deductions obtained through inequalities are classified as `Technique.BOUNDING`, while `arms.py` interprets bounding PA deductions as reasoning and non-bounding deductions as filler. Even if the intervals happened to corner a PA cell, the total-visible arm would count the cyclic arithmetic as a stall rather than as the trivial quotient/remainder step that arm is intended to isolate.
+- **Impact:** The corrected relations prevent impossible solutions, but `on_total_given` still does not represent “the player types nine values from one number.” Therefore the three-arm experiment cannot yet answer whether keeping the total visible creates filler or whether erasing it creates useful reasoning. It will either fail to expose deductions a human has immediately or attribute them to the difficult technique being measured. Production remains unaffected because the production erasure path still supplies no slots.
+- **Reproduction:** Create a shape with one batting row in each slot 1 through 9 and give only `batting_totals.plate_appearances = 39` among the PA column. The column equation initially caps every slot at 39. Because all nine domains overlap at `0..39`, each adjacent inequality and the first/last spread inequality leaves those intervals unchanged; fixed-point propagation cannot reach the actual `(5, 5, 5, 4, 4, 4, 4, 4, 4)` distribution. Direct predicate tests pass because the relations are mathematically correct, but no cell is operationally deduced.
+- **Recommended fix and rationale:** Add a value-aware cyclic propagator for the slot sums. When the team total is known, compute `divmod(total, 9)` and constrain each slot sum directly; when a slot has substitutions, constrain the sum of its rows rather than assigning one player. Mark this deterministic total-to-slot step separately from exploratory bounding so the total-visible arm can classify it as filler. A linear alternative is to add the position-specific bounds `9*S_i - T + i - 1 >= 0` and `T - 9*S_i - i + 9 >= 0`, but that requires teaching `_reach()` and `_divide()` about coefficient magnitudes and integer rounding; they currently assume coefficients of `1` or `-1`. Add end-to-end `narrow()` or `solve()` tests for totals with remainder zero and nonzero, including a shared slot. Satisfaction tests alone cannot establish solver behavior.
+
+## Second-Pass Disposition of the Original Findings
+
+- **`v27-P1-01` resolved at the model layer:** both implementations now add the first/last spread bound and reject monotone-but-impossible distributions. Its promised solver behavior remains open as `v27-P1-05`.
+- **`v27-P2-02` resolved:** persisted rows now include `offense` and `seed`, and per-board reporting groups by `(game, offense)`.
+- **`v27-P2-03` resolved:** both trust boundaries require exactly the slot domain `1..9` while allowing duplicates for substitutions.
+- **`v27-P3-04` resolved:** the TODO decision summary now reports 826,039 of 990,202 rows, or 83.4%.
+
+`arms.log` remains empty, so no numerical conclusion from the three-arm experiment is available or reviewed.
+
+## Second-Pass Persona Summary
+
+| Persona | Result |
+|---|---|
+| Backend Architect | The persisted trial identity repair is correct; no new finding. |
+| Python Principal Engineer | The non-zero inequality constant is propagated with the correct sign; operational incompleteness is covered by `v27-P1-05`. |
+| Frontend Engineer | No frontend changes are in scope. |
+| QA / Reliability Engineer | The original regression cases are now represented, but an end-to-end solver case is still missing under `v27-P1-05`. |
+| Security Engineer | No security finding. |
+| UX / Visual Reviewer | No user-interface or visual changes are in scope. |
+| Baseball / Boxscore Domain Reviewer | The corrected per-slot cyclic relation is faithful to the baseball rule for admitted directions. |
+| Kakuro / Logic-Puzzle Reviewer | Raised `v27-P1-05`. |
+
+## Second-Pass Verdict
+
+The four original v27 findings are corrected, and the run was stopped before an ambiguous artifact was spent. One P1 remains: the mathematical model is now exact, but the solver and experiment cannot yet realize or classify its central total-to-slot deduction. No P0, P2, or P3 finding remains open from this second pass.
+
+## Resolved First-Pass Findings
 
 ### v27-P1-01: The implementation encodes only monotonicity, not the cyclic batting-order rule it claims to measure
 
@@ -55,7 +93,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** Compare the payoff at line 2387 with the batting-order decision summary beginning at line 2884. They refer to the same proposed constraint but report 83.4% and 75.1%, respectively.
 - **Recommended fix and rationale:** Replace the stale 75.1% summary with 83.4% and, preferably, retain the corrected numerator and denominator. Keeping the decision summary derived from the authoritative measurement prevents a superseded denominator from surviving after the detailed section is repaired.
 
-## Persona Review Summary
+## First-Pass Persona Review Summary (superseded)
 
 | Persona | Result |
 |---|---|
@@ -72,13 +110,13 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 
 Both second-pass v26 findings are corrected in the revised measurement script. The exception-distribution table now iterates over the complete population and prints zero-exception categories. The payoff query receives the five derived failing direction keys and reports the post-rule population. Neither v26 finding is repeated.
 
-## Recommended Order of Work
+## First-Pass Recommended Order of Work (completed)
 
 1. Decide whether the feature is the full cyclic rule or only weak monotonicity, then make implementation, tests, and experiment describe the same mathematics before running `arms.py`.
 2. Preserve seed and direction identity in the arm artifact before spending time generating it.
 3. Reject incomplete slot domains at both trust boundaries.
 4. Correct the stale payoff in the TODO summary.
 
-## Verdict
+## First-Pass Verdict (superseded)
 
 Production behavior is unchanged because slots are not yet supplied by the production erasure path. That containment is valuable, but the new arm experiment should not be run for a decision in its current form: its central “constraint on” treatment is weaker than the cyclic rule it claims to evaluate. One P1, two P2, and one P3 finding were identified; no P0 finding was identified.
