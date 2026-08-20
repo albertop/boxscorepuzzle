@@ -592,6 +592,151 @@ suite("⚠️ A cell takes two digits, and a two-digit value never starts with a
   });
 });
 
+suite("⚠️ What a screen reader hears follows what the cell holds", () => {
+  // ⚠️ **An explicit `aria-label` *replaces* the element's text as its name.** The label was written
+  // once at render with the row and column, and `paint()` never touched it — so a screen reader read
+  // `SS, H` whether the cell held nothing, a 1 or a 17. `aria-pressed` says which cell is selected and
+  // nothing about what is in it, and on a board whose whole interaction is re-reading your own earlier
+  // entries, that is the one thing the accessible path could not do.
+  //
+  // Derived in the same redraw as the visual state, because two paths computing one fact is how they
+  // drift — and this pair had already drifted.
+  const board = async () => {
+    const { renderSection, paint: repaint, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell } = await import("../engine/columns.js");
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const node = renderSection({
+      title: "t",
+      columns: columnsFor.batting,
+      rows: puzzle.puzzle.batting,
+      labels: puzzle.labels,
+      slots: puzzle.slotReferences,
+      cellName: battingCell,
+      totalName: totalNameFor.batting,
+      game,
+      onSelect: () => {},
+    });
+    return { node, game, repaint };
+  };
+
+  test("the name follows entering, changing and clearing", async () => {
+    const { node, game, repaint } = await board();
+    const cell = node.querySelector(".cell.blank");
+    assert(cell, "no blank cell to test");
+    const seen = [];
+    const read = () => seen.push(cell.getAttribute("aria-label"));
+
+    read();
+    for (const value of [5, 12, null]) {
+      game.enter(cell.dataset.cell, value);
+      repaint(cell, game);
+      read();
+    }
+
+    const base = seen[0].replace(/, [^,]+$/, "");
+    equal(seen, [`${base}, blank`, `${base}, 5`, `${base}, 12`, `${base}, blank`]);
+  });
+
+  test("every blank cell names a state from the moment it is drawn", async () => {
+    // ⚠️ The opening state was the one that said least: `paint()` ran before the base label existed,
+    // so the first cell a screen-reader user meets announced bare context.
+    const { node } = await board();
+    const blanks = [...node.querySelectorAll(".cell.blank")];
+
+    assert(blanks.length > 0, "no blanks on this board, so the test proves nothing");
+    const bare = blanks.filter((cell) => !/, (blank|[\d.]+)$/.test(cell.getAttribute("aria-label") ?? ""));
+    equal(bare.map((cell) => cell.dataset.cell), [], "a blank cell was drawn with no state in its name");
+  });
+
+  test("an innings cell reads the way it is written, not as outs", async () => {
+    const { node, game, repaint } = await board();
+    const cell = node.querySelector(".cell.blank");
+    game.enter(cell.dataset.cell, 25);
+    repaint(cell, game);
+
+    // The batting grid is whole numbers; the point is that the name carries the *rendered* value, which
+    // is what makes `8.1` correct on an outs cell rather than `25`.
+    assert(cell.getAttribute("aria-label").endsWith(", 25"), cell.getAttribute("aria-label"));
+    equal(cell.textContent, "25", "the name and the text disagree");
+  });
+});
+
+suite("⚠️ A thirds key means one thing, and only where it means it", () => {
+  // ⚠️ **The branch ran before the flag it depends on.** `key.thirds` was handled ahead of the innings
+  // check, so a thirds key on any plain-integer cell computed `floor(current / 3) * 3 + thirds` and
+  // wrote the result as a whole number — `1⁄3` on an empty hits cell entered `1`. A control performing
+  // an operation other than the one printed on it, into a board that deliberately withholds correctness
+  // feedback, so the wrong value travels into every deduction after it.
+  //
+  // Guarded in the handler **and** disabled in the pad. A control prevented only by being greyed out is
+  // one that works again the moment anything reaches it another way.
+  test("the shell and the keypad ask the same question", async () => {
+    const { isInningsCell } = await import("../ui/phone/board.js");
+
+    assert(isInningsCell("pitching[0].outs"), "an outs cell is measured in thirds");
+    for (const name of ["batting[0].hits", "pitching[0].hits", "batting_totals.runs", "pitching[1].walks"]) {
+      assert(!isInningsCell(name), `${name} is a plain integer and must not take thirds`);
+    }
+  });
+
+  test("⚠️ a thirds key leaves every plain-integer cell exactly as it was", async () => {
+    // The handler's own refusal, not the pad's. ⚠️ This rule lived in `main.js`, which the suite does
+    // not import — so it was unguarded by construction, which is how the branch came to run ahead of
+    // the flag it depends on. Driven through `applyKey` now, where a test can reach it.
+    const { applyKey } = await import("../ui/phone/board.js");
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const plain = game.blanks().filter((name) => !name.endsWith(".outs"));
+
+    assert(plain.length > 0, "no plain-integer blanks on this board, so the test proves nothing");
+    const damaged = [];
+    for (const name of plain) {
+      for (const seed of [null, 0, 4, 17]) {
+        game.enter(name, seed);
+        for (const thirds of [1, 2]) applyKey(game, name, { thirds });
+        if (game.value(name) !== seed) damaged.push(`${name}: ${seed} became ${game.value(name)}`);
+      }
+      game.enter(name, null);
+    }
+    equal(damaged, [], "a thirds key changed a cell that is not measured in thirds");
+  });
+
+  test("a thirds key adjusts an outs cell, and replaces rather than accumulating", async () => {
+    // The other half: a guard that refused everything would satisfy the test above.
+    const { applyKey } = await import("../ui/phone/board.js");
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+    const outs = game.blanks().find((name) => name.endsWith(".outs"));
+    assert(outs !== undefined, "no blank outs cell on this board, so this proves nothing");
+
+    applyKey(game, outs, { digit: 8 });
+    const whole = game.value(outs);
+    applyKey(game, outs, { thirds: 1 });
+    const third = game.value(outs);
+    applyKey(game, outs, { thirds: 2 });
+    const swapped = game.value(outs);
+
+    equal(whole, 24, "eight whole innings is twenty-four outs");
+    equal(third, 25, "a third did not adjust the outs");
+    equal(swapped, 26, "the thirds accumulated instead of replacing");
+  });
+
+  test("the pad offers the thirds keys only for an outs cell", async () => {
+    const { renderKeypad } = await import("../ui/phone/board.js");
+    const pad = renderKeypad(() => {});
+    const thirds = [...pad.querySelectorAll("button.thirds")];
+
+    assert(thirds.length === 2, `${thirds.length} thirds keys, expected 2`);
+    equal(thirds.map((key) => key.disabled), [true, true], "the pad opens with thirds available");
+    pad.allowThirds(true);
+    equal(thirds.map((key) => key.disabled), [false, false], "an outs cell did not enable them");
+    equal(thirds.map((key) => key.getAttribute("aria-disabled")), ["false", "false"], "the name disagrees");
+    pad.allowThirds(false);
+    equal(thirds.map((key) => key.disabled), [true, true], "leaving an outs cell did not disable them");
+  });
+});
+
 suite("⚠️ The highlight paints over a filled cell", () => {
   // ⚠️ **A defect no assertion about classes could have caught.** `paint()` set `filled`, `peer` and
   // `selected` correctly and the board still showed nothing on the cells the player had written in —

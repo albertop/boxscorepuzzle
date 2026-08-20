@@ -35,6 +35,10 @@ const en = {
   // footnote line while reading this key for the heading, so a catalogue could rename the column and
   // not the reference pointing at it — two spellings of one thing on one screen, which is the defect
   // `side.home` was introduced to close, recurring six keys further down.
+  // What a screen reader hears where the eye sees an empty cell. ⚠️ Spoken, never drawn: the board
+  // shows an empty cell and says nothing, because a grid of numbers with the word "blank" in thirty of
+  // them is unreadable. The two channels carry the same fact in the form each can use.
+  "cell.blank": "blank",
   "board.slot": "#",
   // ⚠️ `board.footnote_repeat` (`×`) lived here for one hour and is gone with the form that needed
   // it. `#4×2` put the count *after* the slot as a multiplier; the line now prints `2 #4`, count first

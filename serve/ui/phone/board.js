@@ -119,12 +119,17 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
   const cellNode = (name, rowLabel) => {
     const cell = el("td", "cell");
     cell.dataset.cell = name;
-    paint(cell, game);
-    cell.addEventListener("click", () => onSelect(name));
     if (game.isBlank(name)) {
       const column = text(`column.${name.split(".")[1]}`);
-      reachable(cell, { label: `${rowLabel}, ${column}`, selected: false });
+      // ⚠️ **The context only, and set before the first paint.** The value is appended by `paint()`,
+      // because an `aria-label` written once at render stops describing the element the moment the
+      // element changes — and painting first left the opening state as bare context, so the very cell a
+      // screen-reader user meets first was the one that said least.
+      cell.dataset.label = `${rowLabel}, ${column}`;
+      reachable(cell, { label: cell.dataset.label, selected: false });
     }
+    paint(cell, game);
+    cell.addEventListener("click", () => onSelect(name));
     return cell;
   };
 
@@ -182,6 +187,7 @@ function reachable(node, { label, selected }) {
   node.tabIndex = 0;
   node.setAttribute("role", "button");
   node.setAttribute("aria-label", label);
+  // The name is completed by `paint()` on every redraw; see the note there.
   node.setAttribute("aria-pressed", selected ? "true" : "false");
   node.addEventListener("keydown", (event) => {
     // Enter and Space are what `role="button"` promises. Anything else belongs to the page.
@@ -200,7 +206,20 @@ export function paint(node, game) {
   node.classList.toggle("filled", blank && value !== null);
   node.classList.toggle("given", !blank);
   const isInnings = name.startsWith("pitching") && name.endsWith(".outs");
-  node.textContent = value === null ? "" : isInnings ? inningsToDisplay(value) : String(value);
+  const shown = value === null ? "" : isInnings ? inningsToDisplay(value) : String(value);
+  node.textContent = shown;
+  // ⚠️ **The accessible name is redrawn here or it is not redrawn at all.** An explicit `aria-label`
+  // *replaces* the element's text as its name, so a label written once at render described the cell
+  // until the first entry and then described nothing: a screen reader read `SS, H` whether the cell held
+  // nothing, a 1 or a 17. `aria-pressed` says which cell is selected; it says nothing about what is in
+  // it. On a board whose whole interaction is re-reading your own earlier entries, that is the one thing
+  // the accessible path could not do.
+  //
+  // Derived in the same redraw as the visual state on purpose. Two paths computing one fact is how they
+  // drift, and this pair had already drifted once.
+  if (node.dataset.label) {
+    node.setAttribute("aria-label", `${node.dataset.label}, ${shown === "" ? text("cell.blank") : shown}`);
+  }
 }
 
 /* ---- the footnote line ----------------------------------------------------------------------- */
@@ -294,8 +313,62 @@ export function grow(current, digit) {
 /* ---- keypad ---------------------------------------------------------------------------------- */
 
 /**
+ * What one keypad press does to one cell. **The whole input rule, in one testable place.**
+ *
+ * ⚠️ **It lived in the shell, where nothing could reach it.** `main.js` is not imported by the test
+ * suite — it boots the application — so every rule written there was unguarded by construction. That is
+ * how the thirds branch came to run ahead of the flag it depends on, and how the digit cap came to exist
+ * in one of the two places it was written. Both were found by a person pressing keys.
+ *
+ * The shell keeps what is genuinely its own: which cell is selected, and when to repaint.
+ */
+export function applyKey(game, name, key) {
+  if (key.clear) {
+    game.enter(name, null);
+    return;
+  }
+  const innings = isInningsCell(name);
+  if (key.thirds !== undefined) {
+    // ⚠️ **The guard that was missing.** A thirds key on a plain-integer cell computed
+    // `floor(current / 3) * 3 + thirds` and wrote a whole number: `1⁄3` on an empty hits cell entered
+    // `1`. A control doing something other than what is printed on it, into a board that deliberately
+    // withholds correctness feedback — so the value travels into every deduction after it.
+    //
+    // The pad disables these keys too. Both, because a control prevented only by being greyed out works
+    // again the moment anything reaches it another way.
+    if (!innings) return;
+    // Innings are entered as whole innings then a third, the way they are written. The thirds keys
+    // adjust the current entry rather than appending a digit, because `6` then `⅓` is `6.1` and not
+    // sixty-one.
+    const current = game.value(name) ?? 0;
+    game.enter(name, Math.floor(current / 3) * 3 + key.thirds);
+    return;
+  }
+  if (innings) {
+    // The whole innings grow; the thirds are held above. This had no cap while the grid path had one.
+    const current = game.value(name) ?? 0;
+    game.enter(name, grow(Math.floor(current / 3), key.digit) * 3 + (current % 3));
+    return;
+  }
+  game.enter(name, grow(game.value(name), key.digit));
+}
+
+/**
+ * Whether a cell is measured in thirds of an inning. **The only cell a thirds key means anything for.**
+ *
+ * ⚠️ Exported so the handler and the keypad ask one question. They asked two: the shell computed this
+ * for the digit branch and the thirds branch ran before it, so `1⁄3` on a *hits* cell wrote a whole `1`.
+ */
+export const isInningsCell = (name) => name.startsWith("pitching") && name.endsWith(".outs");
+
+/**
  * The phone's input. **A custom keypad, not the system keyboard**: the system one covers the board,
  * offers letters nobody needs, and cannot carry the thirds keys innings are entered with.
+ *
+ * Returns the pad and `allowThirds`, which the shell calls on every selection. ⚠️ **The buttons are
+ * disabled and the handler still refuses**: a control that is only prevented by being greyed out is a
+ * control that works again the moment anything reaches it another way — a keyboard, a test, a future
+ * layer. Presentation says *not here*; the handler is what makes it true.
  */
 export function renderKeypad(onKey) {
   const pad = el("div", "keypad");
@@ -317,6 +390,15 @@ export function renderKeypad(onKey) {
   const clear = el("button", "wide", text("keypad.clear"));
   clear.addEventListener("click", () => onKey({ clear: true }));
   pad.append(clear);
+  pad.allowThirds = (allowed) => {
+    for (const key of pad.querySelectorAll("button.thirds")) {
+      key.disabled = !allowed;
+      // The name has to say it too: a disabled button a screen reader announces as available is a
+      // control that reads as broken rather than as inapplicable.
+      key.setAttribute("aria-disabled", allowed ? "false" : "true");
+    }
+  };
+  pad.allowThirds(false);
   return pad;
 }
 

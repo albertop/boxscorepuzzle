@@ -2,8 +2,14 @@
 
 ## Where everything stands
 
-**Twenty-two reviews, 96 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-three reviews, 98 findings, none rejected. Nothing is open.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
+
+⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
+not a change of subject so much as a change of what is reachable: `serve` only recently had enough
+surface to be wrong in. Both of v23's findings, and both of the defects the operator found by playing,
+share one cause worth naming — **a rule written in `main.js` is unguarded by construction**, because the
+suite does not import a file whose job is to boot the application.
 
 ⚠️ **v05-P1-02, open across ten reviews, is closed twice over.** It was fixed by drawing the erased
 footnote term as the grid's own cell — and then **deleted along with the case it existed for**, when the
@@ -2262,6 +2268,58 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## v23 — verified, none rejected. **Both closed.**
+
+Both reproduced in the running board before anything was changed, in one pass.
+
+### v23-P2-02 — a keypad control did something other than what was printed on it. **The one that corrupts data.**
+
+The `key.thirds` branch ran **before** the innings flag it depends on, so on any plain-integer cell it
+computed `floor(current / 3) * 3 + thirds` and wrote the result as a whole number. **`1⁄3` on an empty
+hits cell entered `1`.**
+
+⚠️ **The damage is larger than the keystroke** because §2 deliberately withholds correctness feedback:
+the board says nothing until *done*, so an accidental value travels into every deduction after it. When
+the guard is reverted the test names **21 affected cells** — batting, pitching and both totals rows.
+
+**Closed in both layers: the handler refuses and the pad disables the keys.** Both, because a control
+prevented only by being greyed out works again the moment anything reaches it another way — a keyboard,
+a test, a later interface.
+
+### v23-P2-01 — the accessible name never reported the value. **Real.**
+
+An explicit `aria-label` **replaces** the element's text as its accessible name. It was written once at
+render with the row and column, and `paint()` never touched it — so a screen reader read `SS, H` whether
+the cell held nothing, a 1 or a 17. `aria-pressed` says which cell is selected and nothing about what is
+in it.
+
+⚠️ **On a board whose entire interaction is re-reading your own earlier entries, that is the one thing
+the accessible path could not do.** The sighted path could.
+
+Recomputed in the same redraw as the visual state, because two paths computing one fact is how they
+drift and this pair had already drifted. ⚠️ **And the opening state was the one that said least**:
+`paint()` ran before the base label existed, so the first cell a screen-reader user meets announced bare
+context. Fixed by ordering, and asserted over every blank rather than the one that was checked by hand.
+
+### ⚠️⚠️ What both findings share, and both of the operator's defects too
+
+**A rule written in `main.js` is unguarded by construction.** The suite does not import it — it boots the
+application — so every rule that lived there was untestable in principle rather than untested by
+oversight:
+
+| rule | what it cost |
+|---|---|
+| the thirds branch ahead of its flag | `1⁄3` wrote `1` into any cell |
+| the digit cap, written twice | only the grid copy had one, so `IP` took `8444` |
+
+Both were found by a person pressing keys, which is the check this project keeps rediscovering. The
+whole input rule is `applyKey()` in `board.js` now, and the shell keeps what is genuinely its own:
+which cell is selected, and when to repaint.
+
+⚠️ **I found this hole while trying to mutation-check my own fix** — the guard was in `main.js`, so
+reverting it broke nothing and the tests I had written covered the predicate and the pad rather than the
+refusal. The mutation check is what found it, not the writing of it.
 
 ## v22 — verified, none rejected. **All three closed.**
 

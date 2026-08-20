@@ -11,8 +11,9 @@ import { createGame } from "../../engine/game.js";
 import { PackageError, readPackage } from "../../engine/package.js";
 import { text } from "../../engine/strings.js";
 import {
+  applyKey,
   columnsFor,
-  grow,
+  isInningsCell,
   paint,
   renderFootnotes,
   renderKeypad,
@@ -62,9 +63,13 @@ function boot({ puzzle }) {
   scroller.className = "scroller";
   app.append(scroller);
 
+  let keypad = null;
   const select = (name) => {
     if (!game.isBlank(name)) return;
     selected = name;
+    // The visible half of the same rule the handler enforces: the thirds keys apply to one kind of
+    // cell, so they are only offered on that kind.
+    keypad?.allowThirds(isInningsCell(name));
     for (const node of scroller.querySelectorAll(".cell")) {
       const isSelected = node.dataset.cell === name;
       node.classList.toggle("selected", isSelected);
@@ -132,29 +137,12 @@ function boot({ puzzle }) {
     footnotes.replaceWith(renderFootnotes(puzzle, game));
   };
 
-  app.append(
-    renderKeypad((key) => {
-      if (!selected) return;
-      const innings = selected.startsWith("pitching") && selected.endsWith(".outs");
-      if (key.clear) game.enter(selected, null);
-      else if (key.thirds !== undefined) {
-        // ⚠️ Innings are entered as whole innings then a third, the way they are written. The thirds
-        // keys adjust the current entry rather than appending a digit, because `6` then `⅓` is `6.1`
-        // and not sixty-one.
-        const current = game.value(selected) ?? 0;
-        game.enter(selected, Math.floor(current / 3) * 3 + key.thirds);
-      } else if (innings) {
-        // The whole innings grow; the thirds are held by the branch above. ⚠️ This had no cap at all
-        // while the grid path below capped at two digits — one rule, two spellings, and only one of
-        // them written down.
-        const current = game.value(selected) ?? 0;
-        game.enter(selected, grow(Math.floor(current / 3), key.digit) * 3 + (current % 3));
-      } else {
-        game.enter(selected, grow(game.value(selected), key.digit));
-      }
-      repaint();
-    }),
-  );
+  keypad = renderKeypad((key) => {
+    if (!selected) return;
+    applyKey(game, selected, key);
+    repaint();
+  });
+  app.append(keypad);
 
   draw();
   globalThis.__game = game;
