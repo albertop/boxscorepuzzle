@@ -2269,6 +2269,70 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## ⚠️⚠️ The batting order: the hypothesis holds 99.9906%, which is the answer that needs a pool rule
+
+**Measured over the whole pool, not a sample** — 371,802 directions. The claim: the order is cyclic and
+cannot be skipped, so given the team's PA total the nine per-slot values follow. 38 plate appearances is
+four turns of nine plus two, so slots 1 and 2 have 5 and the rest have 4.
+
+| | |
+|---|---|
+| hold all three claims | **371,767 — 99.9906%** |
+| exceptions | **35 — 0.0094%** |
+
+⚠️ **This is exactly the outcome the operator named in advance, and the instruction was explicit: a
+constraint true 99.99% of the time is not a constraint, it is a trap.** The solver would deduce a value
+that is wrong on the exceptional board, and §22's guarantee would break in a way **no identity check
+could catch** — the board would balance perfectly and be about a different game.
+
+**So the answer is a pool rule, not a weaker constraint**, and it is unusually cheap: reject a direction
+whose slot distribution does not match what the total predicts. That is 35 of 371,802, and the rule is
+one comparison against a function of a single number.
+
+### Where the exceptions are, which is the part a rate cannot tell you
+
+⚠️ **Nowhere.** They do not cluster: 0.00–0.02% in every decade from the 1910s to the 2010s, 0.01% in
+both major source types, 0.01% whether the game went to extra innings, 0.01% whether the team batted
+last. **A rule of baseball would cluster somewhere** — an era, a league, a scoring convention. An even
+spread across 110 years reads as transcription noise rather than as a thing the game does.
+
+**That reading is not established.** These 35 have not been examined individually, and the distinction
+that matters — a real event such as a batting-out-of-order call, against a scoring error — cannot be
+made from the distribution. Thirty-five is few enough for a person to look at. **Recorded as unresolved
+rather than assumed**, because "probably data noise" is exactly the kind of conclusion this project has
+learned to distrust when nothing checked it.
+
+### The excluded populations, measured separately and never mixed in
+
+**Deduced files: 3 of 6,551 — 0.0458%, about five times the pool's rate.** A violation there *confirms*
+§32's exclusion rather than refuting the hypothesis, which is why they are a separate arm.
+
+⚠️ **The Negro Leagues arm was empty, and the reason is not the one §32 gives.** All 1,872 `EVR` games
+are in `retroGamesReg` and **not one has a `retroGameLogs` row**. The game-log join removes them before
+the source rule ever applies — two independent exclusions for one population, and the join is the
+stricter. Said as a result, because an arm reporting *no rows* cannot otherwise be told from an arm whose
+predicate cannot match.
+
+⚠️ **And that arm was broken on the first run.** It asked for a deduced game *with an accepted source
+type* — an empty intersection by construction, since deduced files carry `EDA`/`EDN`/`EDF` and the
+accepted list is `EVA`/`EVN`/`EVF`. The report said *the filters in this script are wrong*: a broken arm
+describing itself as a broken script. It now replaces the provenance rule whole, and refuses to run if
+that rule has moved rather than silently measuring the pool while claiming to measure an exclusion.
+
+### What it would buy, measured before anything is built
+
+⚠️ **Less than nine cells a board, and the reason is the hypothesis's own warning turned around.** The
+constraint determines PA per **slot**; the board has a row per **player**. A slot held by one man all
+game has its row determined by the team total. A slot shared by a starter and a substitute yields only
+their **sum** — a statement about two cells that fixes neither.
+
+**2,918,672 of 3,884,504 batting rows — 75.1% — are alone in their slot.** For those the team's PA total
+would give the value outright. The other quarter get a sum.
+
+⚠️ **This is what the constraint *determines*, not how many cells could then be erased.** Those are
+different numbers, and the second needs the solver to hold the constraint — which is precisely what is
+not being built. **Nothing is implemented.** The instrument is `discovery/batting-order/`.
+
 ## v25 — verified, none rejected. **Both closed.**
 
 ### v25-P2-01 — a malformed saved session could take the board away. **Real, and worse than reported.**
