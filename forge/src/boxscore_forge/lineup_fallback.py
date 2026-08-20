@@ -1,9 +1,19 @@
 """The batting-order constraint as a fallback, tried only when a board cannot reach its target.
 
-⚠️⚠️ **EXPERIMENTAL. NOT ADOPTED. NOTHING HERE MAY REACH PUBLICATION.**
-`docs/reviews/batting-order-reversal.md` is the record of what is and is not established, including a
-recommendation given, reversed under one push, and overstated in both directions. Read it before
-citing any number from this module.
+✅ **ADOPTED. This is the production erasure path.** `write_reference_puzzles.py` builds through it
+and the boards it produces publish.
+
+⚠⚠ **This said `EXPERIMENTAL. NOT ADOPTED. NOTHING HERE MAY REACH PUBLICATION` for one commit
+after production started calling it** — v29-P3-01. The caller said extend this path and the module
+said restore the fence, so **a later correction could have undone the adoption while honestly
+following the repository.** A module contract is not archived prose: it is the instruction anyone
+reads before touching the file. The history is dated in `batting-order-reversal.md`; the current
+statement lives here, and there is one of it.
+
+`docs/reviews/batting-order-reversal.md` records what is and is not established — a recommendation
+given, reversed under one push, and overstated in both directions. Read it before citing any number
+from this module, and note that **every figure in it was measured before the verifier could certify
+these boards.**
 
 **Why a fallback rather than a switch.** On the 46 walks that already reach eight stalls without the
 constraint, turning it on changes stalls on four of them and converts a median of eight steps into
@@ -17,10 +27,12 @@ costs something everywhere else.** Trying the ordinary path first is what separa
 - **n = 11.** The whole case rests on eleven directions out of forty-eight, ten qualifying walks out of
   fifteen, in a subgroup that was **not pre-registered**. A subgroup chosen after seeing the aggregate
   is a known way to manufacture a result, and this one has not survived a confirmation run.
-- **Human derivability is untouched.** `boxscore_verify` carries the batting-order *relations* but no
-  value-producing lineup move, so layer 3 refuses any board that leans on this. That is deliberate and
-  it is the safety property: **these boards cannot publish, because the verifier will not pass them.**
-  The verifier step is the irreversible spend and it is not written.
+- **The verifier can now replay it.** `lineup_values()` in `boxscore_verify/reason.py` is the
+  independent, value-producing step §22 requires, and **all five layers read the lineup**. Layers 2
+  and 4 did not for one commit, which meant a board unique *because of* the batting order was
+  refused as ambiguous before layer 3 ever ran — adoption that was true in the imports and false in
+  the outcome. `test_lineup_fallback_is_adopted.py` now takes a real fallback board through every
+  layer, and reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`.
 - **The filler ratio's unit is itself provisional.** See `division_against_chain`.
 """
 

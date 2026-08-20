@@ -209,7 +209,7 @@ def report(rows: list[Row]) -> None:
             )
 
     print("")
-    print("=== ⚠⚠ CERTIFICATION: boards the generator produced and the verifier refused ===")
+    print("=== !! CERTIFICATION: boards the generator produced and the verifier refused ===")
     print("  This is the number that did not exist when the adoption was decided.")
     for arm in ("plain", "fallback"):
         produced = [row for row in rows if row.arm == arm and row.reached]

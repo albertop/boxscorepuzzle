@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-eight reviews, 127 findings, none rejected. v28 was a full-tree review rather than a delta:
+**Twenty-nine reviews, 129 findings, none rejected. v28 was a full-tree review rather than a delta:
 six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
 which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
@@ -93,6 +93,55 @@ arrived wrapped in an attack scenario that is out of scope here, and the defect 
 adversary at all.
 
 Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
+
+## ⚠⚠ v29 — the adoption was true in the imports and false in the outcome
+
+Two findings, both closed. **The first would have made the confirmation run report the opposite of the
+truth, and it was caught while that run was in flight.** The run was stopped.
+
+### v29-P2-01: layers 2 and 4 searched a weaker system than the one that erased
+
+The lineup was wired into layer 3 and 3b. **Layers 1, 2 and 4 still called `relations(board)` with no
+slots.** So the fallback erased cells the batting order determines, and then layer 2 — which cannot see
+the order — found alternatives the player could never choose and rejected the board as
+`MULTIPLE_SOLUTIONS`. **A board unique *because of* the adopted clue was discarded before the new
+derivability step ever ran.** One that stayed unique under the other four families passed by accident.
+
+⚠⚠ **Nothing was red, and that is the whole shape of it.** Every test passed. The reference writer
+fills its slots with whatever boards it finds, so a run in which the adopted branch published *nothing*
+looks exactly like a run in which it published. And `TestTheVerifierCanActuallyCertifyTheseBoards`
+tested the value step in isolation and read the two derivability call sites — **it asserted the
+presence of imports and function calls, never an outcome.**
+
+⚠️ **The confirmation run was measuring against this.** It would have reported near-zero certified
+fallback boards, and the pre-registered reading says *if most of them fail, the adoption is not
+supported by boards that can ship*. The instrument would have overturned the decision on an artefact
+of the instrument. **Stopped mid-run rather than finished and interpreted.**
+
+Closed by deriving the slots in every layer whose model can speak about the order — 1, 2, 3, 3b and 4
+— and by a test that takes a real board the plain erasure **cannot** reach, produced by the fallback,
+through all five layers. Reverting layer 2 makes it fail with `MULTIPLE_SOLUTIONS`, which is the
+reviewer's reproduction exactly.
+
+✅ **And layer 1 now catches the phantom row as bad data rather than as an underivable puzzle**, which
+is the better answer and the more specific message: it names the slots instead of reporting a stalled
+solve.
+
+### v29-P3-01: the source disagreed with itself about whether this is adopted
+
+`lineup_fallback.py` opened with **`EXPERIMENTAL. NOT ADOPTED. NOTHING HERE MAY REACH PUBLICATION`**
+for one commit after `write_reference_puzzles.py` started calling it. `erasure.py` said passing slots
+was experimental. `open-decisions.md` — the file named for open decisions — recorded both the constraint
+and the verifier step as not adopted.
+
+⚠️ **This is not stale prose in an archived review.** It is the module contract anyone reads before
+touching the file, and it said the opposite of what the caller said. **A later correction could have
+undone the adoption while honestly following the repository.**
+
+One current statement plus dated history: the module says adopted and records what it used to say and
+why that mattered; `open-decisions.md` gains a superseding section with the struck rows left visible;
+and the test-local `EXPERIMENTAL` identifier is now `FALLBACK`, since an identifier describing a
+retired state is a statement about the code and it was the wrong one.
 
 ## ✅ v28 — a full-tree review, five findings, all five closed
 

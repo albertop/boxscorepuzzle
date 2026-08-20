@@ -109,7 +109,13 @@ class TestTheDefectItself:
 
         assert not verdict.accepted, "the batting order stopped catching the phantom row"
         assert verdict.rejection is not None
-        assert verdict.rejection.layer is Layer.DERIVABILITY
+        # ⚠️ **Layer 1, not layer 3, and the move is the improvement.** When only the derivability
+        # layers read the lineup this was caught as *underivable*, which is a statement about the
+        # puzzle. Layer 1 checks the source boxscore against every rule the board is built on, so it is
+        # caught as **bad data** — which is what a phantom row is. The earlier layer is the better
+        # answer and the more specific message: it names the slots rather than a stalled solve.
+        assert verdict.rejection.layer is Layer.IDENTITIES
+        assert "PA(slot" in verdict.rejection.detail
         # And plausibility still sees it on its own terms, which is what keeps both checks earning
         # their place.
         assert faults(broken)

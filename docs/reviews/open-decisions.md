@@ -15,10 +15,10 @@ This file exists so the state does not live only in a chat window. It is a snaps
 
 | | |
 |---|---|
-| Batting-order constraint | **Not adopted.** Built as an opt-in fallback, publication fenced off by three guards. Steps 1 and 2 of the agreed plan, then frozen. |
+| Batting-order constraint | ⚠️ **SUPERSEDED on 20 August — ADOPTED.** See below. |
 | Conditional retry | Tries the ordinary path first; only a board that misses its target sees the constraint. |
 | `LINEUP_DIVISION_SHARE_CAP` | `0.20`, `PROVISIONAL`, origin recorded as *two boards, not a measurement*. |
-| Verifier's lineup step | **Not written.** This is the gate: layer 3 cannot replay a `batting_order` move, so no fallback board can publish. |
+| Verifier's lineup step | ⚠️ **SUPERSEDED — written.** `lineup_values()`, independent and value-aware. |
 | Weak solver (v28-P2-01) | Fixed. It treated every inequality as an upper bound and invented values. |
 | Discovery footnote renderer (v28-P2-03) | Now a third consumer of the canonical vectors. |
 | Inning cap | **12**, in `MAX_INNINGS`, with the 11px rule below 359px. |
@@ -26,6 +26,32 @@ This file exists so the state does not live only in a chat window. It is a snaps
 | Half-inning marker | Raised from 2.21:1 to 4.51:1. |
 
 ---
+
+## ⚠⚠ SUPERSEDING: the batting order is ADOPTED (20 August 2026)
+
+**This file said the opposite for one commit after production started building through the fallback**
+— v29-P3-01. Two rows above recorded the constraint and the verifier step as not adopted while
+`write_reference_puzzles.py` called one and `boxscore_verify` contained the other. **A document named
+for open decisions saying a settled one is open is worse than silence**, because it reads as current.
+
+The rows are struck rather than deleted, and this is the current statement:
+
+| | |
+|---|---|
+| The constraint | **Adopted.** Production erases through `erase_with_lineup_fallback`. |
+| The retry | Conditional. Boards reaching their target plain never see it. |
+| The verifier | `lineup_values()`, independent of the generator, value-aware. **All five layers read the lineup.** |
+| The pool rule | `_check_batting_order()` rejects a distribution the cycle cannot produce — 35 in 371,802. |
+| §8 | Teaches five equation families. The batting order gets the clearest explanation, because it is the one that cannot be read off a board. |
+
+**What decided it is not a measurement.** The operator solved the five hand-solve boards with the
+constraint active and reported that it makes them harder — not because it resolves more cells, but
+because the player must hold one more rule in their head. Recorded in `batting-order-reversal.md` as a
+human verdict rather than a measured quantity.
+
+⚠️ **Still open: the confirmation run.** Every figure that decided this was measured while the
+verifier had no lineup step, so the numbers describe what the generator produces rather than what can
+ship. `discovery/batting-order/confirm.py` is pre-registered and committed before running.
 
 ## Decided since this file was written
 

@@ -25,7 +25,10 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 SCRIPTS = ROOT / "scripts"
-EXPERIMENTAL = "boxscore_forge.lineup_fallback"
+FALLBACK = "boxscore_forge.lineup_fallback"
+"""⚠️ Named for what it is, not for what it was. This constant was `EXPERIMENTAL` while the module was,
+and kept the name for a commit after production started calling it — v29-P3-01. An identifier that
+describes a retired state is a statement about the code, and it was the wrong one."""
 
 
 def _modules(*roots: pathlib.Path) -> dict[str, ast.Module]:
@@ -75,7 +78,7 @@ class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
         """
         offenders: list[str] = []
         for name, tree in _modules(SRC, SCRIPTS).items():
-            if name == EXPERIMENTAL:
+            if name == FALLBACK:
                 continue
             for call in _calls(tree, "erase"):
                 if any(keyword.arg == "slots" for keyword in call.keywords) or len(call.args) > 1:
@@ -85,7 +88,7 @@ class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
 
     def test_the_finder_sees_the_one_call_that_is_allowed_to_pass_slots(self) -> None:
         # ⚠️ Positive control. "No offenders" from a finder that finds nothing is not a result.
-        tree = _modules(SRC)[EXPERIMENTAL]
+        tree = _modules(SRC)[FALLBACK]
         with_slots = [
             call for call in _calls(tree, "erase") if any(keyword.arg == "slots" for keyword in call.keywords)
         ]
@@ -128,3 +131,71 @@ class TestTheVerifierCanActuallyCertifyTheseBoards:
 
         assert "slots_of(package)" in text, f"{layer} never reads the lineup off the package"
         assert "slots" in text, f"{layer} does not pass the lineup on"
+
+
+class TestAFallbackBoardActuallyPublishes:
+    """⚠️⚠️ Adoption as an observable outcome, not as the presence of imports and calls.
+
+    Everything else in this file reads the source: does the generator call the retry, does the verifier
+    have the step, do the layers read the lineup. **All of that was true while a fallback board could
+    not publish at all**, because layers 2 and 4 built their relations without the slots and searched a
+    weaker system than the one that erased the cells. A board unique *because of* the batting order was
+    seen as ambiguous and discarded at layer 2 — before the new derivability step ever ran.
+
+    ⚠️ **And nothing was red.** The reference writer fills its slots with whatever boards it finds, so a
+    run where the adopted branch published nothing looks exactly like a run where it published. That is
+    the shape of every check in this project that turned out to be watching the wrong thing.
+
+    So this test takes the one path that matters: a board the plain erasure **cannot** reach, produced
+    by the fallback, through **all five layers** and the publication gate.
+    """
+
+    SLOTS = (1, 2, 3, 4, 5, 6, 7, 8, 9)
+    """The shared fixture is nine rows, one per place, with no substitution."""
+
+    def test_the_fixture_is_a_lineup_the_pool_rule_accepts(self, cubs_at_braves_1968: object) -> None:
+        """⚠️ Before anything else: a fixture the pool rule would reject cannot test adoption.
+
+        A real 1968 boxscore, and its places bat 5 5 5 4 4 4 4 4 4 — thirty-nine appearances dealt round
+        the order, which is what the cycle predicts. **Used rather than fabricated** so the test is
+        about a board that happened, and stated first so a later failure is never ambiguous about
+        whether the fixture or the adoption is at fault.
+        """
+        from boxscore_forge.identities import find_violations  # noqa: PLC0415
+
+        assert find_violations(cubs_at_braves_1968, self.SLOTS) == ()
+
+    def test_a_fallback_board_passes_every_layer(self, cubs_at_braves_1968: object) -> None:
+        """The sequence the reviewer named: plain misses, fallback reaches, and the result certifies."""
+        from boxscore_forge.erasure import erase  # noqa: PLC0415
+        from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: PLC0415
+        from boxscore_forge.publish import to_board  # noqa: PLC0415
+        from boxscore_package.format import Package  # noqa: PLC0415
+        from boxscore_verify.verify import UNSIGNED, verify  # noqa: PLC0415
+
+        direction, slots = cubs_at_braves_1968, self.SLOTS
+        target = next(
+            (t for t in range(3, 14) if erase(direction, target_stalls=t, seed=1) is None),
+            None,
+        )
+        assert target is not None, "the plain path reaches every target on this board; the fixture is wrong"
+
+        puzzle, reason = erase_with_lineup_fallback(direction, slots, target_stalls=target, seed=1)
+        if reason != "fallback":
+            import pytest as _pytest  # noqa: PLC0415
+
+            _pytest.skip(f"this board's fallback returned {reason!r}; nothing to certify")
+
+        assert puzzle is not None
+        package = Package(
+            puzzle_id="0000000000000fff",
+            puzzle=to_board(direction, puzzle.erased),
+            solution=to_board(direction, None),
+            labels=("C",) * len(direction.batting),
+            pitcher_labels=("P",) * len(direction.pitching),
+            slot_references=tuple(str(slot) for slot in slots),
+            offense_is_home=True,
+        )
+        verdict = verify(package, secret=UNSIGNED)
+
+        assert verdict.accepted, f"a fallback board was refused: {verdict.rejection}"

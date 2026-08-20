@@ -164,7 +164,11 @@ def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
 
     known = values_of(package.solution)
     broken: list[str] = []
-    for relation in relations(package.solution):
+    # ⚠️ The lineup here as well. This layer checks the *source* boxscore against every rule the board
+    # is built on, and the batting order is now one of them — a source whose places cannot have batted
+    # that way is bad data, and catching it here names it as such rather than as an ambiguity or an
+    # underivable puzzle three layers later.
+    for relation in relations(package.solution, slots_of(package)):
         total = sum(coefficient * known[cell] for cell, coefficient in relation.terms)
         if relation.equality and total != relation.constant:
             broken.append(f"{relation.origin} is off by {total - relation.constant}")
@@ -184,8 +188,14 @@ def check_uniqueness(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     which is the case a player meets as a board with no right answer to find.
     """
     board = package.puzzle
+    slots = slots_of(package)
     try:
-        found = solutions(relations(board), all_cells(board), values_of(board), limit=2)
+        # ⚠⚠ **With the lineup, or this layer searches a weaker system than the one that erased.**
+        # The fallback erases cells the batting order determines; a search that cannot see the order
+        # finds alternatives the player could never choose and calls the board ambiguous. So a board
+        # unique *because of* the adopted clue is discarded here, before layer 3 ever runs — and one
+        # that happens to stay unique under the other four families passes **by accident**.
+        found = solutions(relations(board, slots), all_cells(board), values_of(board), limit=2)
     except ContradictionError:
         return Rejection(Layer.UNIQUENESS, Fault.NO_SOLUTION, "the given cells contradict each other")
     except UndecidedError as error:
@@ -255,8 +265,12 @@ def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     """
     # Same as layer 2: a package without a solution cannot be constructed or parsed any more.
     board = package.puzzle
+    slots = slots_of(package)
     try:
-        found = solutions(relations(board), all_cells(board), values_of(board), limit=1)
+        # ⚠️ The same clue surface layers 2 and 3 use. Solving the published board against a
+        # *different* constraint system is not an independent check of the same puzzle; it is a check
+        # of a puzzle nobody is playing.
+        found = solutions(relations(board, slots), all_cells(board), values_of(board), limit=1)
     except ContradictionError:
         return Rejection(Layer.END_TO_END, Fault.NO_SOLUTION, "the published board cannot be completed")
     except UndecidedError as error:

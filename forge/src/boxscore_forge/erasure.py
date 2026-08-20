@@ -224,10 +224,14 @@ def erase(  # noqa: PLR0913
     `seed` makes the result reproducible, which is §21's idempotence at this step — regenerating a
     batch has to produce the same puzzle for the same game or the no-repetition promise breaks.
 
-    `slots` is the batting order, and **empty is the production path**. Passing it adds the
-    batting-order relations to the shape, which is experimental and not adopted: see
-    `docs/reviews/batting-order-reversal.md` for what is and is not established about it. It is a
-    parameter here rather than a second erasure function because the walk, the ordering and the
+    `slots` is the batting order. ✅ **Adopted, and passed by `lineup_fallback` alone.** Production
+    reaches this function
+    through `erase_with_lineup_fallback`, which tries the plain path first and only retries with the
+    order when the target is missed — so an empty `slots` here is the **first attempt**, not the
+    production configuration. Calling `erase(..., slots=...)` directly is the everywhere-on arrangement
+    the measurement rejected, and a test refuses it outside the fallback.
+
+    A parameter here rather than a second erasure function because the walk, the ordering and the
     give-up rule must not exist twice — two copies of a rule drift, and this project has the record to
     prove it.
     """
