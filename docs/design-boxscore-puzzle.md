@@ -1242,8 +1242,8 @@ the moment the name is the point.
 
 ## 8. Tutorial
 
-**Not a modal.** The first games *are* the tutorial. There are **four equation families** on this
-board (§3), not five techniques, so there are four steps plus one on the bounding technique:
+**Not a modal.** The first games *are* the tutorial. There are **five equation families** on this
+board (§3), not six techniques, so there are five steps plus one on the bounding technique:
 
 1. **P1 — Column sums.** One missing cell with the total given. Impossible to fail.
 2. **P2 — The row identity:** `PA = AB + BB + HBP + SF + SH + CI`. Also where the footnote line is
@@ -1254,13 +1254,34 @@ board (§3), not five techniques, so there are four steps plus one on the boundi
 5. **P5 — The global identity** `PA = Outs + R + LOB`. The most powerful and least intuitive, and
    measured as the rarest: it appears in a few percent of solution paths even at the hardest level
    (§31), so a player who has not been taught it will meet it cold and rarely.
+6. **P6 — The batting order.** The lineup bats in a cycle and never skips, so the team's plate
+   appearances are dealt round the nine places: every place gets the same number, and the places at
+   the front of the order get one more when the total does not divide evenly.
+
+### ⚠⚠ P6 needs the clearest explanation of the six, and for a reason the others do not share
+
+**The first five are baseball bookkeeping.** A fan recognises them without ever having written one
+down: totals rule, a batter's row balances, the two halves cross, runners are accounted for. Even the
+global identity, the least intuitive of them, is a statement about things printed on the card.
+
+**The batting order is logic over a sequence.** It is true because the order is *cyclic*, and
+deducing the single-step distribution from that is reasoning about cycles rather than knowing
+baseball. **Nothing on the board shows it.** A player can stare at a boxscore for an hour and never
+recover it, because it is not a fact the boxscore records — it is a fact about how the boxscore came
+to be.
+
+⚠️ **That does not disqualify it, and the precedent is P5.** `PA = Outs + R + LOB` is not visible on
+a boxscore either, and it went in without this argument. The tutorial is mandatory on first play and
+not skippable, so the rule is taught there like the other five. What follows is not an exemption but a
+weighting: **this step carries more of the tutorial's job than any other**, because it is the only one
+a player cannot arrive at by looking.
 
 **P2 and P3 are different techniques and both need a step.** The row identity works down a single
 row; the cross works across the board between the two halves. Neither substitutes for the other.
 
 ### Scope: the mechanics, not baseball
 
-- **Does explain:** that totals rule, that a batter's row balances, that opposing pitching crosses with the offense, that PA = Outs + R + LOB
+- **Does explain:** that totals rule, that a batter's row balances, that opposing pitching crosses with the offense, that PA = Outs + R + LOB, and that the lineup bats in a cycle
 - **Does not explain:** what AB means, what a sacrifice fly is, why there are nine innings
 
 **The tutorial teaches identities, not statistics.** A hardcore fan knows what LOB is and has never once thought that PA = Outs + R + LOB.

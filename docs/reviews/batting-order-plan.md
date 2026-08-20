@@ -14,6 +14,18 @@ while they run.
 
 ---
 
+## ✅ ADOPTED — the plan below is the record of how it got here
+
+**The operator adopted the constraint.** Steps 1 and 2 are unfrozen and in production, step 3's
+verdict is in, and step 4 — the verifier's lineup step — is written. What remains is step 6, the
+re-measurement, and it matters: **every figure that decided this was measured while layer 3 could not
+certify a board leaning on the constraint.**
+
+The decisive evidence is not in any table: the operator solved the five hand-solve boards with it
+active and reported that it makes them harder — not because it resolves more cells, but because the
+player has to hold one more rule in their head. Recorded in `batting-order-reversal.md`, with the note
+that it is a human verdict rather than a measured quantity.
+
 ## Step 1 and 2 — BUILT, then frozen
 
 **Conditional retry.** `boxscore_forge.lineup_fallback.erase_with_lineup_fallback()` tries the ordinary
@@ -87,6 +99,17 @@ does not. **Three boards are at 5 and two are at 8.**
 ⚠️ **If 5 turns out hard, the gate closes and nothing about 8 needs answering at all** — and with it,
 the whole batting-order question goes away, since its only established value is at the hard end.
 
+### ✅ The verdict came back, and it decided the adoption
+
+The operator solved the five with the constraint active. **It makes them harder**, and the reason is
+not one this instrument can see: the player has to hold one more rule in their head. Stall counts
+measure how often propagation runs dry; they say nothing about sustaining five relations instead of
+four.
+
+⚠️ **The same class of finding as the footnote zeros** — knowable only by doing the task, and pointing
+slightly away from what the metric measures. There the number said 5 stalls to 15 and the player was
+typing zeros; here the number says less than the verdict does.
+
 ---
 
 ## Step 4 — reconciliation, then an authoritative instrument. ⚠️ Not a plan B
@@ -117,7 +140,18 @@ Defining the categories before seeing the result is what stops it being read in 
 project has had two results read that way already**, including one this week where a subgroup chosen
 after seeing the aggregate produced the answer the pressure pointed at.
 
-## Step 7 — the verifier, last
+## ✅ Step 7 — the verifier, written
 
-The irreversible spend. Not before the confirmation run, and not before the hand-solve has had its
-chance to close the question entirely.
+`lineup_values()` in `boxscore_verify/reason.py`, derived from the rule rather than from the
+generator, and value-aware because narrowing the relations to a fixed point still leaves every slot a
+range. Both derivability layers read the lineup off the package.
+
+⚠⚠ **Two things surfaced the moment it existed.** The batting-order relations had never been
+generated — `relations()` took a `slots` argument and every call site passed nothing. And both board
+strategies were building lineups no game can reach, because the arithmetic identities never implied
+the cyclic distribution and nothing could see the difference while the family was unused.
+
+⚠️ **It also catches the phantom row of noughts**, which is the defect that produced the plausibility
+layer. That does not make plausibility redundant: a version 1 package carries no slot references and
+applies no batting-order relation, and three centre fielders in one lineup balances every identity and
+every place.

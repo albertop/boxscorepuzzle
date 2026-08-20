@@ -179,3 +179,59 @@ eleven directions is not enough to spend a second verifier implementation on.
 
 That is a third position, and it is the one the evidence actually supports. **It contradicts both
 answers given to the operator today.**
+
+---
+
+# ⚠️⚠️ ADOPTED — and the thing that decided it is not in any table above
+
+**The operator solved the five hand-solve boards with the constraint active and reported that it makes
+them harder.** Not because it resolves more cells. **Because the player has to hold one more rule in
+their head.**
+
+⚠️ **No metric in this document captures that.** Stall counts measure how often propagation runs dry;
+they say nothing about the cognitive load of sustaining five relations instead of four. The 47 causal
+deductions and the nine-of-eleven-with-no-filler are *consistent* with the verdict, and they are not
+what established it.
+
+**This is the same class of finding as the footnote zeros** — knowable only by doing the task. There
+the metric said a change took the median board from 5 stalls to 15, and it was true, and the player
+was typing zeros. Here the metric says less than the verdict does. Both times the instrument was
+working and pointed slightly away from the question.
+
+⚠️ **Recorded so nobody later reads the tables as the whole case.** It is a human verdict, not a
+measured quantity. If a future measurement disagrees with it, that is a conflict to resolve rather
+than a correction to apply.
+
+## The distinction the operator drew, which the project did not have before
+
+**The first four families are baseball bookkeeping.** A fan recognises them without having written one
+down: totals rule, a row balances, the halves cross, runners are accounted for.
+
+**The batting order is logic over a sequence.** It is true because the order is *cyclic*, and deducing
+the single-step distribution from that is reasoning about cycles rather than knowing baseball.
+
+That is a **design criterion**, not a complaint, and it is now in §8: the rule cannot be inferred from
+looking at a board, so the tutorial carries more weight for it than for the others.
+
+⚠️ **And the objection that nearly blocked adoption was wrong.** It was mine: *a player who does not
+know the rule cannot see it on the board*. True — and equally true of `PA = Outs + R + LOB`, which is
+not visible on a boxscore either and went in without the argument. §8 is mandatory on first play and
+not skippable. The rule is taught there like the other four; the tutorial gains a step.
+
+## ⚠️ What is measured here describes boards that could not have shipped
+
+Every figure above was produced while `boxscore_verify` had no value-producing lineup step, so **layer
+3 would have rejected any board leaning on the constraint.** The numbers describe what the generator
+produces, not what can publish.
+
+The step exists now. **Until the re-measurement lands, the 47 causal deductions and the
+nine-of-eleven are provisional** — and several decisions rest on them. What has to come back:
+
+- coverage at each stall target, with and without, on the authoritative instrument
+- how many of the eleven directions survive all five certification layers
+- stall ceiling distribution and blank counts
+- causal deductions against division filler, the split that decided adoption
+
+**Reported as a comparison against these figures, saying plainly if any moved.** If they hold, the
+adoption is confirmed on boards that can ship. If they move, that is a finding and the decision gets
+revisited rather than assumed.
