@@ -245,6 +245,11 @@ def _batting_order(slots: tuple[int, ...], batters: int) -> list[Relation]:
     if len(slots) != batters:
         message = f"{len(slots)} slots against {batters} batting rows"
         raise ValueError(message)
+    # ⚠️ All nine positions, not merely the right number of labels. `(1,2,3,4,5,6,7,8,8)` passes a count
+    # check and yields one relation fewer, silently. Duplicates are substitutions and stay legal.
+    if set(slots) != set(range(1, 10)):
+        message = f"slots {sorted(set(slots))} are not the nine lineup positions"
+        raise ValueError(message)
 
     rows_in: dict[int, list[int]] = {}
     for row, slot in enumerate(slots):
@@ -267,6 +272,22 @@ def _batting_order(slots: tuple[int, ...], batters: int) -> list[Relation]:
                 equality=False,
             )
         )
+
+    # ⚠️⚠️ **The chain is monotonicity; this is what makes it the cycle.** A lineup cannot be skipped,
+    # so the first slot has batted either as often as the last or exactly once more — never twice.
+    # Without this, `6 5 4 4 4 4 4 4 4` satisfies every relation above and is impossible in a game.
+    found.append(
+        Relation(
+            terms=(
+                *((batting(row, "plate_appearances"), 1) for row in rows_in[order[0]]),
+                *((batting(row, "plate_appearances"), -1) for row in rows_in[order[-1]]),
+            ),
+            constant=1,
+            family=Family.ROW_IDENTITY,
+            origin=f"PA(slot {order[0]}) - PA(slot {order[-1]}) <= 1",
+            equality=False,
+        )
+    )
     return found
 
 

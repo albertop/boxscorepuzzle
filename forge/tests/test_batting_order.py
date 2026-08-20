@@ -56,21 +56,22 @@ class TestItIsOffUnlessAskedFor:
     def test_and_something_with_them_so_the_test_above_is_not_vacuous(self) -> None:
         slots = (1, 2, 3, 4, 5, 6, 7, 8, 9)
 
-        assert len(_generator(slots)) == 8
-        assert len(_verifier(slots)) == 8
+        # Eight adjacent comparisons and the one spread bound that makes them a cycle.
+        assert len(_generator(slots)) == 9
+        assert len(_verifier(slots)) == 9
 
 
 class TestOneRelationPerAdjacentPairOfSlots:
-    def test_nine_distinct_slots_give_eight_relations(self) -> None:
-        assert len(_generator((1, 2, 3, 4, 5, 6, 7, 8, 9))) == 8
+    def test_nine_distinct_slots_give_eight_comparisons_and_one_spread_bound(self) -> None:
+        assert len(_generator((1, 2, 3, 4, 5, 6, 7, 8, 9))) == 9
 
     def test_a_shared_slot_is_one_term_of_several_cells(self) -> None:
         """⚠️ The whole hypothesis, expressed. Three men in slot 9 are **one** figure, not three."""
         rules = _generator((1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9), batters=11)
-        last = rules[-1]
-        negative = {term.cell for term in last.terms if term.coefficient < 0}
+        chain = [rule for rule in rules if rule.constant == 0]
+        negative = {term.cell for term in chain[-1].terms if term.coefficient < 0}
 
-        assert len(rules) == 8, "eleven rows in nine slots still make eight adjacent pairs"
+        assert len(chain) == 8, "eleven rows in nine slots still make eight adjacent pairs"
         assert negative == {batting_cell(index, "plate_appearances") for index in (8, 9, 10)}
 
     def test_it_only_ever_speaks_about_plate_appearances(self) -> None:
@@ -91,7 +92,7 @@ class TestOneRelationPerAdjacentPairOfSlots:
 class TestTheRelationHoldsAndFailsWhereItShould:
     @staticmethod
     def _satisfied(rule: object, values: dict[str, int]) -> bool:
-        return sum(term.coefficient * values[term.cell] for term in rule.terms) >= 0
+        return sum(term.coefficient * values[term.cell] for term in rule.terms) + rule.constant >= 0
 
     def _values(self, per_slot: tuple[int, ...]) -> dict[str, int]:
         return {batting_cell(index, "plate_appearances"): value for index, value in enumerate(per_slot)}
@@ -117,6 +118,15 @@ class TestTheRelationHoldsAndFailsWhereItShould:
 
         assert not all(self._satisfied(rule, values) for rule in _generator(tuple(range(1, 10))))
 
+    def test_the_verifier_refuses_the_same_impossibility(self) -> None:
+        # §22 keeps the two apart, so the counterexample is put to both rather than to one.
+        values = {f"bat[{index}].plate_appearances": value for index, value in enumerate((6, 5, 4, 4, 4, 4, 4, 4, 4))}
+        rules = _verifier(tuple(range(1, 10)))
+
+        assert not all(
+            sum(coefficient * values[cell] for cell, coefficient in rule.terms) <= rule.constant for rule in rules
+        )
+
     def test_the_relation_is_about_the_slot_sum_and_not_the_row(self) -> None:
         """The case a per-row reading gets wrong, and it is the ordinary case rather than a corner.
 
@@ -127,6 +137,78 @@ class TestTheRelationHoldsAndFailsWhereItShould:
         values = self._values((4, 4, 4, 4, 4, 4, 4, 4, 1, 3))
 
         assert all(self._satisfied(rule, values) for rule in rules)
+
+
+class TestTheChainAloneIsNotTheRule:
+    """⚠️⚠️ Eight adjacent comparisons are **monotonicity**, and monotonicity is not the batting order.
+
+    The first implementation emitted only `PA(n) >= PA(n+1)` and the experiment built on it was named
+    for the cyclic rule. It accepted `6 5 4 4 4 4 4 4 4` — a board no lineup can produce, because the
+    order is a cycle: the first slot has batted either as often as the last or exactly one more, never
+    two more. **The docstrings described the rule and the code described a weaker one**, and every test
+    passed because none of them tried a monotone-but-impossible vector.
+
+    The missing piece is one bound: `PA(slot 1) - PA(slot 9) <= 1`. With it every slot holds one of two
+    adjacent values and there is at most one cut point, so the column sum then determines all nine.
+    """
+
+    @staticmethod
+    def _accepts(slots: tuple[int, ...], per_slot: tuple[int, ...]) -> bool:
+        values = {batting_cell(index, "plate_appearances"): value for index, value in enumerate(per_slot)}
+        return all(
+            sum(term.coefficient * values[term.cell] for term in rule.terms) + rule.constant >= 0
+            for rule in _generator(slots, len(slots))
+        )
+
+    def test_the_monotone_impossibility_is_refused(self) -> None:
+        # 39 plate appearances. The cycle says 5 5 5 4 4 4 4 4 4; this never rises and is still absurd.
+        assert not self._accepts(tuple(range(1, 10)), (6, 5, 4, 4, 4, 4, 4, 4, 4))
+
+    def test_what_the_cycle_actually_predicts_is_accepted(self) -> None:
+        # A guard that refused everything would satisfy the test above.
+        assert self._accepts(tuple(range(1, 10)), (5, 5, 5, 4, 4, 4, 4, 4, 4))
+
+    def test_a_spread_of_one_is_the_boundary_and_stays_legal(self) -> None:
+        assert self._accepts(tuple(range(1, 10)), (5, 4, 4, 4, 4, 4, 4, 4, 4))
+
+    def test_a_spread_of_two_is_refused_even_at_the_ends(self) -> None:
+        assert not self._accepts(tuple(range(1, 10)), (5, 5, 5, 5, 5, 4, 4, 4, 3))
+
+    def test_the_bound_is_summed_over_shared_slots_too(self) -> None:
+        """Slot 9 held by two men totals 4, so the spread against slot 1's 5 is one and it is legal."""
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+
+        assert self._accepts(slots, (5, 4, 4, 4, 4, 4, 4, 4, 1, 3))
+        assert not self._accepts(slots, (6, 4, 4, 4, 4, 4, 4, 4, 1, 3))
+
+
+class TestAnIncompleteLineupIsRefused:
+    """⚠️ **All nine positions, or the metadata is refused** — on both sides.
+
+    Checking only the count let `(1,2,3,4,5,6,7,8,8)` through: nine labels, nine rows, eight distinct
+    values, and therefore seven relations instead of eight. A quietly weaker model with no error to
+    read, which is the exact failure the count check existed to prevent, one step further in.
+    """
+
+    @pytest.mark.parametrize(
+        "slots",
+        [
+            (1, 2, 3, 4, 5, 6, 7, 8, 8),
+            (0, 1, 2, 3, 4, 5, 6, 7, 8),
+            (1, 2, 3, 4, 5, 6, 7, 8, 10),
+            (1, 1, 1, 1, 1, 1, 1, 1, 1),
+        ],
+        ids=["slot 9 missing", "a slot zero", "a slot above nine", "every row in one slot"],
+    )
+    def test_both_sides_refuse_it(self, slots: tuple[int, ...]) -> None:
+        with pytest.raises(ValueError, match="not the nine lineup positions"):
+            _generator(slots)
+        with pytest.raises(ValueError, match="not the nine lineup positions"):
+            _verifier(slots)
+
+    def test_duplicates_are_still_legal_because_they_are_substitutions(self) -> None:
+        # The point of the whole hypothesis: a slot is every man who occupied it.
+        assert len(_generator((1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9), batters=11)) == 9
 
 
 class TestTheTwoImplementationsAgree:
@@ -160,18 +242,20 @@ class TestTheTwoImplementationsAgree:
     def test_both_sides_constrain_the_same_cells(self, slots: tuple[int, ...]) -> None:
         batters = len(slots)
         ours = [
-            (self._rows(t.cell for t in rule.terms if t.coefficient > 0),
-             self._rows(t.cell for t in rule.terms if t.coefficient < 0))
+            (
+                self._rows(t.cell for t in rule.terms if t.coefficient > 0),
+                self._rows(t.cell for t in rule.terms if t.coefficient < 0),
+            )
             for rule in _generator(slots, batters)
         ]
         theirs = [
-            (self._rows(c for c, k in rule.terms if k < 0),
-             self._rows(c for c, k in rule.terms if k > 0))
+            (self._rows(c for c, k in rule.terms if k < 0), self._rows(c for c, k in rule.terms if k > 0))
             for rule in _verifier(slots, batters)
         ]
 
         assert ours, "the generator emitted nothing, so this proves nothing"
-        assert ours == theirs
+        # Sorted, because the two sides emit the spread bound in their own place in the list.
+        assert sorted(map(str, ours)) == sorted(map(str, theirs))
 
     def test_they_disagree_about_direction_deliberately(self) -> None:
         # Recorded rather than papered over: the generator writes `earlier - later >= 0` and the

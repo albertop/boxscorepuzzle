@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-six reviews (one re-reviewed), 105 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-seven reviews (one re-reviewed), 109 findings, none rejected. Nothing is open.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2269,6 +2269,48 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
+## ⚠⚠ v27: what I implemented was monotonicity, not the batting order
+
+**The constraint accepted a board no lineup can produce, and the experiment built on it was already
+running.** Stopped mid-flight.
+
+Eight adjacent inequalities `PA(n) >= PA(n+1)` are **monotonicity**. The batting order is a *cycle*: the
+first slot has batted either as often as the last or **exactly one more**, never two. So
+`6 5 4 4 4 4 4 4 4` satisfies every relation I emitted and is impossible in a game — for a total of 39
+the cycle predicts `5 5 5 4 4 4 4 4 4`.
+
+⚠️ **The docstrings described the rule and the code described a weaker one.** Both implementations, both
+sets of comments, and the whole three-arm experiment were named for the cyclic rule. And every test
+passed, because **none of them tried a monotone-but-impossible vector** — I tested a real cyclic
+distribution, a flat one and a rise, which is the shape of the thing rather than its boundary.
+
+⚠️ **And the two independent implementations agreed perfectly**, which is what makes this worth
+recording. §22's duplication catches a mistake in *one* side. It cannot catch **the same misreading made
+twice** — and the cross-implementation test I wrote to make them answerable to one rule was comparing
+them to each other rather than to the rule. That is the residual risk §22 already names, arriving.
+
+**The fix is one bound**: `PA(slot 1) - PA(slot 9) <= 1`. With it every slot holds one of two adjacent
+values and there is at most one cut point, so the column sum then determines all nine. `Inequality` had
+no constant — every bound in the system compared two quantities directly — so it has one now, and
+`bounds.py` propagates it.
+
+### The other three
+
+**v27-P2-03 — an incomplete lineup was accepted and quietly weakened the model.** Only the *count* of
+slot labels was checked, so `(1,2,3,4,5,6,7,8,8)` passed: nine labels, nine rows, eight distinct values,
+**seven** relations instead of eight, and no error to read. That is the silent-underconstraint failure
+the count check existed to prevent, one step further in. Both sides now require all nine positions;
+duplicates stay legal because they are substitutions.
+
+**v27-P2-02 — the expensive artifact could not pair a trial.** `Row` said *one direction, one seed, one
+arm, one target* and stored neither the seed nor the offensive side. Three seeds run per direction, so
+the ambiguity was guaranteed rather than unlucky, and two directions of one game were
+indistinguishable. Caught **before** the run was spent, which is the only reason it cost nothing.
+
+**v27-P3-04 — the decision summary still published the superseded 75.1%.** The detailed section had been
+corrected to 83.4% and the summary had not, so the two contradicted each other in one file — at exactly
+the line an operator reads when taking the decision.
+
 ## ⚠️⚠️ The batting order holds 99.9950% on the pool that ships — and the measurement was wrong twice first
 
 **The claim:** the order is cyclic and cannot be skipped, so given the team's PA total the nine per-slot
@@ -2883,9 +2925,15 @@ itself is not the same as the experience being right.**
 
 **The batting-order pool rule.** 5 of 100,226 directions break the cycle. Adopting the rule makes the
 constraint exact and costs those five; not adopting it means the solver never gets the constraint, since
-a rule true 99.995% of the time is a trap rather than a weaker rule. **Nothing is implemented either
-way.** What it buys is bounded and measured: 75.1% of batting rows are alone in their slot and would be
-determined outright by the team's PA total; the rest get a sum.
+a rule true 99.995% of the time is a trap rather than a weaker rule.
+
+What it buys is bounded and measured on the post-rule pool: **826,039 of 990,202 batting rows — 83.4% —
+are alone in their slot** and would be determined outright by the team's PA total; the rest get a sum.
+
+⚠️ **This line said 75.1% until v27 caught it**, which was the ungated figure the detailed section above
+had already corrected. A decision summary carrying a superseded denominator is worse than no summary:
+it is read at exactly the moment the decision is taken, and it contradicted the authoritative section in
+the same file.
 
 ⚠️ **The winner bias, which nobody chose and nothing had recorded.** §5's zero-density gate selects the
 **winning team's offense 84% of the time** — more runs means fewer zeros. So every board the generator

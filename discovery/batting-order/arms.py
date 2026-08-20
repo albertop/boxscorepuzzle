@@ -67,7 +67,14 @@ class Row:
     """One direction, one seed, one arm, one target."""
 
     game: str
+    # ⚠️ **`offense` and `seed`, because without them the rows cannot be paired.** `Row` said it was
+    # one direction, one seed, one arm and one target, and stored neither the seed nor the side. Three
+    # seeds run per direction, so ambiguity was guaranteed rather than unlucky — and if both directions
+    # of one game entered the sample their rows were indistinguishable. The expensive artifact could
+    # not answer the one question it exists for: what did the three arms do on *this* walk.
+    offense: str
     season: int
+    seed: int
     arm: str
     target: int
     reached: bool
@@ -172,7 +179,9 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
             rows.append(
                 Row(
                     game=loaded.game_id,
+                    offense=loaded.offense_team,
                     season=loaded.season,
+                    seed=seed,
                     arm=arm,
                     target=target,
                     # ⚠️ A target no arm reached is a row, not a missing row. Dropping it would summarise
@@ -246,8 +255,17 @@ def _report(rows: list[Row]) -> None:
     print("=== STALL CEILING PER BOARD (best reached, medians) ===")
     for arm in ARMS:
         ceilings = [
-            max((row.stalls for row in rows if row.arm == arm and row.game == game and row.reached), default=0)
-            for game in {row.game for row in rows}
+            max(
+                (
+                    row.stalls
+                    for row in rows
+                    if row.arm == arm and (row.game, row.offense) == board and row.reached
+                ),
+                default=0,
+            )
+            # By direction, not by game: a game is two boards and merging them would average a
+            # winning offence with a losing one.
+            for board in {(row.game, row.offense) for row in rows}
         ]
         print(f"  {arm:<20} median {_median(ceilings):.0f}, max {max(ceilings, default=0)}")
 

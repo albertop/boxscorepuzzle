@@ -68,10 +68,18 @@ class Equation:
 
 @dataclass(frozen=True, slots=True)
 class Inequality:
-    """`sum(coefficient * cell) >= 0`, tagged with where it came from."""
+    """`sum(coefficient * cell) + constant >= 0`, tagged with where it came from.
+
+    ⚠️ **`constant` exists because a bound of zero could not express the batting order.** Every
+    inequality here compared two quantities directly until the cyclic rule arrived, and that rule needs
+    a *difference of at most one* — `PA(slot 1) - PA(slot 9) <= 1`. Without a constant the strongest
+    thing expressible was `PA(slot 1) >= PA(slot 9)`, which is monotonicity and **not the rule**:
+    `6 5 4 4 4 4 4 4 4` satisfies it and is impossible in a lineup that cannot be skipped.
+    """
 
     terms: tuple[Term, ...]
     origin: Identity
+    constant: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,7 +101,6 @@ class BoardShape:
     threaded in by the caller that has it, and every caller that does not simply gets today's behaviour.
     """
 
-
     def __post_init__(self) -> None:
         """⚠️ **On the type, not on `shape_of`.** The check lived in the factory, so building a
         `BoardShape` directly — which every instrument does — skipped it and emitted relations about
@@ -101,6 +108,15 @@ class BoardShape:
         """
         if self.slots and len(self.slots) != self.batter_count:
             message = f"{len(self.slots)} slots against {self.batter_count} batting rows"
+            raise ValueError(message)
+        # ⚠️ **Every slot from 1 to 9, or the metadata is refused.** Checking only the *count* let a
+        # lineup like `(1,2,3,4,5,6,7,8,8)` through: nine labels, nine rows, eight distinct values, and
+        # therefore **seven** relations instead of eight — a quietly weaker model with no error to read.
+        # That is the exact silent-underconstraint failure the length check was written to prevent, one
+        # step further in. Duplicates stay legal; they are substitutions. What must be present is all
+        # nine slots.
+        if self.slots and set(self.slots) != set(range(1, 10)):
+            message = f"slots {sorted(set(self.slots))} are not the nine lineup positions"
             raise ValueError(message)
 
 
@@ -398,6 +414,23 @@ def _batting_order(shape: BoardShape) -> Iterator[Inequality]:
             ),
             Identity.BATTING_ORDER,
         )
+
+    # ⚠️⚠️ **The chain alone is monotonicity, and monotonicity is not the rule.** Eight adjacent
+    # inequalities accept `6 5 4 4 4 4 4 4 4`, which no lineup can produce: the order is a *cycle*, so
+    # the first slot has batted either as many times as the last or exactly one more. Never two.
+    #
+    # This one bound is what turns a chain of comparisons into the cyclic rule. With it, every slot
+    # holds one of two adjacent values and there is at most one cut point — and once the column sum
+    # fixes the total, the nine values are determined. Without it the whole experiment measured
+    # something weaker than the thing it was named for.
+    yield Inequality(
+        (
+            *(Term(batting_cell(index, "plate_appearances"), -1) for index in rows_in[order[0]]),
+            *(Term(batting_cell(index, "plate_appearances"), 1) for index in rows_in[order[-1]]),
+        ),
+        Identity.BATTING_ORDER,
+        constant=1,
+    )
 
 
 def _pitching_bounds(shape: BoardShape) -> Iterator[Inequality]:

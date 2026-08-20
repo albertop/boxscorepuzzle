@@ -101,10 +101,14 @@ def _from_equation(domains: Mapping[str, Bounds], equation: Equation, target: Te
 
 
 def _from_inequality(domains: Mapping[str, Bounds], inequality: Inequality, target: Term) -> Bounds:
-    """An inequality gives one side only: the target must at least offset the rest."""
+    """An inequality gives one side only: the target must at least offset the rest.
+
+    ⚠️ The zero this used to subtract from was the constant, assumed absent. It is a field now, so a
+    bound like *at most one apart* propagates instead of being inexpressible.
+    """
     others = tuple(term for term in inequality.terms if term.cell != target.cell)
     _, highest = _reach(domains, others)
-    limit = _subtract(0, highest)
+    limit = _subtract(-inequality.constant, highest)
     if target.coefficient > 0:
         return Bounds(limit if limit is not None else 0, None)
     return Bounds(0, None if limit is None else -limit)
