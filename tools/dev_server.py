@@ -19,9 +19,10 @@ boundary is what the directory means, not what the file is called.
     python tools/dev_server.py [port]
 """
 
+import socket
 import sys
 from functools import partial
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "serve"
@@ -57,6 +58,40 @@ class NoCache(SimpleHTTPRequestHandler):
         sys.stderr.write(f"  {fmt % args}\n")
 
 
+def _reachable_at(port: int) -> list[str]:
+    """Every address this server can be opened at, so the one to type into a phone is on screen.
+
+    ⚠️ **Printed rather than left to be worked out.** The whole point of binding every interface is a
+    second device, and `http://localhost` is the one address that is useless from one. The laptop's
+    address on the wireless network is what a phone needs, it changes with the network, so nothing can
+    hard-code it and a person should not have to go looking.
+
+    ⚠⚠ **And inside a container it refuses to guess, because the first version guessed wrong.** The
+    probe below asks the operating system which interface it would use, and in a container the answer
+    is the container's own bridge address on the container's own port — it printed
+    `http://172.20.0.2:8080/...`, which no phone can reach and which reads exactly like an address that
+    works. The host's address and the published port are facts the container does not have and cannot
+    obtain, so it says that instead of inventing one. **The same shape as the text dump that supplied
+    its own padding: an instrument reporting on its own environment rather than the one that matters.**
+    """
+    addresses = [f"http://localhost:{port}/ui/phone/index.html"]
+    if Path("/.dockerenv").exists():
+        addresses.append(
+            "from a phone: the host's own address on the network, at the port compose publishes "
+            "-- this container cannot see either of them"
+        )
+        return addresses
+    try:
+        # A UDP socket to an address that is never contacted: it makes the OS choose a source
+        # interface, which is the one a phone on the same network would reach. No packet is sent.
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("10.255.255.255", 1))
+            addresses.append(f"http://{probe.getsockname()[0]}:{port}/ui/phone/index.html   <- from a phone")
+    except OSError:
+        addresses.append("(no network address found: this laptop is not on a network)")
+    return addresses
+
+
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else PORT
     if not ROOT.is_dir():
@@ -64,7 +99,17 @@ def main() -> None:
         raise SystemExit(message)
     handler = partial(NoCache, directory=str(ROOT))
     print(f"serving {ROOT} on http://localhost:{port} with caching off", flush=True)
-    HTTPServer(("0.0.0.0", port), handler).serve_forever()  # noqa: S104
+    for address in _reachable_at(port):
+        print(f"  {address}", flush=True)
+    # ⚠⚠ **`ThreadingHTTPServer`, and the plain one was a real outage.** `HTTPServer` handles one
+    # request at a time, so a single connection left open blocks every other client permanently — the
+    # server reports `Up 26 minutes`, its log shows requests it served, and nothing new is answered.
+    # That happened: one `Established` and one `CloseWait` socket on 8137 and a dead server.
+    #
+    # It stopped being tolerable the moment a **second device** was the point. A laptop browser and a
+    # phone on the same server is exactly the case one thread cannot serve, and the failure looks like
+    # the phone being unable to reach the laptop rather than like a server defect.
+    ThreadingHTTPServer(("0.0.0.0", port), handler).serve_forever()  # noqa: S104
 
 
 if __name__ == "__main__":
