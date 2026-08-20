@@ -163,7 +163,7 @@ def _rows(cursor: object, *, gated: bool, provenance: str = "") -> list:
     return cursor.execute(query).fetchall()
 
 
-def _report(name: str, rows: list) -> Counter:
+def _report(name: str, rows: list) -> tuple[Counter, list]:
     kinds: Counter = Counter()
     exceptions: list = []
     extra_innings = last_up = 0
@@ -179,6 +179,7 @@ def _report(name: str, rows: list) -> Counter:
             kinds[", ".join(broken)] += 1
             exceptions.append((row, slots, broken))
 
+    broken_keys = [(row.GAME_ID, row.TEAM_ID) for row, _, _ in exceptions]
     total = len(rows)
     clean = total - len(exceptions)
     print("")
@@ -188,7 +189,7 @@ def _report(name: str, rows: list) -> Counter:
         # from "no rows" out of a cohort that should have had some, and one report cannot mean both.
         print("  NO DIRECTIONS AT ALL. Either this population is empty in the database, or this arm's")
         print("  predicate cannot match anything. Both are silence; only the first is a result.")
-        return kinds
+        return kinds, broken_keys
     print(f"  {total:,} directions, {extra_innings:,} in extra innings, {last_up:,} batted last")
     print(f"  hold all three claims: {clean:,} ({100.0 * clean / total:.4f}%)")
     print(f"  exceptions:            {len(exceptions):,} ({100.0 * len(exceptions) / total:.4f}%)")
@@ -196,7 +197,7 @@ def _report(name: str, rows: list) -> Counter:
         print(f"     {count:>7,}  {kind}")
 
     if not exceptions:
-        return kinds
+        return kinds, broken_keys
     print("")
     print(f"  --- exceptions, {min(EXAMPLES, len(exceptions))} of {len(exceptions):,} listed ---")
     print(f"  {'game':<14} {'yr':<5} {'inn':<4} {'m':<2} {'last':<5} {'source':<22} slots -> predicted")
@@ -213,7 +214,7 @@ def _report(name: str, rows: list) -> Counter:
 
     # ⚠️ Where the exceptions cluster is the thing that separates a rule of baseball from a data defect.
     print("")
-    print("  --- where the exceptions are ---")
+    print("  --- where the exceptions are (every category, including those with none) ---")
     for label, key in (
         ("by decade", lambda r: (r.SEASON // 10) * 10),
         ("by source", lambda r: r.source_type),
@@ -224,12 +225,19 @@ def _report(name: str, rows: list) -> Counter:
     ):
         spread = Counter(key(row) for row, _, _ in exceptions)
         whole = Counter(key(row) for row in rows)
+        # ⚠️ **Over the whole population, not over the exceptions.** This iterated `spread`, so a
+        # category with **no** exceptions disappeared from the table entirely — and this table exists
+        # for exactly one purpose, to say whether failures cluster. Every one of the five is a
+        # non-extra-innings direction, so the honest line is `True: 0/6,276` beside `False: 5/93,950`;
+        # what printed was the second alone, which reads as a neutral partial split rather than as the
+        # one-sided result it is. **The absence of a reading is not a reading of absence**, and here it
+        # suppressed the strongest clustering evidence in the report.
         parts = ", ".join(
-            f"{value}: {count:,}/{whole[value]:,} ({100.0 * count / whole[value]:.2f}%)"
-            for value, count in sorted(spread.items(), key=lambda item: str(item[0]))
+            f"{value}: {spread[value]:,}/{whole[value]:,} ({100.0 * spread[value] / whole[value]:.2f}%)"
+            for value in sorted(whole, key=str)
         )
         print(f"    {label:<18} {parts}")
-    return kinds
+    return kinds, broken_keys
 
 
 def _negro_leagues(cursor: object) -> None:
@@ -256,7 +264,7 @@ def _negro_leagues(cursor: object) -> None:
     print("  cross-check. Two exclusions for one population, and the game log is the stricter of them.")
 
 
-def _what_it_buys(cursor: object) -> None:
+def _what_it_buys(cursor: object, broken: list) -> None:
     """What the constraint would be worth, without implementing anything.
 
     ⚠️ **The payoff is cut by substitutions, and this is the same trap the hypothesis itself carries.**
@@ -268,6 +276,16 @@ def _what_it_buys(cursor: object) -> None:
     So the honest measure of what it buys is not "nine cells": it is **how many batting rows are alone in
     their slot**. Measured, not estimated, and measured before anything is built.
     """
+    # ⚠️ **The post-rule cohort, because that is what the heading claims.** This measured the gated
+    # cohort while calling itself the payoff "if the pool rule made it exact" — the five directions the
+    # rule removes were still in the denominator. The difference is tiny today and that is not the
+    # point: the number is named for a population it did not measure, and exception growth would widen
+    # the gap silently. Derived from the run rather than hard-coded, so the two cannot drift apart.
+    excluded = (
+        " AND NOT (" + " OR ".join(f"(a.GAME_ID = '{game}' AND a.TEAM_ID = '{team}')" for game, team in broken) + ")"
+        if broken
+        else ""
+    )
     rows = cursor.execute(f"""
     {SHAPE_CTE},
     admissible AS (SELECT g.GAME_ID, o.TEAM_ID {candidates(gated=True)}),
@@ -275,14 +293,14 @@ def _what_it_buys(cursor: object) -> None:
       SELECT a.GAME_ID, a.TEAM_ID, r.SLOT_CT, COUNT(*) AS men
       FROM admissible a
       JOIN dbo.retroDailyReg r ON r.GAME_ID = a.GAME_ID AND r.TEAM_ID = a.TEAM_ID
-      WHERE r.SLOT_CT BETWEEN 1 AND {SLOTS} AND {CONTRIBUTED.replace("B_", "r.B_")}
+      WHERE r.SLOT_CT BETWEEN 1 AND {SLOTS} AND {CONTRIBUTED.replace("B_", "r.B_")}{excluded}
       GROUP BY a.GAME_ID, a.TEAM_ID, r.SLOT_CT)
     SELECT men, COUNT(*) AS slots, SUM(men) AS rows_in_them
     FROM occupancy GROUP BY men ORDER BY men
     """).fetchall()  # noqa: S608 - module constants only
 
     print("")
-    print("=== WHAT IT WOULD BUY, IF THE POOL RULE MADE IT EXACT (production pool, gated) ===")
+    print(f"=== WHAT IT WOULD BUY (production pool, gated, {len(broken)} rule-excluded directions removed) ===")
     total_slots = sum(row.slots for row in rows)
     total_rows = sum(row.rows_in_them for row in rows)
     if not total_slots:
@@ -313,7 +331,7 @@ def main() -> None:
         cursor = connection.cursor()
         print("THE HYPOTHESIS: the batting order is cyclic, so the team's PA total determines every slot.")
         print("Measured over the whole admissible pool, not a sample. One counterexample outweighs a rate.")
-        _report(
+        _, broken = _report(
             "THE PRODUCTION POOL - caps, provenance, game log, season window, and S5's zero-density gate."
             " THE POOL RULE IS DECIDED FROM THIS ONE",
             _rows(cursor, gated=True),
@@ -337,7 +355,7 @@ def main() -> None:
             _report(label, _rows(cursor, gated=True, provenance=rule))
 
         _negro_leagues(cursor)
-        _what_it_buys(cursor)
+        _what_it_buys(cursor, broken)
 
     print("")
     print("NOTE: nothing is implemented from this. The solver does not have the constraint and does not")

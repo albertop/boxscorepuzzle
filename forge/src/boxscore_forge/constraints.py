@@ -20,6 +20,7 @@ constraint, not a different column set.
 import functools
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
+from itertools import pairwise
 
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.identities import (
@@ -81,14 +82,41 @@ class BoardShape:
     pitcher_count: int
     offense_innings: int
     defense_innings: int
+    slots: tuple[int, ...] = ()
+    """The lineup slot each batting row belongs to, or empty for *not known*.
+
+    ⚠️ **Empty means the batting-order constraint is not applied**, never that it is applied with a
+    guess. A default that assumed one row per slot would emit a relation that is wrong on every board
+    carrying a substitution, and it would emit it silently — the board would still balance.
+
+    Not part of `Direction`, which is what the *board shows*; a slot is what the lineup was. It is
+    threaded in by the caller that has it, and every caller that does not simply gets today's behaviour.
+    """
 
 
-def shape_of(direction: Direction) -> BoardShape:
+    def __post_init__(self) -> None:
+        """⚠️ **On the type, not on `shape_of`.** The check lived in the factory, so building a
+        `BoardShape` directly — which every instrument does — skipped it and emitted relations about
+        whichever rows happened to be there. Found by a test that expected a refusal and got a board.
+        """
+        if self.slots and len(self.slots) != self.batter_count:
+            message = f"{len(self.slots)} slots against {self.batter_count} batting rows"
+            raise ValueError(message)
+
+
+def shape_of(direction: Direction, slots: tuple[int, ...] = ()) -> BoardShape:
+    """The board's shape. `slots` is opt-in: without it there is no batting-order constraint.
+
+    ⚠️ **Opt-in rather than defaulted, because the failure mode of a wrong default is silent.** Production
+    passes nothing and behaves exactly as before; the instrument measuring the constraint passes the
+    lineup and gets it.
+    """
     return BoardShape(
         batter_count=len(direction.batting),
         pitcher_count=len(direction.pitching),
         offense_innings=len(direction.line_score.offense_by_inning),
         defense_innings=len(direction.line_score.defense_by_inning),
+        slots=tuple(slots),
     )
 
 
@@ -294,7 +322,12 @@ def _global_identity_equation() -> Equation:
 @functools.cache
 def inequalities(shape: BoardShape) -> tuple[Inequality, ...]:
     """The bounds a player can reason with. Nothing here computes a value; they only rule some out."""
-    return (*_non_negativity(shape), *_batting_bounds(shape), *_pitching_bounds(shape))
+    return (
+        *_non_negativity(shape),
+        *_batting_bounds(shape),
+        *_pitching_bounds(shape),
+        *_batting_order(shape),
+    )
 
 
 def _non_negativity(shape: BoardShape) -> Iterator[Inequality]:
@@ -334,6 +367,37 @@ def _batting_bounds(shape: BoardShape) -> Iterator[Inequality]:
         ),
         Identity.PLATE_APPEARANCES_COVER_AT_BATS_AND_WALKS,
     )
+
+
+def _batting_order(shape: BoardShape) -> Iterator[Inequality]:
+    """A slot never bats fewer times than the slot after it. **Nothing at all when slots are unknown.**
+
+    The lineup is a cycle nobody can skip: if the game ends with slot 5 batting, slots 1 to 5 have come
+    up once more than 6 to 9. So the plate appearances never rise going down the order, which bounds
+    **in both directions** — knowing slots 3 and 6 puts 4 and 5 between them without fixing either.
+
+    ⚠️ **Summed over the rows sharing a slot.** A slot held by a starter and two substitutes is one term
+    of three cells. Stated per row the relation is simply false.
+
+    ⚠️ **This does not determine anything on its own, and that is the point.** If the team's PA total is
+    given, the nine values follow from one number and the player types nine cells without thinking —
+    filler. With the total erased, each slot bounds the next and the player has to chain. The constraint
+    is worth having for the second case; the first is what has to be controlled.
+    """
+    if not shape.slots:
+        return
+    rows_in: dict[int, list[int]] = {}
+    for index, slot in enumerate(shape.slots):
+        rows_in.setdefault(slot, []).append(index)
+    order = sorted(rows_in)
+    for earlier, later in pairwise(order):
+        yield Inequality(
+            (
+                *(Term(batting_cell(index, "plate_appearances"), 1) for index in rows_in[earlier]),
+                *(Term(batting_cell(index, "plate_appearances"), -1) for index in rows_in[later]),
+            ),
+            Identity.BATTING_ORDER,
+        )
 
 
 def _pitching_bounds(shape: BoardShape) -> Iterator[Inequality]:

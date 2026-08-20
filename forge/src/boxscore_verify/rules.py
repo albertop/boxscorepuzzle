@@ -101,7 +101,7 @@ def all_cells(board: Board) -> tuple[str, ...]:
     return tuple(cells)
 
 
-def relations(board: Board) -> tuple[Relation, ...]:
+def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]:
     """Every equality and inequality the board offers, for a board of this shape.
 
     The line score is given complete and never erased (§6), so wherever an identity reaches it the
@@ -222,7 +222,52 @@ def relations(board: Board) -> tuple[Relation, ...]:
     )
 
     found.extend(_inequalities(batters, pitchers))
+    found.extend(_batting_order(slots, batters))
     return tuple(found)
+
+
+def _batting_order(slots: tuple[int, ...], batters: int) -> list[Relation]:
+    """A lineup slot never bats fewer times than the slot after it. **Nothing when slots are unknown.**
+
+    ⚠️ **Written from the rule, not from the generator's version, and §22 requires exactly that.** The
+    generator has its own; if these two were one function a mistake in it would pass validation by being
+    present on both sides. The duplication is the design. What they share is the sentence above.
+
+    ⚠️ **`slots` empty means the relation is not applied**, never applied with a guess. A default of one
+    row per slot would be wrong on every board carrying a substitution, and wrong silently — the board
+    balances either way.
+
+    ⚠️ **Summed over the rows sharing a slot.** Per row the claim is false at once: a substitute bats
+    fewer times than the man he replaced. The claim is about the slot.
+    """
+    if not slots:
+        return []
+    if len(slots) != batters:
+        message = f"{len(slots)} slots against {batters} batting rows"
+        raise ValueError(message)
+
+    rows_in: dict[int, list[int]] = {}
+    for row, slot in enumerate(slots):
+        rows_in.setdefault(slot, []).append(row)
+
+    found: list[Relation] = []
+    order = sorted(rows_in)
+    for later, earlier in zip(order[1:], order, strict=False):
+        # Stated in the same direction as every other inequality here, so there is one way round to
+        # reason about rather than two: the later slot never exceeds the earlier one.
+        found.append(
+            Relation(
+                terms=(
+                    *((batting(row, "plate_appearances"), 1) for row in rows_in[later]),
+                    *((batting(row, "plate_appearances"), -1) for row in rows_in[earlier]),
+                ),
+                constant=0,
+                family=Family.ROW_IDENTITY,
+                origin=f"PA(slot {later}) <= PA(slot {earlier})",
+                equality=False,
+            )
+        )
+    return found
 
 
 def _inequalities(batters: int, pitchers: int) -> list[Relation]:

@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-six reviews, 103 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-six reviews (one re-reviewed), 105 findings, none rejected. Nothing is open.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2289,7 +2289,12 @@ board balances perfectly and is about a different game.
 whose slot distribution does not match what its total predicts: one comparison against a function of a
 single number.
 
-### ⚠️⚠️ v26 found the measurement wrong twice, and both were defects this project had just named
+### ⚠️⚠️ v26 found the measurement wrong five times across two passes
+
+**Two of the five are the second pass, and one of those overturned a recorded conclusion** — the
+clustering table above. Recorded together because the pattern is the point: **every one was a defect in
+the instrument, none in the hypothesis**, and four of the five were invisible in an output that looked
+entirely reasonable.
 
 **v26-P2-01 — no zero-density gate.** The first run measured 371,802 directions: the ungated population,
 while the decision is about the 100,226 the generator ships from. **That is the same defect fixed twice
@@ -2328,15 +2333,35 @@ systematic sameness in what the player meets, which §31 cares about. **Not a de
 It was found by disbelieving a number that came out of a correction, which is the only reason it was
 found at all.
 
-### Where the exceptions are
+### ⚠️⚠️ Where the exceptions are — and the first answer was read off a table that hid half of it
 
-⚠️ **Nowhere.** 0.00–0.02% in every decade that has one, both major source types, with and without extra
-innings, batting last or not. **A rule of baseball would cluster somewhere** — an era, a league, a
-scoring convention. An even spread reads as transcription noise.
+**I recorded "nowhere". That was wrong, and v26's second pass is why it is now known.**
 
-**That reading is not established.** The five have not been examined individually, and the distinction
-that matters — a real batting-out-of-order call against a scoring error — cannot be made from a
-distribution. Five is few enough for a person to look at. Recorded as unresolved rather than assumed.
+`_report()` iterated the categories that *had* exceptions, so any category with **none** vanished from
+the table entirely. All five production exceptions are non-extra-innings directions, so the honest line
+is `True: 0/6,276` beside `False: 5/93,950`; what printed was the second alone — which reads as a
+neutral partial split rather than as the one-sided result it is. **The absence of a reading is not a
+reading of absence**, in the one table whose entire job is to say whether failures cluster.
+
+**With every category printed, one dimension does cluster.** On the 35-exception ungated arm, which is
+the better sample:
+
+| | exceptions | directions | rate |
+|---|---|---|---|
+| before 1960 | 22 | 112,431 | **0.0196%** |
+| 1960 onward | 13 | 259,371 | **0.0050%** |
+
+**Roughly four times more common before 1960**, and monotone across the decades. Every other dimension
+is genuinely flat: extra innings 0.01% either way, home offense 0.01% either way, and — on the
+*corrected* definition — batted last 0.01% either way.
+
+⚠️ **This strengthens the transcription-noise reading rather than weakening it.** A rule of baseball
+would not fade as record-keeping improved; a scoring-error rate would. **But it is a gradient where I
+said there was none**, and it was invisible until zero-count categories were printed.
+
+**Still unresolved, and still the right call for a person:** the five have not been examined
+individually, and the distinction that matters — a real batting-out-of-order call against a scoring
+error — cannot be made from any distribution, however complete.
 
 ### The excluded populations
 
@@ -2359,7 +2384,13 @@ determines PA per **slot**; the board has a row per **player**. A slot held by o
 row determined by the team total; a slot shared by a starter and a substitute yields only their **sum**,
 which constrains two cells without fixing either.
 
-**75.1% of batting rows are alone in their slot.** Those would be determined outright.
+**83.4% of batting rows are alone in their slot** — 826,039 of 990,202 in the post-rule pool. Those
+would be determined outright.
+
+⚠️ **The earlier 75.1% was the ungated population**, and `_what_it_buys()` also measured the *pre*-rule
+cohort while its heading claimed the post-rule one (v26-P3-05). The five rule-excluded directions are
+removed now, and the exclusion is derived from the run rather than written down, so the decision cohort
+and the payoff cohort cannot drift apart.
 
 ⚠️ **That is what the constraint *determines*, not how many cells could then be erased.** The second
 number needs the solver to hold the constraint, which is exactly what is not built. **Nothing is

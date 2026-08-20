@@ -76,6 +76,17 @@ class Identity(StrEnum):
     HITS_WITHIN_AT_BATS = "hits_within_at_bats"
     PLATE_APPEARANCES_COVER_AT_BATS_AND_WALKS = "plate_appearances_cover_at_bats_and_walks"
     EARNED_RUNS_WITHIN_RUNS = "earned_runs_within_runs"
+    BATTING_ORDER = "batting_order"
+    """The lineup is cyclic and cannot be skipped, so a slot never bats fewer times than the one after it.
+
+    ⚠️ **Per SLOT, never per player.** A slot is every man who occupied it; measured per row the claim is
+    false at once, since a substitute bats fewer times than the man he replaced.
+
+    ⚠️ **True of 99.9950% of the production pool** — 5 directions in 100,226 break it, which is why it
+    arrives with a pool rule rather than as a weaker relation. A constraint true almost always is a trap:
+    the solver deduces a value that is wrong on the exceptional board and every total still balances.
+    """
+
     NON_NEGATIVE = "non_negative"
 
 
