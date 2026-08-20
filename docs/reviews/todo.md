@@ -2,16 +2,13 @@
 
 ## Where everything stands
 
-**Eighteen reviews, 79 findings, none rejected. One is open and it is not waiting on effort**, and two
-are **declined on the environment** and recorded in `non-issue.md`.
+**Twenty-two reviews, 96 findings, none rejected. Nothing is open.** Two are **declined on the
+environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
-| | Open | Why |
-|---|---|---|
-| **v05-P1-02** | ✅ **closed.** The erased term is drawn as the grid's own cell — same border, ground, colour, selection and keypad — with the label and slot reference as text. Recorded in `docs/serve-brief.md`. It also fixed an unsolvable board: zero-total columns were rendered nowhere, so 18 of one board's 39 blanks had no element to tap |
-
-**Everything from v01 to v18 is closed except that one — seventy-seven of seventy-nine**, with
-`v16-P1-01` and `v17-P2-01` declined rather than fixed, each with its reason and its reactivation
-condition in `non-issue.md`.
+⚠️ **v05-P1-02, open across ten reviews, is closed twice over.** It was fixed by drawing the erased
+footnote term as the grid's own cell — and then **deleted along with the case it existed for**, when the
+pool run closed the footnote cells again. Both halves are recorded, because a fix later removed for a
+good reason reads in the history exactly like one that was abandoned.
 
 ⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
@@ -64,9 +61,15 @@ Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both 
 
 ## What is left
 
-**`serve` runs in parallel with everything below it**, not after. It depends on none of them: since
-schema 2 it has the contract it needed, and the group run, the drawing and the ladder are forge and
-pack work that does not change what the client reads. It is at zero and February is the window.
+**`serve` runs in parallel with everything below it**, not after. It depends on none of them: it has
+the contract it needs, and the group run, the drawing and the ladder are forge and pack work that does
+not change what the client reads.
+
+⚠️ **This paragraph said `serve` was at zero and named February as the window, long after both stopped
+being true.** It has an engine, a phone board, 82 browser tests and six real packages at **schema 4**,
+not 2. The current state and everything missing from it are in *What is actually left* at the end of
+this file; the sections below are the record of how the forge got here and are history rather than
+status.
 
 ### Ed25519 and the six packages — finished
 
@@ -2259,6 +2262,96 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## v22 — verified, none rejected. **All three closed.**
+
+### v22-P2-01 — the constructor wrote what its own reader refused. **Real, and reproduced.**
+
+Schema 4 had the two board profiles at both JSON readers and **none at the constructor.** Built a
+package with one null answer cell: **accepted, serialised with the null, and refused by
+`Package.from_json` on its own output.**
+
+⚠️ **A format that cannot read back what it writes is not a format**, and the asymmetry is invisible
+to anyone who only ever round-trips valid data. A `str` passed as `solution` was accepted too and died
+in `as_json()` with an `AttributeError` — an uncontrolled failure three steps from its cause.
+
+**Fixed with `check_profile()`, one function called from `Board.from_json` and `Package.__post_init__`.**
+It takes `object` rather than `Board` deliberately: a frozen dataclass does not check its own field
+types, so **the `isinstance` mypy calls unreachable is the one that caught the string.** A type is a
+promise; that is the check.
+
+⚠⚠ **My reason for leaving the constructor lax was a justification scoped to a test's convenience.**
+I argued it kept a verifier layer testable. What it actually preserved was the exact asymmetry v21
+required removing — and `todo.md` recorded the constructor fix as closed while it was not. The layer
+stayed testable anyway, on a complete board whose line score disagrees with its source, which is a more
+realistic malformation than the one it replaced.
+
+**Two verifier faults then became unreachable and moved rather than vanished**: an erased footnote total
+and an erased left-on-base, both refused by the format now. Named where they stood, because **deleting a
+fault and enforcing it earlier look identical in a diff.** The comment beside one still asserted that
+per-batter footnote cells are erasable — true for about a week, three decisions ago.
+
+### v22-P2-02 — the repaired instrument still measured a different cohort. **Real.**
+
+⚠⚠ **Second repair to the same instrument, and the first one solved most of the problem.** It took
+`SHAPE_CTE` and the zero-density gate from the loader and left behind the **game-log join**, the
+**`VisLineScore` requirement** and the **season window** — so it counted directions `load()` cannot
+return while calling the number the production pool.
+
+**Sharing part of a cohort is worse than sharing none**, because the partial version looks like the
+whole one. This is CLAUDE.md's own rule arriving inside my repair of the defect it describes: *a fix
+that solves most of a problem reads like one that solves all of it.*
+
+`eligibility()` is that entire `FROM`/`JOIN`/`WHERE` now, one string, used by the loader and the
+instrument. **The loader's SQL is byte-identical** — compared against `HEAD`'s rendered block rather
+than asserted, after the operator asked what SQL was being changed in the forge. The answer was none,
+and that had to be shown rather than claimed.
+
+**The re-measurement moved the absolute counts and not the ratio:** 4,019 of 100,226 against 4,040 of
+100,742, still **4.01%**, decades identical to two decimals. ⚠️ **That is knowable only afterwards.** A
+denominator describing a cohort you did not measure is wrong whether or not the quotient survives.
+
+### v22-P3-01 — the instrument ran its aggregate twice. **Fixed.**
+
+Once for the row, once more on a fresh cursor only to read `cursor.description`.
+
+## ⚠⚠ Two interface defects the operator found by playing
+
+Both were invisible to every test in the suite, for different reasons worth separating.
+
+### The highlight did not paint on a filled cell
+
+`.cell.blank.filled` is three classes and `.cell.peer` is two, so **the ground outranked the state
+whatever the source order.** The player saw the highlight on every given cell and every empty one, and
+nothing on the cells they had actually written in — which is where the eye is.
+
+⚠️ **No assertion about classes could have caught it: the classes were all correct.** `paint()` set
+`filled`, `peer` and `selected` exactly as intended. Only a computed style can see a cascade, so the
+test page now loads the real stylesheets and two tests read backgrounds. Mutation-checked by restoring
+the broken specificity.
+
+**Ground says what kind of cell this is; state says where you are now.** A state that cannot paint over
+ground is not a state.
+
+### A cell took four digits
+
+The growth rule was written twice and **only the grid copy had a cap**, so `IP` accepted `8444` — four
+digits in a cell 44px wide. `grow()` is one function in `board.js` now, which also makes it testable: it
+lived in `main.js`, which the suite does not import.
+
+⚠️ **And the leading-zero rule was right by coercion rather than by rule.** `Number("05")` is 5, so
+the old code behaved correctly and said nothing about why. A reader could not tell it was intended, and
+the next person to reach for `parseInt` would have lost it with nothing going red. It is a line and a
+test now, plus one that walks all thousand reachable pairs — **the cap that held for the cases someone
+thought of is the cap that failed here.**
+
+**IP is the exception and keeps four characters:** two whole digits, a point, one decimal. The whole
+part is capped by `grow()` and the thirds replace rather than compound, so the fractional position
+cannot grow.
+
+⚠️ **A method note.** My first attempt to test this pressed `⅓` while the key carries `1⁄3` — a
+different codepoint. Nothing was pressed and the log came back clean. **A test that tests nothing reads
+exactly like one that passes**, and only the unchanged cell text gave it away.
 
 ## v21 — verified, none rejected. **Both closed.**
 
