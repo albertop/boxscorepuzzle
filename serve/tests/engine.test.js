@@ -1782,7 +1782,13 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
     for (const rule of ["PA = AB + BB + HBP + SF + SH + CI", "PA = Outs + Runs + LOB", "Outs = 3"]) {
       assert(text.includes(rule), `the sheet is missing ${rule}`);
     }
-    assert(/nine slots/.test(text), "the sheet is missing the batting order, which is the one nobody can infer");
+    // ⚠️ **Asserted on the family being present, not on the wording of its rule.** The batting-order
+    // line has been rewritten twice — formula, worked example, and now the consequence a solver
+    // actually applies — and a test pinned to a phrase turns every copy edit into a red suite while
+    // proving nothing about the thing that matters: that the one family nobody can infer from a board
+    // is on the sheet at all.
+    const names = [...panel.querySelectorAll("dt")].map((dt) => dt.textContent);
+    assert(names.includes("The batting order"), `the sheet is missing the batting order: ${names}`);
     assert(/AB \u2265 H|AB ≥ H/.test(text), "the sheet is missing the bounds");
     equal(panel.querySelectorAll("dt").length, panel.querySelectorAll("dd").length, "a rule with no name");
   });

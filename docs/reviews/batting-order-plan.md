@@ -183,8 +183,9 @@ the hard end. A constraint that helped everywhere would have been the more suspi
 +6/−0. Across all targets and seeds arm A loses **34** directions in total, which is the proof that
 v29-P1-01's fix took — the old arm could not express a loss at all.
 
-**3. Filler — confirmed, and the headline overstated what it measured.** On the gained cohort, one row
-per direction: **2 division steps in 348 deductions, 0.6% filler. Nine of ten directions carry none.**
+**3. Filler — confirmed as filler, and the headline named a quantity the run did not produce.** On the
+gained cohort, one row per direction: **2 division steps in 348 deductions, 0.6% filler. Nine of ten
+directions carry none.**
 
 ⚠️⚠️ **It read "346 causal deductions" and they are not causal.** The number is
 `len(deductions) − division`: every column sum, row propagation, cross-team and global-identity

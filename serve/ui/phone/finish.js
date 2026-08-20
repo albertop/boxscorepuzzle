@@ -97,10 +97,22 @@ export function renderReveal(puzzle, record) {
   sheet.className = "reveal-sheet";
   panel.append(sheet);
 
+  // ⚠️ **The verdict and the result are one band, not three stacked lines.** `Solved` sits to the left
+  // and the two figures are boxed together on the right, so the labels and their values read as one
+  // block rather than as a heading followed by two unrelated rows. The time was legible on its own and
+  // the hint count was not; grouping them makes the pair the unit, which is what a shared result is.
+  const head = document.createElement("div");
+  head.className = "reveal-head";
+
   const title = document.createElement("h2");
   title.className = "reveal-title";
   title.textContent = text("reveal.title");
-  sheet.append(title);
+  head.append(title);
+
+  const result = document.createElement("div");
+  result.className = "reveal-result";
+  head.append(result);
+  sheet.append(head);
 
   // ⚠️ The clock, appearing for the first time. Invisible during play (§26) because a visible timer
   // changes how people play; shown here because it is what the comparison feature will compare.
@@ -113,7 +125,7 @@ export function renderReveal(puzzle, record) {
   figure.className = "reveal-time-figure";
   figure.textContent = formatDuration(record.duration_ms);
   time.append(label, figure);
-  sheet.append(time);
+  result.append(time);
 
   // ⚠️⚠️ **Beside the time, because that is the whole argument for allowing hints at all.** The
   // decision against them was reversed on the crossword's reasoning: a hint does not corrupt a shared
@@ -128,8 +140,11 @@ export function renderReveal(puzzle, record) {
   const hintFigure = document.createElement("span");
   hintFigure.className = "reveal-hints-figure";
   hintFigure.textContent = record.hints === 0 ? text("reveal.no_hints") : String(record.hints);
+  // A clean solve is styled quietly and a spend is not. The state is on the row rather than read from
+  // the text, so the stylesheet never has to parse a word out of a catalogue it does not own.
+  if (record.hints === 0) hints.dataset.state = "none";
   hints.append(hintLabel, hintFigure);
-  sheet.append(hints);
+  result.append(hints);
 
   const clipping = document.createElement("div");
   clipping.className = "clipping";

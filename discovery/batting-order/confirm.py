@@ -1,9 +1,14 @@
 """Does the adoption hold on boards that can actually publish?
 
 ⚠️⚠️ **Everything that decided this was measured while no such board existed.** `boxscore_verify` had
-no value-producing lineup step, so layer 3 refused anything leaning on the cyclic order. The 47 non-division
-deductions and the nine-of-eleven-with-no-filler describe **what the generator produces**, not what can
-ship. The step exists now; this is the re-run.
+no value-producing lineup step, so layer 3 refused anything leaning on the cyclic order. The technique
+counts and the no-filler share describe **what the generator produces**, not what can ship. The step
+exists now; this is the re-run.
+
+⚠⚠ **Two of the figures that used to be quoted here were wrong and are corrected in
+`batting-order-reversal.md`**: there is no reproducible *47*, and the no-filler share is **eight** of
+eleven rather than nine — the table it came from listed eight zeros. The instrument that produced the
+buckets is sound; the sentences about it were not.
 
 ⚠️⚠️ **PRE-REGISTERED, and this is the second version of the pre-registration.** The first was
 committed and the run was stopped before it wrote a single row — `confirm.json` never existed and no

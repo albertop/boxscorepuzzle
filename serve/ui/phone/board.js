@@ -17,7 +17,7 @@ import {
   inningsToDisplay,
   pitchingTotalCell,
 } from "../../engine/columns.js";
-import { fill, text } from "../../engine/strings.js";
+import { text } from "../../engine/strings.js";
 
 const el = (tag, className, content) => {
   const node = document.createElement(tag);
@@ -436,10 +436,7 @@ export function renderKeypad(onKey, onCheck) {
   // ⚠️ **The hint acts on the selected cell**, so it belongs among the keys that act on the selected
   // cell. The reference sheet does not and is not here — it is permanent context rather than input,
   // and it lives in the board's own chrome.
-  const hint = el("button", "hint");
-  const hintLabel = el("span", "hint-label", text("keypad.hint"));
-  const hintLeft = el("span", "hint-left", "");
-  hint.append(hintLabel, hintLeft);
+  const hint = el("button", "hint", text("keypad.hint"));
   hint.addEventListener("click", () => onKey({ hint: true }));
   pad.append(hint);
 
@@ -480,19 +477,20 @@ export function renderKeypad(onKey, onCheck) {
   };
 
   /**
-   * How many hints are left, on the key.
+   * Whether a hint can still be spent. **The key carries no count.**
    *
-   * ⚠️ **The number is shown rather than only enforced.** A spend the player cannot count is a spend
-   * they will not make: three invisible hints are, in practice, zero hints and a mysteriously dead key
-   * at the end. Dead at zero, and the count is the label's second half so the key does not resize as
-   * it counts down.
+   * ⚠️ The first version printed the number on the key — *Hint 3* counting down. The count is not
+   * shown: the key going dead is the whole signal, which is the same answer the thirds keys already
+   * give for *not applicable here*. One fewer number on a board made of numbers.
+   *
+   * ⚠️ **And no count in the accessible name either.** A key announced as *Hint, 2 left* while the
+   * screen says *Hint* is two interfaces telling two different stories, which is the shape this
+   * project keeps finding. `aria-disabled` carries exactly what the greying-out carries, and nothing
+   * more.
    */
   pad.showHints = (left) => {
-    hintLeft.textContent = String(left);
     hint.disabled = left === 0;
     hint.setAttribute("aria-disabled", left === 0 ? "true" : "false");
-    // The key's accessible name has to carry the count too; a screen reader gets `Hint, 2 left`.
-    hint.setAttribute("aria-label", fill("keypad.hint_left", { left }));
   };
 
   pad.allowThirds(false);

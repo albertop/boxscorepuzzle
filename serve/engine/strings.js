@@ -72,10 +72,9 @@ const en = {
   "side.away": "AWAY",
 
   "keypad.clear": "Clear",
+  // ⚠️ No count on it, in either interface. The key going dead is the signal, and an accessible name
+  // carrying a number the screen does not show would be two interfaces disagreeing.
   "keypad.hint": "Hint",
-  // The accessible name, which has to carry the count: a key announced as "Hint" says nothing about
-  // whether pressing it will do anything.
-  "keypad.hint_left": "Hint, {left} left",
   // The fraction is composed from these rather than printed as `⅓`, because the face draws that glyph
   // badly at key size and a borrowed one rendered nothing. A language that writes thirds differently
   // changes them here.
@@ -157,13 +156,19 @@ const en = {
   "reference.row_identity_name": "Every batting row",
   "reference.row_identity": "PA = AB + BB + HBP + SF + SH + CI",
   "reference.column_sum_name": "Every column",
-  "reference.column_sum": "Totals = the rows above them",
+  "reference.column_sum": "Totals = the sum of the rows above",
   "reference.global_name": "Each team, over the game",
   "reference.global": "PA = Outs + Runs + LOB",
   "reference.cross_team_name": "The two halves",
   "reference.cross_team": "Team H = hits allowed by the opposing pitchers (the same for BB, SO and R)",
   "reference.batting_order_name": "The batting order",
-  "reference.batting_order": "PA dealt round nine slots: each gets T \u00f7 9, and the first T mod 9 get one more",
+  // ⚠️⚠️ **The usable form of the rule, not its arithmetic.** Two earlier versions stated the
+  // cycle as a formula and then as a worked example: correct, and both asked a player mid-solve to do
+  // modular arithmetic. What a solver actually applies is the consequence — dealing round a circle
+  // means the slots can only step down — so a single glance at the PA column says whether it is
+  // possible. This is the one family nobody can infer from a board, so the sheet has to give the form
+  // that gets used rather than the form that is true.
+  "reference.batting_order": "Turns are dealt around the order, so going down the slots, plate appearances never go up.",
   "reference.innings_name": "Innings",
   "reference.innings": "Outs = 3 \u00d7 innings pitched",
   "reference.bounds_name": "And nothing can break these",

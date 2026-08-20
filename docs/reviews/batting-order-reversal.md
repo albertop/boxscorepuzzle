@@ -94,8 +94,9 @@ constraint:**
 | division steps, treated arm | 8 | 12 of 46 walks have none |
 
 **Reading:** on boards that already reach the target the constraint changes nothing measurable and
-converts roughly eight steps into division. On boards that could not reach it, nine of eleven reach it
-with **no division at all**. The two ATL boards are the failure case and a chain-share filter would
+converts roughly eight steps into division. On boards that could not reach it, **eight of eleven** reach
+it with no division at all. (This said *nine of eleven*; the table above it lists `0 0 0 0 0 0 0 0 2 9 9`
+and the recomputation agrees on eight. See the end of this document.) The two ATL boards are the failure case and a chain-share filter would
 discard them.
 
 ---
@@ -189,9 +190,13 @@ them harder.** Not because it resolves more cells. **Because the player has to h
 their head.**
 
 ⚠️ **No metric in this document captures that.** Stall counts measure how often propagation runs dry;
-they say nothing about the cognitive load of sustaining five relations instead of four. The 47 causal
-deductions and the nine-of-eleven-with-no-filler are *consistent* with the verdict, and they are not
-what established it.
+they say nothing about the cognitive load of sustaining five relations instead of four. The technique
+counts below and the no-filler share are *consistent* with the verdict, and they are not what
+established it.
+
+⚠️⚠️ **This sentence said "the 47 causal deductions", and that number does not exist.** See *What the
+numbers actually are* at the end of this document: the figure cannot be reproduced from `arms.json`
+under any definition, and no bucket the instrument produces is a causal one.
 
 **This is the same class of finding as the footnote zeros** — knowable only by doing the task. There
 the metric said a change took the median board from 5 stalls to 15, and it was true, and the player
@@ -224,8 +229,9 @@ Every figure above was produced while `boxscore_verify` had no value-producing l
 3 would have rejected any board leaning on the constraint.** The numbers describe what the generator
 produces, not what can publish.
 
-The step exists now. **Until the re-measurement lands, the 47 causal deductions and the
-nine-of-eleven are provisional** — and several decisions rest on them. What has to come back:
+The step exists now. **Until the re-measurement lands, the technique counts and the no-filler share are
+provisional** — and several decisions rest on them. (This read *"the 47 causal deductions and the
+nine-of-eleven"*; both figures are corrected at the end of this document.) What has to come back:
 
 - coverage at each stall target, with and without, on the authoritative instrument
 - how many of the eleven directions survive all five certification layers
@@ -235,3 +241,76 @@ nine-of-eleven are provisional** — and several decisions rest on them. What ha
 **Reported as a comparison against these figures, saying plainly if any moved.** If they hold, the
 adoption is confirmed on boards that can ship. If they move, that is a finding and the decision gets
 revisited rather than assumed.
+
+
+---
+
+# ⚠️⚠️ What the numbers actually are — checked 2026-08-20
+
+**Two figures this document repeats are wrong, and the instrument behind them is not.** Checked by
+reading `arms.py` and recomputing from `arms.json`, which is committed.
+
+## How the eleven-direction figures were measured: **by attribution, not by subtraction**
+
+`arms.py::_pa_techniques` walks the solution and classifies **each step by its own technique**,
+restricted to steps that resolved an **erased PA cell**:
+
+| bucket | what lands in it |
+|---|---|
+| `lineup` | technique is `LINEUP_ARITHMETIC` — read the total, divide by nine, write it down |
+| `bounding` | technique is `BOUNDING` — the cell was cornered by the board |
+| `propagation` | anything else, **within the PA column** |
+
+**This is not the 346's defect.** That number is `len(deductions) - division` over the *whole solve*.
+This one is a three-way split of a named subset, and each bucket is defined by what produced the step.
+
+⚠️ Its docstring records that an earlier version *did* have the inversion and was fixed: it counted
+anything that was not `BOUNDING` as propagation, so the cyclic step would have been filed as reasoning
+— "the precise inversion of the distinction this experiment exists to draw".
+
+## But no bucket is a causal one, and the instrument never said it was
+
+`bounding` is the closest: its own comment calls it **"the reasoning the constraint *may* buy"**. *May*.
+Attributing a bounded cell to the relation that made it bounded is exactly what bounding cannot support
+— it carries no originating identity. **"Causal" was a word applied in prose to a technique count.**
+
+## And the number 47 is not reproducible at all
+
+Recomputed over the gained cohort at target 8 — eleven directions, one row each, the treated arm:
+
+| bucket | total |
+|---|---|
+| `lineup` (division filler) | **20** |
+| `propagation` | **39** |
+| `bounding` | **23** |
+
+No combination of these is 47. Nor is any combination over any arm, any target, either cohort
+definition, or three different per-direction selection rules — a sweep that found seven ways to reach 47
+by accident, all of them at other targets or mixing a blank count with a technique count.
+
+**The figure has no derivation anyone can reproduce**, which is the same shape as the unsourced
+`22% → 33%` recorded in `todo.md`.
+
+## The nine-of-eleven is eight, and this document's own table says so
+
+The table above lists division per direction: `0 0 0 0 0 0 0 0 2 9 9`. **Eight zeros, not nine.** The
+recomputation agrees: **8 of 11**. The prose and the table in one document disagreed by one, and the
+table was right.
+
+## ⚠️ Does the adoption still stand? **Yes, and not because of these numbers**
+
+**It was decided by a person**, and this document already says so above: the operator solved the five
+hand-solve boards with the constraint active and found them harder to hold in the head. That is
+recorded as the deciding evidence, explicitly *not* the tables.
+
+So nothing here reverses the adoption. What it does is remove two figures from the supporting case:
+
+- **20 division steps against 62 other PA-cell deductions on the gained cohort** is what the artefact
+  says, and it is a statement about *filler*, which is real and was the pre-registered criterion.
+- **Whether the constraint reasons or merely permits erasure is still open**, and it is recorded as an
+  investigation with a design in `todo.md` rather than as a defect.
+
+⚠️ **The pattern is worth more than either number.** Three times now a figure in this project has been
+a label applied in prose to something narrower — `causal` for a subtraction, `causal` for a technique
+count, `coverage at 8 stalls` for a figure with no run. **The instrument was sound in two of the three
+cases.** What failed was the sentence, and a sentence is not checked by anything.

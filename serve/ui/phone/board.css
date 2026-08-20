@@ -485,15 +485,9 @@ td.label.substitute { padding-left: 14px; }
   font-weight: 600;
 }
 
-/* The hint key: the word and the count on one line, so the key does not resize as it counts down. */
-.keypad button.hint { font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 4px; }
-.keypad button.hint .hint-left {
-  font-size: 15px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--hinted);
-}
-.keypad button.hint:disabled .hint-left { color: var(--muted); }
+/* The hint key. One word, like `Clear` beside it; the count is not shown and the key goes dead at
+   zero, which is the same answer the thirds keys give for *not applicable here*. */
+.keypad button.hint { font-size: 14px; }
 
 /* ⚠️ The reference key, in the chrome rather than in the pad. Quiet: it is always there and it is not
    what the player came for, so it reads as a label until it is wanted. */
@@ -597,10 +591,30 @@ td.label.substitute { padding-left: 14px; }
   }
 }
 
+/* `Solved` on the left, the result boxed on the right. */
+.reveal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+}
 .reveal-title {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 20px;
   letter-spacing: 0.02em;
+}
+
+/* ⚠️ The box is what groups them. Two label/value rows loose on the sheet read as two facts about
+   nothing in particular; inside a frame they read as one result with two parts, which is exactly what
+   gets shared. */
+.reveal-result {
+  flex: none;
+  min-width: 150px;
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  background: var(--blank);
 }
 
 /* ⚠️ The clock, seen for the first time. Invisible during play (§26), so this is the first and only
@@ -609,23 +623,42 @@ td.label.substitute { padding-left: 14px; }
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin: 0 0 14px;
-  font-size: 13px;
+  gap: 12px;
+  margin: 0;
+  font-size: 12px;
   color: var(--scoreboard-dim, #667);
 }
-/* Under the clock and much quieter: it is part of the result and it is not the headline. */
+/* ⚠️⚠️ **Under the clock and legible, and the first version was neither.** It was 13px of dim grey
+   against a 30px clock, and a player who spent two hints could not see that he had — which defeats the
+   only argument for allowing hints at all: a shared result carries the time *and* the count, and a
+   count nobody reads is a time presented as if it were clean.
+
+   The label takes the page's ink rather than the clock's grey, and the figure is 20px: clearly the
+   second number and clearly a number. */
 .reveal-hints {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin: -8px 0 14px;
-  font-size: 13px;
-  color: var(--scoreboard-dim, #667);
+  gap: 12px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink);
 }
-.reveal-hints-figure { font-weight: 700; color: var(--hinted); font-variant-numeric: tabular-nums; }
+.reveal-hints-figure {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--hinted);
+  font-variant-numeric: tabular-nums;
+}
+/* ⚠️ A clean solve says so quietly. `None` in the hint colour would shout an absence, and the whole
+   point of printing the line unconditionally is that its presence is not the news. */
+.reveal-hints[data-state="none"] .reveal-hints-figure {
+  font-size: 15px;
+  color: var(--muted);
+}
 
 .reveal-time-figure {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
