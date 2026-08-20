@@ -484,6 +484,26 @@ def report(rows: list[Row]) -> None:
         )
 
 
+RENAMED_FIELDS = {"causal": "other_steps"}
+"""Fields whose *name* changed after a run was recorded. The values did not.
+
+⚠⚠ **The recorded artefact is not rewritten to match a rename, and that is the point.**
+`confirm.json` is 2,160 rows produced by the run that decided the adoption; it is the evidence, and
+evidence edited to agree with later code is no longer evidence of anything. v30-P1-01 renamed `causal`
+to `other_steps` because the old name asserted causation the number does not establish — a correction to
+the *claim*, not to the measurement — so the file keeps the key it was written with and the reader
+knows both names.
+
+⚠️ **This is a rename shim and must never become a value shim.** A missing field, a changed unit or a
+value that needs adjusting is a different run, and the honest answer to those is to re-run rather than
+to translate on the way in.
+"""
+
+
+def _migrate(row: dict) -> dict:
+    return {RENAMED_FIELDS.get(name, name): value for name, value in row.items()}
+
+
 def main() -> None:
     # ⚠️ The pool rule applied with the slots, which is the whole point: without them
     # `find_violations` skips the batting-order check and the cohort would include the 35.
@@ -516,6 +536,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     if "--report-only" in sys.argv[1:]:
-        report([Row(**row) for row in json.loads((_HERE / "confirm.json").read_text(encoding="utf-8"))])
+        report([Row(**_migrate(row)) for row in json.loads((_HERE / "confirm.json").read_text(encoding="utf-8"))])
     else:
         main()

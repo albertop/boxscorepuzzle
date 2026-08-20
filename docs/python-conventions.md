@@ -157,8 +157,17 @@ someone could reasonably want to change the value *as a decision*.
 **The value is the smallest part of what needs recording.** Each one carries:
 
 - **The reason it holds that value.**
-- **The measurement that set it**, where one exists — **with the figures**, not a reference to a
-  conversation or a commit. `22% -> 33% coverage at 8 stalls`, not "measured in the pitcher-cap run".
+- **The measurement that set it**, where one exists — **with the figures and with the file that holds
+  them**, not a reference to a conversation or a commit.
+  `81% of directions reach 8 stalls against 60% plain (discovery/batting-order/confirm.json)`, not
+  "measured in the batting-order run".
+
+  ⚠️⚠️ **The example here used to be `22% -> 33% coverage at 8 stalls`, and that number is in no output
+  file.** The rule asked for figures rather than a reference to a commit, and its own illustration was
+  a figure nobody can reproduce — searched across every committed result and every run log in the tree.
+  Figures alone were not enough: a number quoted from memory looks exactly like a number quoted from a
+  run. **Name the artefact**, and if there is not one, the measurement did not happen in a form anyone
+  can check.
 - **Whether it is provisional**, explicitly and in the same place, when it was chosen rather than
   measured.
 

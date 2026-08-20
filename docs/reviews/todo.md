@@ -3686,9 +3686,8 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
    justification does not travel.** Nothing here is wrong yet — it is unverified at the cap that ships.
 6. **The scoreboard-duplicate question was never re-run.** The instrument was fixed — a failed arm is a
    row rather than a missing one — and the measurement it was fixed for has not been taken.
-7. ⚠️ **Coverage at 8 stalls does not reconcile.** The cap comparison said 33%; the pack found 36 of 72
-   directions, 50%. Same gate, same caps, two instruments, and nobody has said how they differ. **The
-   newer number being the more favourable one is a reason to be more suspicious of it, not less.**
+7. ✅ **Coverage at 8 stalls: answered. They never measured the same quantity** — and the number that
+   decided the pitcher cap has no recorded run behind it. See the section at the end of this file.
 
 ### `serve` — the engine is ahead of the shell
 
@@ -4042,3 +4041,71 @@ designed the constraint, on his fourth board.
 balance* message, and neither should be designed from one incident. **Recorded so the fifty-board
 hand-solve is watched for it**: if more than one solver stalls this way, the frequency is the finding
 and the design follows from it. If nobody else does, this was one board and a rule three days old.
+
+
+## ✅ Coverage at 8 stalls reconciled — and the figure that decided the pitcher cap is unsourced
+
+**The 33% and the 50% are different quantities and both are correct.** Two differences, found by
+reading the instruments rather than by re-running anything:
+
+| | `stall-targeted` / `pool-at-4-pitchers` | `build_ceiling_pack` |
+|---|---|---|
+| unit | a **(direction, seed) pair** | a **direction** |
+| seeds | 2 and 3 | **5, best-of** — `reach()` returns the first that carries the board |
+
+A best-of-five over directions is necessarily larger than a per-pair rate, so the pack's number
+**cannot** be compared with the others and the gap is not evidence of anything.
+
+### The size of the gap is right, and there is a committed artefact that shows it
+
+`confirm.json` — 2,160 rows from the pre-registered batting-order run — records `reached` per
+(direction, seed), so **both units can be computed from one file**. At target 8:
+
+| arm | by direction, best of 3 seeds | by (direction, seed) pair |
+|---|---|---|
+| `plain` | **60%** (29/48) | **37%** (53/144) |
+| `on` | 79% (38/48) | 51% (73/144) |
+| `fallback` | 81% (39/48) | 52% (75/144) |
+
+**`plain` is the closest analogue to the cap instruments, and its two units are 37% and 60% — which
+bracket both of the numbers that would not reconcile.** The unit alone moves this quantity by 23
+points on the same data. That is the whole discrepancy, demonstrated rather than argued.
+
+### ⚠️⚠️ But the number itself has no run behind it
+
+**`22% → 33% coverage at 8 stalls` appears in three documents and in no output file.** Searched: every
+committed `.txt`, `.log`, `.json` and `.csv` under `discovery/`, and the gitignored run logs in the
+working tree. The commit that introduced the claim — `8183966`, *the pitcher cap goes to 6* — changed
+`max_pitchers=4` to `PITCHER_CAP` in fifteen scripts, added `discovery/ceiling-pack.log` **with zero
+bytes**, and added no results.
+
+It was measured in a terminal and the output was not kept.
+
+⚠️ **This is the project's own rule, broken in the place the rule is written down.**
+`docs/python-conventions.md` requires a constant to record *"the measurement that set it, **with the
+figures**, not a reference to a conversation or a commit"* — **and it uses `22% -> 33% coverage at 8
+stalls` as its worked example of a properly cited number.** The example cannot be reproduced. Both the
+rule and its illustration have been corrected: the rule now asks for the artefact as well as the
+figures, and the example is one that has a file behind it.
+
+### What this does and does not threaten
+
+**It does not overturn the ≤6 pitcher cap**, and the reason is that the decision never rested on this
+figure alone. What is independently sourced:
+
+- **41% more directions in the pool, with the 1990s and 2000s reachable** —
+  `discovery/pitcher-cap/cap_gate_sweep_results.txt`, committed, a direct pool count.
+- **Both reasons the ≤4 argument was broken**: a justification retired for the batter cap and never
+  re-derived for pitchers, and a comparison run while stalls counted the solver deducing footnote
+  zeros. Neither is a coverage figure; both stand on their own.
+
+**What is now unsupported is the citation, not the cap.** The figure stays in the documents marked as
+unsourced rather than deleted — it is probably right, and quietly removing a number is how a record
+stops being one.
+
+### If it is ever wanted properly
+
+`discovery/stall-targeted/measure.py` measures stalls and would answer it; it needs the cap as a
+parameter and its output committed. **Not scheduled, and deliberately.** It would re-derive a number
+supporting a decision already taken on other evidence, and nothing would be built differently either
+way — which is this project's own test for whether a measurement should run.

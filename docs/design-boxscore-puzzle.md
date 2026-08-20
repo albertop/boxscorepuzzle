@@ -872,7 +872,15 @@ terms worth zero as stalls, and a pitching row carries no footnote terms at all 
 boards had fewer zeros inflating their scores and the comparison was biased against the very thing it
 was judging. Re-measured after the correction: coverage at 8 stalls 22% → 33%, the pitching section's
 share of stalls 34% → 45%, 41% more directions in the pool with the 1990s and 2000s reachable, global
-identity required on 70% of boards against 55%, cross-team on 80% against 88%. The median ceiling is
+identity required on 70% of boards against 55%, cross-team on 80% against 88%.
+
+⚠️ **The two stall figures have no recorded run and are marked rather than removed.** Neither
+`22% → 33%` nor `34% → 45%` appears in any output file — the commit that introduced them added no
+results — so they cannot be reproduced, which by this project's own rule makes them not evidence. They
+stay because they are probably right and deleting a number quietly is how a record stops being one.
+**The pool figure is sourced** (`discovery/pitcher-cap/cap_gate_sweep_results.txt`) and so are both
+reasons the ≤4 cap was wrong, so the decision does not rest on the unsourced pair. See
+`docs/reviews/todo.md`. The median ceiling is
 unchanged at 5. **And the screen-cost argument was wrong twice**: it was retired for the batter cap by
 the working-set finding and never re-derived for pitchers. Nothing in §6 is
 provisional any more.
