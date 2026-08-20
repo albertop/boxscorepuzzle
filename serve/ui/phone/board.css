@@ -433,11 +433,10 @@ td.label.substitute { padding-left: 14px; }
   letter-spacing: 0.02em;
 }
 
-/* ---- the reveal ------------------------------------------------------------------------------ */
+/* ---- the reveal: a printed boxscore, not a results card -------------------------------------- */
 
-/* The screen effect: the board is still there, dimmed, and the boxscore arrives over it. §7 says the
-   real boxscore is drawn complete at the end, so it is a panel over the game rather than a new page —
-   the player can see what they filled underneath what it turned out to be. */
+/* The board is still there, dimmed, and the clipping arrives over it. §7 draws the real boxscore
+   complete at the end, so it is a panel over the game rather than a new page. */
 .reveal {
   position: fixed;
   inset: 0;
@@ -457,11 +456,11 @@ td.label.substitute { padding-left: 14px; }
 .reveal-sheet {
   width: 100%;
   max-width: 375px;
-  max-height: 92dvh;
+  max-height: 94dvh;
   overflow-y: auto;
   background: var(--paper);
   border-radius: 14px 14px 0 0;
-  padding: 16px var(--board-margin) calc(16px + env(safe-area-inset-bottom));
+  padding: 14px var(--board-margin) calc(14px + env(safe-area-inset-bottom));
   animation: reveal-rise 260ms cubic-bezier(0.2, 0.8, 0.3, 1);
 }
 @keyframes reveal-rise {
@@ -471,19 +470,18 @@ td.label.substitute { padding-left: 14px; }
 }
 
 .reveal-title {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   font-size: 20px;
   letter-spacing: 0.02em;
 }
 
 /* ⚠️ The clock, seen for the first time. Invisible during play (§26), so this is the first and only
    place a number of seconds appears — which is why it is the largest thing on the panel. */
-.reveal-time,
-.reveal-errors {
+.reveal-time {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin: 0 0 6px;
+  margin: 0 0 14px;
   font-size: 13px;
   color: var(--scoreboard-dim, #667);
 }
@@ -494,38 +492,77 @@ td.label.substitute { padding-left: 14px; }
   font-variant-numeric: tabular-nums;
 }
 
-.reveal-game {
-  margin: 12px 0 8px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+/* ⚠⚠ **Monospace, because that is what a printed boxscore used**, and because it puts visible
+   distance between this and the board's condensed face: the player is looking at a clipping rather
+   than at the thing they were typing into. The columns then align by themselves.
+
+   ⚠️ **No aged-paper texture and no newsprint ground.** At 375px there is no room for decoration,
+   and a textured background lowers contrast exactly where the player wants to read names. Get the
+   form right — columns, monospace, rules — and the texture is unnecessary. */
+.clipping {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
   color: var(--ink);
+}
+.clipping .linescore {
+  padding: 0;
+  margin-bottom: 10px;
 }
 
-/* The names, beside the position label the player actually solved against. A list of names with no
-   labels cannot be mapped onto the board they just filled. */
-.reveal-batters,
-.reveal-pitchers {
-  list-style: none;
-  margin: 8px 0;
-  padding: 0;
-  font-size: 13px;
+.clipping-head {
+  margin: 0 0 8px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
-.reveal-batters li,
-.reveal-pitchers li {
-  display: flex;
-  gap: 10px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--rule);
-}
-.reveal-label {
-  flex: none;
-  width: var(--label-column);
-  color: var(--scoreboard-dim, #667);
+
+/* A real table, so the columns *are* columns: a screen reader gets rows and headers instead of one
+   run-on line, and a long name pushes its own column rather than shearing everything after it. */
+.clipping-grid {
+  width: 100%;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
+  margin-bottom: 12px;
 }
-.reveal-name {
-  color: var(--ink);
+.clipping-grid th,
+.clipping-grid td {
+  padding: 1px 0;
+  text-align: right;
+  white-space: nowrap;
+}
+/* The rules a newspaper had: under the header, and above the totals. Nowhere else. */
+.clipping-grid tr:first-child th {
+  border-bottom: 1px solid var(--ink);
+  padding-bottom: 2px;
+}
+.clipping-totals td {
+  border-top: 1px solid var(--ink);
+  padding-top: 2px;
+  font-weight: 700;
+}
+.clipping-team,
+.clipping-who {
+  text-align: left;
+  width: 99%;
+  padding-right: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clipping-team {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* Below the grids, as printed boxscores carry it. Named carriers rather than slot references — the
+   reference existed to point at a row without naming anyone, and that reason is gone here. */
+.clipping-notes {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--rule-strong);
+  font-size: 10.5px;
+  line-height: 1.5;
 }
 
 .reveal-close {

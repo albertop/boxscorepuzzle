@@ -3914,3 +3914,33 @@ column, and §2 commits to the canonical format.
 
 And **five stalls was an example, not a standard.** Nothing is labelled easy, medium or hard until the
 pack comes back.
+
+## ⚠️ The reveal is a printed boxscore now, and the package cannot fill one
+
+The end of the game draws the completed board as a clipping — monospace, a rule under the header and
+above the totals, names beside the positions the player solved against, footnotes naming carriers. That
+part is rendering and it is done.
+
+**But it is not the boxscore a newspaper printed, and the gap is in the package rather than in the
+client.** A schema-4 payload carries, checked against a real file rather than assumed:
+
+- **Six batting columns and six pitching columns** — `PA AB R H BB SO` and `IP H R ER BB SO`. **No RBI
+  and no HR.** Both exist in the forge's loader as deliberate §6 candidate columns and neither is
+  carried into `BattingLine`, so they are not in the package to draw.
+- **One direction only.** A game is two puzzles (§5), and the payload holds the offensive team's
+  batting against the defensive team's pitching. The other team's batting and this team's pitching are
+  **the other puzzle**, and printing them at the end of this one would spoil a board that has not been
+  played.
+
+So the reveal shows the object the player reconstructed, complete, and stops exactly there. **That is
+defensible and it is also a decision nobody took.** The two questions are separable:
+
+1. **Extra columns for the reveal only** — RBI and HR would make it read as a boxscore rather than as
+   the board with names. They are already in the loader; the cost is package size and a `reveal`
+   block that carries a second, wider table. **It cannot be the same table**: the six columns are what
+   §22 layer 4 checks against, and widening them widens what has to be verified.
+2. **The other half of the game.** Only safe once both directions of that game have been played, which
+   the calendar knows and the package does not. Probably never worth it.
+
+**Not decided here.** Recorded because the reveal now looks like it is missing something, and the next
+person to notice will look in `finish.js`, where there is nothing to find.

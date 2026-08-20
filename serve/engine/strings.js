@@ -96,7 +96,6 @@ const en = {
   // ---- the reveal ------------------------------------------------------------------------------
   "reveal.title": "Solved",
   "reveal.time": "Your time",
-  "reveal.errors": "Mistakes",
   // ⚠️ The clock is invisible during play (§26) and appears here for the first time. The label says
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.

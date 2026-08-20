@@ -16,8 +16,13 @@
  * ⚠️ **The clock does not stop for a wrong answer, and attempts are unlimited.** §27 says there is no
  * fail state; what an error costs is time, and time is what gets measured and shared. A limit would
  * add a fail state through the back door, and stopping the clock would make errors free.
+ *
+ * ⚠️ **And the mistake count is gone from the reveal.** It was never decided anywhere — not in
+ * `serve-flow.md` — and a number quantifying failure sits badly beside §27's rule that you cannot
+ * lose. It is still in the C7 event record, where it is a measurement rather than a message.
  */
 
+import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS } from "../../engine/columns.js";
 import { text } from "../../engine/strings.js";
 import { renderLineScore } from "./board.js";
 
@@ -45,17 +50,28 @@ export function checkBoard(game) {
   return { state: "solved", message: "" };
 }
 
+/** Innings held as outs, printed the way a boxscore prints them. */
+const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;
+
 /**
- * The official boxscore, drawn complete, with the names the player never saw during play.
+ * The boxscore the player just reconstructed, laid out the way a newspaper printed one.
  *
- * ⚠️ **This is the payoff, and it is the one thing the player has never received.** The `reveal` block
- * has shipped in every package since schema 2 and was drawn nowhere. §7 keeps names off the board
- * during play so nothing is handed over before it is earned; this is where it is earned.
+ * ⚠️⚠️ **This replaced a results card, and the difference is the whole point.** The payoff is not being
+ * told *Solved* — it is seeing the object, whole, with the names that were withheld while it was being
+ * worked out (§7). A list of positions and surnames down the left is a legend; a boxscore is a boxscore.
+ *
+ * **Monospace, because that is what a printed boxscore used.** The columns then align by themselves
+ * rather than by a grid, and it puts visible distance between the reveal and the board's modern face —
+ * the player is looking at a clipping, not at the thing they were just typing into.
+ *
+ * ⚠️ **No aged-paper texture and no newsprint ground.** At 375px there is no room for decoration, and a
+ * textured background lowers contrast exactly where the player wants to read names. If the columns,
+ * the monospace and the rules read as a clipping, nothing else is needed.
  */
 export function renderReveal(puzzle, record) {
   // ⚠️ **`snake_case`, because the reveal passes through the reader untouched.** `readPackage` maps
   // every other field into the client's own shape and deliberately does not map this one, so writing
-  // `reveal.offenseTeam` here reads `undefined` and renders an empty heading -- with no error, on the
+  // `reveal.offenseTeam` here reads `undefined` and renders an empty heading — with no error, on the
   // one screen nobody had ever seen. Checked against a real package rather than assumed.
   const reveal = puzzle.reveal;
   const panel = document.createElement("div");
@@ -86,68 +102,152 @@ export function renderReveal(puzzle, record) {
   time.append(label, figure);
   sheet.append(time);
 
-  if (record.errors > 0) {
-    // ⚠️ Shown **after** the board is solved and never before. During play a count is a binary search;
-    // afterwards there is nothing left to search, so it is a result rather than a clue.
-    const errors = document.createElement("p");
-    errors.className = "reveal-errors";
-    const errorLabel = document.createElement("span");
-    errorLabel.textContent = text("reveal.errors");
-    const errorFigure = document.createElement("span");
-    errorFigure.textContent = String(record.errors);
-    errors.append(errorLabel, errorFigure);
-    sheet.append(errors);
-  }
+  const clipping = document.createElement("div");
+  clipping.className = "clipping";
+  sheet.append(clipping);
 
   if (reveal) {
     const heading = document.createElement("p");
-    heading.className = "reveal-game";
+    heading.className = "clipping-head";
     // `AWAY vs HOME at DATE`, composed from the catalogue rather than written as a sentence, so a
     // language that orders it differently changes the strings and not this file.
     heading.textContent =
       `${reveal.offense_team} ${text("reveal.versus")} ${reveal.defense_team} ` +
       `${text("reveal.at")} ${reveal.played_on}`;
-    sheet.append(heading);
-
-    const score = document.createElement("div");
-    score.className = "linescore";
-    score.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
-    sheet.append(score);
-
-    sheet.append(nameList(reveal.batter_names, puzzle.labels, "reveal-batters"));
-    sheet.append(nameList(reveal.pitcher_names, puzzle.pitcherLabels, "reveal-pitchers"));
+    clipping.append(heading);
   }
+
+  const score = document.createElement("div");
+  score.className = "linescore";
+  score.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
+  clipping.append(score);
+
+  // ⚠⚠ **`solution`, not `puzzle`.** The first version drew `puzzle.puzzle`, which is the board *with
+  // its blanks* — so the finished boxscore printed `null` in every cell the player had just filled in,
+  // and every pitcher's innings read `0.0`. It threw nothing and the panel looked structurally right;
+  // only reading the rendered text showed it. The reveal is the completed object by definition, and
+  // the completed object is `solution`. The line score above is the same either way: §6 gives it
+  // complete and never erases it.
+  const done = puzzle.solution;
+
+  clipping.append(
+    grid({
+      team: reveal?.offense_team ?? "",
+      columns: BATTING_COLUMNS,
+      rows: done.batting,
+      totals: done.battingTotals,
+      names: reveal?.batter_names ?? [],
+      labels: puzzle.labels,
+      className: "clipping-batting",
+    }),
+  );
+  clipping.append(
+    grid({
+      team: reveal?.defense_team ?? "",
+      columns: PITCHING_COLUMNS,
+      rows: done.pitching,
+      totals: done.pitchingTotals,
+      names: reveal?.pitcher_names ?? [],
+      labels: puzzle.pitcherLabels,
+      className: "clipping-pitching",
+      innings: true,
+    }),
+  );
+  clipping.append(footnoteBlock(puzzle));
 
   const close = document.createElement("button");
   close.type = "button";
   close.className = "reveal-close";
   close.textContent = text("reveal.close");
   sheet.append(close);
-  panel.dataset.close = "";
   close.addEventListener("click", () => panel.remove());
 
   return panel;
 }
 
 /**
- * The rows, with the position label the player solved against beside the name they have just earned.
+ * One half of the clipping: a team, its rows, and its totals under a rule.
  *
- * ⚠️ Both, not the name alone: the player spent the game thinking of that row as `CF`, and a list of
- * names with no labels is a list they cannot map onto the board they just filled.
+ * ⚠️ A real `<table>` rather than padded text. Monospace makes the columns *look* like a printed
+ * boxscore; a table makes them *be* columns, so a screen reader gets rows and headers instead of one
+ * run-on line, and a long name pushes its own column rather than shearing the alignment of the rest.
  */
-function nameList(names, labels, className) {
-  const list = document.createElement("ul");
-  list.className = className;
-  names.forEach((name, index) => {
-    const item = document.createElement("li");
-    const slot = document.createElement("span");
-    slot.className = "reveal-label";
-    slot.textContent = labels[index] ?? "";
-    const person = document.createElement("span");
-    person.className = "reveal-name";
-    person.textContent = name;
-    item.append(slot, person);
-    list.append(item);
+function grid({ team, columns, rows, totals, names, labels, className, innings = false }) {
+  const table = document.createElement("table");
+  table.className = `clipping-grid ${className}`;
+
+  const head = document.createElement("tr");
+  const teamCell = document.createElement("th");
+  teamCell.className = "clipping-team";
+  teamCell.scope = "col";
+  teamCell.textContent = team;
+  head.append(teamCell);
+  for (const column of columns) {
+    const cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = text(`column.${column}`);
+    head.append(cell);
+  }
+  table.append(head);
+
+  rows.forEach((row, index) => {
+    const line = document.createElement("tr");
+    const who = document.createElement("td");
+    who.className = "clipping-who";
+    // Name then position, lower case, which is how a printed boxscore wrote it. The label is what the
+    // player solved against, so keeping it beside the name is what lets them map one onto the other.
+    who.textContent = `${names[index] ?? ""} ${(labels[index] ?? "").toLowerCase()}`.trim();
+    line.append(who);
+    row.forEach((value, column) => {
+      const cell = document.createElement("td");
+      cell.textContent = innings && column === 0 ? inningsOf(value) : String(value);
+      line.append(cell);
+    });
+    table.append(line);
   });
-  return list;
+
+  const totalsRow = document.createElement("tr");
+  totalsRow.className = "clipping-totals";
+  const totalsLabel = document.createElement("td");
+  totalsLabel.className = "clipping-who";
+  totalsLabel.textContent = text("board.totals");
+  totalsRow.append(totalsLabel);
+  totals.forEach((value, column) => {
+    const cell = document.createElement("td");
+    cell.textContent = innings && column === 0 ? inningsOf(value) : String(value);
+    totalsRow.append(cell);
+  });
+  table.append(totalsRow);
+
+  return table;
+}
+
+/**
+ * The footnote block, below the grids, as printed boxscores carry it.
+ *
+ * ⚠️ Named carriers rather than slot references. During play the line says `SH: 1 #2` because the
+ * player has no names; here they do, and a printed boxscore wrote `Sacrifice hit — Shotton`. The slot
+ * reference existed to point at a row without naming anyone, and that reason is gone at this point.
+ */
+function footnoteBlock(puzzle) {
+  const block = document.createElement("p");
+  block.className = "clipping-notes";
+  const names = puzzle.reveal?.batter_names ?? [];
+  const parts = [];
+
+  // The footnote line is given in full and never erased (§6), so puzzle and solution agree here — but
+  // it reads from the solution anyway, so that one rule about where a finished boxscore comes from
+  // holds for every part of this panel rather than for most of it.
+  FOOTNOTE_COLUMNS.forEach((column, index) => {
+    const carriers = [];
+    puzzle.solution.footnotes.forEach((row, batter) => {
+      const count = row[index];
+      if (count > 0) carriers.push(count > 1 ? `${names[batter] ?? ""} ${count}` : (names[batter] ?? ""));
+    });
+    if (carriers.length > 0) parts.push(`${text(`column.${column}`)} — ${carriers.join(", ")}`);
+  });
+  parts.push(`${text("board.left_on_base")} — ${puzzle.solution.leftOnBase}`);
+
+  block.textContent = parts.join(".  ");
+  return block;
 }

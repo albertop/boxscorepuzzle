@@ -1478,48 +1478,122 @@ suite("⚠️⚠️ The end of the game, and what the board may never say", () =
   });
 });
 
-suite("⚠️ The reveal, which is the payoff and was drawn nowhere", () => {
-  test("it draws the names, the teams, the date and the time", async () => {
+suite("⚠️ The reveal is the boxscore the player reconstructed, not a results card", () => {
+  const finished = async (raw) => {
     const { createGame } = await import("../engine/game.js");
     const { readPackage } = await import("../engine/package.js");
     const { renderReveal } = await import("../ui/phone/finish.js");
-
-    const puzzle = readPackage(packages[0].raw);
+    const puzzle = readPackage(raw);
     const game = createGame(puzzle);
     const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
     for (const name of game.blanks()) game.enter(name, answers.get(name));
-    const panel = renderReveal(puzzle, game.finish());
+    return { puzzle, panel: renderReveal(puzzle, game.finish()) };
+  };
 
+  test("⚠⚠ every cell carries a value, because it draws the solution and not the puzzle", async () => {
+    // ⚠⚠ **The first version drew `puzzle.puzzle`, which is the board with its blanks.** The finished
+    // boxscore printed `null` in every cell the player had just filled and every pitcher's innings
+    // read `0.0`. Nothing threw and the panel looked structurally right; only reading the rendered
+    // text showed it. This asserts the content of the grid rather than its shape.
+    for (const { raw } of packages) {
+      const { panel } = await finished(raw);
+      const grid = panel.querySelector(".clipping-batting");
+
+      for (const cell of grid.querySelectorAll("td")) {
+        assert(cell.textContent.trim().length > 0, "an empty cell in the finished boxscore");
+        assert(!cell.textContent.includes("null"), `a null in the finished boxscore: ${cell.textContent}`);
+      }
+    }
+  });
+
+  test("the innings column prints thirds rather than outs", async () => {
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const first = panel.querySelector(".clipping-pitching tr:nth-child(2) td:nth-child(2)");
+    const outs = puzzle.solution.pitching[0][0];
+
+    equal(first.textContent, `${Math.floor(outs / 3)}.${outs % 3}`);
+  });
+
+  test("both grids carry every row and a totals line", async () => {
+    const { puzzle, panel } = await finished(packages[0].raw);
+    // Header, one row per player, and totals.
+    equal(
+      panel.querySelectorAll(".clipping-batting tr").length,
+      puzzle.solution.batting.length + 2,
+    );
+    equal(
+      panel.querySelectorAll(".clipping-pitching tr").length,
+      puzzle.solution.pitching.length + 2,
+    );
+    assert(panel.querySelector(".clipping-batting .clipping-totals"), "no batting totals line");
+    assert(panel.querySelector(".clipping-pitching .clipping-totals"), "no pitching totals line");
+  });
+
+  test("the totals line matches the package's own totals", async () => {
+    // ⚠️ Against the package rather than against a sum of the rows above: a totals row computed here
+    // would be a second place encoding the same rule, and it would agree with itself while disagreeing
+    // with the boxscore.
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const cells = [...panel.querySelectorAll(".clipping-batting .clipping-totals td")].slice(1);
+
+    equal(
+      cells.map((cell) => Number(cell.textContent)),
+      [...puzzle.solution.battingTotals],
+    );
+  });
+
+  test("it names the teams and the date", async () => {
     // ⚠️ The reveal block passes through the reader in snake_case while every other field is mapped.
     // Reading it as camelCase renders an empty heading with no error, on the one screen nobody had
-    // seen — so this asserts the content rather than the presence of an element.
-    const heading = panel.querySelector(".reveal-game").textContent;
+    // seen -- so this asserts the content rather than the presence of an element.
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const heading = panel.querySelector(".clipping-head").textContent;
+
     assert(heading.includes(puzzle.reveal.offense_team), `no offense team in ${heading}`);
     assert(heading.includes(puzzle.reveal.defense_team), `no defense team in ${heading}`);
     assert(heading.includes(puzzle.reveal.played_on), `no date in ${heading}`);
-
-    equal(panel.querySelectorAll(".reveal-batters li").length, puzzle.puzzle.batting.length);
-    equal(panel.querySelectorAll(".reveal-pitchers li").length, puzzle.puzzle.pitching.length);
-    assert(
-      panel.querySelector(".reveal-batters li").textContent.includes(puzzle.reveal.batter_names[0]),
-      "the first batter's name is missing",
-    );
-    assert(panel.querySelector(".reveal-time-figure").textContent.length > 0, "no time shown");
   });
 
-  test("⚠️ the position label stays beside the name", async () => {
-    // The player spent the game thinking of that row as `CF`. A list of names with no labels cannot be
-    // mapped onto the board they just filled.
+  test("⚠️ each row carries the name the player earned and the position they solved against", async () => {
+    // Both, not the name alone: the player spent the game thinking of that row as `cf`, and a list of
+    // names with no positions cannot be mapped onto the board they just filled.
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const first = panel.querySelector(".clipping-batting tr:nth-child(2) .clipping-who").textContent;
+
+    assert(first.includes(puzzle.reveal.batter_names[0]), `no name in "${first}"`);
+    assert(first.includes(puzzle.labels[0].toLowerCase()), `no position in "${first}"`);
+  });
+
+  test("the footnote block names carriers rather than slot references", async () => {
+    // During play the line says `SH: 1 #2` because the player has no names. Here they do, and a
+    // printed boxscore wrote `Sacrifice hit -- Shotton`. The reference existed to point at a row
+    // without naming anyone, and that reason is gone at this point.
+    const { puzzle, panel } = await finished(packages[0].raw);
+    const notes = panel.querySelector(".clipping-notes").textContent;
+
+    assert(notes.includes(puzzle.solution.leftOnBase.toString()), "LOB is missing from the footnotes");
+    assert(!notes.includes("#"), `the reveal still prints a slot reference: ${notes}`);
+  });
+
+  test("⚠⚠ the mistake count is not shown", async () => {
+    // Dropped deliberately: it was never decided in `serve-flow.md`, and a number quantifying failure
+    // sits badly beside §27's rule that you cannot lose. It stays in the C7 record, where it is a
+    // measurement rather than a message.
     const { createGame } = await import("../engine/game.js");
     const { readPackage } = await import("../engine/package.js");
     const { renderReveal } = await import("../ui/phone/finish.js");
-
     const puzzle = readPackage(packages[0].raw);
     const game = createGame(puzzle);
-    const row = renderReveal(puzzle, game.record()).querySelector(".reveal-batters li");
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    const blanks = game.blanks();
+    // Three wrong entries, then the right ones: the record carries three, the panel says nothing.
+    blanks.slice(0, 3).forEach((name) => game.enter(name, answers.get(name) + 1));
+    for (const name of blanks) game.enter(name, answers.get(name));
+    const record = game.finish();
+    const panel = renderReveal(puzzle, record);
 
-    equal(row.querySelector(".reveal-label").textContent, puzzle.labels[0]);
-    equal(row.querySelector(".reveal-name").textContent, puzzle.reveal.batter_names[0]);
+    equal(record.errors, 3, "the event record lost the mistakes");
+    assert(!panel.querySelector(".reveal-errors"), "the reveal shows a mistake count");
   });
 
   test("a duration renders as minutes and seconds, and past an hour gains one", async () => {
