@@ -155,3 +155,65 @@ the cyclic distribution and nothing could see the difference while the family wa
 layer. That does not make plausibility redundant: a version 1 package carries no slot references and
 applies no batting-order relation, and three centre fielders in one lineup balances every identity and
 every place.
+
+---
+
+# ✅ STEP 6 — THE CONFIRMATION RUN CAME BACK, AND ALL THREE CRITERIA HOLD
+
+**Read against the pre-registration exactly as committed** (`82eaa90`, corrected in `e5854bd` before
+the run produced a row). Nothing in the reading was adjusted to the result. 48 directions × 3 seeds
+× 5 targets × 3 arms, 2,160 rows, every board through `certify_for_publication()`.
+
+## The three criteria
+
+**1. Coverage — confirmed.** *Zero added overturns it.*
+
+| target | plain | fallback | added |
+|---|---|---|---|
+| 3 | 46/48 | 46/48 | 0 |
+| 4 | 45/48 | 45/48 | 0 |
+| 5 | 43/48 | 45/48 | +2 |
+| 6 | 40/48 | 45/48 | +5 |
+| **8** | **29/48** | **39/48** | **+10** |
+
+✅ **And the shape is the one the design predicts**: nothing added at the easy end, everything added at
+the hard end. A constraint that helped everywhere would have been the more suspicious result.
+
+**2. Cost — confirmed, and `lost` is genuinely non-zero.** At target 8, per seed: +10/−1, +11/−6,
++6/−0. Across all targets and seeds arm A loses **34** directions in total, which is the proof that
+v29-P1-01's fix took — the old arm could not express a loss at all.
+
+**3. Filler — confirmed, and stronger than before.** On the gained cohort, one row per direction:
+**346 causal deductions against 2 division steps, 0.6% filler. Nine of ten directions carry none.**
+
+## ⚠️ What moved against the figures that decided the adoption
+
+| | before the verifier could certify | now |
+|---|---|---|
+| coverage at 8, plain | 29/48 (60%) | **29/48 — identical** |
+| gained directions at 8 | 11 | **10** |
+| gained with no filler | 9 of 11 (82%) | **9 of 10 (90%)** |
+
+**One direction fewer, and the filler share improved.** `ATL197408210` no longer qualifies, and
+`ATL198408120` — which carried 35% filler before — now appears with **zero**, because the 0.20 cap
+discarded the filler-heavy board and the direction still qualifies through another seed. **The cap did
+the job it was put there for**: it fired 18 times across the run.
+
+## ⚠⚠ A finding the pre-registration did not ask for, and it is the strongest evidence yet
+
+**Turning the constraint on everywhere is net-negative in places.** Arm A at target 6, seed 2: gained
+6, **lost 10**. At target 5, seed 2: gained 6, **lost 7**.
+
+⚠️ The adopted design has no such case, because it is monotone: the fallback tries plain first, so it
+cannot lose a board. **So this is direct evidence for the conditional retry specifically, rather than
+for the constraint in general** — which is a distinction none of the earlier figures could draw.
+
+## ⚠️ Two things the run does NOT establish, stated because the numbers look clean
+
+- **The publication gate refused nothing.** All 1,449 produced boards are `publishable`, so on this
+  cohort `verified` and `publishable` are the same number. The distinction is live — the pre-flight
+  proved the gate refuses a package without a reveal — but it **drew no distinction here**, so nothing
+  in this run is evidence that plausibility or evidence checking catches anything.
+- **Nothing here measures a person.** Eight stalls is a solver metric. The only human verdict on
+  record is the operator's, and it is about the constraint making boards harder to hold in the head.
+
