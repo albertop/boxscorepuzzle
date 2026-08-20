@@ -1,0 +1,130 @@
+"""The batting order is adopted, and these are the invariants that survived the fence coming down.
+
+⚠️⚠️ **This file used to assert the opposite of what it asserts now, and that is the point of keeping
+it rather than deleting it.** While the constraint was experimental it held three guards: nothing may
+import the fallback, no module may reach both it and certification, and the verifier must contain no
+lineup step. All three were true, all three were checked by reverting, and **all three are now false by
+decision** — the operator adopted the constraint, production builds through the fallback, and the
+verifier has the step it needs to certify those boards.
+
+A guard that outlives its decision fails honest changes, so those three are gone. What replaces them
+is not weaker: it is the set of things that must hold **because** it is adopted.
+
+⚠️ **And one of them existed only by accident.** The old import-graph guard walked `forge/src` and the
+production generator lives in `forge/scripts`, so a script bridging the experiment to certification
+would never have been seen. The fence was intact in the half of the tree it looked at. That is
+recorded here because it is the reason to state a boundary as *what the code must do* rather than as
+*what it must not import*.
+"""
+
+import ast
+import pathlib
+
+import pytest
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+SCRIPTS = ROOT / "scripts"
+EXPERIMENTAL = "boxscore_forge.lineup_fallback"
+
+
+def _modules(*roots: pathlib.Path) -> dict[str, ast.Module]:
+    """Every first-party module under the given roots, parsed once.
+
+    ⚠️ `scripts/` as well as `src/`, because the production generator lives there and the guard this
+    replaces did not look at it.
+    """
+    found: dict[str, ast.Module] = {}
+    for root in roots:
+        for path in root.rglob("*.py"):
+            dotted = ".".join(path.relative_to(root).with_suffix("").parts).removesuffix(".__init__")
+            found[dotted] = ast.parse(path.read_text(encoding="utf-8"))
+    return found
+
+
+def _calls(tree: ast.Module, name: str) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and (node.func.id if isinstance(node.func, ast.Name) else getattr(node.func, "attr", None)) == name
+    ]
+
+
+class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
+    """⚠️⚠️ The conditional retry is the whole design, and calling `erase` directly bypasses it.
+
+    On the walks measured, turning the constraint on everywhere converted a median of eight steps per
+    board into *read the total, divide by nine, write it down* — 244 such cells. The retry exists so
+    boards that reach their target without the constraint never pay that. A producer that calls
+    `erase()` itself gets the old behaviour if it omits slots, and the everywhere-on behaviour if it
+    passes them. **Neither is the adopted design**, and both look correct in a diff.
+    """
+
+    def test_the_reference_generator_builds_through_the_fallback(self) -> None:
+        tree = _modules(SCRIPTS)["write_reference_puzzles"]
+
+        assert _calls(tree, "erase_with_lineup_fallback"), "the generator no longer uses the retry"
+        assert not _calls(tree, "erase"), "the generator calls erase() directly, bypassing the retry"
+
+    def test_no_module_outside_the_fallback_passes_slots_to_erase(self) -> None:
+        """⚠️ The other way round it: turning the constraint on for every board.
+
+        `erase(..., slots=lineup)` is the everywhere-on configuration, which is the one the measurement
+        rejected. Only the fallback may pass it, and only after the plain attempt has failed.
+        """
+        offenders: list[str] = []
+        for name, tree in _modules(SRC, SCRIPTS).items():
+            if name == EXPERIMENTAL:
+                continue
+            for call in _calls(tree, "erase"):
+                if any(keyword.arg == "slots" for keyword in call.keywords) or len(call.args) > 1:
+                    offenders.append(f"{name}:{call.lineno}")
+
+        assert not offenders, f"the constraint is switched on for every board at {offenders}"
+
+    def test_the_finder_sees_the_one_call_that_is_allowed_to_pass_slots(self) -> None:
+        # ⚠️ Positive control. "No offenders" from a finder that finds nothing is not a result.
+        tree = _modules(SRC)[EXPERIMENTAL]
+        with_slots = [
+            call for call in _calls(tree, "erase") if any(keyword.arg == "slots" for keyword in call.keywords)
+        ]
+
+        assert with_slots, "the finder cannot see the fallback's own call, so it would find nothing"
+
+
+class TestTheVerifierCanActuallyCertifyTheseBoards:
+    """⚠️⚠️ The gate that used to keep them unpublishable is now the thing that lets them publish.
+
+    While the step did not exist, layer 3 refused any board leaning on the cyclic order — which is what
+    made the experiment safe, and also what made every figure measured before it describe boards that
+    could not ship. Now it exists, so what has to hold is that it is *reachable*: present in the
+    verifier, and actually consulted by the layer.
+    """
+
+    def test_the_verifier_has_a_value_producing_lineup_step(self) -> None:
+        from boxscore_verify.reason import lineup_values  # noqa: PLC0415
+
+        # It produces a value rather than a bound: nine places, thirty-nine appearances, so the first
+        # three bat five times. A step that only narrowed would return nothing here.
+        from boxscore_verify.rules import batting_total  # noqa: PLC0415
+
+        found = lineup_values(tuple(range(1, 10)), {batting_total("plate_appearances"): 39})
+
+        assert len(found) == 9
+        assert sorted(found.values()) == [4, 4, 4, 4, 4, 4, 5, 5, 5]
+
+    @pytest.mark.parametrize("layer", ["check_derivability", "derivable_in_view"])
+    def test_both_derivability_layers_read_the_lineup(self, layer: str) -> None:
+        """⚠️ Present is not the same as consulted.
+
+        `relations()` took a `slots` argument for a day while every call site passed nothing, so the
+        family was dead code that read as a working constraint. This reads the call sites.
+        """
+        source = (SRC / "boxscore_verify" / "verify.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+        body = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == layer)
+        text = ast.unparse(body)
+
+        assert "slots_of(package)" in text, f"{layer} never reads the lineup off the package"
+        assert "slots" in text, f"{layer} does not pass the lineup on"

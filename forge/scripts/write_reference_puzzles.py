@@ -28,8 +28,8 @@ sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 from measure import Loaded, load, slot_references  # noqa: E402
 
-from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
+from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import Package, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
@@ -97,8 +97,16 @@ def reveal_for(loaded: Loaded) -> Reveal:
 
 
 def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None:
-    """Generate one puzzle and put it through the publication gate, not a subset of the checks."""
-    produced = erase(loaded.direction, target_stalls=target, seed=SEED)
+    """Generate one puzzle and put it through the publication gate, not a subset of the checks.
+
+    ⚠⚠ **The batting order is a fallback, not a switch.** Boards that reach their target without it
+    never see it, so they never pay its cost: with the constraint on everywhere, a median of eight
+    steps per board became *read the total, divide by nine, write it down* — 244 such cells across the
+    walks measured. On the eleven directions that reach eight stalls only with it, nine carry no such
+    filler at all. It is worth something exactly where the board cannot get there without it.
+    """
+    produced, why = erase_with_lineup_fallback(loaded.direction, tuple(loaded.slots), target_stalls=target, seed=SEED)
+    del why  # The reason is for the measurement instruments; this script only needs the board.
     if produced is None:
         return None
     package = sign(
