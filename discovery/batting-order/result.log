@@ -1,8 +1,30 @@
 THE HYPOTHESIS: the batting order is cyclic, so the team's PA total determines every slot.
 Measured over the whole admissible pool, not a sample. One counterexample outweighs a rate.
 
-=== THE POOL - accepted, non-deduced sources ===
-  371,802 directions, 27,774 in extra innings, 185,469 batting last
+=== THE PRODUCTION POOL - caps, provenance, game log, season window, and S5's zero-density gate. THE POOL RULE IS DECIDED FROM THIS ONE ===
+  100,226 directions, 6,276 in extra innings, 16,791 batted last
+  hold all three claims: 100,221 (99.9950%)
+  exceptions:            5 (0.0050%)
+           5  rises, more than one cut point, not determined by the total
+
+  --- exceptions, 5 of 5 listed ---
+  game           yr    inn  m  last  source                 slots -> predicted
+  CHN192508110   1925  9    1  no    EVN                      6  6  6  5  5  6  6  5  5  ->  6  6  6  6  6  5  5  5  5   [rises; more than one cut point; not determined by the total]
+  MON199505020   1995  9    0  no    EVN                      5  5  5  5  6  5  5  4  4  ->  5  5  5  5  5  5  5  5  4   [rises; more than one cut point; not determined by the total]
+  BLF191507142   1915  9    1  yes   EVF                      5  5  5  5  5  4  3  4  4  ->  5  5  5  5  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  PHA195208242   1952  9    1  no    EVA                      5  5  4  3  4  4  4  4  4  ->  5  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  BOS193408100   1934  9    0  no    EVA                      6  6  5  5  4  5  6  5  5  ->  6  6  5  5  5  5  5  5  5   [rises; more than one cut point; not determined by the total]
+
+  --- where the exceptions are ---
+    by decade          1910: 1/6,967 (0.01%), 1920: 1/6,285 (0.02%), 1930: 1/6,912 (0.01%), 1950: 1/5,434 (0.02%), 1990: 1/11,407 (0.01%)
+    by source          EVA: 2/59,271 (0.00%), EVF: 1/653 (0.15%), EVN: 2/40,302 (0.00%)
+    by method record   0: 2/42,747 (0.00%), 1: 3/55,291 (0.01%)
+    extra innings      False: 5/93,950 (0.01%)
+    home offense       False: 2/49,899 (0.00%), True: 3/50,327 (0.01%)
+    batted last        False: 4/83,435 (0.00%), True: 1/16,791 (0.01%)
+
+=== UNGATED - the same rules WITHOUT the zero-density gate. NOT the production pool: structural evidence only ===
+  371,802 directions, 27,774 in extra innings, 182,846 batted last
   hold all three claims: 371,767 (99.9906%)
   exceptions:            35 (0.0094%)
           25  rises, more than one cut point, not determined by the total
@@ -10,32 +32,32 @@ Measured over the whole admissible pool, not a sample. One counterexample outwei
            2  more than one cut point, not determined by the total
 
   --- exceptions, 25 of 35 listed ---
-  game           yr    inn  m  home  source                 slots -> predicted
-  PIT199309262   1993  9    0  yes   EVN                      4  4  3  3  3  2  3  3  3  ->  4  3  3  3  3  3  3  3  3   [rises; more than one cut point; not determined by the total]
-  OAK201309040   2013  9    1  no    EVA                      4  4  4  4  5  4  4  4  3  ->  4  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  CHN195108011   1951  9    1  no    EVN                      6  5  4  4  4  4  4  3  4  ->  5  5  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  game           yr    inn  m  last  source                 slots -> predicted
   DET194509230   1945  9    1  no    EVA                      5  5  5  4  4  4  4  4  3  ->  5  5  4  4  4  4  4  4  4   [more than one cut point; not determined by the total]
-  PIT191509250   1915  9    1  yes   EVN                      4  4  4  4  4  4  4  3  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
-  PHI191710031   1917  9    1  no    EVN                      5  5  5  5  5  6  5  5  5  ->  6  5  5  5  5  5  5  5  5   [rises; more than one cut point; not determined by the total]
-  PHA195208242   1952  9    1  yes   EVA                      5  5  4  3  4  4  4  4  4  ->  5  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  BRO192806302   1928  9    1  no    EVN                      5  5  5  4  4  4  4  5  4  ->  5  5  5  5  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  CIN201805090   2018  10   1  no    EVN                      5  3  4  4  4  4  4  4  4  ->  4  4  4  4  4  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
-  CIN198806270   1988  9    1  yes   EVN                      5  4  5  5  4  4  4  4  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  CHA194204260   1942  9    0  yes   EVA                      4  4  4  4  4  3  4  4  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
-  CHN192508110   1925  9    1  no    EVN                      6  6  6  5  5  6  6  5  5  ->  6  6  6  6  6  5  5  5  5   [rises; more than one cut point; not determined by the total]
-  NY1194305012   1943  9    0  no    EVN                      5  5  5  5  5  5  3  5  4  ->  5  5  5  5  5  5  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
-  SE1196905280   1969  9    1  yes   EVA                      5  4  4  6  6  4  4  4  4  ->  5  5  5  5  5  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
-  CHA192609252   1926  9    0  no    EVA                      4  4  4  4  4  4  4  3  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
+  CIN197405150   1974  9    1  yes   EVN                      4  3  4  4  4  4  4  4  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
+  CHN193507271   1935  9    1  yes   EVN                      5  5  5  5  4  4  4  4  3  ->  5  5  5  4  4  4  4  4  4   [more than one cut point; not determined by the total]
   DET192305250   1923  9    1  yes   EVA                      4  4  4  4  4  4  3  3  4  ->  4  4  4  4  4  4  4  3  3   [rises; more than one cut point; not determined by the total]
-  MIL198909230   1989  9    1  no    EVA                      5  5  5  5  4  3  4  4  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  CIN191407141   1914  9    1  yes   EVN                      4  4  4  4  4  4  5  3  3  ->  4  4  4  4  4  4  4  4  3   [rises; drops more than one; more than one cut point; not determined by the total]
+  SE1196905280   1969  9    1  yes   EVA                      5  4  4  6  6  4  4  4  4  ->  5  5  5  5  5  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
+  BRO192806302   1928  9    1  yes   EVN                      5  5  5  4  4  4  4  5  4  ->  5  5  5  5  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  BOS196106092   1961  9    1  no    EVA                      4  5  4  4  4  4  4  5  4  ->  5  5  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  PIT199309262   1993  9    0  no    EVN                      4  4  3  3  3  2  3  3  3  ->  4  3  3  3  3  3  3  3  3   [rises; more than one cut point; not determined by the total]
+  CHN192508110   1925  9    1  no    EVN                      6  6  6  5  5  6  6  5  5  ->  6  6  6  6  6  5  5  5  5   [rises; more than one cut point; not determined by the total]
+  CHA195408130   1954  16   1  no    EVA                      8  8  7  7  6  7  7  8  7  ->  8  8  7  7  7  7  7  7  7   [rises; more than one cut point; not determined by the total]
+  NY1193608140   1936  9    1  yes   EVN                      6  4  4  4  4  4  4  2  4  ->  4  4  4  4  4  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
+  CIN201805090   2018  10   1  no    EVN                      5  3  4  4  4  4  4  4  4  ->  4  4  4  4  4  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
   CHA198908100   1989  9    1  no    EVA                      5  5  5  4  4  4  3  5  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  BSN193104150   1931  9    0  yes   EVN                      5  4  3  4  4  4  4  4  5  ->  5  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  CHA192609252   1926  9    0  no    EVA                      4  4  4  4  4  4  4  3  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
   SLA191305190   1913  9    0  no    EVA                      5  5  5  5  5  5  5  3  4  ->  5  5  5  5  5  5  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
-  CHN193507271   1935  9    1  no    EVN                      5  5  5  5  4  4  4  4  3  ->  5  5  5  4  4  4  4  4  4   [more than one cut point; not determined by the total]
-  NY1193608140   1936  9    1  no    EVN                      6  4  4  4  4  4  4  2  4  ->  4  4  4  4  4  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
-  ANA200208140   2002  9    1  no    EVA                      5  4  4  4  4  4  4  3  4  ->  4  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
   BLF191507142   1915  9    1  yes   EVF                      5  5  5  5  5  4  3  4  4  ->  5  5  5  5  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  PHI191610032   1916  9    1  yes   EVN                      4  4  4  4  4  3  4  3  3  ->  4  4  4  4  4  4  3  3  3   [rises; more than one cut point; not determined by the total]
+  PHI191710031   1917  9    1  no    EVN                      5  5  5  5  5  6  5  5  5  ->  6  5  5  5  5  5  5  5  5   [rises; more than one cut point; not determined by the total]
+  CLE198207040   1982  9    1  no    EVA                      5  5  5  5  5  4  3  4  4  ->  5  5  5  5  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  NY1194305012   1943  9    0  no    EVN                      5  5  5  5  5  5  3  5  4  ->  5  5  5  5  5  5  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
+  CHN195108011   1951  9    1  yes   EVN                      6  5  4  4  4  4  4  3  4  ->  5  5  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  OAK201309040   2013  9    1  yes   EVA                      4  4  4  4  5  4  4  4  3  ->  4  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  CIN198806270   1988  9    1  yes   EVN                      5  4  5  5  4  4  4  4  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  WS1192106100   1921  9    0  no    EVA                      5  5  5  4  6  4  4  4  4  ->  5  5  5  5  5  4  4  4  4   [rises; drops more than one; more than one cut point; not determined by the total]
+  CIN191407141   1914  9    1  yes   EVN                      4  4  4  4  4  4  5  3  3  ->  4  4  4  4  4  4  4  4  3   [rises; drops more than one; more than one cut point; not determined by the total]
   (10 further exceptions not listed; the counts above are complete)
 
   --- where the exceptions are ---
@@ -43,26 +65,27 @@ Measured over the whole admissible pool, not a sample. One counterexample outwei
     by source          EVA: 16/186,867 (0.01%), EVF: 1/2,349 (0.04%), EVN: 18/182,586 (0.01%)
     by method record   0: 9/149,726 (0.01%), 1: 26/213,555 (0.01%)
     extra innings      False: 32/344,028 (0.01%), True: 3/27,774 (0.01%)
-    batting last       False: 24/186,333 (0.01%), True: 11/185,469 (0.01%)
+    home offense       False: 24/186,333 (0.01%), True: 11/185,469 (0.01%)
+    batted last        False: 18/188,956 (0.01%), True: 17/182,846 (0.01%)
 
 === DEDUCED FILES - excluded by S32. Reconstructions, so a violation here confirms the rule ===
-  6,551 directions, 710 in extra innings, 3,241 batting last
-  hold all three claims: 6,548 (99.9542%)
-  exceptions:            3 (0.0458%)
-           3  rises, more than one cut point, not determined by the total
+  1,943 directions, 205 in extra innings, 288 batted last
+  hold all three claims: 1,941 (99.8971%)
+  exceptions:            2 (0.1029%)
+           2  rises, more than one cut point, not determined by the total
 
-  --- exceptions, 3 of 3 listed ---
-  game           yr    inn  m  home  source                 slots -> predicted
-  SLF191509230   1915  9    1  no    EDF                      4  4  4  4  4  3  4  4  4  ->  4  4  4  4  4  4  4  4  3   [rises; more than one cut point; not determined by the total]
-  PHA194505240   1945  9    1  yes   EDA                      4  4  4  4  4  5  4  4  4  ->  5  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
-  SLN191407170   1914  9    0  yes   EDN                      5  4  5  4  4  4  4  5  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  --- exceptions, 2 of 2 listed ---
+  game           yr    inn  m  last  source                 slots -> predicted
+  PHA194505240   1945  9    1  no    EDA                      4  4  4  4  4  5  4  4  4  ->  5  4  4  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
+  SLN191407170   1914  9    0  no    EDN                      5  4  5  4  4  4  4  5  4  ->  5  5  5  4  4  4  4  4  4   [rises; more than one cut point; not determined by the total]
 
   --- where the exceptions are ---
-    by decade          1910: 2/424 (0.47%), 1940: 1/2,919 (0.03%)
-    by source          EDA: 1/3,704 (0.03%), EDF: 1/92 (1.09%), EDN: 1/2,755 (0.04%)
-    by method record   0: 1/2,129 (0.05%), 1: 2/4,422 (0.05%)
-    extra innings      False: 3/5,841 (0.05%)
-    batting last       False: 1/3,310 (0.03%), True: 2/3,241 (0.06%)
+    by decade          1910: 1/134 (0.75%), 1940: 1/853 (0.12%)
+    by source          EDA: 1/1,196 (0.08%), EDN: 1/732 (0.14%)
+    by method record   0: 1/669 (0.15%), 1: 1/1,274 (0.08%)
+    extra innings      False: 2/1,738 (0.12%)
+    home offense       True: 2/913 (0.22%)
+    batted last        False: 2/1,655 (0.12%)
 
 === NEGRO LEAGUES (EVR) - why that arm is empty ===
   1,872 games, 0 of them with a game-log row.
@@ -70,15 +93,15 @@ Measured over the whole admissible pool, not a sample. One counterexample outwei
   carry no retroGameLogs row at all, which is the join the pool needs for its independent
   cross-check. Two exclusions for one population, and the game log is the stricter of them.
 
-=== WHAT IT WOULD BUY, IF THE POOL RULE MADE IT EXACT ===
+=== WHAT IT WOULD BUY, IF THE POOL RULE MADE IT EXACT (production pool, gated) ===
   men in a slot   slots            batting rows in them
-     1             2,918,672 (87.22%)   2,918,672
-     2               333,429 ( 9.96%)     666,858
-     3                78,171 ( 2.34%)     234,513
-     4                15,269 ( 0.46%)      61,076
-     5                   677 ( 0.02%)       3,385
+     1               826,080 (91.58%)     826,080
+     2                65,410 ( 7.25%)     130,820
+     3                 8,951 ( 0.99%)      26,853
+     4                 1,465 ( 0.16%)       5,860
+     5                   128 ( 0.01%)         640
 
-  2,918,672 of 3,884,504 batting rows (75.1%) are alone in their slot.
+  826,080 of 990,253 batting rows (83.4%) are alone in their slot.
   For those, the team's PA total would determine the cell outright. For the rest the
   constraint gives the SUM of the rows sharing a slot, which constrains two cells without
   fixing either - still useful to a solver, and not the same thing.

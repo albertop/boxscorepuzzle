@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-five reviews, 100 findings, none rejected. Nothing is open.** Two are **declined on the
+**Twenty-six reviews, 103 findings, none rejected. Nothing is open.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2269,69 +2269,101 @@ they go back to given — which also removes the drawing, the 24% of screen, and
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
 
-## ⚠️⚠️ The batting order: the hypothesis holds 99.9906%, which is the answer that needs a pool rule
+## ⚠️⚠️ The batting order holds 99.9950% on the pool that ships — and the measurement was wrong twice first
 
-**Measured over the whole pool, not a sample** — 371,802 directions. The claim: the order is cyclic and
-cannot be skipped, so given the team's PA total the nine per-slot values follow. 38 plate appearances is
-four turns of nine plus two, so slots 1 and 2 have 5 and the rest have 4.
+**The claim:** the order is cyclic and cannot be skipped, so given the team's PA total the nine per-slot
+values follow. 38 plate appearances is four turns of nine plus two, so slots 1 and 2 have 5 and the rest
+have 4.
 
-| | |
-|---|---|
-| hold all three claims | **371,767 — 99.9906%** |
-| exceptions | **35 — 0.0094%** |
+| population | directions | exceptions | |
+|---|---|---|---|
+| **the production pool** (gated) | 100,226 | **5** | **99.9950%** — the pool rule is decided from this |
+| ungated, same rules otherwise | 371,802 | 35 | 99.9906% — structural evidence, not about what ships |
 
-⚠️ **This is exactly the outcome the operator named in advance, and the instruction was explicit: a
-constraint true 99.99% of the time is not a constraint, it is a trap.** The solver would deduce a value
-that is wrong on the exceptional board, and §22's guarantee would break in a way **no identity check
-could catch** — the board would balance perfectly and be about a different game.
+⚠️ **This is the outcome the instruction named in advance, and its verdict stands: a constraint true
+99.995% of the time is not a constraint, it is a trap.** The solver would deduce a value that is wrong on
+the exceptional board, and §22's guarantee would break where **no identity check could catch it** — the
+board balances perfectly and is about a different game.
 
-**So the answer is a pool rule, not a weaker constraint**, and it is unusually cheap: reject a direction
-whose slot distribution does not match what the total predicts. That is 35 of 371,802, and the rule is
-one comparison against a function of a single number.
+**The pool rule is therefore the answer, and it costs five directions out of 100,226.** Reject a direction
+whose slot distribution does not match what its total predicts: one comparison against a function of a
+single number.
 
-### Where the exceptions are, which is the part a rate cannot tell you
+### ⚠️⚠️ v26 found the measurement wrong twice, and both were defects this project had just named
 
-⚠️ **Nowhere.** They do not cluster: 0.00–0.02% in every decade from the 1910s to the 2010s, 0.01% in
-both major source types, 0.01% whether the game went to extra innings, 0.01% whether the team batted
-last. **A rule of baseball would cluster somewhere** — an era, a league, a scoring convention. An even
-spread across 110 years reads as transcription noise rather than as a thing the game does.
+**v26-P2-01 — no zero-density gate.** The first run measured 371,802 directions: the ungated population,
+while the decision is about the 100,226 the generator ships from. **That is the same defect fixed twice
+in `footnote-multiplicity` hours earlier**, by the same hand, in a script written after the lesson was
+recorded — *a research denominator and the generator have to mean the same thing.* Writing a rule down
+is not applying it.
 
-**That reading is not established.** These 35 have not been examined individually, and the distinction
-that matters — a real event such as a batting-out-of-order call, against a scoring error — cannot be
-made from the distribution. Thirty-five is few enough for a person to look at. **Recorded as unresolved
-rather than assumed**, because "probably data noise" is exactly the kind of conclusion this project has
-learned to distrust when nothing checked it.
+**v26-P2-02 — `offense_is_home` was labelled "batting last".** They are not the same fact: when the home
+team leads after the top of the ninth **they do not bat at all**, and the visitors made the last plate
+appearance. The reported split was the home/away split, which is near enough 50/50 to look like an
+answer. **A name is not the thing** — the fifth instance of that class here. Retrosheet marks the
+unplayed half `x` at the end of the home line score, so the fact was available and simply not asked for.
 
-### The excluded populations, measured separately and never mixed in
+**v26-P3-03 — the prose and the predicate disagreed.** The docstring said "exactly one step down" while
+`faults()` accepted zero. A total divisible by nine is whole turns and every slot is equal, so
+`4 4 4 4 4 4 4 4 4` is the cleanest case and the wording called it a violation. **The code was right and
+the sentence was wrong**, which is the harder direction to notice because the numbers looked correct.
 
-**Deduced files: 3 of 6,551 — 0.0458%, about five times the pool's rate.** A violation there *confirms*
-§32's exclusion rather than refuting the hypothesis, which is why they are a separate arm.
+### ⚠️⚠️ And correcting the second one exposed something nobody was looking for
 
-⚠️ **The Negro Leagues arm was empty, and the reason is not the one §32 gives.** All 1,872 `EVR` games
-are in `retroGamesReg` and **not one has a `retroGameLogs` row**. The game-log join removes them before
-the source rule ever applies — two independent exclusions for one population, and the join is the
-stricter. Said as a result, because an arm reporting *no rows* cannot otherwise be told from an arm whose
-predicate cannot match.
+Fixing "batted last" made it 16.8% of the pool instead of ~50%, which did not make sense — so it was
+checked rather than accepted:
 
-⚠️ **And that arm was broken on the first run.** It asked for a deduced game *with an accepted source
-type* — an empty intersection by construction, since deduced files carry `EDA`/`EDN`/`EDF` and the
-accepted list is `EVA`/`EVN`/`EVF`. The report said *the filters in this script are wrong*: a broken arm
-describing itself as a broken script. It now replaces the provenance rule whole, and refuses to run if
-that rule has moved rather than silently measuring the pool while claiming to measure an exclusion.
+| | directions | batted last | **the offense won** |
+|---|---|---|---|
+| ungated | 371,802 | 49.2% | 50.4% |
+| **the pool** | 100,226 | **16.8%** | **84.1%** |
 
-### What it would buy, measured before anything is built
+**§5's zero-density gate selects the winning team's offense five times out of six.** A team that scores
+more has fewer zeros, so the gate prefers it — and the winner is usually the side that did *not* bat
+last, either a home team already ahead after the top of the ninth or a winning visitor.
 
-⚠️ **Less than nine cells a board, and the reason is the hypothesis's own warning turned around.** The
-constraint determines PA per **slot**; the board has a row per **player**. A slot held by one man all
-game has its row determined by the team total. A slot shared by a starter and a substitute yields only
-their **sum** — a statement about two cells that fixes neither.
+⚠️ **Every board the generator ships is overwhelmingly a winning team's batting line.** That is a
+property of the pool nobody chose and nothing recorded, and it is not obviously wrong — but it is a
+systematic sameness in what the player meets, which §31 cares about. **Not a decision to take here.**
+It was found by disbelieving a number that came out of a correction, which is the only reason it was
+found at all.
 
-**2,918,672 of 3,884,504 batting rows — 75.1% — are alone in their slot.** For those the team's PA total
-would give the value outright. The other quarter get a sum.
+### Where the exceptions are
 
-⚠️ **This is what the constraint *determines*, not how many cells could then be erased.** Those are
-different numbers, and the second needs the solver to hold the constraint — which is precisely what is
-not being built. **Nothing is implemented.** The instrument is `discovery/batting-order/`.
+⚠️ **Nowhere.** 0.00–0.02% in every decade that has one, both major source types, with and without extra
+innings, batting last or not. **A rule of baseball would cluster somewhere** — an era, a league, a
+scoring convention. An even spread reads as transcription noise.
+
+**That reading is not established.** The five have not been examined individually, and the distinction
+that matters — a real batting-out-of-order call against a scoring error — cannot be made from a
+distribution. Five is few enough for a person to look at. Recorded as unresolved rather than assumed.
+
+### The excluded populations
+
+**Deduced files: 3 of 6,551 — five times the pool's rate.** A violation there confirms §32's exclusion
+rather than refuting the hypothesis, which is why they are a separate arm.
+
+⚠️ **The Negro Leagues arm is empty for a reason that is not §32.** All 1,872 `EVR` games are in
+`retroGamesReg` and **not one has a `retroGameLogs` row**, so the game-log join removes them before the
+source rule applies. Two exclusions, and the join is the stricter.
+
+⚠️ **That arm was broken on its first run**, asking for a deduced game with an accepted source type — an
+empty intersection, since deduced files carry `EDA`/`EDN`/`EDF`. The report said *the filters in this
+script are wrong*: a broken arm describing itself as a broken script. It replaces the provenance rule
+whole now and refuses to run if that rule has moved.
+
+### What it would buy
+
+⚠️ **Less than nine cells a board, for the hypothesis's own reason turned around.** The constraint
+determines PA per **slot**; the board has a row per **player**. A slot held by one man all game has its
+row determined by the team total; a slot shared by a starter and a substitute yields only their **sum**,
+which constrains two cells without fixing either.
+
+**75.1% of batting rows are alone in their slot.** Those would be determined outright.
+
+⚠️ **That is what the constraint *determines*, not how many cells could then be erased.** The second
+number needs the solver to hold the constraint, which is exactly what is not built. **Nothing is
+implemented.** The instrument is `discovery/batting-order/`.
 
 ## v25 — verified, none rejected. **Both closed.**
 

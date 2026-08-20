@@ -4,8 +4,14 @@
 last, slots 1 to 5 have come up one more time than slots 6 to 9. Three claims, in increasing strength:
 
   weak       PA(N+1) <= PA(N) for every N from 1 to 8 — it never rises going down the order
-  strong     exactly one step down, of exactly one, and never two steps
+  strong     **at most one** cut point, and where there is one it drops by exactly one
   determined given the team's PA total, the whole per-slot distribution follows from the cycle
+
+⚠️ **"At most one", not "exactly one", and the difference is not pedantry.** A total divisible by nine
+is a whole number of complete turns, so every slot holds the same value and there is **no** cut point —
+`4 4 4 4 4 4 4 4 4` is the cleanest possible case and the literal wording called it a violation. The
+prose said one thing and `faults()` did another; the predicate was right and the sentence was wrong,
+which is the harder direction to notice because the numbers looked correct.
 
 If the third holds, **the total determines every individual value**: 38 plate appearances is four full
 turns of nine plus two, so slots 1 and 2 have 5 and the rest have 4. The solver does not have this
@@ -45,8 +51,40 @@ from measure import (  # noqa: E402
     CONTRIBUTED,
     SEASON_WINDOW,
     SHAPE_CTE,
+    ZERO_DENSITY_GATE,
     eligibility,
+    zero_density_clause,
 )
+
+
+def candidates(*, gated: bool, provenance: str = "") -> str:
+    """The candidate population, with §5's zero-density gate applied or deliberately not.
+
+    ⚠️ **The first run of this script applied no gate at all** and reported 371,802 directions — the
+    ungated population — while the decision it was written to support is about the **100,226** the
+    generator actually ships from. That is the same defect this project had just fixed twice in
+    `footnote-multiplicity`, in a script written by the same hand hours later: *a research denominator
+    and the generator have to mean the same thing.*
+
+    Both are reported now, and the difference between them is the point rather than an accident:
+
+    - **gated** is the production pool. **The pool rule is decided from this one.**
+    - **ungated** is a wider population for the structural claim — more evidence about baseball, and
+      **not** evidence about what ships. Labelled, never mixed.
+    """
+    built = eligibility(
+        seasons=f"g.SEASON BETWEEN {SEASON_WINDOW[0]} AND {SEASON_WINDOW[1]}",
+        gate_clause=zero_density_clause(ZERO_DENSITY_GATE) if gated else "",
+    )
+    if provenance:
+        original = f"AND p.is_deduced = 0 AND p.source_type IN ({ACCEPTED_LITERAL})"
+        # Not an `assert`: `python -O` removes assertions, and the failure this guards is an arm that
+        # silently measures the pool while claiming to measure an excluded population.
+        if original not in built:
+            message = "the provenance rule moved; this arm would silently measure the pool instead"
+            raise SystemExit(message)
+        built = built.replace(original, provenance)
+    return built
 
 SLOTS = 9
 EXAMPLES = 25
@@ -81,7 +119,7 @@ def faults(slots: tuple[int, ...]) -> list[str]:
     return found
 
 
-def _rows(cursor: object, provenance: str = "") -> list:
+def _rows(cursor: object, *, gated: bool, provenance: str = "") -> list:
     """One row per direction: the nine slot totals, and what is needed to explain an exception.
 
     ⚠️ `r` for the daily rows, because `eligibility()` already binds `d` to the *defensive* team's shape.
@@ -94,29 +132,33 @@ def _rows(cursor: object, provenance: str = "") -> list:
     `EVF`. Asking for a deduced game with an accepted source type is asking for the empty set, and an arm
     that cannot return a row is not a null result.
     """
-    cohort = eligibility(seasons=f"g.SEASON BETWEEN {SEASON_WINDOW[0]} AND {SEASON_WINDOW[1]}")
-    if provenance:
-        original = f"AND p.is_deduced = 0 AND p.source_type IN ({ACCEPTED_LITERAL})"
-        # Not an `assert`: `python -O` removes assertions, and the failure this guards is an arm that
-        # silently measures the pool while claiming to measure an excluded population.
-        if original not in cohort:
-            message = "the provenance rule moved; this arm would silently measure the pool instead"
-            raise SystemExit(message)
-        cohort = cohort.replace(original, provenance)
+    built = candidates(gated=gated, provenance=provenance)
     slot_sums = ", ".join(f"SUM(CASE WHEN r.SLOT_CT = {n} THEN r.B_PA ELSE 0 END) AS s{n}" for n in range(1, SLOTS + 1))
     query = f"""
     {SHAPE_CTE},
     admissible AS (
       SELECT g.GAME_ID, o.TEAM_ID, g.SEASON, g.INN_CT, g.METHOD_RECORD_CD,
              CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END AS offense_is_home,
+             -- ⚠️ **Which side actually made the game's last plate appearance**, which is not the same
+             -- as which side is at home. When the home team leads after the top of the ninth they do
+             -- not bat at all, and Retrosheet marks that half-inning `x` at the end of the home line
+             -- score. So home batted last exactly when their line score does *not* end in `x`.
+             --
+             -- The first version of this script read `offense_is_home` and called it "batting last".
+             -- The split it reported was the home/away split, which is near enough 50/50 to look like
+             -- an answer. **A name is not the thing** — the fourth instance of that class here.
+             CASE WHEN (CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END)
+                       <> (CASE WHEN RIGHT(l.HomeLineScore, 1) = 'x' THEN 1 ELSE 0 END)
+                  THEN 1 ELSE 0 END AS batted_last,
              prov.source_type
-      {cohort})
+      {built})
     SELECT a.GAME_ID, a.TEAM_ID, a.SEASON, a.INN_CT, a.METHOD_RECORD_CD, a.offense_is_home,
-           a.source_type, {slot_sums}
+           a.batted_last, a.source_type, {slot_sums}
     FROM admissible a
     JOIN dbo.retroDailyReg r ON r.GAME_ID = a.GAME_ID AND r.TEAM_ID = a.TEAM_ID
     WHERE r.SLOT_CT BETWEEN 1 AND {SLOTS}
-    GROUP BY a.GAME_ID, a.TEAM_ID, a.SEASON, a.INN_CT, a.METHOD_RECORD_CD, a.offense_is_home, a.source_type
+    GROUP BY a.GAME_ID, a.TEAM_ID, a.SEASON, a.INN_CT, a.METHOD_RECORD_CD, a.offense_is_home,
+             a.batted_last, a.source_type
     """  # noqa: S608 - every interpolation is a module constant or a loop index
     return cursor.execute(query).fetchall()
 
@@ -124,15 +166,15 @@ def _rows(cursor: object, provenance: str = "") -> list:
 def _report(name: str, rows: list) -> Counter:
     kinds: Counter = Counter()
     exceptions: list = []
-    extra_innings = walkoff_side = 0
+    extra_innings = last_up = 0
 
     for row in rows:
-        slots = tuple(row[7 : 7 + SLOTS])
+        slots = tuple(row[8 : 8 + SLOTS])
         broken = faults(slots)
         if row.INN_CT and row.INN_CT > SLOTS:
             extra_innings += 1
-        if row.offense_is_home:
-            walkoff_side += 1
+        if row.batted_last:
+            last_up += 1
         if broken:
             kinds[", ".join(broken)] += 1
             exceptions.append((row, slots, broken))
@@ -147,7 +189,7 @@ def _report(name: str, rows: list) -> Counter:
         print("  NO DIRECTIONS AT ALL. Either this population is empty in the database, or this arm's")
         print("  predicate cannot match anything. Both are silence; only the first is a result.")
         return kinds
-    print(f"  {total:,} directions, {extra_innings:,} in extra innings, {walkoff_side:,} batting last")
+    print(f"  {total:,} directions, {extra_innings:,} in extra innings, {last_up:,} batted last")
     print(f"  hold all three claims: {clean:,} ({100.0 * clean / total:.4f}%)")
     print(f"  exceptions:            {len(exceptions):,} ({100.0 * len(exceptions) / total:.4f}%)")
     for kind, count in kinds.most_common():
@@ -157,13 +199,13 @@ def _report(name: str, rows: list) -> Counter:
         return kinds
     print("")
     print(f"  --- exceptions, {min(EXAMPLES, len(exceptions))} of {len(exceptions):,} listed ---")
-    print(f"  {'game':<14} {'yr':<5} {'inn':<4} {'m':<2} {'home':<5} {'source':<22} slots -> predicted")
+    print(f"  {'game':<14} {'yr':<5} {'inn':<4} {'m':<2} {'last':<5} {'source':<22} slots -> predicted")
     for row, slots, broken in exceptions[:EXAMPLES]:
         shown = "".join(f"{value:>3}" for value in slots)
         expect = "".join(f"{value:>3}" for value in predicted(sum(slots)))
         print(
             f"  {row.GAME_ID:<14} {row.SEASON:<5} {row.INN_CT or 0:<4} {row.METHOD_RECORD_CD or 0:<2} "
-            f"{'yes' if row.offense_is_home else 'no':<5} {(row.source_type or '')[:22]:<22} "
+            f"{'yes' if row.batted_last else 'no':<5} {(row.source_type or '')[:22]:<22} "
             f"{shown}  ->{expect}   [{'; '.join(broken)}]"
         )
     if len(exceptions) > EXAMPLES:
@@ -177,7 +219,8 @@ def _report(name: str, rows: list) -> Counter:
         ("by source", lambda r: r.source_type),
         ("by method record", lambda r: r.METHOD_RECORD_CD),
         ("extra innings", lambda r: bool(r.INN_CT and r.INN_CT > SLOTS)),
-        ("batting last", lambda r: bool(r.offense_is_home)),
+        ("home offense", lambda r: bool(r.offense_is_home)),
+        ("batted last", lambda r: bool(r.batted_last)),
     ):
         spread = Counter(key(row) for row, _, _ in exceptions)
         whole = Counter(key(row) for row in rows)
@@ -225,10 +268,9 @@ def _what_it_buys(cursor: object) -> None:
     So the honest measure of what it buys is not "nine cells": it is **how many batting rows are alone in
     their slot**. Measured, not estimated, and measured before anything is built.
     """
-    cohort = eligibility(seasons=f"g.SEASON BETWEEN {SEASON_WINDOW[0]} AND {SEASON_WINDOW[1]}")
     rows = cursor.execute(f"""
     {SHAPE_CTE},
-    admissible AS (SELECT g.GAME_ID, o.TEAM_ID {cohort}),
+    admissible AS (SELECT g.GAME_ID, o.TEAM_ID {candidates(gated=True)}),
     occupancy AS (
       SELECT a.GAME_ID, a.TEAM_ID, r.SLOT_CT, COUNT(*) AS men
       FROM admissible a
@@ -240,7 +282,7 @@ def _what_it_buys(cursor: object) -> None:
     """).fetchall()  # noqa: S608 - module constants only
 
     print("")
-    print("=== WHAT IT WOULD BUY, IF THE POOL RULE MADE IT EXACT ===")
+    print("=== WHAT IT WOULD BUY, IF THE POOL RULE MADE IT EXACT (production pool, gated) ===")
     total_slots = sum(row.slots for row in rows)
     total_rows = sum(row.rows_in_them for row in rows)
     if not total_slots:
@@ -271,8 +313,17 @@ def main() -> None:
         cursor = connection.cursor()
         print("THE HYPOTHESIS: the batting order is cyclic, so the team's PA total determines every slot.")
         print("Measured over the whole admissible pool, not a sample. One counterexample outweighs a rate.")
-        pool = _rows(cursor, "")
-        _report("THE POOL - accepted, non-deduced sources", pool)
+        _report(
+            "THE PRODUCTION POOL - caps, provenance, game log, season window, and S5's zero-density gate."
+            " THE POOL RULE IS DECIDED FROM THIS ONE",
+            _rows(cursor, gated=True),
+        )
+        # ⚠️ Wider, and labelled as not-the-pool. More evidence about baseball; none about what ships.
+        _report(
+            "UNGATED - the same rules WITHOUT the zero-density gate. NOT the production pool:"
+            " structural evidence only",
+            _rows(cursor, gated=False),
+        )
 
         # ⚠️ Measured separately and never mixed in. A violation among an excluded population
         # **confirms the exclusion** rather than refuting the hypothesis, so pooling them would make the
@@ -283,7 +334,7 @@ def main() -> None:
                 "AND p.is_deduced = 1 AND p.source_type IN ('EDA', 'EDN', 'EDF')",
             ),
         ):
-            _report(label, _rows(cursor, rule))
+            _report(label, _rows(cursor, gated=True, provenance=rule))
 
         _negro_leagues(cursor)
         _what_it_buys(cursor)
