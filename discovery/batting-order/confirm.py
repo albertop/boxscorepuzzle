@@ -77,11 +77,13 @@ from pathlib import Path
 
 _HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(_HERE.parents[1] / "discovery"))
+sys.path.insert(0, str(_HERE.parents[1] / "forge" / "scripts"))
 from bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
 from measure import Loaded, load, slot_references  # noqa: E402
+from write_reference_puzzles import reveal_for  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.erasure import erase  # noqa: E402
@@ -158,6 +160,21 @@ def _evidence(loaded: Loaded, board: object) -> Evidence:
 
 
 def _package(loaded: Loaded, erased: frozenset[str] | None) -> Package:
+    """The package production would build, **including its reveal** (v29-P1-02).
+
+    ⚠⚠ **Without the reveal the gate refuses every row, and the criterion reads that as a verdict.**
+    `certify_for_publication` requires a complete reveal — §23 puts the answer in the file — so a
+    measurement package missing one is `publishable=False` for a reason that has nothing to do with the
+    treatment. `_covered()` counts only publishable rows, and criterion 1 says **zero added overturns
+    the adoption**. The instrument would have rejected the mechanism without measuring it.
+
+    ⚠️ **The end-to-end test had already hit this and been fixed**, and the fix was not carried here.
+    A lesson learned in one file at 15:40 and not applied in the next is the shape this project keeps
+    meeting; the pre-flight check below exists so the next one costs a second rather than an afternoon.
+
+    `reveal_for` is imported from the production writer rather than reassembled, so there is one place
+    that knows what a reveal is made of.
+    """
     return Package(
         puzzle_id=puzzle_id(loaded.game_id, loaded.offense_team),
         puzzle=to_board(loaded.direction, erased),
@@ -165,8 +182,35 @@ def _package(loaded: Loaded, erased: frozenset[str] | None) -> Package:
         labels=loaded.labels,
         pitcher_labels=loaded.pitcher_labels,
         slot_references=slot_references(loaded.slots),
+        reveal=reveal_for(loaded),
         offense_is_home=loaded.offense_is_home,
     )
+
+
+def _preflight(loaded: Loaded) -> None:
+    """Prove the instrument can produce a publishable board **before** spending the run on it.
+
+    ⚠⚠ **The check that would have caught v29-P1-02 in a second.** An unerased board is the easiest
+    case there is: nothing is blank, so no treatment, no erasure and no solver is involved. If *that*
+    cannot pass the gate, the failure is in how this file assembles a package — and every row the run
+    produces would carry it, reported as though the constraint had failed.
+
+    ⚠️ Raises rather than warns. A measurement that knows its instrument is broken and runs anyway is
+    worse than one that never ran, because it produces numbers.
+    """
+    package = _package(loaded, None)
+    verdict = verify(package, secret=UNSIGNED)
+    if not verdict.accepted:
+        message = f"pre-flight: an unerased board fails the arithmetic layers: {verdict.rejection}"
+        raise SystemExit(message)
+    gate = certify_for_publication(package, evidence=_evidence(loaded, package.solution), secret=UNSIGNED)
+    if not gate.publishable:
+        message = (
+            "pre-flight: an unerased board does not reach publication, so nothing this run measures "
+            f"could. The instrument is at fault, not the treatment: {gate.refusals}"
+        )
+        raise SystemExit(message)
+    print(f"pre-flight: an unerased {loaded.game_id} board passes the gate, so the package is complete")
 
 
 def _steps(solution: object) -> tuple[int, int]:
@@ -426,6 +470,8 @@ def main() -> None:
         message = "no directions survived the gate and the pool rule; the filters here are wrong"
         raise SystemExit(message)
     print(f"{len(sample)} directions through the gate and the batting-order pool rule")
+    # ⚠️ Before the expensive half, not after: the point is to fail in a second rather than in an hour.
+    _preflight(sample[0])
 
     rows: list[Row] = []
     for number, loaded in enumerate(sample, start=1):

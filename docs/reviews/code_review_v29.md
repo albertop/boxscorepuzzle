@@ -221,3 +221,24 @@ That is not the unit used by the earlier claim being tested: "nine of eleven" re
 ### Updated verdict
 
 The production and verifier defects found earlier are corrected. The remaining decision blockers are **v29-P2-05** (measurement denominator) and the already documented need to validate whether the target of eight stalls corresponds to felt difficulty. **v29-P3-01** is documentation cleanup and does not block the experiment.
+
+---
+
+## Re-check after the direction-unit correction (2026-08-20)
+
+**v29-P2-05 is closed.** The confirmation report now reduces qualifying seed rows to one deterministic observation per gained direction, marks the selected row, and retains all seed rows for auditability. This restores the direction-level denominator used by the claim under test.
+
+### v29-P1-02 - The confirmation runner sends packages without a reveal to a gate that correctly refuses them
+
+**Severity:** P1  
+**Location:** `discovery/batting-order/confirm.py:160`, `forge/tests/test_lineup_fallback_is_adopted.py:246`
+
+`_measure()` now correctly calls `certify_for_publication()`, but `_package()` still constructs a `Package` without `reveal`. The corrected end-to-end test explicitly records that the publication gate refused its first package for a missing reveal, and fixes that fixture by supplying a `Reveal`. The confirmation runner does not carry the same fix.
+
+As a result, a fallback board can reach and pass every arithmetic layer and still be recorded as `publishable=False` solely because the measurement package is incomplete. Since `_covered()` only counts publishable rows and criterion 1 says that zero added boards overturns adoption, this can make the experiment reject the mechanism without measuring it. This is not an edge case: every row produced by this runner uses the same package builder.
+
+**Recommended fix:** construct the confirmation package through the same production package-building path, including its reveal, rather than maintaining another partial `Package(...)` assembly. If reuse is not currently possible, populate a complete `Reveal` from the loaded source metadata and add an assertion before the expensive run that one pinned produced package passes the gate for reasons unrelated to the treatment.
+
+### Updated verdict
+
+Do not run or interpret `confirm.py` yet. The direction denominator is repaired, but **v29-P1-02 makes the publication result structurally zero or gate-refused until the package includes its reveal**. After that repair, the remaining source issue is the non-blocking stale adoption comment in `lineup_fallback.py` from **v29-P3-01**. The unresolved product question about whether eight stalls corresponds to felt difficulty remains outside this code defect.

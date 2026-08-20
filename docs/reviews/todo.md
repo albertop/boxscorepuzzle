@@ -2,8 +2,8 @@
 
 ## Where everything stands
 
-**Twenty-nine reviews (two passes on the last), 134 findings, none rejected — including the first
-**P1**, and it was in an instrument's pre-registration rather than in the product. v28 was a full-tree review rather than a delta:
+**Twenty-nine reviews (three passes on the last), 135 findings, none rejected — including the first
+two **P1**s, and both were in the instrument built to check a decision rather than in the product. v28 was a full-tree review rather than a delta:
 six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
 which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
@@ -99,6 +99,33 @@ Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both 
 
 **Four more findings, all against the confirmation run rather than the product.** The adoption was
 already decided; what these say is that **nothing built to check it could have contradicted it.**
+
+### ⚠⚠⚠ v29-P1-02: the run would have rejected the mechanism without measuring it
+
+`_package()` built the measurement package **without a reveal**. `certify_for_publication` requires
+one — §23 puts the answer in the file — so every row would have been `publishable=False` for a reason
+with nothing to do with the treatment. `_covered()` counts only publishable rows, and criterion 1
+says **zero added overturns the adoption**. The instrument was set to return the verdict *reject*
+before it measured anything.
+
+⚠⚠ **And the same defect had been found and fixed forty minutes earlier, in the end-to-end test.** The
+gate refused that fixture for exactly this, the fix was written down in the test, and it was not
+carried to the runner. **A lesson applied in one file and not the next** is the shape this project
+keeps meeting — and this is the third instance today, after the ruff scope and the sweep's own
+baseline.
+
+Closed two ways. The package now takes `reveal_for` from the production writer rather than
+reassembling one, so there is a single place that knows what a reveal is made of. And **`_preflight()`
+runs before the expensive half**: it puts an *unerased* board through the gate — nothing blank, no
+treatment, no erasure, no solver — and refuses to continue if that cannot publish, because then the
+fault is in how the file assembles a package and every row would carry it.
+
+Checked by removing the reveal again: the run stops in a second with *the instrument is at fault, not
+the treatment*. With it restored, an unerased board passes the gate.
+
+⚠️ **The general form is worth more than the fix.** An expensive measurement should prove its own
+instrument works before spending the afternoon, and the cheapest proof is the trivial case — the one
+where the treatment cannot be the explanation.
 
 ### ⚠⚠⚠ v29-P1-01: the criterion was wired to a treatment that contains the control
 
