@@ -35,7 +35,14 @@ _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
-from measure import ACCEPTED_SOURCES, CONNECTION, CONTRIBUTED, SHAPE_CTE, zero_density_clause  # noqa: E402
+from measure import (  # noqa: E402
+    CONNECTION,
+    CONTRIBUTED,
+    SEASON_WINDOW,
+    SHAPE_CTE,
+    eligibility,
+    zero_density_clause,
+)
 
 from boxscore_domain import BATTER_CAP, PITCHER_CAP, ZERO_DENSITY_GATE  # noqa: E402
 
@@ -45,22 +52,19 @@ TERMS = {"hit_by_pitch": "B_HP", "sacrifice_flies": "B_SF", "sacrifice_hits": "B
 def main() -> None:
     import pyodbc  # noqa: PLC0415
 
-    accepted = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
-    # The offensive side of an admissible direction: a team whose roster fits and whose game is one the
-    # pool accepts. The zero-density half of the gate needs both sides, so it is applied as a join on
-    # the shape table exactly as `load()` does.
+    # ⚠️ **The loader's whole cohort, not a copy of part of it.** This CTE used to be written out here
+    # with the roster caps and the provenance rule, and it omitted the game-log join, the `VisLineScore`
+    # requirement and the season window — so it counted directions `load()` cannot return while calling
+    # the number the production pool. `eligibility()` is that entire FROM/JOIN/WHERE, one definition.
+    cohort = eligibility(
+        gate_clause=zero_density_clause(ZERO_DENSITY_GATE),
+        seasons=f"g.SEASON BETWEEN {SEASON_WINDOW[0]} AND {SEASON_WINDOW[1]}",
+    )
     query = f"""
     {SHAPE_CTE},
     admissible AS (
-      SELECT o.GAME_ID, o.TEAM_ID
-      FROM shape o
-      JOIN shape d ON d.GAME_ID = o.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
-      JOIN dbo.retroGamesReg g ON g.GAME_ID = o.GAME_ID
-      CROSS APPLY (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p
-                   WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
-                   ORDER BY p.source_type) AS prov
-      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP}
-        {zero_density_clause(ZERO_DENSITY_GATE)})
+      SELECT g.GAME_ID, o.TEAM_ID
+      {cohort})
     SELECT COUNT(*) AS rows_total,
            COUNT(DISTINCT a.GAME_ID) AS games,
            {", ".join(f"SUM(CASE WHEN d.{col} > 1 THEN 1 ELSE 0 END) AS many_{name}" for name, col in TERMS.items())},
@@ -72,11 +76,13 @@ def main() -> None:
     WHERE {CONTRIBUTED.replace("B_", "d.B_")}
     """  # noqa: S608 - every interpolation is a module constant; nothing here is reachable from input
 
+    # ⚠️ **One execution.** This ran the whole aggregate twice — once for the row and once more, on a
+    # fresh cursor, only to read `cursor.description` — so every measurement paid for two full scans and
+    # threw the second result away. The cursor keeps its column metadata after `fetchone()`.
     with pyodbc.connect(CONNECTION) as connection:
-        row = connection.cursor().execute(query).fetchone()
-
-    columns = [description[0] for description in connection.cursor().execute(query).description]
-    found = dict(zip(columns, row, strict=True))
+        cursor = connection.cursor().execute(query)
+        row = cursor.fetchone()
+        found = dict(zip([column[0] for column in cursor.description], row, strict=True))
     rows_total = found["rows_total"]
     if not rows_total:
         message = "no admissible batting rows at all; the filters in this script are wrong"
@@ -103,15 +109,8 @@ def main() -> None:
     per_board = f"""
     {SHAPE_CTE},
     admissible AS (
-      SELECT o.GAME_ID, o.TEAM_ID, g.SEASON
-      FROM shape o
-      JOIN shape d ON d.GAME_ID = o.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
-      JOIN dbo.retroGamesReg g ON g.GAME_ID = o.GAME_ID
-      CROSS APPLY (SELECT TOP 1 p.source_type FROM dbo.retroGameProvenance p
-                   WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
-                   ORDER BY p.source_type) AS prov
-      WHERE o.batters <= {BATTER_CAP} AND d.pitchers <= {PITCHER_CAP}
-        {zero_density_clause(ZERO_DENSITY_GATE)})
+      SELECT g.GAME_ID, o.TEAM_ID, g.SEASON
+      {cohort})
     SELECT (a.SEASON/10)*10 AS decade, COUNT(*) AS directions,
            SUM(CASE WHEN x.affected > 0 THEN 1 ELSE 0 END) AS broken
     FROM admissible a

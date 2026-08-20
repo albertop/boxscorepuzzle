@@ -11,7 +11,7 @@ from collections.abc import Callable
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from boxscore_package.format import Board, LineScore, Package
+from boxscore_package.format import Board, LineScore, Package, PackageError
 from boxscore_package.signing import sign
 from boxscore_verify.verify import UNSIGNED, Fault, Layer, check_derivability, verify
 
@@ -131,18 +131,21 @@ class TestLayerOneCatchesBadData:
         assert verdict.rejection.layer is Layer.IDENTITIES
         assert verdict.rejection.fault is Fault.BAD_DATA
 
-    def test_an_erased_footnote_total_is_malformed_rather_than_hard(self, board: Board) -> None:
-        # ⚠️ The **totals** row, not a per-batter cell. Those are erasable now: each is an unknown
-        # inside the row identity, with the totals row supplying the number that closes it. Erase the
-        # totals row instead and the identity has two unknowns and no way to separate them, which is
-        # a broken puzzle rather than a difficult one.
+    def test_an_erased_footnote_total_never_reaches_a_layer_at_all(self, board: Board) -> None:
+        """⚠️ **The rule moved from this layer to the format, and the test moved with it.**
+
+        Erasing the totals row leaves the row identity with two unknowns and no way to separate them,
+        which is a broken puzzle rather than a difficult one. Layer 1 used to say so. `check_profile`
+        now refuses it on construction *and* on parsing, so no package can carry the fault and the
+        layer's branch for it could never fire — which this project treats as broken rather than free.
+
+        Asserting the earlier refusal is the stronger statement: a fault caught by the type cannot
+        reach a verifier that might have been skipped.
+        """
         puzzle = replacing(board, footnote_totals=(None, *board.footnote_totals[1:]))
 
-        verdict = verify(package(puzzle, board), secret=UNSIGNED)
-
-        assert verdict.rejection is not None
-        assert verdict.rejection.layer is Layer.IDENTITIES
-        assert verdict.rejection.fault is Fault.MALFORMED
+        with pytest.raises(PackageError, match="footnote_totals has a blank"):
+            package(puzzle, board)
 
 
 class TestLayerTwoCatchesAmbiguity:

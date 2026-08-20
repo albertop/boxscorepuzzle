@@ -266,19 +266,19 @@ def _structure_faults(puzzle: Board, source: Board) -> list[str]:
         faults.append(f"{len(puzzle.footnotes)} footnote rows against {len(puzzle.batting)} batters")
     if puzzle.line_score != source.line_score:
         faults.append("the puzzle's line score differs from the source's")
-    # ⚠️ A per-batter footnote cell **may** be erased, and this check used to reject it. §6 gave the
-    # whole footnote line because the row identity needs its numbers — and the footnote *totals* row
-    # supplies them, so each per-batter cell is an unknown inside an identity that can close. Opening
-    # them is what takes the median board from 5 stalls to 15 and from 56% of boards reaching five to
-    # all of them, at no cost in columns or pixels.
+    # ⚠️ **Two faults left this function for the format's own boundary: an erased footnote total and
+    # an erased left-on-base.** `check_profile` refuses both on construction and on parsing, so a board
+    # reaching here cannot carry either — and a branch nothing can enter is indistinguishable from one
+    # that is broken. Named rather than silently dropped, because **deleting a fault and enforcing it
+    # earlier look identical in a diff.**
     #
-    # The totals row below is still required complete. Without it the row identity has two unknowns
-    # and no way to separate them, which is a broken puzzle rather than a hard one.
-    if any(value is None for value in puzzle.footnote_totals):
-        faults.append("a footnote total is erased, and §6 gives the footnote line complete")
-    # ⚠️ **The erased-LOB fault moved to the parse boundary, it did not disappear.** `left_on_base`
-    # is `int` now and both readers refuse a null, so a board reaching this function has one. Worth
-    # naming because deleting a fault and enforcing it earlier look identical in a diff.
+    # ⚠️ The comment that stood here still said "a per-batter footnote cell **may** be erased". That
+    # was true for about a week. The cells were closed again by the pool run, the rule moved, and the
+    # justification stayed behind explaining a world that had ended — which is worse than no comment,
+    # because it reads as current.
+    #
+    # What remains above is genuinely reachable: row counts that disagree with the source, a footnote
+    # line that does not match the lineup, and a line score the puzzle and the source do not share.
     return faults
 
 

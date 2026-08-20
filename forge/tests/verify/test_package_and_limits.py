@@ -226,12 +226,24 @@ class TestMalformedPackages:
                 offense_is_home=True,
             )
 
-    def test_a_source_with_a_hole_in_it_is_malformed(self, board: Board, blank: Blank) -> None:
-        # The source is the original boxscore, so a gap in it means the pipeline lost something
-        # rather than that the puzzle is hard.
+    def test_an_answer_board_with_a_hole_is_refused_before_it_can_be_serialised(
+        self, board: Board, blank: Blank
+    ) -> None:
+        """⚠️ **The write/read asymmetry, asserted at the constructor.**
+
+        This used to build the package and let a verifier layer reject it. That left the type able to
+        emit a document its own reader refused: construction accepted a holed answer, `as_json()` wrote
+        the null, and `from_json()` raised on the output its own writer had just produced. **A format
+        that cannot read back what it writes is not a format**, and the asymmetry is invisible to
+        anyone who only ever round-trips valid data.
+
+        The source is the original boxscore, so a gap in it means the pipeline lost something rather
+        than that the puzzle is hard — which is why the refusal belongs at the boundary that created
+        it, not three layers out.
+        """
         holed = blank(board, {"batting": [(0, 3)]})
 
-        verdict = verify(
+        with pytest.raises(PackageError, match=r"solution.batting\[0\] has a blank"):
             Package(
                 labels=("C",) * len(board.batting),
                 pitcher_labels=("C",) * len(board.pitching),
@@ -240,12 +252,22 @@ class TestMalformedPackages:
                 solution=holed,
                 slot_references=refs(board),
                 offense_is_home=True,
-            ),
-            secret=UNSIGNED,
-        )
+            )
 
-        assert verdict.rejection is not None
-        assert verdict.rejection.fault is Fault.MALFORMED
+    def test_what_the_constructor_writes_its_own_reader_accepts(self, board: Board, blank: Blank) -> None:
+        """The property the test above protects, stated positively so a constructor that refused
+        everything would not satisfy it."""
+        document = Package(
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("C",) * len(board.pitching),
+            puzzle_id="000000000000000f",
+            puzzle=blank(board, {"batting": [(0, 3)]}),
+            solution=board,
+            slot_references=refs(board),
+            offense_is_home=True,
+        ).as_json()
+
+        assert Package.from_json(document).puzzle_id == "000000000000000f"
 
     def test_a_puzzle_of_a_different_shape_from_its_source(self, board: Board) -> None:
         shorter = package_format.Board(
@@ -411,17 +433,30 @@ class TestTheTally:
                 ),
                 secret=UNSIGNED,
             ),
-            # ⚠️ **The malformed one, and it used to be malformed by having no solution at all.** That
-            # is no longer constructible, so the third verdict silently became a second acceptance and
-            # the tally asserted 1 where 2 was true. A *holed* solution still reaches layer 2, which is
-            # what this verdict is for: the tally has to distinguish layers, not only count failures.
+            # ⚠️ **The malformed one, and it has now been rewritten twice.** It was first malformed by
+            # having no solution, then by having a holed one — and each became unconstructible in turn
+            # as the schema tightened, silently turning this verdict into a second acceptance. A
+            # **complete** board whose line score disagrees with the puzzle's is malformed in a way the
+            # format cannot catch and layer 1 can, which is what this verdict is for: the tally has to
+            # distinguish layers, not only count failures.
             verify(
                 Package(
                     labels=("C",) * len(board.batting),
                     pitcher_labels=("C",) * len(board.pitching),
                     puzzle_id="000000000000000c",
-                    puzzle=board,
-                    solution=blank(board, {"batting": [(0, 3)]}),
+                    puzzle=package_format.Board(
+                        batting=board.batting,
+                        batting_totals=board.batting_totals,
+                        footnotes=board.footnotes,
+                        footnote_totals=board.footnote_totals,
+                        left_on_base=board.left_on_base,
+                        pitching=board.pitching,
+                        pitching_totals=board.pitching_totals,
+                        line_score=package_format.LineScore(
+                            **{**board.line_score.as_json(), "offense_hits": board.line_score.offense_hits + 1}
+                        ),
+                    ),
+                    solution=board,
                     slot_references=refs(board),
                     offense_is_home=True,
                 ),

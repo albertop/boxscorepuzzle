@@ -494,7 +494,7 @@ suite("⚠️ The footnote line, against the strings the PDF renderer also runs"
   // two disagreeing.
   //
   // ⚠️ **And the format change is a correctness fix.** `SH: 2` was a slot reference that reads as a
-  // count, so a row carrying two of one term could not be expressed. 4,040 of 100,742 admissible
+  // count, so a row carrying two of one term could not be expressed. 4,019 of 100,226 admissible
   // directions carry such a row — 4.01%, and 8.31% in the 1920s. Those boards cannot be solved, and
   // every total balances on them.
   const cases = vectors_footnote.cases;
@@ -547,6 +547,113 @@ suite("⚠️ The footnote line, against the strings the PDF renderer also runs"
       }
     }
     assert(checked > 0, "no term was printed at all, so this test proves nothing");
+  });
+});
+
+suite("⚠️ A cell takes two digits, and a two-digit value never starts with a zero", () => {
+  // The rule for the batting grid, and the same code path serves every cell that is a plain integer.
+  // ⚠️ **It was written twice and only one copy had a cap.** The grid path stopped at 99; the innings
+  // path grew without any bound, so `IP` accepted `8444` — four digits in a cell 44px wide.
+  //
+  // ⚠️ **And the leading zero was right by coercion rather than by rule.** `Number("05")` is 5, so the
+  // old code behaved correctly and said nothing about why. A reader could not tell it was intended, and
+  // the next person to reach for `parseInt` would have lost it without a test going red.
+  const cases = [
+    { current: null, digit: 7, want: 7, why: "an empty cell takes the digit" },
+    { current: 0, digit: 5, want: 5, why: "a two-digit value never starts with a zero" },
+    { current: 0, digit: 0, want: 0, why: "and zero itself is still a value a player can enter" },
+    { current: 1, digit: 0, want: 10, why: "a zero in the second position is a real number" },
+    { current: 8, digit: 4, want: 84, why: "two digits is the limit, not one" },
+    { current: 84, digit: 4, want: 4, why: "past two digits the cell restarts rather than refusing" },
+    { current: 99, digit: 1, want: 1, why: "the boundary itself" },
+  ];
+
+  for (const { current, digit, want, why } of cases) {
+    test(`grow(${current}, ${digit}) is ${want} — ${why}`, async () => {
+      const { grow } = await import("../ui/phone/board.js");
+
+      equal(grow(current, digit), want);
+    });
+  }
+
+  test("nothing a player can type reaches three digits", async () => {
+    // Stated as what it forbids, over every reachable pair rather than the seven above: a cap that
+    // held for the cases someone thought of is the cap that failed here in the first place.
+    const { grow } = await import("../ui/phone/board.js");
+    const wrong = [];
+
+    for (let current = 0; current <= 99; current += 1) {
+      for (let digit = 0; digit <= 9; digit += 1) {
+        const grown = grow(current, digit);
+        if (grown > 99 || grown < 0) wrong.push(`grow(${current}, ${digit}) = ${grown}`);
+      }
+    }
+    equal(wrong, [], "a reachable entry left the two-digit range");
+  });
+});
+
+suite("⚠️ The highlight paints over a filled cell", () => {
+  // ⚠️ **A defect no assertion about classes could have caught.** `paint()` set `filled`, `peer` and
+  // `selected` correctly and the board still showed nothing on the cells the player had written in —
+  // because `.cell.blank.filled` is three classes and `.cell.peer` is two, so the **ground outranked the
+  // state whatever the source order**. The player saw the highlight everywhere except where their eye
+  // was. Only a computed style can see it, which is why the real stylesheets are loaded by this page.
+  //
+  // Ground says *what kind of cell this is*; state says *where you are now*. A state that cannot paint
+  // over ground is not a state.
+  const paint = async () => {
+    const { renderSection, paint: repaint, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell } = await import("../engine/columns.js");
+    const puzzle = readPackage(packages[0].raw);
+    const game = createGame(puzzle);
+
+    const host = document.getElementById("board");
+    host.replaceChildren(
+      renderSection({
+        title: "t",
+        columns: columnsFor.batting,
+        rows: puzzle.puzzle.batting,
+        labels: puzzle.labels,
+        slots: puzzle.slotReferences,
+        cellName: battingCell,
+        totalName: totalNameFor.batting,
+        game,
+        onSelect: () => {},
+      }),
+    );
+    // Visible for the duration: `getComputedStyle` on a `hidden` subtree still resolves colours, but a
+    // test that depends on that is a test that breaks when someone changes how it is hidden.
+    host.hidden = false;
+    const blanks = [...host.querySelectorAll(".cell.blank")];
+    assert(blanks.length >= 2, "this package has fewer than two blanks, so the test proves nothing");
+    for (const cell of blanks.slice(0, 2)) {
+      game.enter(cell.dataset.cell, 1);
+      repaint(cell, game);
+    }
+    return { host, blanks };
+  };
+
+  test("a filled cell in the active row or column still shows the peer colour", async () => {
+    const { host, blanks } = await paint();
+    const plain = getComputedStyle(blanks[0]).backgroundColor;
+    blanks[0].classList.add("peer");
+    const peered = getComputedStyle(blanks[0]).backgroundColor;
+    host.hidden = true;
+
+    assert(blanks[0].classList.contains("filled"), "the cell under test is not filled, so it proves nothing");
+    assert(peered !== plain, `a filled peer kept its ground colour ${plain}`);
+  });
+
+  test("a filled cell that is selected still shows the selected colour", async () => {
+    const { host, blanks } = await paint();
+    blanks[1].classList.add("peer");
+    const peered = getComputedStyle(blanks[1]).backgroundColor;
+    blanks[1].classList.add("selected");
+    const chosen = getComputedStyle(blanks[1]).backgroundColor;
+    host.hidden = true;
+
+    assert(blanks[1].classList.contains("filled"), "the cell under test is not filled, so it proves nothing");
+    assert(chosen !== peered, `a filled selected cell painted as a peer, ${chosen}`);
   });
 });
 

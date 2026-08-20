@@ -234,7 +234,7 @@ export function renderFootnotes(puzzle, game) {
 
     // ⚠️ **`<count> #<slot>`, and the count prints even when it is one.** The old form printed the
     // term total and then bare slot references — `SH: 2` was a *slot*, not a count, and a row carrying
-    // two of one term could not be expressed at all. Measured over the gated pool: 4,040 of 100,742
+    // two of one term could not be expressed at all. Measured over the gated pool: 4,019 of 100,226
     // directions carry such a row (4.01%, 8.31% in the 1920s). Those boards cannot be solved:
     // `PA = AB + BB + HBP + SF + SH + CI` has no other route to the value, and every total still
     // balances, which is why nothing in the four layers saw it.
@@ -266,6 +266,29 @@ export function renderFootnotes(puzzle, game) {
     line.append(term);
   });
   return line;
+}
+
+/**
+ * A typed digit appended to what is already in the cell. **At most two digits, and never a leading zero.**
+ *
+ * ⚠️ **Two rules, and the innings path obeyed neither.** The grid path capped at 99; the innings path
+ * grew without any bound at all, so `IP` accepted `8444` — four digits in a cell 44px wide, and a value
+ * no baseball game has produced. One function now, because the same rule written twice is the shape
+ * every serious defect in this project has had.
+ *
+ * ⚠️ **The leading zero is refused explicitly, not left to `Number()`.** `Number("05")` is 5, so the
+ * old code happened to be right — by a coercion, not by a rule. A reader could not tell whether the
+ * behaviour was intended, and the next person to reach for `parseInt` or string concatenation would
+ * have lost it silently.
+ *
+ * Filling past two digits **replaces** rather than refusing: a player who typed the wrong number can
+ * keep typing, which is the behaviour a phone keypad has everywhere else. §27 has no fail state and
+ * this is the same principle one level down.
+ */
+export function grow(current, digit) {
+  if (current === null || current === 0) return digit;
+  const grown = Number(`${current}${digit}`);
+  return grown > 99 ? digit : grown;
 }
 
 /* ---- keypad ---------------------------------------------------------------------------------- */

@@ -1,31 +1,31 @@
 caps 13 batters / 6 pitchers, zero-density gate 30% APPLIED
-995,489 batting rows across 91,609 admissible games
+990,253 batting rows across 91,118 admissible games
 
 term                  rows with >1   share of all rows   share of rows carrying the term   max
-  hit_by_pitch                611             0.0614%                             2.03%     3
-  sacrifice_flies             707             0.0710%                             2.00%     3
-  sacrifice_hits            2,833             0.2846%                             5.61%     4
-  catcher_interference          5             0.0005%                             0.87%     2
+  hit_by_pitch                610             0.0616%                             2.04%     3
+  sacrifice_flies             700             0.0707%                             1.99%     3
+  sacrifice_hits            2,820             0.2848%                             5.62%     4
+  catcher_interference          5             0.0005%                             0.88%     2
 
-rows that cannot be read from the current format: 4,155 of 995,489
-   0.4174% of admissible batting rows
+rows that cannot be read from the current format: 4,134 of 990,253
+   0.4175% of admissible batting rows
 
 === DIRECTIONS CARRYING AT LEAST ONE UNREADABLE ROW ===
-4,040 of 100,742 admissible directions — 4.01%
+4,019 of 100,226 admissible directions — 4.01%
 
 decade   directions      broken     share
   1910        6,967         559     8.02%
   1920        6,285         522     8.31%
-  1930        6,913         347     5.02%
-  1940        5,534         268     4.84%
-  1950        5,615         213     3.79%
-  1960        6,585         254     3.86%
-  1970        9,641         342     3.55%
-  1980       10,227         286     2.80%
-  1990       11,414         373     3.27%
-  2000       12,494         422     3.38%
-  2010       11,287         297     2.63%
-  2020        7,780         157     2.02%
+  1930        6,912         347     5.02%
+  1940        5,528         267     4.83%
+  1950        5,434         205     3.77%
+  1960        6,294         242     3.84%
+  1970        9,632         342     3.55%
+  1980       10,220         286     2.80%
+  1990       11,407         373     3.27%
+  2000       12,489         422     3.38%
+  2010       11,284         297     2.63%
+  2020        7,774         157     2.02%
 
 NOTE: one unreadable row makes the whole board unsolvable. The player cannot tell one
   occurrence from two, and the row identity has no other route to the value. Every total still

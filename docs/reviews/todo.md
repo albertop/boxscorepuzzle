@@ -2403,14 +2403,14 @@ sacrifices in slot 2*.
 
 | term | rows with more than one | of the rows carrying it | max |
 |---|---|---|---|
-| sacrifice_hits | 2,833 | 5.61% | 4 |
-| hit_by_pitch | 611 | 2.03% | 3 |
-| sacrifice_flies | 707 | 2.00% | 3 |
-| catcher_interference | 5 | 0.87% | 2 |
+| sacrifice_hits | 2,820 | 5.62% | 4 |
+| hit_by_pitch | 610 | 2.04% | 3 |
+| sacrifice_flies | 700 | 1.99% | 3 |
+| catcher_interference | 5 | 0.88% | 2 |
 
 ⚠️ **The denominator that decides is directions, not rows.** One unreadable row breaks the whole board,
 so a per-row rate understates the damage by the number of rows on a board — 0.27% of rows reads like a
-rounding error. **4,040 of 100,742 admissible directions carry at least one: 4.01%.** It clusters where
+rounding error. **4,019 of 100,226 admissible directions carry at least one: 4.01%.** It clusters where
 the pool is thinnest: **8.31% in the 1920s and 8.02% in the 1910s** against 2.02% in the 2020s, because the sacrifice was a
 dead-ball-era habit.
 

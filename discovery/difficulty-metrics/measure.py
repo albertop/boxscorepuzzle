@@ -83,6 +83,65 @@ TAIL_TRIM = 3
 SEED = 20260817
 
 
+ACCEPTED_LITERAL: Final = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
+"""§32's accepted source types as a SQL list. Derived from `ACCEPTED_SOURCES`, never spelled."""
+
+SEASON_WINDOW: Final = (1910, 2029)
+"""The seasons the sampler draws from, hoisted out of the decade loop that spelled it.
+
+⚠️ An instrument measuring *the pool* has to apply this too. Retrosheet reaches back to 1871 and
+the sampler never touches those games, so a denominator without this window counts boards `load()`
+cannot return.
+"""
+
+
+def eligibility(
+    *,
+    max_batters: int = BATTER_CAP,
+    min_pitchers: int = 0,
+    max_pitchers: int = PITCHER_CAP,
+    gate_clause: str = "",
+    seasons: str = "g.SEASON BETWEEN ? AND ?",
+) -> str:
+    """**The whole candidate cohort**: the provenance rule, both roster caps, the game-log join, the
+    line score requirement, the season window and — when asked for — §5's zero-density gate.
+
+    ⚠️ **Hoisted because sharing part of a cohort is worse than sharing none.** The first repair to
+    `footnote-multiplicity` shared `SHAPE_CTE` and the gate and left the game-log join, the
+    `VisLineScore` requirement and the season window behind — so the instrument still counted games
+    `load()` cannot return, and its report still called that number the production pool. **A fix that
+    solves most of a problem reads exactly like one that solves all of it**, which is why the whole
+    thing is one string now rather than three shared fragments and a hope.
+    """
+    return f"""FROM dbo.retroGamesReg g
+    CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
+                 WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({ACCEPTED_LITERAL})
+                 ORDER BY p.source_type) AS prov
+    JOIN shape o ON o.GAME_ID = g.GAME_ID
+    JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
+    JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
+    -- Caps are arguments so an instrument can vary them, but the defaults are the decided pair and
+    -- they are **imported rather than spelled**: ≤13 batters and ≤6 pitchers (§5, §6). Written as
+    -- literals here they were also literals at twenty-five call sites, which is how ≤4 outlived the
+    -- measurement supporting it. Anything measured under ≤2 or ≤4 pitchers describes a board that is
+    -- no longer being built.
+    WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
+      AND l.VisLineScore IS NOT NULL
+      AND {seasons}
+      -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
+      -- identity, which is why the exclusion has to be a join rather than a check: nothing
+      -- downstream can catch a board that is consistent and still wrong.
+      -- ⚠️ EXISTS over an acceptance list, never NOT EXISTS over an exclusion list. The previous
+      -- form admitted a game with **no provenance row at all**: absence satisfied "not excluded", so
+      -- a partial import, a new season or an identifier mismatch silently turned "source unknown"
+      -- into "source approved". Completeness of the provenance table was an unstated precondition.
+      -- The acceptance rule lives in the CROSS APPLY above: a game with no accepted, non-deduced
+      -- provenance row produces no row at all. Stating it twice is the defect this file spent the day
+      -- closing, so the EXISTS that used to sit here is gone rather than kept as a belt.
+      {gate_clause}
+    """
+
+
 SHAPE_CTE: Final = f"""    WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
              -- Only rows that actually batted. See the note on the batting query below.
@@ -394,7 +453,6 @@ def load(
     import pyodbc  # noqa: PLC0415
 
     gate_clause = zero_density_clause(gate)
-    accepted = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
     query = f"""
     {SHAPE_CTE}
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
@@ -433,32 +491,7 @@ def load(
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_at_bats,
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
-    FROM dbo.retroGamesReg g
-    CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
-                 WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({accepted})
-                 ORDER BY p.source_type) AS prov
-    JOIN shape o ON o.GAME_ID = g.GAME_ID
-    JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
-    JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
-    -- Caps are arguments so an instrument can vary them, but the defaults are the decided pair and
-    -- they are **imported rather than spelled**: ≤13 batters and ≤6 pitchers (§5, §6). Written as
-    -- literals here they were also literals at twenty-five call sites, which is how ≤4 outlived the
-    -- measurement supporting it. Anything measured under ≤2 or ≤4 pitchers describes a board that is
-    -- no longer being built.
-    WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
-      AND l.VisLineScore IS NOT NULL
-      AND g.SEASON BETWEEN ? AND ?
-      -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
-      -- identity, which is why the exclusion has to be a join rather than a check: nothing
-      -- downstream can catch a board that is consistent and still wrong.
-      -- ⚠️ EXISTS over an acceptance list, never NOT EXISTS over an exclusion list. The previous
-      -- form admitted a game with **no provenance row at all**: absence satisfied "not excluded", so
-      -- a partial import, a new season or an identifier mismatch silently turned "source unknown"
-      -- into "source approved". Completeness of the provenance table was an unstated precondition.
-      -- The acceptance rule lives in the CROSS APPLY above: a game with no accepted, non-deduced
-      -- provenance row produces no row at all. Stating it twice is the defect this file spent the day
-      -- closing, so the EXISTS that used to sit here is gone rather than kept as a belt.
-      {gate_clause if gated else ""}
+    {eligibility(max_batters=max_batters, min_pitchers=min_pitchers, max_pitchers=max_pitchers, gate_clause=gate_clause)}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     # The same SELECT with the sampling replaced by a name list. Built from the query above rather
@@ -545,7 +578,7 @@ def load(
         # Stratified by decade on purpose. The pool is not spread evenly across eras, and a sample
         # that lands in one decade would describe that decade's roster habits rather than the board.
         candidates = []
-        for decade in range(1910, 2030, 10):
+        for decade in range(SEASON_WINDOW[0], SEASON_WINDOW[1] + 1, 10):
             candidates += cursor.execute(query, limit, decade, decade + 9).fetchall()
         if also:
             # ⚠️ Keyed by game *and* offensive team, because a game is two directions and they are two

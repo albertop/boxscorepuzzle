@@ -101,7 +101,7 @@ def footnote_line(board: Board, slots: "Sequence[int]") -> str:
     ⚠️ **The count is what makes the board solvable, and it used to be absent.** The old form printed
     `SH: 2`, which is a *slot reference* and reads as a count — the two could not be told apart, and a
     row carrying two of one term could not be expressed at all. Measured over the admissible pool:
-    **4,040 of 100,742 directions carry at least one such row — 4.01%**, and 8.31% in the 1920s where
+    **4,019 of 100,226 directions carry at least one such row — 4.01%**, and 8.31% in the 1920s where
     the pool is thinnest. Those boards cannot be solved: `PA = AB + BB + HBP + SF + SH + CI` has no
     other route to the value, and **every total still balances**, which is why nothing in the four
     layers saw it.

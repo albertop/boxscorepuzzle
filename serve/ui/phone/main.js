@@ -12,6 +12,7 @@ import { PackageError, readPackage } from "../../engine/package.js";
 import { text } from "../../engine/strings.js";
 import {
   columnsFor,
+  grow,
   paint,
   renderFootnotes,
   renderKeypad,
@@ -143,13 +144,13 @@ function boot({ puzzle }) {
         const current = game.value(selected) ?? 0;
         game.enter(selected, Math.floor(current / 3) * 3 + key.thirds);
       } else if (innings) {
+        // The whole innings grow; the thirds are held by the branch above. ⚠️ This had no cap at all
+        // while the grid path below capped at two digits — one rule, two spellings, and only one of
+        // them written down.
         const current = game.value(selected) ?? 0;
-        const whole = Number(`${Math.floor(current / 3)}${key.digit}`);
-        game.enter(selected, whole * 3 + (current % 3));
+        game.enter(selected, grow(Math.floor(current / 3), key.digit) * 3 + (current % 3));
       } else {
-        const current = game.value(selected);
-        const grown = current === null ? key.digit : Number(`${current}${key.digit}`);
-        game.enter(selected, grown > 99 ? key.digit : grown);
+        game.enter(selected, grow(game.value(selected), key.digit));
       }
       repaint();
     }),

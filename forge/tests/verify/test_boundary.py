@@ -98,7 +98,7 @@ class TestTheFormatRefusesMalformedBoards:
     def test_a_footnote_line_with_a_hole_in_it(self, tmp_path: Path, board: Board) -> None:
         # §6 gives the footnote totals complete and never erased, so a null there is malformed
         # rather than difficult, and saying so at the boundary is cheaper than deducing it later.
-        with pytest.raises(PackageError, match="never erased"):
+        with pytest.raises(PackageError, match="footnote_totals has a blank"):
             read(written(tmp_path, board, puzzle__footnote_totals=[0, None, 0, 0]))
 
     def test_footnote_rows_that_do_not_match_the_lineup(self, tmp_path: Path, board: Board) -> None:

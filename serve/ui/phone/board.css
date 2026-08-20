@@ -234,13 +234,6 @@ td.label.substitute { padding-left: 14px; }
    `outline` rather than `border`, and that is the whole point: an outline is drawn outside the border
    box and **takes part in no layout**, so the 44px touch target keeps all 44 of its pixels. A 1.5px
    border inside the cell would have quietly made it 41px, which is under the minimum §6 measured. */
-/* ⚠️ **The pale ground means one thing: empty and editable.** A filled cell kept it, so a blue `5` on
-   pale blue and an empty pale-blue cell read alike at a glance — the ground was saying *editable* and
-   being heard as *empty*. Filled goes white and the digit alone carries the colour, which also keeps
-   the three empty states — plain, cream on the active row or column, amber on the active cell — as far
-   apart as they were. They were already close to the limit of what separates at a glance. */
-.cell.blank.filled { background: var(--paper); }
-
 .cell.blank {
   background: var(--blank);
   color: var(--entered);
@@ -257,7 +250,23 @@ td.label.substitute { padding-left: 14px; }
      pixel in costs nothing the instruction was protecting and removes the collision. */
   outline-offset: -1px;
 }
+/* ⚠️ **The pale ground means one thing: empty and editable.** A filled cell kept it, so a blue `5` on
+   pale blue and an empty pale-blue cell read alike at a glance — the ground was saying *editable* and
+   being heard as *empty*. Filled goes white and the digit alone carries the colour, which also keeps
+   the three empty states — plain, cream on the active row or column, amber on the active cell — as far
+   apart as they were. They were already close to the limit of what separates at a glance. */
+.cell.blank:where(.filled) { background: var(--paper); }
+
 .cell.blank:empty::after { content: ""; }
+/* ⚠️ **Ground first, then state, and the two must not compete on specificity.**
+   `.cell.blank.filled` is three classes and these are two, so **the ground outranked the state
+   whatever the source order** — a filled cell kept its white and lost both the cream of the active row
+   or column and the amber of the selection. The player saw the highlight on every given cell and on
+   every empty one, and nothing on the cells they had actually written in, which is where the eye was.
+   `:where()` on `.filled` contributes no specificity, so the ground rules sit at two classes like
+   these and **the later rule wins, which is what the cascade is for.**
+   This is not a CSS detail: ground says *what kind of cell this is*, state says *where you are now*,
+   and state has to be able to paint over ground or it is not a state. */
 .cell.peer { background: var(--peer); }
 .cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
 

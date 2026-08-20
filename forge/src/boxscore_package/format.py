@@ -141,7 +141,7 @@ class PackageError(Exception):
     """The file is not a puzzle package, or is a version this code does not know."""
 
 
-def _cells(raw: object, width: int, where: str, *, complete: bool = False) -> tuple[int | None, ...]:
+def _cells(raw: object, width: int, where: str) -> tuple[int | None, ...]:
     """One row of the grid, checked at the boundary rather than three layers later.
 
     A package that is valid JSON and malformed as a board must produce a controlled `PackageError`
@@ -157,36 +157,80 @@ def _cells(raw: object, width: int, where: str, *, complete: bool = False) -> tu
     for index, value in enumerate(raw):
         # bool is an int in Python and never a cell value, so it is excluded explicitly.
         if value is None:
-            if complete:
-                message = f"{where}[{index}] is empty, and this part of the board is never erased"
-                raise PackageError(message)
+            pass
         elif not isinstance(value, int) or isinstance(value, bool):
             message = f"{where}[{index}] is {value!r}, expected a whole number or null"
             raise PackageError(message)
     return tuple(raw)
 
 
-def _rows(raw: object, width: int, where: str, *, complete: bool = False) -> tuple[tuple[int | None, ...], ...]:
-    """The rows of a grid. `complete` forbids a blank cell anywhere in them.
+def check_profile(board: object, where: str, *, complete: bool) -> None:
+    """Which cells of a board may be blank. **One rule, used by construction and by parsing.**
 
-    ⚠️ **`complete` is the footnote line, and it is the difference between versions 3 and 4.** A null
-    here used to be an erasable cell; it is now a blank the player is asked for and given no way to
-    enter, because the line renders as read-only text. Refused at the boundary rather than discovered
-    when a finished board refuses to be finished.
+    | profile | may be blank |
+    |---|---|
+    | puzzle (`complete=False`) | the batting and pitching grids, and their totals rows |
+    | answer (`complete=True`) | nothing, anywhere |
+
+    The footnote line and `left_on_base` are given in both: §6 never erases them, and the row identity
+    does not close without the footnote totals.
+
+    ⚠️ **This lives outside `from_json` because the null policy applied only at the parse boundary let
+    the type write what it could not read.** A directly constructed `Package` carrying an answer board
+    with one null cell was accepted, `as_json()` emitted the null, and `from_json()` refused the
+    document its own writer had just produced. **A format that cannot read back its own output is not a
+    format**, and the asymmetry is invisible to anyone who only ever round-trips valid data.
+
+    Same shape and same fix as `_check_slot_references` below, which was hoisted for exactly this after
+    `__post_init__` and `from_json` were found applying different subsets of one rule.
+
+    ⚠️ **The parameter is `object`, not `Board`, and that is the point.** Annotated `Board`, mypy calls
+    the `isinstance` below unreachable — correctly, for code it can see. But a frozen dataclass does not
+    check its own field types at runtime, so a directly built `Package` can carry a `str` where a board
+    belongs, and it did: the value travelled to `as_json()` and died there with an `AttributeError`
+    instead of being refused at the boundary that created it. **A type is a promise; this is the check.**
+    """
+    if not isinstance(board, Board):
+        message = f"{where} is {type(board).__name__}, expected a board"
+        raise PackageError(message)
+    # Widened deliberately, same reason: the annotation says `int` and nothing enforces it.
+    left_on_base: object = board.left_on_base
+    if not isinstance(left_on_base, int) or isinstance(left_on_base, bool):
+        message = f"{where}.left_on_base is {left_on_base!r}; §6 never erases it"
+        raise PackageError(message)
+
+    always: list[tuple[str, tuple[tuple[int | None, ...], ...]]] = [("footnotes", board.footnotes)]
+    grids: list[tuple[str, tuple[tuple[int | None, ...], ...]]] = [
+        ("batting", board.batting),
+        ("pitching", board.pitching),
+    ]
+    for name, rows in always + (grids if complete else []):
+        for index, row in enumerate(rows):
+            if any(cell is None for cell in row):
+                message = f"{where}.{name}[{index}] has a blank and must be given"
+                raise PackageError(message)
+
+    totals: list[tuple[str, tuple[int | None, ...]]] = [("footnote_totals", board.footnote_totals)]
+    if complete:
+        totals += [("batting_totals", board.batting_totals), ("pitching_totals", board.pitching_totals)]
+    for name, row in totals:
+        if any(cell is None for cell in row):
+            message = f"{where}.{name} has a blank and must be given"
+            raise PackageError(message)
+
+
+def _rows(raw: object, width: int, where: str) -> tuple[tuple[int | None, ...], ...]:
+    """The rows of a grid: shape and cell type only.
+
+    ⚠️ **Which cells may be blank is not decided here.** That is `check_profile`, and it is one
+    function because it has to answer for a board built in memory as well as one parsed from a
+    document — `as_json()` could emit an answer board with a hole that `from_json()` then refused,
+    which is a format that cannot read back what it writes.
     """
     if not isinstance(raw, list):
         message = f"{where} is {type(raw).__name__}, expected a list of rows"
         raise PackageError(message)
-    rows = tuple(_cells(row, width, f"{where}[{index}]") for index, row in enumerate(raw))
-    if complete:
-        for index, row in enumerate(rows):
-            if any(cell is None for cell in row):
-                # Names the position rather than one of the rules that reach here: `complete` covers
-                # the footnote line and the whole answer board, and naming the wrong rule sends the
-                # reader to the wrong contract.
-                message = f"{where}[{index}] has a blank and must be given"
-                raise PackageError(message)
-    return rows
+    return tuple(_cells(row, width, f"{where}[{index}]") for index, row in enumerate(raw))
 
 
 def _required(raw: dict[str, Any], field: str) -> object:
@@ -334,27 +378,27 @@ class Board:
         if not isinstance(raw, dict):
             message = f"a board is {type(raw).__name__}, expected an object"
             raise PackageError(message)
-        batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting", complete=complete)
-        # Complete in both profiles: the footnote line is given in full from schema 4.
-        footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes", complete=True)
+        batting = _rows(raw.get("batting"), len(BATTING_COLUMNS), "batting")
+        footnotes = _rows(raw.get("footnotes"), len(FOOTNOTE_COLUMNS), "footnotes")
         if len(footnotes) != len(batting):
             message = f"{len(footnotes)} footnote rows against {len(batting)} batting rows"
             raise PackageError(message)
-        return cls(
+        board = cls(
             batting=batting,
-            batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals", complete=complete),
+            batting_totals=_cells(raw.get("batting_totals"), len(BATTING_COLUMNS), "batting_totals"),
             footnotes=footnotes,
             # The footnote TOTALS row is never erased — the row identity does not close without it —
             # so a null in it is
             # malformed rather than difficult.
-            footnote_totals=_cells(raw.get("footnote_totals"), len(FOOTNOTE_COLUMNS), "footnote_totals", complete=True),
+            footnote_totals=_cells(raw.get("footnote_totals"), len(FOOTNOTE_COLUMNS), "footnote_totals"),
             left_on_base=_whole_number(raw.get("left_on_base"), "left_on_base"),
-            pitching=_rows(raw.get("pitching"), len(PITCHING_COLUMNS), "pitching", complete=complete),
-            pitching_totals=_cells(
-                raw.get("pitching_totals"), len(PITCHING_COLUMNS), "pitching_totals", complete=complete
-            ),
+            pitching=_rows(raw.get("pitching"), len(PITCHING_COLUMNS), "pitching"),
+            pitching_totals=_cells(raw.get("pitching_totals"), len(PITCHING_COLUMNS), "pitching_totals"),
             line_score=LineScore.from_json(raw.get("line_score", {})),
         )
+        # The policy, after the shape. One function, so parsing and construction cannot diverge.
+        check_profile(board, "board", complete=complete)
+        return board
 
 
 LEAKING_METADATA: Final = frozenset({"game_id", "retrosheet_id", "season", "date", "teams"})
@@ -515,13 +559,10 @@ class Package:
         # certified on the forge with no labels at all, and the browser then refused it for exactly that
         # — two readers of one schema disagreeing about what the schema requires, which is the failure
         # shape this project is named for. The document says one label per row; so does this now.
-        # ⚠️ **Here as well as in `from_json`, and for the reason recorded above it.** A check living
-        # only at the parse boundary lets the generator construct, sign and certify a package the
-        # browser then refuses — which is exactly what happened with `labels`, one screen down.
-        for index, row in enumerate(self.puzzle.footnotes):
-            if any(cell is None for cell in row):
-                message = f"puzzle.footnotes[{index}] has a blank; the footnote line is given in full"
-                raise PackageError(message)
+        # ⚠️ **The same rule the parser applies, and for the reason `check_profile` records.** A policy
+        # living only at the parse boundary let this type emit a document its own reader refused.
+        check_profile(self.puzzle, "puzzle", complete=False)
+        check_profile(self.solution, "solution", complete=True)
         _check_labels(self.labels, len(self.puzzle.batting), "labels")
         _check_labels(self.pitcher_labels, len(self.puzzle.pitching), "pitcher_labels")
         if self.schema is not None:

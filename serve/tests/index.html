@@ -1,9 +1,17 @@
 <title>engine tests</title>
+<!-- ⚠️ The board's real stylesheets, because one class of defect is only visible through the
+     cascade: `.cell.blank.filled` is three classes and `.cell.peer` is two, so the ground outranked
+     the state whatever the source order and a filled cell lost every highlight. No assertion about
+     classes can see that — the classes were all correct. Loaded here so a test can read a computed
+     background, and scoped to `#board` so they do not restyle the report. -->
+<link rel="stylesheet" href="../ui/phone/tokens.css">
+<link rel="stylesheet" href="../ui/phone/board.css">
 <style>
   body { font: 13px ui-monospace, monospace; margin: 1rem; background: #111; color: #ddd; }
   h1 { font-size: 15px; } h2 { font-size: 13px; color: #8ab; margin: 1.2em 0 .3em; }
   p { margin: .1em 0; } .pass { color: #7c7; } .fail { color: #f77; }
 </style>
+<div id="board" hidden></div>
 <main id="out"></main>
 <script type="module">
   import { run } from "./harness.js";
