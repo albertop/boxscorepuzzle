@@ -133,7 +133,7 @@ INVENTORY_ALERT_MONTHS: Final = 3
 """Alert below this. **PROVISIONAL.** Two months of slack to notice and rebuild."""
 
 # ---------------------------------------------------------------------------------------------------
-# Batting-order constraint — experimental, not adopted (docs/reviews/batting-order-reversal.md)
+# Batting-order constraint — ADOPTED (docs/reviews/batting-order-plan.md; history in -reversal.md)
 # ---------------------------------------------------------------------------------------------------
 
 LINEUP_DIVISION_SHARE_CAP: Final = 0.20

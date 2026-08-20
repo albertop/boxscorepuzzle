@@ -18,6 +18,33 @@ findings come from tracing the changed source and its existing tests.
 
 ## Findings
 
+### v29-P1-01 - The confirmation arm contains the control arm, making `lost` impossible by construction
+
+- **Persona:** Statistician/methodologist / data scientist / solo-maintainer
+- **Severity:** P1
+- **Location:** `discovery/batting-order/confirm.py:14`, `discovery/batting-order/confirm.py:20`, `discovery/batting-order/confirm.py:123`, `discovery/batting-order/confirm.py:128`, `discovery/batting-order/confirm.py:176`, `forge/src/boxscore_forge/lineup_fallback.py:81`
+- **Description:** The pre-registration defines `lost` as a direction that reaches the target plain but
+  not through the fallback, and uses gained-minus-lost as its first adoption criterion. The `plain` arm
+  calls `erase()` directly. The `fallback` arm calls `erase_with_lineup_fallback()` with the same seed
+  and target; that wrapper first makes the identical plain call and returns that exact puzzle whenever
+  it succeeds. Consequently every direction covered by `plain` is necessarily covered by `fallback`.
+  `plain - fallback` is structurally empty, not an observed zero.
+- **Impact:** The headline comparison cannot measure a cost of adopting the mechanism. `lost` can never
+  be positive, so net gain can be zero or favourable but never negative; a criterion described as able
+  to overturn the adoption is wired to one treatment that contains the other. The per-seed table does
+  not repair this because the containment holds independently for every seed. This is the same
+  saturation shape the pre-registration says it was written to prevent, now built into the arm rather
+  than the target.
+- **Reproduction:** For any target and seed where the plain row is reached and certified, follow the
+  fallback call. Its first call is the same `erase(direction, target_stalls=target, seed=seed)` and it
+  returns immediately with reason `"plain"`. Verification is deterministic on the same erased board,
+  so `_covered(rows, "plain", ...) - _covered(rows, "fallback", ...)` is empty for every run.
+- **Recommended fix and rationale:** Separate the two questions. Measure treatment trade-offs with a
+  true constraint-on arm that calls `erase(..., slots=slots)` against the plain arm at the same seed.
+  Measure product coverage with the conditional fallback wrapper, while stating explicitly that this
+  path is monotone by design and has no meaningful `lost` category. Do not compare a net figure from
+  one treatment definition with an earlier figure from another.
+
 ### v29-P2-01 - Uniqueness and end-to-end verification omit the adopted lineup relations
 
 - **Persona:** Software architect / verification and test engineer / solo-maintainer
@@ -78,6 +105,60 @@ findings come from tracing the changed source and its existing tests.
   `verify()` assertion only if per-layer attribution is useful; it is not a substitute for the gate the
   production writer calls.
 
+### v29-P2-03 - The authoritative coverage instrument equates `verify()` with publication certification
+
+- **Persona:** Software architect / data scientist / verification engineer
+- **Severity:** P2
+- **Location:** `discovery/batting-order/confirm.py:1`, `discovery/batting-order/confirm.py:22`, `discovery/batting-order/confirm.py:32`, `discovery/batting-order/confirm.py:64`, `discovery/batting-order/confirm.py:150`, `forge/scripts/write_reference_puzzles.py:146`
+- **Description:** `confirm.py` says it measures boards that can actually publish, defines coverage as
+  passing every certification layer, and stores the result in a field named `certified`. `_measure()`
+  calls only `verify(..., secret=UNSIGNED)`. Production publication calls
+  `certify_for_publication()`, which additionally applies plausibility and independent evidence checks.
+  The confirmation instrument imports neither that gate nor `Evidence` and therefore cannot answer its
+  stated question.
+- **Impact:** A generator result can be counted as covered and publishable here while the real writer
+  refuses it for roster plausibility, source provenance, game identity, or official-total
+  corroboration. The certification-refusal share and the 8-stall coverage figure are then numbers about
+  the arithmetic verifier, not about the product, despite the report explicitly presenting them as the
+  latter. Using `UNSIGNED` also means the signature layer is deliberately bypassed, so the phrase “all
+  five layers” should not be used as evidence that the publication boundary ran.
+- **Reproduction:** Compare line 152 with the writer's gate at `write_reference_puzzles.py:146`. Alter
+  the independent evidence so that official totals disagree while keeping the package internally
+  consistent. `verify()` accepts the arithmetic package and this instrument records `certified=True`;
+  `certify_for_publication()` refuses it.
+- **Recommended fix and rationale:** Build `Evidence` from the same `Loaded` fields the production
+  writer uses and call `certify_for_publication()` on the measured package. Store both arithmetic-layer
+  acceptance and publication-gate acceptance if the distinction is useful, with names that do not
+  conflate them. An unsigned discovery run may deliberately skip cryptographic authenticity, but it
+  must still execute the same plausibility and evidence boundary whose outcome it reports.
+
+### v29-P2-04 - The filler criterion is computed over common, lower-target and plain-return rows
+
+- **Persona:** Statistician/methodologist / data scientist
+- **Severity:** P2
+- **Location:** `discovery/batting-order/confirm.py:25`, `discovery/batting-order/confirm.py:223`, `discovery/batting-order/confirm.py:229`, `discovery/batting-order/confirm.py:240`
+- **Description:** The pre-registered third criterion is causal deductions versus division filler on
+  the gained boards at the hard end. The per-direction table first identifies directions gained at
+  target 8, but chooses each displayed row from every certified fallback-arm row for that direction,
+  without requiring `target == 8` or `reason == "fallback"`. The aggregate immediately below is broader
+  still: it sums every certified row at all five targets and all three seeds, including common boards
+  and fallback-arm rows whose wrapper returned the plain result. Those plain-return rows necessarily
+  carry zero lineup division and dilute the filler share.
+- **Impact:** The report does not calculate the criterion written at the top of the same file. A
+  favourable all-target aggregate can hide filler-heavy target-8 gains, and `max(stalls)` can select a
+  different target or treatment path from the board whose membership in `gained` is being explained.
+  This can confirm the adoption with evidence from easier or common boards that the pre-registration
+  explicitly excluded.
+- **Reproduction:** Take a direction gained through a fallback row at target 8 and also reached plain at
+  a lower target. The lower-target row enters the aggregate with zero division. It is also eligible for
+  the `max()` at line 229 because that selection filters neither target nor reason. Neither row is the
+  target-8 fallback observation the criterion names.
+- **Recommended fix and rationale:** Form one explicit analysis cohort from rows with `target == 8`,
+  `arm == "fallback"`, `reason == "fallback"`, `certified`, and a direction in the paired gained set.
+  Report causal and division counts only for that cohort, per seed unless a direction-level reduction
+  rule was pre-registered. If one row per direction is required, choose the seed deterministically
+  before reading outcomes rather than maximizing over targets and seeds.
+
 ### v29-P3-01 - Active source and decision records disagree about whether batting order is adopted
 
 - **Persona:** Software architect / technical writer / solo-maintainer
@@ -106,15 +187,37 @@ findings come from tracing the changed source and its existing tests.
 
 ## Verdict
 
-No P0 or P1 finding was identified. v29 found **two P2 findings and one P3**. The independent lineup arithmetic
+v29 found **one P1, four P2 findings and one P3**. The independent lineup arithmetic
 and relation implementations agree on the cases covered by the new tests, slot parsing is taken from
 the signed package boundary, and the conditional retry remains scoped to the production writer rather
-than turning the constraint on globally. The blocking issue is integration: all four verification
-layers must reason about the same published clue set, and the gate needs one non-vacuous fallback package
-test before adoption can be considered complete.
+than turning the constraint on globally. The blocking issue is now the confirmation instrument: its
+comparison cannot observe losses, its certification predicate is not the publication gate, and its
+filler calculation does not use the pre-registered cohort.
 
 Recommended order:
 
-1. Keep package slots threaded through every model-bearing layer and make the fallback test fail rather than skip when its precondition disappears.
-2. Pass the fallback-produced package through `certify_for_publication()`, not only `verify()`.
-3. Finish updating the active module contracts and superseded decision text.
+1. Stop the confirmation run and separate the constraint-on comparison from conditional product coverage.
+2. Make both the adoption test and confirmation instrument call `certify_for_publication()` on a real fallback result, failing rather than skipping when none exists.
+3. Restrict the filler analysis to pre-registered target-8 gained observations.
+4. Finish updating the two remaining stale source statements about adoption.
+
+---
+
+## Re-check after the latest corrections (2026-08-20)
+
+The latest implementation closes **v29-P1-01**, **v29-P2-01**, **v29-P2-02**, **v29-P2-03**, and **v29-P2-04**. The fallback test is now pinned and non-skipping, the publication gate is exercised, the confirmation runner uses publication certification, and lineup slots are threaded through every verifier path. **v29-P3-01 remains partially open** because two source comments still describe lineup arithmetic as experimental or unreachable in production.
+
+### v29-P2-05 - The filler decision silently changes its unit from directions to direction-seed rows
+
+**Severity:** P2  
+**Location:** `discovery/batting-order/confirm.py:291`, `discovery/batting-order/confirm.py:303`
+
+`_covered()` and `_gained_cohort()` identify gains at direction level, but `_gained_cohort()` then returns every successful fallback row for every seed. `_report_filler()` uses `len(cohort)` as the denominator and aggregates filler across those rows. A gained direction that succeeds under all three seeds therefore receives three votes, while one that succeeds under only one seed receives one.
+
+That is not the unit used by the earlier claim being tested: "nine of eleven" referred to directions, and the requested follow-up was explicitly per direction. The weighting can reverse the majority criterion without any change in the underlying set of useful directions, so it can change the adoption decision for purely incidental seed-frequency reasons.
+
+**Recommended fix:** pre-register one decision unit and keep it throughout the comparison. The least surprising option is to retain directions as the unit: emit the seed rows for transparency, reduce them to one deterministic classification per gained direction, and evaluate the majority over gained directions. If seed rows are intentionally the unit instead, state that explicitly and do not compare the result with the earlier 9-of-11 direction result.
+
+### Updated verdict
+
+The production and verifier defects found earlier are corrected. The remaining decision blockers are **v29-P2-05** (measurement denominator) and the already documented need to validate whether the target of eight stalls corresponds to felt difficulty. **v29-P3-01** is documentation cleanup and does not block the experiment.

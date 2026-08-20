@@ -203,9 +203,10 @@ easy board — 12% trivial steps at a chain target of 5 against 19-20% for the o
 # nothing in baseball, so it bought nothing for the complexity it carried.
 
 
-# ⚠️ Six keyword arguments, one over the limit, and the sixth is `slots` — experimental and
-# defaulted off. Silenced rather than split: the alternative is a second erasure function, and a
-# walk that exists twice is the defect this project keeps finding.
+# ⚠️ Six keyword arguments, one over the limit, and the sixth is `slots` — adopted, and defaulted
+# off because the *first* attempt is always without it. Silenced rather than split: the alternative
+# is a second erasure function, and a walk that exists twice is the defect this project keeps
+# finding.
 def erase(  # noqa: PLR0913
     direction: Direction,
     *,

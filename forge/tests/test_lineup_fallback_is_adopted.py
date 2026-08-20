@@ -25,6 +25,11 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 SCRIPTS = ROOT / "scripts"
+GAME = "SLN19680808"
+OFFENSE = "CHN"
+"""The game the shared fixture is, so the evidence and the identifier describe the same one. The gate
+checks that they agree — an arbitrary id with matching evidence is the gap it exists to close."""
+
 FALLBACK = "boxscore_forge.lineup_fallback"
 """⚠️ Named for what it is, not for what it was. This constant was `EXPERIMENTAL` while the module was,
 and kept the name for a commit after production started calling it — v29-P3-01. An identifier that
@@ -153,6 +158,44 @@ class TestAFallbackBoardActuallyPublishes:
     SLOTS = (1, 2, 3, 4, 5, 6, 7, 8, 9)
     """The shared fixture is nine rows, one per place, with no substitution."""
 
+    SEED = 1
+    FALLBACK_TARGET = 4
+    """⚠️ Found by probing this fixture, not guessed: at four stalls with seed one the plain erasure
+    misses and the fallback reaches. Targets 8 and above are `unreachable` even with the constraint, so
+    a test pinned there would assert nothing about publication."""
+    """⚠️ Pinned, not searched. A test that hunts for the first target the plain path misses will
+    silently move to a different case when the erasure changes, and then it is exercising something
+    nobody chose. Asserted below, so if this board stops needing the fallback here the test says so
+    rather than quietly testing the plain path."""
+
+    @staticmethod
+    def _evidence(package: object) -> object:
+        """Independent corroboration, in the shape the gate requires.
+
+        ⚠️ Taken from the solution board's line score, which §6 gives complete and never erases — so it
+        is *given* rather than derived from the rows it corroborates. In production these come from the
+        game log, which is a different table from the one the board is built from; here the point is
+        that the gate runs at all, not that it catches a fabricated total.
+        """
+        from boxscore_package.format import BATTING_COLUMNS  # noqa: PLC0415
+        from boxscore_verify.certify import Evidence  # noqa: PLC0415
+
+        board = package.solution
+        return Evidence(
+            game_id=GAME,
+            offense_team=OFFENSE,
+            source_type="EVN",
+            is_deduced=False,
+            official_hits=board.line_score.offense_hits,
+            official_runs=board.line_score.offense_runs,
+            official_errors=board.line_score.offense_errors,
+            official_defense_runs=board.line_score.defense_runs,
+            official_defense_hits=board.line_score.defense_hits,
+            official_defense_errors=board.line_score.defense_errors,
+            official_at_bats=board.batting_totals[BATTING_COLUMNS.index("at_bats")],
+            official_left_on_base=board.left_on_base,
+        )
+
     def test_the_fixture_is_a_lineup_the_pool_rule_accepts(self, cubs_at_braves_1968: object) -> None:
         """⚠️ Before anything else: a fixture the pool rule would reject cannot test adoption.
 
@@ -165,37 +208,70 @@ class TestAFallbackBoardActuallyPublishes:
 
         assert find_violations(cubs_at_braves_1968, self.SLOTS) == ()
 
-    def test_a_fallback_board_passes_every_layer(self, cubs_at_braves_1968: object) -> None:
-        """The sequence the reviewer named: plain misses, fallback reaches, and the result certifies."""
+    def test_a_fallback_board_reaches_the_publication_gate(self, cubs_at_braves_1968: object) -> None:
+        """The sequence: plain misses, the fallback reaches, and that exact package publishes.
+
+        ⚠⚠ **This skipped when no fallback board appeared, and called `verify()` rather than the gate.**
+        Both are the same defect wearing different clothes — v29-P2-02. A skip is a *successful* suite
+        outcome, so the regression v29-P2-01 described could return without the suite going red: the
+        adopted branch produces nothing certifiable and the test reports a skip. And production
+        publishes through `certify_for_publication()`, which adds plausibility and independent
+        evidence, so a defect in either refuses every fallback board while a `verify()` assertion stays
+        green.
+
+        **A missing fallback board is a failed precondition, never a skip**, and the boundary asserted
+        is the one the production writer actually calls.
+        """
         from boxscore_forge.erasure import erase  # noqa: PLC0415
         from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: PLC0415
         from boxscore_forge.publish import to_board  # noqa: PLC0415
         from boxscore_package.format import Package  # noqa: PLC0415
+        from boxscore_verify.certify import certify_for_publication  # noqa: PLC0415
         from boxscore_verify.verify import UNSIGNED, verify  # noqa: PLC0415
 
         direction, slots = cubs_at_braves_1968, self.SLOTS
-        target = next(
-            (t for t in range(3, 14) if erase(direction, target_stalls=t, seed=1) is None),
-            None,
+        target = self.FALLBACK_TARGET
+
+        # ⚠️ Pinned rather than searched. A test that hunts for a target where the plain path misses
+        # will quietly pick a different one when the erasure changes, and then it is testing a case
+        # nobody chose. If this board stops needing the fallback here, that is a finding.
+        assert erase(direction, target_stalls=target, seed=self.SEED) is None, (
+            f"the plain path now reaches {target} stalls on this board; the fixture no longer exercises the fallback"
         )
-        assert target is not None, "the plain path reaches every target on this board; the fixture is wrong"
+        puzzle, reason = erase_with_lineup_fallback(direction, slots, target_stalls=target, seed=self.SEED)
 
-        puzzle, reason = erase_with_lineup_fallback(direction, slots, target_stalls=target, seed=1)
-        if reason != "fallback":
-            import pytest as _pytest  # noqa: PLC0415
-
-            _pytest.skip(f"this board's fallback returned {reason!r}; nothing to certify")
-
+        assert reason == "fallback", f"expected a fallback board, got {reason!r}"
         assert puzzle is not None
+
+        # ⚠️ Built the way production builds it, not the way a fixture is convenient. The gate refused
+        # the first version for two reasons that are entirely correct — an arbitrary `puzzle_id` that
+        # no evidence implies, and a missing reveal — and a test that worked around those by not
+        # calling the gate is exactly what v29-P2-02 was about.
+        from boxscore_package.format import Reveal  # noqa: PLC0415
+        from boxscore_verify.expected_id import expected_puzzle_id  # noqa: PLC0415
+
         package = Package(
-            puzzle_id="0000000000000fff",
+            puzzle_id=expected_puzzle_id(GAME, OFFENSE),
             puzzle=to_board(direction, puzzle.erased),
             solution=to_board(direction, None),
             labels=("C",) * len(direction.batting),
-            pitcher_labels=("P",) * len(direction.pitching),
+            pitcher_labels=("SP",) * len(direction.pitching),
             slot_references=tuple(str(slot) for slot in slots),
+            reveal=Reveal(
+                batter_names=("A Batter",) * len(direction.batting),
+                pitcher_names=("A Pitcher",) * len(direction.pitching),
+                offense_team=OFFENSE,
+                defense_team="BBB",
+                played_on="1968-08-08",
+            ),
             offense_is_home=True,
         )
-        verdict = verify(package, secret=UNSIGNED)
 
-        assert verdict.accepted, f"a fallback board was refused: {verdict.rejection}"
+        # Per-layer attribution first, because "the gate refused it" does not say which layer.
+        verdict = verify(package, secret=UNSIGNED)
+        assert verdict.accepted, f"the arithmetic layers refused a fallback board: {verdict.rejection}"
+
+        # ⚠⚠ And then the boundary production calls. Passing the layers is not publishing.
+        result = certify_for_publication(package, evidence=self._evidence(package), secret=UNSIGNED)
+
+        assert result.publishable, f"a fallback board did not reach publication: {result.refusals}"

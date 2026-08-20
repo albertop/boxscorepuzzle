@@ -5,35 +5,65 @@ no value-producing lineup step, so layer 3 refused anything leaning on the cycli
 deductions and the nine-of-eleven-with-no-filler describe **what the generator produces**, not what can
 ship. The step exists now; this is the re-run.
 
-⚠️⚠️ **PRE-REGISTERED. The categories and the reading are fixed here, before the run.**
-`batting-order-reversal.md` records a subgroup chosen *after* seeing an aggregate producing the answer
-the pressure pointed at. This file is written first so that cannot happen twice.
+⚠️⚠️ **PRE-REGISTERED, and this is the second version of the pre-registration.** The first was
+committed and the run was stopped before it wrote a single row — `confirm.json` never existed and no
+figure was ever seen. **Rewriting it is therefore correcting an instrument, not adjusting a reading**,
+and that distinction is the only thing that makes a rewrite legitimate at all.
 
-**The three categories, defined now:**
+## ⚠️⚠️ Why the first version could not have overturned anything (v29-P1-01)
 
-  gained    the direction reaches the target through the fallback and does not reach it plain
-  lost      it reaches the target plain and not through the fallback
-  common    both reach it
+It compared `plain` against `fallback` and made `gained - lost` the headline, with *anything at or
+below zero overturns the adoption*.
 
-**What would confirm the adoption**, decided before any number is seen:
+**`lost` was impossible by construction.** `erase_with_lineup_fallback` makes the identical plain call
+first and returns that exact puzzle when it succeeds, so **every direction covered by `plain` is
+covered by `fallback`**. `plain - fallback` is structurally empty. The criterion described as able to
+overturn the decision was wired to one treatment that *contains* the other, and the per-seed table did
+not repair it, because the containment holds for every seed independently.
 
-  1. `gained` stays materially above `lost` at the hard end, per seed rather than best-of-three.
-     The earlier figure was +5 to +9 net per seed. **Anything at or below zero overturns it.**
-  2. The gained boards still pass **all five certification layers**, not merely the generator.
-     This is the number that did not exist before. **If most of them fail, the adoption is not
-     supported by boards that can ship, whatever the generator says.**
-  3. Causal deductions still outnumber division filler on the gained boards. The earlier split was
-     nine of eleven with no filler at all. **A majority carrying filler overturns it.**
+**A pre-registered criterion that cannot be violated is not a criterion.** It is the
+check-that-never-fires defect, built into the arm rather than the threshold — inside a file whose own
+docstring said it existed to stop exactly that.
 
-**What would NOT count as confirmation:** a favourable total that comes from a different subgroup, a
-different seed treatment, or a target the earlier figures did not use. Those are the moves that
-produced the reversal.
+## The two questions, separated — they were one before, which is what let the containment hide
 
-⚠️ **This is also the authoritative coverage instrument.** Coverage at eight stalls has had three
-values — 33%, 50% and 79% — from three instruments that counted different things, and 60% from an
-ad-hoc calculation that was never code. Here it is one definition, stated once: **a direction is
-covered at a target when a board reaching that target passes every certification layer.** Anything
-weaker is a number about the generator rather than about the product.
+  **A. What does the constraint cost and buy as a treatment?**
+     `plain` against `on`: the constraint applied to every board, `erase(..., slots=slots)`, same seed
+     and target. **Neither arm contains the other, so `lost` is real and can be positive.**
+
+  **B. What does the product gain from the adopted design?**
+     `plain` against `fallback`. **Monotone by design** — the fallback tries plain first, so it can
+     only add. `lost` is meaningless here and is not reported as though it were a finding.
+
+## What would confirm the adoption, fixed before any number is seen
+
+  1. **Coverage.** Arm B adds directions at the hard end that plain cannot reach and that pass the
+     publication gate. **Zero added overturns it** — the whole case is that the constraint reaches
+     boards nothing else does.
+  2. **Cost.** In arm A, `lost` does not swamp `gained` at the hard end, per seed. **If switching the
+     constraint on loses more than it gains, the conditional design is doing the work and the
+     constraint itself is not.**
+  3. **Filler.** On the **gained cohort only** — `target == 8`, `arm == "fallback"`,
+     `reason == "fallback"`, publishable, direction in the paired gained set — causal deductions
+     outnumber division filler. The earlier claim was nine of eleven with none at all. **A majority
+     carrying filler overturns it.**
+
+⚠️ **What would NOT count:** a favourable figure drawn from a wider cohort than the criterion names —
+other targets, other seeds, common boards, or fallback rows whose wrapper returned the plain result.
+Those carry zero division *by construction* and dilute the very share being tested. That was
+v29-P2-04, which is why the cohort above is spelled out field by field.
+
+## ⚠️ Certification means the publication gate, not the arithmetic verifier
+
+The first version called `verify()` and stored the answer in a field named `certified`. Production
+publishes through `certify_for_publication()`, which also applies plausibility and independent
+evidence. A board can pass every arithmetic layer and be refused for roster plausibility or a
+disagreeing official total, so coverage built on `verify()` is a number about the verifier while
+claiming to be one about the product (v29-P2-03).
+
+Both are recorded under names that cannot be confused: `verified` for the arithmetic layers,
+`publishable` for the gate. ⚠️ Signatures are deliberately skipped — this is an unsigned discovery run
+— so **"passes the gate" here never means "authentic"**, and the phrase *all five layers* is not used.
 
 Read-only against DGL. Run from anywhere.
 """
@@ -61,12 +91,20 @@ from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_forge.solver import Technique  # noqa: E402
 from boxscore_package.format import Package  # noqa: E402
+from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, verify  # noqa: E402
 
 TARGETS = (3, 4, 5, 6, 8)
 SEEDS = (1, 2, 3)
 SAMPLE_PER_DECADE = 4
 """The same draw as `arms.py`, so the figures are comparable to the ones being tested."""
+
+HARD = 8
+"""The target the case rests on. Named, so the cohort below cannot quietly become a different one."""
+
+ARMS = ("plain", "on", "fallback")
+"""⚠️ `on` is the trade-off arm and `fallback` is the product arm. Reporting them as one comparison is
+what made `lost` impossible last time."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,18 +117,44 @@ class Row:
     seed: int
     target: int
     arm: str
-    """`plain` or `fallback` — the two the adoption is between. `on everywhere` is not a candidate."""
     reached: bool
-    certified: bool
-    """⚠️ **The field that did not exist before.** Passing every layer, not merely being produced."""
-    rejected_by: str
+    verified: bool
+    """The arithmetic layers accepted it. **Not** the same as publishable."""
+    publishable: bool
+    """⚠️ The publication gate accepted it: plausibility and independent evidence as well."""
+    refused_by: str
     blanks: int
     stalls: int
     chain: int
     division: int
     causal: int
-    """Deductions that combined terms, against `division` which read one total and divided by nine."""
     reason: str
+    """`plain`, `on`, `fallback`, `discarded_filler` or `unreachable` — which path produced this."""
+
+
+def _evidence(loaded: Loaded, board: object) -> Evidence:
+    """The same independent corroboration the production writer supplies.
+
+    ⚠️ `official_at_bats` and `official_left_on_base` come from the loader's game-log join rather than
+    from the board, which is the whole point of the evidence layer: a total summed from the rows it is
+    meant to verify cannot fail. The error and defensive columns are not on `Loaded`, so they are taken
+    from the line score — which §6 gives complete and never erases, so they are given rather than
+    derived.
+    """
+    return Evidence(
+        game_id=loaded.game_id,
+        offense_team=loaded.offense_team,
+        source_type=loaded.source_type,
+        is_deduced=loaded.is_deduced,
+        official_hits=loaded.official_hits,
+        official_runs=loaded.official_runs,
+        official_errors=board.line_score.offense_errors,
+        official_defense_runs=board.line_score.defense_runs,
+        official_defense_hits=board.line_score.defense_hits,
+        official_defense_errors=board.line_score.defense_errors,
+        official_at_bats=loaded.official_at_bats,
+        official_left_on_base=loaded.official_left_on_base,
+    )
 
 
 def _package(loaded: Loaded, erased: frozenset[str] | None) -> Package:
@@ -106,159 +170,247 @@ def _package(loaded: Loaded, erased: frozenset[str] | None) -> Package:
 
 
 def _steps(solution: object) -> tuple[int, int]:
-    """Division filler against causal deductions.
-
-    ⚠️ The split that decided the adoption, so it is counted the same way it was then: a
-    `LINEUP_ARITHMETIC` step read one total and divided by nine and is filler; everything else combined
-    terms the player had to find.
-    """
+    """Division filler against causal deductions, counted as it was when the adoption was decided."""
     division = sum(1 for step in solution.deductions if step.technique is Technique.LINEUP_ARITHMETIC)
     return division, len(solution.deductions) - division
+
+
+def _erase_for(arm: str, loaded: Loaded, slots: tuple[int, ...], target: int, seed: int) -> tuple:
+    """The three arms, kept apart so none contains another by accident."""
+    if arm == "plain":
+        produced = erase(loaded.direction, target_stalls=target, seed=seed)
+        return produced, ("plain" if produced else "unreachable")
+    if arm == "on":
+        # The constraint applied to every board. Not the adopted design -- the arm that says what the
+        # adopted design is avoiding.
+        produced = erase(loaded.direction, target_stalls=target, seed=seed, slots=slots)
+        return produced, ("on" if produced else "unreachable")
+    return erase_with_lineup_fallback(loaded.direction, slots, target_stalls=target, seed=seed)
 
 
 def _measure(loaded: Loaded, seed: int) -> list[Row]:
     rows: list[Row] = []
     slots = tuple(loaded.slots)
     for target in TARGETS:
-        for arm in ("plain", "fallback"):
-            if arm == "plain":
-                puzzle = erase(loaded.direction, target_stalls=target, seed=seed)
-                reason = "plain" if puzzle else "unreachable"
-            else:
-                puzzle, reason = erase_with_lineup_fallback(loaded.direction, slots, target_stalls=target, seed=seed)
+        for arm in ARMS:
+            puzzle, reason = _erase_for(arm, loaded, slots, target, seed)
+            common = {
+                "game": loaded.game_id,
+                "offense": loaded.offense_team,
+                "season": loaded.season,
+                "seed": seed,
+                "target": target,
+                "arm": arm,
+                "reason": reason,
+            }
             if puzzle is None:
                 rows.append(
                     Row(
-                        game=loaded.game_id,
-                        offense=loaded.offense_team,
-                        season=loaded.season,
-                        seed=seed,
-                        target=target,
-                        arm=arm,
+                        **common,
                         reached=False,
-                        certified=False,
-                        rejected_by="",
+                        verified=False,
+                        publishable=False,
+                        refused_by="",
                         blanks=0,
                         stalls=0,
                         chain=0,
                         division=0,
                         causal=0,
-                        reason=reason,
                     )
                 )
                 continue
-            # ⚠⚠ Every layer, not a subset. A board the generator likes and the verifier refuses is
-            # exactly what the earlier figures could not distinguish.
-            verdict = verify(_package(loaded, puzzle.erased), secret=UNSIGNED)
+            package = _package(loaded, puzzle.erased)
+            verdict = verify(package, secret=UNSIGNED)
+            # ⚠️⚠️ The gate production calls, not the arithmetic verifier alone.
+            gate = certify_for_publication(package, evidence=_evidence(loaded, package.solution), secret=UNSIGNED)
             division, causal = _steps(puzzle.solution)
+            refused = "" if gate.publishable else "; ".join(str(item) for item in gate.refusals)[:80]
             rows.append(
                 Row(
-                    game=loaded.game_id,
-                    offense=loaded.offense_team,
-                    season=loaded.season,
-                    seed=seed,
-                    target=target,
-                    arm=arm,
+                    **common,
                     reached=True,
-                    certified=verdict.accepted,
-                    rejected_by="" if verdict.accepted else f"{verdict.rejection.layer}/{verdict.rejection.fault}",
+                    verified=verdict.accepted,
+                    publishable=gate.publishable,
+                    refused_by=refused,
                     blanks=len(puzzle.erased),
                     stalls=puzzle.solution.stalls,
                     chain=puzzle.solution.chain_length,
                     division=division,
                     causal=causal,
-                    reason=reason,
                 )
             )
     return rows
 
 
 def _covered(rows: list[Row], arm: str, target: int, seed: int | None = None) -> set[tuple[str, str]]:
-    """Directions covered: reached AND certified. One definition, used everywhere below."""
+    """Directions covered: reached AND through the publication gate. One definition, used everywhere."""
     return {
         (row.game, row.offense)
         for row in rows
-        if row.arm == arm and row.target == target and row.certified and (seed is None or row.seed == seed)
+        if row.arm == arm and row.target == target and row.publishable and (seed is None or row.seed == seed)
     }
+
+
+def _report_coverage(rows: list[Row], directions: set) -> None:
+    print("")
+    print("=== B. PRODUCT COVERAGE: plain against the adopted fallback ===")
+    print("  Monotone by design: the fallback tries plain first, so it can only add.")
+    print("  'lost' is meaningless here and is not reported as one.")
+    print(f"  {'target':>7}{'plain':>12}{'fallback':>12}{'added':>8}")
+    for target in TARGETS:
+        plain = _covered(rows, "plain", target)
+        fallback = _covered(rows, "fallback", target)
+        print(
+            f"  {target:>7}{f'{len(plain)}/{len(directions)}':>12}"
+            f"{f'{len(fallback)}/{len(directions)}':>12}{len(fallback - plain):>8}"
+        )
+
+
+def _report_tradeoff(rows: list[Row]) -> None:
+    print("")
+    print("=== A. TREATMENT TRADE-OFF: plain against the constraint on every board ===")
+    print("  Neither arm contains the other, so 'lost' is real and can be positive.")
+    print(f"  {'target':>7}{'seed':>6}{'plain':>7}{'on':>5}{'gained':>8}{'lost':>6}")
+    for target in TARGETS:
+        for seed in SEEDS:
+            plain = _covered(rows, "plain", target, seed)
+            switched = _covered(rows, "on", target, seed)
+            print(
+                f"  {target:>7}{seed:>6}{len(plain):>7}{len(switched):>5}"
+                f"{len(switched - plain):>8}{len(plain - switched):>6}"
+            )
+
+
+DECISION_UNIT = "direction"
+"""⚠⚠ **One unit, fixed before the run, and it is the direction** (v29-P2-05).
+
+The claim being tested is *nine of eleven **directions** carried no division filler*, and the follow-up
+was asked for per direction. An earlier version identified gains per direction and then counted per
+**direction-seed row**, so a direction that succeeded under all three seeds cast three votes and one
+that succeeded under a single seed cast one. **That weighting can reverse the majority without the set
+of useful directions changing at all** — an adoption decided by how often a seed happened to work.
+
+The seed rows are still printed, because a reduction nobody can see is a reduction nobody can check.
+They are evidence; the direction is the unit.
+"""
+
+SEED_FOR_DECISION = min(SEEDS)
+"""Which seed represents a direction when several qualify.
+
+⚠️ **Chosen before any outcome is read, and by a rule that cannot see one.** Taking the best, the
+worst, or the one with least filler would be choosing the observation after seeing it, which is the
+move that produced the reversal this whole file exists to avoid.
+"""
+
+
+def _gained_cohort(rows: list[Row]) -> list[Row]:
+    """⚠⚠ The criterion's rows, spelled out field by field so the cohort cannot widen unnoticed.
+
+    v29-P2-04: an earlier version summed every certified row at every target and seed, including common
+    boards and fallback rows whose wrapper returned the plain result. **Those carry zero division by
+    construction** and dilute the very share being tested.
+    """
+    gained = _covered(rows, "fallback", HARD) - _covered(rows, "plain", HARD)
+    return [
+        row
+        for row in rows
+        if row.target == HARD
+        and row.arm == "fallback"
+        and row.reason == "fallback"
+        and row.publishable
+        and (row.game, row.offense) in gained
+    ]
+
+
+def _one_per_direction(cohort: list[Row]) -> list[Row]:
+    """Reduce the seed rows to one observation per gained direction, deterministically.
+
+    The lowest qualifying seed, which is fixed by `SEED_FOR_DECISION` and does not depend on what the
+    row says. A direction with no row at that seed falls back to its lowest available one — stated
+    here rather than left implicit, because "the lowest that exists" is still a rule chosen in advance.
+    """
+    by_direction: dict[tuple[str, str], list[Row]] = {}
+    for row in cohort:
+        by_direction.setdefault((row.game, row.offense), []).append(row)
+    chosen = []
+    for rows_here in by_direction.values():
+        preferred = [row for row in rows_here if row.seed == SEED_FOR_DECISION]
+        chosen.append(min(preferred or rows_here, key=lambda row: row.seed))
+    return sorted(chosen, key=lambda row: (row.game, row.offense))
+
+
+def _report_filler(rows: list[Row]) -> None:
+    cohort = _gained_cohort(rows)
+    decided = _one_per_direction(cohort)
+    print("")
+    print(f"=== C. FILLER, gained cohort only: target {HARD}, fallback path, publishable ===")
+    print(f"  unit: one {DECISION_UNIT}, represented by seed {SEED_FOR_DECISION} where it qualifies")
+    print(f"  {len(cohort)} qualifying rows reduce to {len(decided)} directions, against 11 before")
+    if not decided:
+        print("  NOTHING IN THE COHORT. The adoption's own criterion has no evidence either way.")
+        return
+
+    print("")
+    print("  every qualifying row, so the reduction can be checked rather than trusted:")
+    header = f"  {'':<3}{'game':<14}{'off':<5}{'seed':>5}{'stalls':>7}{'chain':>7}"
+    print(header + f"{'blanks':>7}{'division':>9}{'causal':>7}")
+    counted = {(row.game, row.offense, row.seed) for row in decided}
+    for row in sorted(cohort, key=lambda item: (item.game, item.offense, item.seed)):
+        mark = "->" if (row.game, row.offense, row.seed) in counted else "  "
+        print(
+            f"  {mark:<3}{row.game:<14}{row.offense:<5}{row.seed:>5}{row.stalls:>7}{row.chain:>7}"
+            f"{row.blanks:>7}{row.division:>9}{row.causal:>7}"
+        )
+
+    division = sum(row.division for row in decided)
+    causal = sum(row.causal for row in decided)
+    clean = sum(1 for row in decided if row.division == 0)
+    share = division / max(causal + division, 1)
+    print("")
+    print(f"  over {len(decided)} directions: {causal} causal, {division} division ({share:.1%} filler)")
+    print(f"  {clean} of {len(decided)} directions carry no division filler at all, against 9 of 11 before")
+
+
+def _report_gate(rows: list[Row]) -> None:
+    print("")
+    print("=== THE PUBLICATION GATE AGAINST THE ARITHMETIC VERIFIER ===")
+    print("  Two different questions, so two fields. A board can pass every arithmetic layer and be")
+    print("  refused for plausibility or a disagreeing official total.")
+    for arm in ARMS:
+        produced = [row for row in rows if row.arm == arm and row.reached]
+        if not produced:
+            continue
+        verified = sum(1 for row in produced if row.verified)
+        publishable = sum(1 for row in produced if row.publishable)
+        print(f"  {arm:<10}{len(produced):>5} produced, {verified:>4} verified, {publishable:>4} publishable")
+        gap = Counter(row.refused_by for row in produced if row.verified and not row.publishable)
+        for refusal, count in gap.most_common(3):
+            print(f"       {count:>4}  verified but refused by the gate: {refusal}")
 
 
 def report(rows: list[Row]) -> None:
     directions = {(row.game, row.offense) for row in rows}
     print("")
-    print(f"{len(directions)} directions x {len(SEEDS)} seeds x {len(TARGETS)} targets x 2 arms")
-    print("")
-    print("=== COVERAGE: reached AND certified by all five layers, per direction on any seed ===")
-    print(f"  {'target':>7}{'plain':>14}{'fallback':>14}{'gained':>9}{'lost':>7}")
-    for target in TARGETS:
-        plain = _covered(rows, "plain", target)
-        fallback = _covered(rows, "fallback", target)
-        print(
-            f"  {target:>7}{f'{len(plain)}/{len(directions)}':>14}{f'{len(fallback)}/{len(directions)}':>14}"
-            f"{len(fallback - plain):>9}{len(plain - fallback):>7}"
-        )
+    print(f"{len(directions)} directions x {len(SEEDS)} seeds x {len(TARGETS)} targets x {len(ARMS)} arms")
+    _report_coverage(rows, directions)
+    _report_tradeoff(rows)
+    _report_filler(rows)
+    _report_gate(rows)
 
     print("")
-    print("=== THE SAME, PER SEED — the check that caught best-of-three bookkeeping last time ===")
-    for target in (6, 8):
-        for seed in SEEDS:
-            plain = _covered(rows, "plain", target, seed)
-            fallback = _covered(rows, "fallback", target, seed)
-            print(
-                f"  target {target}, seed {seed}: plain {len(plain):>2}, fallback {len(fallback):>2}, "
-                f"gained {len(fallback - plain):>2}, lost {len(plain - fallback):>2}"
-            )
-
-    print("")
-    print("=== !! CERTIFICATION: boards the generator produced and the verifier refused ===")
-    print("  This is the number that did not exist when the adoption was decided.")
-    for arm in ("plain", "fallback"):
-        produced = [row for row in rows if row.arm == arm and row.reached]
-        refused = [row for row in produced if not row.certified]
-        share = len(refused) / len(produced) if produced else 0
-        print(f"  {arm:<10}{len(produced):>5} produced, {len(refused):>4} refused ({share:.1%})")
-        for fault, count in Counter(row.rejected_by for row in refused).most_common(4):
-            print(f"       {count:>4}  {fault}")
-
-    print("")
-    print("=== THE GAINED DIRECTIONS AT 8 STALLS, WHICH IS WHERE THE CASE RESTS ===")
-    gained = _covered(rows, "fallback", 8) - _covered(rows, "plain", 8)
-    print(f"  {len(gained)} directions, against 11 before the verifier could certify them")
-    print(f"  {'game':<14}{'off':<5}{'stalls':>7}{'chain':>7}{'blanks':>7}{'division':>9}{'causal':>7}")
-    filler_free = 0
-    for game, offense in sorted(gained):
-        best = max(
-            (r for r in rows if (r.game, r.offense) == (game, offense) and r.arm == "fallback" and r.certified),
-            key=lambda r: r.stalls,
-        )
-        filler_free += best.division == 0
-        print(
-            f"  {game:<14}{offense:<5}{best.stalls:>7}{best.chain:>7}{best.blanks:>7}{best.division:>9}{best.causal:>7}"
-        )
-    print(f"  {filler_free} of {len(gained)} carry no division filler, against 9 of 11 before")
-
-    print("")
-    print("=== CAUSAL DEDUCTIONS AGAINST DIVISION FILLER, certified boards only ===")
-    for arm in ("plain", "fallback"):
-        certified = [row for row in rows if row.arm == arm and row.certified]
-        division = sum(row.division for row in certified)
-        causal = sum(row.causal for row in certified)
-        share = division / max(causal + division, 1)
-        print(f"  {arm:<10}{causal:>7} causal, {division:>6} division ({share:.1%} filler)")
-
-    print("")
-    print("=== STALL CEILING AND BLANKS, certified boards only ===")
-    for arm in ("plain", "fallback"):
-        certified = [row for row in rows if row.arm == arm and row.certified]
-        if not certified:
-            print(f"  {arm:<10}nothing certified")
+    print("=== STALL CEILING AND BLANKS, publishable boards only ===")
+    for arm in ARMS:
+        publishable = [row for row in rows if row.arm == arm and row.publishable]
+        if not publishable:
+            print(f"  {arm:<10}nothing publishable")
             continue
         ceilings = [
-            max(r.stalls for r in certified if (r.game, r.offense) == board)
-            for board in {(r.game, r.offense) for r in certified}
+            max(item.stalls for item in publishable if (item.game, item.offense) == board)
+            for board in {(item.game, item.offense) for item in publishable}
         ]
         print(
             f"  {arm:<10}ceiling median {statistics.median(ceilings):.0f}, max {max(ceilings)}; "
-            f"blanks median {statistics.median([r.blanks for r in certified]):.0f}"
+            f"blanks median {statistics.median([item.blanks for item in publishable]):.0f}"
         )
 
 

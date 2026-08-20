@@ -2,7 +2,8 @@
 
 ## Where everything stands
 
-**Twenty-nine reviews, 129 findings, none rejected. v28 was a full-tree review rather than a delta:
+**Twenty-nine reviews (two passes on the last), 134 findings, none rejected — including the first
+**P1**, and it was in an instrument's pre-registration rather than in the product. v28 was a full-tree review rather than a delta:
 six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
 which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
@@ -94,7 +95,79 @@ adversary at all.
 
 Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
 
-## ⚠⚠ v29 — the adoption was true in the imports and false in the outcome
+## ⚠⚠ v29 second pass — the first P1, and the instrument could not have overturned anything
+
+**Four more findings, all against the confirmation run rather than the product.** The adoption was
+already decided; what these say is that **nothing built to check it could have contradicted it.**
+
+### ⚠⚠⚠ v29-P1-01: the criterion was wired to a treatment that contains the control
+
+`confirm.py` compared `plain` against `fallback` and made `gained − lost` the headline, with *anything
+at or below zero overturns the adoption*.
+
+**`lost` was impossible by construction.** `erase_with_lineup_fallback` makes the identical plain call
+first and returns that exact puzzle when it succeeds, so **every direction covered by `plain` is
+covered by `fallback`**. `plain − fallback` is structurally empty — an observed zero and a
+mathematically-necessary zero are the same number on the page. The per-seed table did not repair it,
+because the containment holds for every seed independently.
+
+⚠⚠ **A pre-registered criterion that cannot be violated is not a criterion.** It is this project's
+oldest defect — a check that never fires — built into the *arm* rather than into the threshold, and
+written inside a file whose own docstring said it existed to stop exactly that. The pre-registration
+was the safeguard, and the safeguard had the defect.
+
+Fixed by separating the two questions, which is what let the containment hide:
+
+| arm | question | `lost` |
+|---|---|---|
+| `plain` vs `on` | what the constraint costs as a treatment | **real, can be positive** |
+| `plain` vs `fallback` | what the product gains from the adopted design | meaningless — monotone by design, and now says so |
+
+⚠️ **The pre-registration was rewritten, and that is only defensible because of one fact:** the run
+was stopped before it wrote a single row. `confirm.json` never existed and the process output is
+literally `[killed]`. **Correcting an instrument that has produced nothing is not adjusting a
+reading** — but the difference rests entirely on that, so it was verified before anything was touched.
+
+### v29-P2-03: `certified` meant the arithmetic verifier, not the publication gate
+
+The instrument said it measured boards that can publish, defined coverage as passing certification,
+and called `verify()`. Production publishes through `certify_for_publication()`, which also applies
+plausibility and independent evidence. **A board can pass every arithmetic layer and be refused for
+roster plausibility or a disagreeing official total.** Now both are recorded, under names that cannot
+be confused: `verified` and `publishable`. Signatures stay skipped and the phrase *all five layers* is
+gone, because an unsigned run cannot claim it.
+
+### v29-P2-04: the filler cohort was wider than the criterion that names it
+
+The third criterion is causal deductions against division filler **on the gained boards at the hard
+end**. The report summed every certified row at all five targets and all three seeds — including common
+boards and fallback rows whose wrapper returned the *plain* result. **Those carry zero division by
+construction and dilute the very share being tested.** The cohort is now spelled out field by field.
+
+### v29-P2-05: the filler decision changed its unit halfway through
+
+`gained` is identified per **direction**; the cohort then returned every qualifying row per **seed**,
+and `len(cohort)` was the denominator. **A direction that succeeded under all three seeds cast three
+votes and one that succeeded under a single seed cast one.** The claim being tested — *nine of eleven*
+— is per direction, so the weighting could reverse the majority **without the set of useful directions
+changing at all**: an adoption decided by how often a seed happened to work.
+
+Fixed by fixing the unit: `DECISION_UNIT = "direction"`, one deterministic row per gained direction,
+chosen by `SEED_FOR_DECISION = min(SEEDS)` — **a rule that cannot see the outcome**. Taking the best,
+the worst, or the one with least filler would be choosing the observation after seeing it, which is
+the move this whole file exists to avoid. The seed rows are still printed, with the counted one
+marked, because a reduction nobody can see is a reduction nobody can check.
+
+### v29-P2-02: the end-to-end test skipped instead of failing, and called the wrong boundary
+
+Added in the first pass to prove a fallback board reaches publication. If the fallback returned
+`unreachable` or `discarded_filler` it called `pytest.skip()` — **a successful suite outcome**, so the
+v29-P2-01 regression could return without the suite going red. And it called `verify()` rather than
+the gate, so a defect in plausibility or evidence refuses every fallback board in production while the
+test stays green. A missing fallback board is now a failed precondition, the target is pinned rather
+than searched, and the boundary asserted is the one the production writer calls.
+
+## ⚠⚠ v29 first pass — the adoption was true in the imports and false in the outcome
 
 Two findings, both closed. **The first would have made the confirmation run report the opposite of the
 truth, and it was caught while that run was in flight.** The run was stopped.
