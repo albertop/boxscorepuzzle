@@ -3986,3 +3986,59 @@ the arithmetic.
 Schema 5 gave the reveal both clubs' batting and pitching. It did **not** give it the other club's
 `HBP/SF/SH/CI` or its left-on-base, so the footnote line cannot cover both. **That is another package
 field if it is ever wanted**, and the prefix is the honest solution until then. Decided: not urgent.
+
+
+## ⚠️⚠️ The batting order met a person, and found the cost nobody had written down
+
+**2026-08-20.** The operator was solving `126c049659c4a61c` (SLA–BOS, 17 August 1913) and stopped,
+because the board looked impossible: the totals row said **PA = 40**, nine slots cannot hold 40 with
+any slot below four, and slot 9 showed a **given** PA of **3**.
+
+**The board is sound and the reasoning was sound.** The real distribution is
+`[4,4,4,4,4,4,4,4,3]`, total 35 — which is *exactly* the cyclic split of 35 — and the given 3 is
+correct. The 40 was **entered**: `batting_totals[PA]` is a blank on this board and its answer is 35.
+The pool rule was re-run against both distributions and behaves: it accepts the real one and rejects
+the implied one, naming the slots. The board postdates adoption. None of the three failure hypotheses
+held.
+
+### What it exposed, which is not a defect and is not nothing
+
+**A given cell can now contradict an entered total, and the board will never say which side is wrong.**
+
+With four families every contradiction resolved *inside one visible equation* — a row, a column, a
+cross-team pair — so a player who reached one could re-read the equation and find their own error in
+it. **The fifth family is different in kind.** It relates a *given* cell to a *team total the player
+computed*, across nine rows, with no equation drawn anywhere on screen. When the two disagree, the two
+readings are:
+
+- *I have the total wrong*, or
+- *this board should never have been produced*,
+
+and **§27's no-marking rule guarantees the board says nothing that distinguishes them.** That rule is
+right and is not in question — marking makes probing beat deducing. But it was decided when every
+contradiction was local, and this one is not.
+
+### Why this is the tutorial's problem and not the board's
+
+⚠️ **`batting-order-reversal.md` already records the operator's own distinction**: the first four
+families are baseball bookkeeping that a fan recognises without being told, and the batting order is
+**logic over a sequence** — true because the order is cyclic, which is reasoning about cycles rather
+than knowing baseball. §8 gained a step for it on that basis.
+
+**This is the evidence for how much weight that step carries.** The rule is not merely uninferable
+from the board; **misapplying it produces a board that looks broken**, and the player has no way back.
+The tutorial has to teach not only *the cycle exists* but *what it feels like when your own total is
+the thing that is wrong* — because that is the failure mode, and it happened to the person who
+designed the constraint, on his fourth board.
+
+### What is NOT proposed here
+
+- **Not marking the cell.** Probing would beat deducing and the rule holds.
+- **Not a count.** Binary search over the board.
+- **Not a batting-order-specific hint.** A cue that fires only for the fifth family tells the player
+  which family they got wrong, which is the same leak in a smaller box.
+
+**Left open deliberately.** The honest options are all in the tutorial and in the copy of the *does not
+balance* message, and neither should be designed from one incident. **Recorded so the fifty-board
+hand-solve is watched for it**: if more than one solver stalls this way, the frequency is the finding
+and the design follows from it. If nobody else does, this was one board and a rule three days old.
