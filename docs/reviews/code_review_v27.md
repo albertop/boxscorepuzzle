@@ -1,4 +1,4 @@
-# Code Review v27 - Second Pass
+# Code Review v27 - Third Pass
 
 ## Scope
 
@@ -13,7 +13,52 @@ This review concentrates on the batting-order work added after v26:
 
 The production erasure path still calls `shape_of(direction)` without slots, so the new constraint is currently opt-in and does not change shipped puzzle generation. `arms.log` is empty, so this review covers the new instrument's code but cannot assess experimental results that have not been recorded. No source code, tests, generated output, configuration, or planning document was changed. Tests and static-analysis tools were not run.
 
-## Second-Pass Finding
+## Third-Pass Findings
+
+### v27-P2-06: Shared-slot lineup deductions omit the row they subtract from their dependency graph
+
+- **Persona:** QA / Reliability Engineer
+- **Priority:** P2
+- **Location:** `forge/src/boxscore_forge/solver.py:489`, `discovery/batting-order/arms.py:199`
+- **Description:** `_lineup_moves()` correctly waits until a slot has only one unknown row and computes that row as the predicted slot total minus the known rows sharing the slot. `_next_step()`, however, records every resulting deduction as depending only on `batting_totals.plate_appearances`, and computes its depth only from that total. A shared-slot deduction also depends on every known PA value subtracted inside `_lineup_moves()`. If one of those companion rows was itself deduced earlier, that edge and its depth are lost. The method also inserts the total into `depends_on` even when the total was a given, unlike ordinary propagation, which records only previously deduced cells.
+- **Impact:** `Solution.chain_length` can understate the path on substitution-heavy boards, and `arms.py` persists that understated chain for the experiment currently running. The numerical PA result remains correct, but the reported solution graph is not the path that produced it. This matters directly to an instrument comparing whether the batting-order constraint adds a chain.
+- **Reproduction:** Use a shared slot whose target sum is four, with one row already deduced as one at depth greater than one and the other row unknown. The lineup move computes the unknown as three by subtracting the first row. The emitted `Deduction` has depth `1 + depth(total)` and `depends_on={total}`; changing or removing the known companion would change the result even though it is absent from the recorded provenance.
+- **Recommended fix and rationale:** Have `_lineup_moves()` return the known companion cells used with each move. In `_next_step()`, include deduced companions in `depends_on` and calculate depth from the maximum depth of the total and those companions; do not add a given total to the dependency set if the graph's established convention excludes givens. Add a shared-slot test in which the known companion is a prior deduction and assert both dependency membership and chain depth. The solution graph should describe the arithmetic actually performed, not only the rule that authorized it.
+
+### v27-P2-07: `bounding_steps` counts every lineup-arithmetic move as bounding
+
+- **Persona:** Python Principal Engineer
+- **Priority:** P2
+- **Location:** `forge/src/boxscore_forge/solver.py:298`, `forge/src/boxscore_forge/solver.py:389`, `discovery/difficulty-weights/measure.py:125`
+- **Description:** Before `LINEUP_ARITHMETIC` existed, `Solution.bounding_steps` counted deductions with `not deduction.has_a_comparable_cost`, which was equivalent to counting `Technique.BOUNDING`. The new lineup deductions also set `known_terms_combined=None`, so they have no comparable cost and now satisfy that old proxy. A total-visible nine-slot board therefore reports nine bounding steps despite using zero `Technique.BOUNDING` deductions. `stalls` and `arms.py` correctly check the explicit technique, making the two public metrics disagree about the same solution.
+- **Impact:** Any measurement consuming `Solution.bounding_steps`, including `discovery/difficulty-weights/measure.py`, will treat the cheapest filler operation as the hardest class of move once slots are enabled. This recreates the exact classification inversion that introducing `LINEUP_ARITHMETIC` was meant to remove. Production is still contained because it passes no slots, but the API is incorrect for the feature under evaluation.
+- **Reproduction:** Solve a one-row-per-slot shape with slots 1 through 9 and a given PA total of 39. The nine PA deductions all have `Technique.LINEUP_ARITHMETIC` and the solution has zero bounding stalls, but `bounding_steps` returns nine because all nine deductions have `known_terms_combined is None`.
+- **Recommended fix and rationale:** Implement `bounding_steps` as an explicit count of `deduction.technique is Technique.BOUNDING`. Audit other properties that use `has_a_comparable_cost` as a technique proxy now that “not comparable” has two meanings, and add a regression asserting that the total-visible lineup solve has nine lineup steps, zero bounding steps, and zero stalls. Technique identity is the stable contract; cost availability is no longer an equivalent classification.
+
+## Third-Pass Disposition
+
+- **`v27-P1-05` resolved in the generator solver:** `_lineup_moves()` now performs the quotient/remainder step directly, leaves a shared slot unsplit when two rows remain unknown, assigns the cheapest dedicated technique, and has end-to-end `solve()` tests. Production still passes no slots and is explicitly covered as unchanged.
+- **Verifier limitation not duplicated:** the independent verifier has no corresponding value-aware step and would reject a board that relies on this constraint as underivable. This is explicitly recorded in the TODO and in the instrument output as pending only if the operator decides to ship the feature.
+- **Experiment incomplete:** `arms.log` currently contains progress only through 10 of 48 directions. No coverage, technique, or payoff conclusion is available yet.
+
+## Third-Pass Persona Summary
+
+| Persona | Result |
+|---|---|
+| Backend Architect | The new technique is correctly contained behind explicit slot metadata; no additional finding. |
+| Python Principal Engineer | Raised `v27-P2-07`. |
+| Frontend Engineer | No frontend changes are in scope. |
+| QA / Reliability Engineer | Raised `v27-P2-06`. |
+| Security Engineer | No security finding. |
+| UX / Visual Reviewer | No user-interface or visual changes are in scope. |
+| Baseball / Boxscore Domain Reviewer | The direct total-to-slot arithmetic and refusal to split two unknown substitute rows are correct. |
+| Kakuro / Logic-Puzzle Reviewer | The generator now reaches the exact cyclic consequence; no new mathematical finding. |
+
+## Third-Pass Verdict
+
+The central second-pass P1 is closed in the generator, and no numerical claim from the still-running experiment has been accepted. Two P2 integration findings remain: dependency provenance is incomplete for shared slots, and one legacy metric misclassifies the new cheapest technique as bounding. No P0, P1, or P3 finding is open from this third pass.
+
+## Resolved Second-Pass Finding
 
 ### v27-P1-05: The interval solver cannot realize the exact deduction the corrected cyclic model promises
 
@@ -25,7 +70,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 - **Reproduction:** Create a shape with one batting row in each slot 1 through 9 and give only `batting_totals.plate_appearances = 39` among the PA column. The column equation initially caps every slot at 39. Because all nine domains overlap at `0..39`, each adjacent inequality and the first/last spread inequality leaves those intervals unchanged; fixed-point propagation cannot reach the actual `(5, 5, 5, 4, 4, 4, 4, 4, 4)` distribution. Direct predicate tests pass because the relations are mathematically correct, but no cell is operationally deduced.
 - **Recommended fix and rationale:** Add a value-aware cyclic propagator for the slot sums. When the team total is known, compute `divmod(total, 9)` and constrain each slot sum directly; when a slot has substitutions, constrain the sum of its rows rather than assigning one player. Mark this deterministic total-to-slot step separately from exploratory bounding so the total-visible arm can classify it as filler. A linear alternative is to add the position-specific bounds `9*S_i - T + i - 1 >= 0` and `T - 9*S_i - i + 9 >= 0`, but that requires teaching `_reach()` and `_divide()` about coefficient magnitudes and integer rounding; they currently assume coefficients of `1` or `-1`. Add end-to-end `narrow()` or `solve()` tests for totals with remainder zero and nonzero, including a shared slot. Satisfaction tests alone cannot establish solver behavior.
 
-## Second-Pass Disposition of the Original Findings
+## Second-Pass Disposition of the Original Findings (superseded)
 
 - **`v27-P1-01` resolved at the model layer:** both implementations now add the first/last spread bound and reject monotone-but-impossible distributions. Its promised solver behavior remains open as `v27-P1-05`.
 - **`v27-P2-02` resolved:** persisted rows now include `offense` and `seed`, and per-board reporting groups by `(game, offense)`.
@@ -34,7 +79,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 
 `arms.log` remains empty, so no numerical conclusion from the three-arm experiment is available or reviewed.
 
-## Second-Pass Persona Summary
+## Second-Pass Persona Summary (superseded)
 
 | Persona | Result |
 |---|---|
@@ -47,7 +92,7 @@ The production erasure path still calls `shape_of(direction)` without slots, so 
 | Baseball / Boxscore Domain Reviewer | The corrected per-slot cyclic relation is faithful to the baseball rule for admitted directions. |
 | Kakuro / Logic-Puzzle Reviewer | Raised `v27-P1-05`. |
 
-## Second-Pass Verdict
+## Second-Pass Verdict (superseded)
 
 The four original v27 findings are corrected, and the run was stopped before an ambiguous artifact was spent. One P1 remains: the mathematical model is now exact, but the solver and experiment cannot yet realize or classify its central total-to-slot deduction. No P0, P2, or P3 finding remains open from this second pass.
 

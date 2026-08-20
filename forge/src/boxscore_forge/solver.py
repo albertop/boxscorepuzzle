@@ -301,8 +301,24 @@ class Solution:
 
     @property
     def bounding_steps(self) -> int:
-        """Counted rather than costed, because their difficulty is not on the same scale."""
-        return sum(1 for deduction in self.deductions if not deduction.has_a_comparable_cost)
+        """Counted rather than costed, because their difficulty is not on the same scale.
+
+        ⚠️⚠️ **Counted by technique, because the cost proxy stopped meaning what it used to.** This read
+        `not has_a_comparable_cost`, which was *equivalent* to `technique is BOUNDING` while bounding was
+        the only step with no comparable cost. `LINEUP_ARITHMETIC` also has none — reading a total and
+        dividing by nine combines no terms — so a total-visible board reported **nine bounding steps
+        while using zero**, and `stalls`, which checks the technique, said zero on the same solution.
+        Two public metrics disagreeing about one board.
+
+        That is the exact inversion `LINEUP_ARITHMETIC` was introduced to remove, surviving one property
+        away from where it was fixed: **the cheapest move on the board counted as the dearest.** The
+        lesson is not about this line. An equivalence held by circumstance is a second definition of the
+        thing, and it breaks the moment the circumstance changes — silently, because both readings have been
+        true for years.
+
+        **Technique identity is the contract; cost availability is no longer equivalent to it.**
+        """
+        return sum(1 for deduction in self.deductions if deduction.technique is Technique.BOUNDING)
 
     @property
     def trivial_share(self) -> float | None:
@@ -418,15 +434,27 @@ def _next_step(
     # credit propagation for work this did.
     lineup = _lineup_moves(shape, values)
     if lineup:
-        cell, value = lineup[0]
+        cell, value, companions = lineup[0]
+        # ⚠️ **The rows subtracted, not only the rule that authorised the move.** A shared slot is
+        # computed as *the slot's total less the rows already known*, so those rows are part of the
+        # arithmetic — and this recorded only the team total. On a substitution-heavy board the edge
+        # and its depth were lost, and `chain_length` understated the path that produced the number.
+        # The value was right; **the recorded graph was not the one that reached it**, which is exactly
+        # what an instrument comparing chains is reading.
+        #
+        # ⚠️ Deduced cells only, which is the convention propagation already follows: a given was not
+        # *reached*, so it is not an edge. The total is frequently a given and was being added anyway.
+        leaned_on = frozenset(
+            earlier for earlier in (batting_total_cell("plate_appearances"), *companions) if earlier in depths
+        )
         return Deduction(
             cell=cell,
             value=value,
             technique=Technique.LINEUP_ARITHMETIC,
             from_identity=Identity.BATTING_ORDER,
-            depth=1 + depths.get(batting_total_cell("plate_appearances"), 0),
+            depth=1 + max((depths[earlier] for earlier in leaned_on), default=0),
             frontier=len(lineup),
-            depends_on=frozenset({batting_total_cell("plate_appearances")}),
+            depends_on=leaned_on,
             equations_live=0,
             equations_solvable=0,
             known_terms_combined=None,
@@ -507,7 +535,7 @@ def _propagation_moves(system: tuple[Equation, ...], values: Mapping[str, int]) 
     return sorted(moves.items())
 
 
-def _lineup_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[str, int]]:
+def _lineup_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[str, int, tuple[str, ...]]]:
     """Slots that the team's plate-appearance total settles outright.
 
     ⚠️⚠️ **The relations alone are exact and inert, which is the whole reason this exists.**
@@ -536,7 +564,7 @@ def _lineup_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[st
         rows_in.setdefault(slot, []).append(index)
 
     base, over = divmod(total, len(rows_in))
-    found: list[tuple[str, int]] = []
+    found: list[tuple[str, int, tuple[str, ...]]] = []
     for position, slot in enumerate(sorted(rows_in), start=1):
         wanted = base + 1 if position <= over else base
         cells = [batting_cell(index, "plate_appearances") for index in rows_in[slot]]
@@ -544,9 +572,11 @@ def _lineup_moves(shape: BoardShape, values: Mapping[str, int]) -> list[tuple[st
         # One row still open: the slot's total less the rest. Two open rows are a sum the ordinary
         # machinery can carry, and splitting it here would be a guess.
         if len(unknown) == 1:
-            value = wanted - sum(values[cell] for cell in cells if cell in values)
+            known = tuple(cell for cell in cells if cell in values)
+            value = wanted - sum(values[cell] for cell in known)
             if value >= 0:
-                found.append((unknown[0], value))
+                # The companions travel with the move: they are what the subtraction used.
+                found.append((unknown[0], value, known))
     return found
 
 

@@ -2,7 +2,7 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (two re-reviewed), 110 findings, none rejected. One is open and stated below.** Two are **declined on the
+**Twenty-seven reviews (three passes on the last), 112 findings, none rejected. One is open and stated below.** Two are **declined on the
 environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
@@ -2268,6 +2268,39 @@ If the pool measurement agrees with the board above, **erasable footnotes were n
 they go back to given — which also removes the drawing, the 24% of screen, and the cap discussion in one
 move. ⚠️ A second reason to expect little: with only non-zero terms erasable, the *positions* of the
 blanks announce which rows carry the term. `HBP: 3` above three boxes means each box is 1.
+
+## ⚠⚠ v27 third pass: the fix left the inversion alive one property away
+
+**Stopped the run a third time.** Both findings are in fields the experiment was persisting.
+
+### The cheapest move was still being counted as the dearest
+
+`Solution.bounding_steps` counted `not has_a_comparable_cost`. That **was** the same as
+`technique is BOUNDING`, for years — while bounding was the only step with no comparable cost.
+`LINEUP_ARITHMETIC` has none either, because reading a total and dividing by nine combines no terms. So
+a total-visible board reported **nine bounding steps while using zero**, and `stalls`, which checks the
+technique, said zero on the same solution. **Two public metrics disagreeing about one board.**
+
+⚠⚠ **This is the exact inversion `LINEUP_ARITHMETIC` was introduced to remove, surviving one property
+away from where it was fixed.** I corrected the solver and the instrument's classifier and left a proxy
+that had meant the same thing until that moment.
+
+**An equivalence held by circumstance is a second definition of the thing**, and it breaks the instant
+the circumstance changes — silently, because both readings were true for as long as anyone had looked.
+The lesson is not about this line: it is that adding a third value to an enumeration invalidates every
+place that tested for the other two by proxy. `has_a_comparable_cost` was the only such proxy; it was
+audited rather than assumed.
+
+### The graph did not describe the arithmetic
+
+A shared slot is computed as *the slot's total less the rows already known*, and the move recorded only
+the team total. On a substitution-heavy board an edge and its depth were lost, so `chain_length`
+**understated the path that produced the number**. The value was right; the recorded graph was not the
+one that reached it — and an instrument comparing chains across arms reads exactly that graph.
+
+⚠️ **It also recorded the total when the total was a given.** Propagation records only cells that were
+*deduced*, because a given was never reached. Two conventions for one graph, in a file that already had
+one.
 
 ## ⚠⚠ v27 second pass: the model was exact and **deduced nothing**
 

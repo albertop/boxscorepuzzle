@@ -245,6 +245,83 @@ class TestTheSolverActuallyReachesIt:
         assert got == (None,) * 9
 
 
+class TestTheRecordedPathIsThePathTaken:
+    """⚠️ **The solution graph must describe the arithmetic done, not only the rule that allowed it.**
+
+    A shared slot is computed as *the slot's total less the rows already known*, so those rows are part
+    of the sum. The move recorded only the team total, so on a substitution-heavy board an edge and its
+    depth were lost and `chain_length` understated the path that produced the number. The value was
+    right; **the graph was not the one that reached it** — and an instrument comparing chains across arms
+    reads exactly that graph.
+    """
+
+    @staticmethod
+    def _solve(slots: tuple[int, ...], given: dict) -> object:
+        from boxscore_forge.solver import solve  # noqa: PLC0415
+
+        shape = BoardShape(**{**_SHAPE, "batter_count": len(slots)}, slots=slots)
+        return solve(shape, given)
+
+    def test_a_shared_slot_move_names_the_row_it_subtracted(self) -> None:
+        # Slot 9 holds two rows. Give one of them and the total; the other is the slot sum less it, so
+        # the row given is part of the arithmetic and belongs in the record.
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+        companion = batting_cell(9, "plate_appearances")
+        solution = self._solve(slots, {batting_total_cell("plate_appearances"): 39, companion: 1})
+        step = next(d for d in solution.deductions if d.cell == batting_cell(8, "plate_appearances"))
+
+        assert step.value == 3, "the slot sum less the known row is three"
+        # The companion here is a *given*, and givens are not edges — the convention propagation
+        # already follows. What must not happen is the total being added while it too was given.
+        assert step.depends_on == frozenset(), f"a given was recorded as an edge: {step.depends_on}"
+
+    def test_a_deduced_companion_is_an_edge_and_moves_the_depth(self) -> None:
+        """The case the old code lost: the companion was **worked out**, so it is a real dependency."""
+        from boxscore_forge.solver import Technique  # noqa: PLC0415
+
+        slots = (1, 2, 3, 4, 5, 6, 7, 8, 9, 9)
+        # Nothing given but the total, so slot 9's two rows stay a sum and neither is settled: the
+        # constraint refuses to split them, which is the neighbouring guarantee.
+        solution = self._solve(slots, {batting_total_cell("plate_appearances"): 39})
+        shared = {batting_cell(8, "plate_appearances"), batting_cell(9, "plate_appearances")}
+        settled = {d.cell for d in solution.deductions if d.technique is Technique.LINEUP_ARITHMETIC}
+
+        assert not (shared & settled), "the solver split a shared slot rather than leaving the sum"
+
+    def test_a_given_total_is_not_recorded_as_a_dependency(self) -> None:
+        # ⚠️ It was, unconditionally. Propagation records only cells that were *deduced*, because a
+        # given was never reached — and a graph that says otherwise inflates every chain that uses it.
+        solution = self._solve(tuple(range(1, 10)), {batting_total_cell("plate_appearances"): 39})
+
+        assert all(step.depends_on == frozenset() for step in solution.deductions), (
+            "a given total was recorded as an edge on every lineup move"
+        )
+
+
+class TestTheMetricsAgreeAboutOneSolution:
+    """⚠️⚠️ **An equivalence held by circumstance is a second definition, and it broke silently.**
+
+    `bounding_steps` counted `not has_a_comparable_cost`, which *was* the same as `technique is
+    BOUNDING` while bounding was the only step with no comparable cost. `LINEUP_ARITHMETIC` has none
+    either — it combines no terms — so a total-visible board reported **nine bounding steps while using
+    zero**, and `stalls`, which checks the technique, said zero on the same solution.
+
+    That is the inversion `LINEUP_ARITHMETIC` was introduced to remove, surviving one property away from
+    where it was fixed: the cheapest move counted as the dearest.
+    """
+
+    def test_nine_lineup_steps_are_nine_lineup_steps(self) -> None:
+        from boxscore_forge.solver import Technique, solve  # noqa: PLC0415
+
+        shape = BoardShape(**_SHAPE, slots=tuple(range(1, 10)))
+        solution = solve(shape, {batting_total_cell("plate_appearances"): 39})
+        lineup = sum(1 for d in solution.deductions if d.technique is Technique.LINEUP_ARITHMETIC)
+
+        assert lineup == 9, "the nine slots were not settled, so this proves nothing"
+        assert solution.bounding_steps == 0, f"{solution.bounding_steps} bounding steps for filler"
+        assert solution.stalls == 0, "reading a total and dividing by nine is not a stall"
+
+
 class TestAnIncompleteLineupIsRefused:
     """⚠️ **All nine positions, or the metadata is refused** — on both sides.
 
