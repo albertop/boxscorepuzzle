@@ -46,6 +46,18 @@
     --paper: #14161a;
     --rule: #2c3038;
     --rule-strong: #565d69;
+    /* ⚠️ **Lighter than `--rule`, and that is the whole reason the token is separate.** On paper the
+       two are the same value; on a dark board `#2c3038` against a `#14161a` ground is a line you have
+       to look for, and the grid is precisely the element that stops a dark board becoming a wall.
+
+       ⚠⚠ **Set by parity with the light mode, not by a contrast threshold — and reaching for the
+       threshold first was the mistake.** A grid rule is structure between two data cells, not the
+       boundary of a control, and the light board proves the point: `#d3d7de` on white is **1.44:1**
+       and reads perfectly. Sizing the dark line to 3:1 would have made it heavier than the version
+       that already works. This value is **1.61:1 against the given ground and 1.49:1 against the
+       editable one**, both a little stronger than light, which is the right place for a mode where the
+       line does more of the separating. Measured, then looked at in both. */
+    --grid-line: #363b45;
     --given: #e6e8ec;
     --entered: #7fa8ff;
     --unknown: #7fa8ff;
@@ -233,13 +245,28 @@ table.grid {
 .grid col.slot { width: var(--slot-column); }
 .grid col.label { width: var(--label-column); }
 
+/* ⚠️⚠️ **Every cell, given and editable alike — the border used to mean *editable* and that broke the
+   grid.** Only blank cells carried a box, so the table read as though pieces of it were missing, and in
+   the dark palette it was worse: the line is the only thing separating a cell from the ground.
+
+   **A grid is a grid.** Saying what a cell *is* was already fully done by colour — blue is the
+   player's, black is given, the pale ground marks an empty editable cell — so the border was carrying a
+   meaning it did not need to carry and paying for it in legibility.
+
+   ⚠️ **`border-right` on every cell rather than a box on each.** The table is `border-collapse:
+   separate`, because `collapse` drops borders on `position: sticky` elements in Chrome and Safari and
+   the header and totals row are pinned (§6). With `separate`, a full box on each cell draws two lines
+   on every shared edge. One bottom and one right per cell gives a single-line grid; the outer edges
+   come from the section's own frame. */
 .grid th, .grid td {
   height: var(--cell);
   padding: 0;
   text-align: center;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--grid-line);
+  border-right: 1px solid var(--grid-line);
   font-weight: 400;
 }
+.grid th:last-child, .grid td:last-child { border-right: 0; }
 
 /* ⚠️ Pinned, because in a deduction puzzle the totals are consulted constantly (§6) — and, as the
    real packages showed, **the totals row holds blanks the player must fill**, so it is an input
@@ -294,26 +321,19 @@ td.label.substitute { padding-left: 14px; }
 
 .cell { cursor: pointer; }
 .cell.given { color: var(--given); }
-/* ⚠️ **A full border, not an underline.** An underline is what a printed form puts under a blank; this
-   is a grid, and an editable cell should read as a cell.
-   `outline` rather than `border`, and that is the whole point: an outline is drawn outside the border
-   box and **takes part in no layout**, so the 44px touch target keeps all 44 of its pixels. A 1.5px
-   border inside the cell would have quietly made it 41px, which is under the minimum §6 measured. */
+/* ⚠️⚠️ **The 1.5px outline that used to box an editable cell is gone, and the grid line replaced it.**
+   It was the thing that made the border mean *editable*, and with every cell bordered it would be a
+   second, heavier line saying what the pale ground already says.
+
+   What remains is what actually distinguishes the three kinds of cell, and none of it is a border:
+   the **pale ground** is empty-and-editable, the **blue bold digit** is the player's, plain black on
+   paper is given. */
 .cell.blank {
   background: var(--blank);
   color: var(--entered);
   /* The player's own writing has to be findable at a glance among nine rows of given numbers: a cell
      they filled and a cell they were given are different kinds of fact. */
   font-weight: 700;
-  outline: 1.5px solid var(--rule-strong);
-  /* ⚠️ **Drawn just inside the box, and the instruction said outside.** Worth the note, because the
-     reason the instruction gave still holds: *the border must not shrink the usable area*. An outline
-     takes part in no layout whatever its offset, so the cell stays 45×44 and every pixel of it is
-     tappable — measured, not assumed.
-     At offset zero the line lands outside the box and **overlaps the neighbour**, so two adjacent
-     blanks drew a doubled, staggered edge that read as a rendering fault rather than as a grid. One
-     pixel in costs nothing the instruction was protecting and removes the collision. */
-  outline-offset: -1px;
 }
 /* ⚠️ **The pale ground means one thing: empty and editable.** A filled cell kept it, so a blue `5` on
    pale blue and an empty pale-blue cell read alike at a glance — the ground was saying *editable* and
@@ -333,7 +353,19 @@ td.label.substitute { padding-left: 14px; }
    This is not a CSS detail: ground says *what kind of cell this is*, state says *where you are now*,
    and state has to be able to paint over ground or it is not a state. */
 .cell.peer { background: var(--peer); }
-.cell.selected { background: var(--selected); box-shadow: inset 0 0 0 2px var(--selected-rule); }
+/* ⚠️⚠️ **Colour at the grid's own width, not a thicker line.** This was `inset 0 0 0 2px`, and a wider
+   edge either shifts the digit or shrinks the cell — with a 44px touch target measured to the pixel
+   (§6) there is nothing to spend. The amber is already on the board as the selected ground, so the
+   edge adds no fifth colour to a palette that carries four with meaning.
+
+   ⚠️ `outline` rather than a border, because the selection moves cell to cell on every tap: an outline
+   takes part in no layout at all, so nothing reflows as it moves. `-1px` keeps it inside the box so it
+   cannot overlap the neighbour's grid line. */
+.cell.selected {
+  background: var(--selected);
+  outline: 1px solid var(--selected-rule);
+  outline-offset: -1px;
+}
 
 /* ---- the footnote line ----------------------------------------------------------------------- */
 
@@ -434,7 +466,14 @@ td.label.substitute { padding-left: 14px; }
   min-height: 1.3em;
 }
 .verdict[data-state="wrong"] {
-  color: var(--wrong-ink, #8a1c12);
+  /* `flex: none` so the badge is the width of its sentence. The empty strip keeps its height from
+     `min-height` above, so the board does not jump when the message appears or goes. */
+  flex: none;
+  align-self: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--wrong-ground);
+  color: var(--wrong-ink);
   font-weight: 600;
 }
 
@@ -458,6 +497,30 @@ td.label.substitute { padding-left: 14px; }
   background: var(--key);
   color: var(--muted);
 }
+
+/* ⚠️ **The way back to the clipping, where the keypad was.** A finished board takes no entries, so
+   the pad is gone rather than disabled — a row of dead keys over a third of the screen at the moment
+   the player is looking at their own finished work. Full width because it is the only thing offered.
+
+   ⚠️ **And the entered values stay blue underneath.** They are the record of what the player deduced,
+   and looking at that is what going back to the board is for. Turning them black on completion would
+   make the board stop being theirs at the exact moment it became worth keeping. No rule is needed for
+   that: `paint()` derives `filled` from the game, which does not forget who filled a cell. */
+.again {
+  flex: none;
+  margin: 0;
+  padding: 0 18px;
+  min-height: var(--cell);
+  border: 0;
+  border-top: 1px solid var(--rule);
+  background: var(--header-ground);
+  color: var(--header-ink);
+  font: 600 15px/1 var(--face), system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
+
+/* A finished board is read: the cells are not controls, so nothing about them offers to be pressed. */
+.app-finished td.cell { cursor: default; }
 
 /* ---- the reveal: a printed boxscore, not a results card -------------------------------------- */
 

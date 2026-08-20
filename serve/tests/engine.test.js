@@ -1648,6 +1648,114 @@ suite("⚠️⚠️ A finished board stays finished, and its time stays what was
   });
 });
 
+suite("⚠️ The finished board is a record, not a surface", () => {
+  /** Boot the real shell against a package, solve it through the keypad, and hand back the app. */
+  const played = async (index = 0, { solve = true } = {}) => {
+    const { readPackage } = await import("../engine/package.js");
+    const { createGame } = await import("../engine/game.js");
+    const { renderSection, renderKeypad, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell, pitchingCell } = await import("../engine/columns.js");
+    const puzzle = readPackage(packages[index].raw);
+    const game = createGame(puzzle);
+    if (solve) {
+      const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+      for (const name of game.blanks()) game.enter(name, answers.get(name));
+      game.check();
+      game.finish();
+    }
+    return { puzzle, game, renderSection, renderKeypad, columnsFor, totalNameFor, battingCell, pitchingCell };
+  };
+
+  const section = (parts, onSelect) =>
+    parts.renderSection({
+      title: "x",
+      columns: parts.columnsFor.batting,
+      rows: parts.puzzle.puzzle.batting,
+      labels: parts.puzzle.labels,
+      slots: parts.puzzle.slotReferences,
+      cellName: parts.battingCell,
+      totalName: parts.totalNameFor.batting,
+      game: parts.game,
+      onSelect,
+    });
+
+  test("⚠️⚠️ a cell drawn without a selector is not a control in any sense", async () => {
+    // **Dead, not disabled.** A cell that keeps `role="button"` and a tab stop announces itself as
+    // pressable to everything that is not a pair of eyes, and a screen reader offering to press a cell
+    // that cannot change is worse than one that does not offer. So the handler, the role and the tab
+    // stop all go together.
+    const parts = await played();
+    const live = section(parts, () => {});
+    const done = section(parts, null);
+
+    const controls = (grid) => [...grid.querySelectorAll("td.cell")].filter((c) => c.getAttribute("role") === "button");
+    assert(controls(live).length > 0, "the live board has no reachable cells, so this proves nothing");
+    equal(controls(done).length, 0, "a finished board still offers cells as buttons");
+    equal([...done.querySelectorAll("td.cell")].filter((c) => c.tabIndex === 0).length, 0, "cells kept a tab stop");
+  });
+
+  test("⚠️ a click on a finished cell changes nothing, because there is nothing listening", async () => {
+    // ⚠️ **The reason this matters is the clock, not tidiness.** §26 shares the finished duration; a
+    // board that still accepts entries either runs a clock under a number already reported or stops it
+    // arbitrarily, and both make the shared time mean nothing.
+    const parts = await played();
+    const done = section(parts, null);
+    const before = parts.game.blanks().map((name) => parts.game.value(name)).join(",");
+    const cell = done.querySelector("td.cell.blank");
+
+    cell.click();
+    cell.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    equal(parts.game.blanks().map((name) => parts.game.value(name)).join(","), before, "a finished board took an entry");
+    assert(!done.querySelector(".cell.selected"), "a finished board selected a cell");
+  });
+
+  test("⚠️ what the player deduced stays blue", async () => {
+    // The record of their own work is what going back to the board is for. If everything turns the
+    // givens' colour on completion, the board stops being theirs at the moment it became worth keeping.
+    const parts = await played();
+    const done = section(parts, null);
+    const filled = [...done.querySelectorAll("td.cell.filled")];
+
+    assert(filled.length > 0, "no cell is marked as filled on a solved board");
+    // ⚠️ The section draws the totals row too, and its blanks live in `batting_totals` rather than in
+    // `batting`. Counting only the grid made this fail on its own arithmetic: 31 against 28.
+    const blanks = [...parts.puzzle.puzzle.batting.flat(), ...parts.puzzle.puzzle.battingTotals];
+    equal(filled.length, blanks.filter((v) => v === null).length, "not every blank the player filled is blue");
+  });
+
+  test("⚠️ the finished duration does not move again, whatever the page does", async () => {
+    const { createClock } = await import("../engine/clock.js");
+    const { readPackage } = await import("../engine/package.js");
+    const { createGame } = await import("../engine/game.js");
+    let now = 5_000_000;
+    const clock = createClock({ now: () => now });
+    const game = createGame(readPackage(packages[0].raw), clock);
+    clock.run();
+    now += 120_000;
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+    const earned = game.finish().duration_ms;
+
+    clock.run();
+    now += 3_600_000;
+
+    equal(game.record().duration_ms, earned, "an hour of the page being open joined the shared time");
+    equal(clock.isRunning(), false);
+  });
+
+  test("the keypad is still built for a board that is being played", async () => {
+    // ⚠️ The control. Every assertion above is about absence, and a suite of absences passes against a
+    // shell that renders nothing at all.
+    const parts = await played(0, { solve: false });
+    const pad = parts.renderKeypad(() => {}, () => {});
+
+    assert(pad.querySelectorAll("button").length >= 13, "the keypad lost its keys");
+    assert(pad.querySelector("button.check"), "the keypad has no Check key");
+    equal(parts.game.isFinished(), false, "the unsolved fixture came back finished");
+  });
+});
+
 suite("⚠️ The reveal is a printed boxscore, not the board with names attached", () => {
   const finished = async (raw) => {
     const { createGame } = await import("../engine/game.js");

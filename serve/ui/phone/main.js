@@ -127,7 +127,9 @@ function boot({ puzzle }) {
         cellName: battingCell,
         totalName: totalNameFor.batting,
         game,
-        onSelect: select,
+        // ⚠️ `null` once the game has ended, and `renderSection` then draws cells that are not
+        // controls at all — no listener, no tab stop, no `role="button"`. See `cellNode`.
+        onSelect: game.isFinished() ? null : select,
       }),
     );
     scroller.append(renderFootnotes(puzzle, game));
@@ -142,10 +144,14 @@ function boot({ puzzle }) {
         cellName: pitchingCell,
         totalName: totalNameFor.pitching,
         game,
-        onSelect: select,
+        onSelect: game.isFinished() ? null : select,
       }),
     );
-    if (selected) select(selected);
+    // ⚠️ **Not on a finished board.** `selected` still holds whichever cell the player was in when
+    // they pressed Check, and re-applying it paints the amber ground and `aria-pressed="true"` on a
+    // cell that is no longer a control — an input affordance on a board that takes no input. Cleared
+    // when the game ends rather than guarded here alone, so nothing can put it back.
+    if (selected && !game.isFinished()) select(selected);
   };
 
   const repaint = () => {
@@ -157,17 +163,38 @@ function boot({ puzzle }) {
   // Every blank filled. Recomputed after each entry, because that is the only thing that changes it.
   const boardIsFull = () => game.blanks().every((name) => game.value(name) !== null);
 
-  keypad = renderKeypad(
-    (key) => {
-      if (!selected) return;
-      applyKey(game, selected, key);
-      repaint();
-      remember();
-      keypad.allowCheck(boardIsFull());
-    },
-    () => check(),
-  );
-  app.append(keypad);
+  const showReveal = (record) => {
+    app.classList.add("solved");
+    app.append(renderReveal(puzzle, record));
+  };
+
+  // ⚠️⚠️ **The keypad exists while the board is an input surface and not afterwards.** A finished board
+  // takes no entries, so a pad under it is a control that does nothing — and the alternative, leaving
+  // it there disabled, is a row of dead keys occupying a third of the screen at the moment the player
+  // is looking at their own finished work.
+  //
+  // What replaces it is the way back to the clipping. Closing the reveal must not throw away the thing
+  // the player earned, and there is no other route to it once the pad is gone.
+  if (game.isFinished()) {
+    const again = document.createElement("button");
+    again.type = "button";
+    again.className = "again";
+    again.textContent = text("done.see_boxscore");
+    again.addEventListener("click", () => showReveal(game.record()));
+    app.append(again);
+  } else {
+    keypad = renderKeypad(
+      (key) => {
+        if (!selected) return;
+        applyKey(game, selected, key);
+        repaint();
+        remember();
+        keypad.allowCheck(boardIsFull());
+      },
+      () => check(),
+    );
+    app.append(keypad);
+  }
 
   // ⚠⚠ **The end of the game, and until now there was not one.** A player could fill every cell and
   // nothing happened — no verdict, no ending, and the `reveal` block shipped in every package and was
@@ -195,8 +222,13 @@ function boot({ puzzle }) {
     // was completed rather than however long the animation took.
     const record = game.finish();
     remember();
-    app.classList.add("solved");
-    app.append(renderReveal(puzzle, record));
+    selected = null;
+    // ⚠️ Redrawn, because the board has just stopped being an input surface: the cells lose their
+    // handlers and the keypad is replaced by the way back to the clipping. Without this the player
+    // closes the reveal onto a board that still invites entries into a game that is over.
+    draw();
+    rebuildChrome();
+    showReveal(record);
   }
 
   // ⚠️ The strip is still here and now carries only the verdict. The key moved into the pad; the
@@ -206,14 +238,27 @@ function boot({ puzzle }) {
   footer.append(verdict);
   app.append(footer);
 
+  /** Swap the keypad for the way back to the clipping, in place, when the game ends mid-session. */
+  function rebuildChrome() {
+    app.querySelector(".keypad")?.remove();
+    app.querySelector(".footer")?.remove();
+    const again = document.createElement("button");
+    again.type = "button";
+    again.className = "again";
+    again.textContent = text("done.see_boxscore");
+    again.addEventListener("click", () => showReveal(game.record()));
+    app.append(again);
+  }
+
   // ⚠⚠ **A finished board reopens finished.** Completion and its frozen duration are part of the
   // session now, so a solved puzzle came back looking unplayed: the reveal was gone, the clock resumed
   // for a visible page, and the next *Check* recorded a longer time than the player earned. The clock
   // is sealed by `restore` and cannot be restarted; this is the other half, which is drawing what the
   // player already earned instead of asking them to press Check again. v30-P1-03.
   if (game.isFinished()) {
-    app.classList.add("solved");
-    app.append(renderReveal(puzzle, game.record()));
+    // The footer's verdict has nothing to say about a finished board, and the pad was never built.
+    app.querySelector(".footer")?.remove();
+    showReveal(game.record());
   }
 
   const attention = followAttention({ clock, save: remember, doc: document, target: app });
@@ -222,7 +267,7 @@ function boot({ puzzle }) {
   addEventListener("pagehide", attention.away);
 
   draw();
-  keypad.allowCheck(boardIsFull());
+  keypad?.allowCheck(boardIsFull());
   globalThis.__game = game;
   globalThis.__puzzle = puzzle;
   globalThis.__store = store;

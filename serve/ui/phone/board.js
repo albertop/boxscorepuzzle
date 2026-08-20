@@ -135,7 +135,17 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
   const cellNode = (name, rowLabel) => {
     const cell = el("td", "cell");
     cell.dataset.cell = name;
-    if (game.isBlank(name)) {
+    // ⚠️⚠️ **A finished board is a record, not a surface.** `onSelect` is null once the game has ended,
+    // and then a blank cell is never made reachable and never takes a click: no `role="button"`, no
+    // tab stop, no Enter or Space handler, no listener. Disabling by CSS or by an early return inside
+    // the handler would leave a control that announces itself as a button to everything that is not a
+    // pair of eyes — and a screen reader offering to press a cell that cannot change is worse than one
+    // that does not offer.
+    //
+    // The reason it must be dead rather than ignored is the clock. §26 shares the finished duration; a
+    // board that still accepts entries either keeps a clock running under a number already reported or
+    // stops it arbitrarily, and both make the shared time mean nothing.
+    if (game.isBlank(name) && onSelect) {
       const column = text(`column.${name.split(".")[1]}`);
       // ⚠️ **The context only, and set before the first paint.** The value is appended by `paint()`,
       // because an `aria-label` written once at render stops describing the element the moment the
@@ -145,7 +155,7 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
       reachable(cell, { label: cell.dataset.label, selected: false });
     }
     paint(cell, game);
-    cell.addEventListener("click", () => onSelect(name));
+    if (onSelect) cell.addEventListener("click", () => onSelect(name));
     return cell;
   };
 

@@ -88,10 +88,10 @@ const en = {
   //
   // So one sentence for every wrong board, whatever is wrong with it. It says the board does not
   // balance -- which is a fact about the whole -- and offers nothing to bisect.
-  "done.not_yet": "It doesn't balance yet.",
+  "done.not_yet": "Something doesn't add up yet.",
   // Shown when blanks remain. Distinct from the above because *incomplete* and *wrong* are different
   // states and a player who has not finished is not being told they made a mistake.
-  "done.incomplete": "There are still empty cells.",
+  "done.incomplete": "Still a few cells to go.",
 
   // ---- the reveal ------------------------------------------------------------------------------
   "reveal.title": "Solved",
@@ -100,6 +100,10 @@ const en = {
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
   "reveal.close": "Back to the board",
+  // ⚠️ The way back to the clipping from a finished board. It replaces the keypad, because a board that
+  // cannot be typed into does not need one — and the boxscore has to stay reachable or closing the
+  // reveal would throw away the thing the player earned.
+  "done.see_boxscore": "See the boxscore",
   // ⚠️ `reveal.at` and `reveal.versus` are gone. They composed `SLA vs BOS at 1913-08-17` — a heading
   // that named the clubs by their Retrosheet keys and dated the game the way a database does. From
   // schema 5 the package carries the real names, and the heading is a result line: winner first, the

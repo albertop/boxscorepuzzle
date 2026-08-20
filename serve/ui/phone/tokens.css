@@ -36,6 +36,11 @@
   --ink: #16181d;
   --paper: #ffffff;
   --rule: #d3d7de;
+  /* ⚠️ **The grid's own line, separate from `--rule`.** They are the same value on paper and they are
+     not the same decision: `--rule` separates *blocks* — a section from a footer, a keypad from a
+     board — while this draws the grid every cell sits in, and the grid has to hold a dark board
+     together where a block separator does not. Measured in both schemes; see the dark override. */
+  --grid-line: #d3d7de;
   --rule-strong: #9aa1ad;
   --given: #16181d;
   /* ⚠️ **What the player wrote, and nothing else.** This token used to paint three things: the value
@@ -58,6 +63,24 @@
      batting and pitching totals, so it is an input surface, in the one row every column sum closes on.
      Colour works everywhere; weight had a hole exactly where the board is most consulted. */
   --entered: #1b57c4;
+
+  /* ⚠⚠ **The one place red is spent, and it is a badge rather than coloured text.**
+     `--entered` above records why red is not available for the player's handwriting: it is the one
+     colour every player reads as *this is wrong*, and an error is the one thing no other colour can
+     carry. This is that spend.
+
+     ⚠️ **It was `color: #8a1c12` on whatever ground was behind it, and that is 9.31:1 on light paper
+     and 1.91:1 on the dark keypad.** Measured, after the operator said it did not read in the dark. A
+     colour chosen against one ground and applied to both is the same shape as a justification reused
+     rather than re-derived — and dark red on near-black is not a weaker version of the message, it is
+     the absence of one.
+
+     A badge carries its own ground, so it does not depend on what is behind it. White on `#b3261e` is
+     **6.54:1**, the same in both schemes, and it is deliberately not overridden in the dark block for
+     the reason the scoreboard is not: a warning is an object, and an object does not change paint when
+     the room does. */
+  --wrong-ground: #b3261e;
+  --wrong-ink: #ffffff;
   --unknown: #1b57c4;
   --blank: #f4f6f9;
   --selected: #ffe9a8;
