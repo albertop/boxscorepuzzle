@@ -2426,17 +2426,35 @@ determines PA per **slot**; the board has a row per **player**. A slot held by o
 row determined by the team total; a slot shared by a starter and a substitute yields only their **sum**,
 which constrains two cells without fixing either.
 
-**83.4% of batting rows are alone in their slot** — 826,039 of 990,202 in the post-rule pool. Those
-would be determined outright.
+**83.4% of batting rows are alone in their slot** — 826,039 of 990,202 in the post-rule pool.
 
 ⚠️ **The earlier 75.1% was the ungated population**, and `_what_it_buys()` also measured the *pre*-rule
 cohort while its heading claimed the post-rule one (v26-P3-05). The five rule-excluded directions are
-removed now, and the exclusion is derived from the run rather than written down, so the decision cohort
-and the payoff cohort cannot drift apart.
+removed now, and the exclusion is derived from the run rather than written down.
 
-⚠️ **That is what the constraint *determines*, not how many cells could then be erased.** The second
-number needs the solver to hold the constraint, which is exactly what is not built. **Nothing is
-implemented.** The instrument is `discovery/batting-order/`.
+### ⚠⚠ And "determined outright" is the wrong thing to want
+
+**The operator caught this and it changes what the measurement is for.** I read the 83.4% as the payoff:
+the constraint determines those cells, so the board gets easier. **Determining cells is filler.** With
+the team's PA total given, the player computes nine slots from one number — four turns and a remainder —
+and types nine cells without thinking.
+
+**With the total erased it works the other way.** Each slot bounds the next and the player has to chain,
+and it bounds **in both directions**: knowing slots 3 and 6 puts 4 and 5 between them without fixing
+either. That restricts without determining, which is what produces a stall. **So the rule is good and
+what needs controlling is the total.**
+
+### What is built, and what is still running
+
+**The constraint is implemented twice**, as §22 requires — once in the generator and once in the
+verifier, written from the rule rather than from each other. ⚠️ **Opt-in: without slots neither emits
+anything**, so production is untouched and stays untouched until the operator decides. A default of one
+row per slot would be wrong on every board carrying a substitution, and wrong silently.
+
+**Three arms are running** on a stratified sample, one canonical walk filtered per arm, with the pool
+rule applied: `off`, `on_total_given`, `on_total_erasable`. **The comparison that answers the question is
+`off` against `on_total_erasable`**; the middle arm exists so the choice about the total is visible
+rather than assumed. The instrument is `discovery/batting-order/arms.py`.
 
 ## v25 — verified, none rejected. **Both closed.**
 
@@ -2927,13 +2945,16 @@ itself is not the same as the experience being right.**
 constraint exact and costs those five; not adopting it means the solver never gets the constraint, since
 a rule true 99.995% of the time is a trap rather than a weaker rule.
 
-What it buys is bounded and measured on the post-rule pool: **826,039 of 990,202 batting rows — 83.4% —
-are alone in their slot** and would be determined outright by the team's PA total; the rest get a sum.
+⚠️ **The number that decides this is not yet in.** The three-arm run is measuring `off` against
+`on_total_erasable` — whether the constraint *adds* deduction once the PA total is erased. On the
+post-rule pool, 826,039 of 990,202 rows (83.4%) are alone in their slot, but **that is the filler case
+and not the payoff**: with the total given those nine cells are typed, not deduced. Do not take this
+decision off the 83.4%.
 
-⚠️ **This line said 75.1% until v27 caught it**, which was the ungated figure the detailed section above
-had already corrected. A decision summary carrying a superseded denominator is worse than no summary:
-it is read at exactly the moment the decision is taken, and it contradicted the authoritative section in
-the same file.
+⚠️ **This line said 75.1% until v27 caught it** — the ungated figure, after the detailed section had
+already been corrected. A decision summary carrying a superseded denominator is worse than none: it is
+read at exactly the moment the decision is taken, and it contradicted the authoritative section in the
+same file.
 
 ⚠️ **The winner bias, which nobody chose and nothing had recorded.** §5's zero-density gate selects the
 **winning team's offense 84% of the time** — more runs means fewer zeros. So every board the generator
