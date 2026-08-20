@@ -2,21 +2,43 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (three passes on the last), 112 findings, none rejected. One is open and stated below.** Two are **declined on the
-environment**, each with its reason and its reactivation condition in `non-issue.md`.
+**Twenty-seven reviews (three passes on the last), 112 findings, none rejected. One is open and stated
+below.** Two are **declined on the environment**, each with its reason and its reactivation condition in
+`non-issue.md`.
 
-⚠️ **The last two reviews were entirely about the phone shell**, after eighteen about the forge. That is
-not a change of subject so much as a change of what is reachable: `serve` only recently had enough
-surface to be wrong in. Both of v23's findings, and both of the defects the operator found by playing,
-share one cause worth naming — **a rule written in `main.js` is unguarded by construction**, because the
-suite does not import a file whose job is to boot the application.
+### ⚠️⚠️ The standing observation: seven findings, one piece of work, five distinct shapes
+
+**v26 and v27 are seven findings across five passes, all against the batting-order work, and every one
+was in the instrument rather than in the hypothesis.** The idea was right from the first sentence. What
+kept being wrong was the apparatus measuring it, and no two were wrong the same way:
+
+| pass | what was wrong |
+|---|---|
+| v26 first | the cohort had no zero-density gate — **the lesson written hours earlier, not applied** |
+| v26 second | the clustering table hid every category with zero exceptions, and **overturned a recorded conclusion** |
+| v27 first | the relations encoded monotonicity, not the cycle: `6 5 4 4 4 4 4 4 4` was accepted |
+| v27 second | the corrected model was exact and **deduced nothing** — 0 of 9 — and no test could see it |
+| v27 third | the inversion survived **one property away** from where it was fixed |
+
+⚠️ **Four of the seven were invisible in output that looked entirely reasonable.** That is the shape
+this project keeps meeting and it has a new member: *a model can be exactly right and have no
+operational consequence*, and **satisfaction tests cannot tell those apart because they never ask the
+solver anything.**
+
+⚠️ **The run was stopped three times.** Each stop cost a few minutes; the artifact would have been
+quoted for months. The cheap thing was stopping, not the measurement.
+
+⚠️ **Earlier, the same pattern one floor down.** v23's findings and both defects the operator found by
+playing share one cause: **a rule written in `main.js` is unguarded by construction**, because the suite
+does not import a file whose job is to boot the application. Different file, same sentence — the guard
+cannot reach where the rule lives.
 
 ⚠️ **v05-P1-02, open across ten reviews, is closed twice over.** It was fixed by drawing the erased
 footnote term as the grid's own cell — and then **deleted along with the case it existed for**, when the
 pool run closed the footnote cells again. Both halves are recorded, because a fix later removed for a
 good reason reads in the history exactly like one that was abandoned.
 
-⚠️ **The last five reviews were almost entirely about one instrument.** That is worth reading as a
+⚠️ **v10 to v18 were almost entirely about one instrument too**, which is why the arc above reads as a
 pattern rather than a run of bad luck: **a measurement can be blind in a way that shows up as a
 plausible value**, and no amount of care in the reading catches it — only a guard that fails when the
 measurement is blind.
