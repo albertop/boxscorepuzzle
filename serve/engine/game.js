@@ -117,6 +117,24 @@ export function isSession(saved) {
  * The engine still has no hidden dependency on when it runs (C4, one field over), and it knows nothing
  * about *why* the clock stopped: page visibility and the inactivity timeout are the shell's business.
  */
+export const HINTS_PER_GAME = 3;
+/**
+ * How many cells a player may be given. **A game rule, so it lives with the game and not with the
+ * shell** — a limit a screen enforces is a limit the next screen has to remember.
+ *
+ * ⚠️⚠️ **Hints were rejected outright and the decision is reversed.** The original reasoning was §22's
+ * guarantee: every board ships solvable without guessing, so a hint is a crutch for a board that
+ * should not need one. That reasoning is still true and it was answering the wrong question — it never
+ * considered **comparison**, which is what the number is for. The crossword's answer settles it: a hint
+ * does not corrupt a shared result if it is shared *alongside* the time. One minute with three hints
+ * and one minute with none are two different results and every reader takes them as two.
+ *
+ * ⚠️ **Three, and the count is not measured — it is a shape.** Few enough that spending one is a
+ * decision, enough that being stuck twice does not end the game. It is `PROVISIONAL` in the sense
+ * `docs/python-conventions.md` means: chosen, not derived, and the fifty-board hand-solve is what will
+ * say whether it is right.
+ */
+
 export function createGame(puzzle, clock = createClock()) {
   const cells = new Map(describeCells(puzzle).map((cell) => [cell.name, cell]));
   const entries = new Map();
@@ -211,14 +229,35 @@ export function createGame(puzzle, clock = createClock()) {
       entries.delete(name);
     },
 
-    /** Fill a blank with its answer and record that it was given away, never counted as a mistake. */
+    /**
+     * Fill a blank with its answer and record that it was given away, never counted as a mistake.
+     *
+     * ⚠️ **The selected cell, never a random one** — that is the shell's business, but it is the reason
+     * this takes a name. A random cell is a lottery: it may hand over the one the player was about to
+     * get, or the one that unlocks the board, and the player controls neither. Revealing the cell they
+     * chose rewards knowing *where you are stuck*, which is part of solving.
+     *
+     * ⚠️ **The limit is enforced here and refuses rather than returning quietly.** The keypad's hint key
+     * goes dead at zero, and a control being disabled is not a rule — the next interface would have to
+     * remember it too.
+     */
     hint(name) {
       const cell = require(name);
       if (cell.given !== null) throw new Error(`${name} is given and needs no hint`);
+      if (hinted.size >= HINTS_PER_GAME && !hinted.has(name)) {
+        throw new Error(`no hints left: ${HINTS_PER_GAME} is the whole allowance`);
+      }
       entries.set(name, cell.answer);
       hinted.add(name);
       return cell.answer;
     },
+
+    /** How many are left. The shell shows it on the key, because a spend the player cannot count is a
+     * spend they will not make. */
+    hintsLeft: () => Math.max(0, HINTS_PER_GAME - hinted.size),
+
+    /** Whether this cell was given away rather than deduced. Read by `paint()`; see the colour note. */
+    isHinted: (name) => hinted.has(name),
 
     isCorrect: (name) => valueOf(name) === require(name).answer,
 
@@ -322,7 +361,10 @@ export function createGame(puzzle, clock = createClock()) {
       hinted.clear();
       firstWrong.clear();
       for (const [name, value] of Object.entries(saved.entries ?? {})) if (cells.has(name)) entries.set(name, value);
-      for (const name of saved.hinted ?? []) if (cells.has(name)) hinted.add(name);
+      // ⚠️ **Capped on the way in.** A session is player-writable storage; without this a hand-edited
+      // one hands out unlimited answers and the record still reads as a legitimate result. §23 says a
+      // refused session costs nothing, and a truncated hint list costs less than an uncapped one.
+      for (const name of (saved.hinted ?? []).slice(0, HINTS_PER_GAME)) if (cells.has(name)) hinted.add(name);
       for (const name of saved.firstWrong ?? []) if (cells.has(name)) firstWrong.add(name);
       finishedAt = saved.finishedAt ?? null;
       // ⚠️ The duration is part of the session, not a separate thing the shell remembers to carry.

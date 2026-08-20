@@ -4196,3 +4196,25 @@ that distributions hide what a rendered board shows.
 `lineup_fallback.py` says the confirmation ran and all three criteria held. **Criteria 1 and 2 hold as
 stated; criterion 3 measures filler and not causation**, and the module now says so rather than leaving
 "all three" to be read as more than it is.
+
+## ⚠️ The printed formula strip is missing the batting order
+
+`discovery/hand-solve/build_pack.FORMULAS` carries four families and the bounds: the row identity,
+column totals, the global identity, the cross-team link, `Outs = 3 x innings`, `AB >= H`, `ER <= R`.
+**It does not carry the batting order**, which was adopted after the strip was written.
+
+⚠️⚠️ **That is the one relation a player cannot infer from looking at a board** — `batting-order-plan.md`
+records the operator's own distinction: the first four are baseball bookkeeping a fan recognises, and
+the fifth is logic over a cyclic sequence. The strip's own docstring says it "doubles as the first real
+test of §8's permanent reference sheet", so a reference sheet missing the rule nobody can infer is the
+worst gap it could have.
+
+**The cost is not hypothetical.** On 2026-08-20 the operator stopped on a board he believed was
+impossible, reasoning correctly from the cyclic rule against a total he had entered wrongly. He had the
+rule in his head; a solver working from the strip would not have it at all.
+
+**Not fixed, and the reason is the launch gate.** The pack is printed and being solved, and it must not
+move while it is being solved — a mid-flight change makes the fifty boards two experiments. Fix it in
+the next pack, and check the same thing then: **every relation the boards can require is on the strip.**
+
+The on-screen reference sheet (`serve-flow.md` §3b) carries all five and is not affected.

@@ -64,27 +64,85 @@ curve — **not** the feedback, because feedback is the thing that destroys the 
 
 ---
 
-## 3. No hints
+## 3. Three hints, and they are shared with the time
 
-**Not primarily because they would ruin a shared time, though they would.**
+**Reversed on 2026-08-20, after playtesting with a real player.** This section said *no hints*. The
+superseded reasoning is kept below, because it was not wrong — it was answering a different question.
 
-§22 guarantees that every published board is solvable by propagation and bounding **without a single
-guess**. A hint is an escape from being stuck with no way forward — and by design that state cannot
-happen. **If a board needed a hint, the guarantee failed**, and the answer is to fix the generator, not to
-hand the player a way around it.
+### How it works
 
-### The consequence, and why it is acceptable
+- **Three per game.** Few enough that spending one is a decision, enough that being stuck twice does
+  not end the game. Chosen, not measured: the fifty-board hand-solve is what will say if it is right.
+- **The hint reveals the *selected* cell.** The player picks where they are stuck and presses it.
+- **A hinted cell is drawn in a third colour** — neither the given black nor the entered blue — so the
+  finished board shows which cells the player did not deduce.
+- **The count sits beside the time on the reveal**, so a shared result carries both.
+- It records in the C7 event (`hints`), which is what a shared or compared result means.
 
-**Without hints, the only exit from being stuck is to give up.** That is a real cost and it is covered by
-§27's existing protections rather than by anything new:
+### ⚠️⚠️ What the reversal turned on, which is not that the old reasoning was wrong
 
-- the free monthly grace day
-- streak insurance in the paid tier
-- the puzzle does not disappear at midnight; it closes for streak purposes and stays playable from the
-  archive
+**A hint does not corrupt a comparison if it is shared alongside the time.** One minute with three
+hints and one minute with none are two different results, and every reader takes them as two. That is
+the crossword's answer and the original argument never considered it — it reasoned entirely about
+whether a board *needs* a hint, and concluded correctly that it does not.
 
-§27 already argues that streak insurance is **protection against your own mechanism** rather than a
-feature. The absence of hints is the other half of that same argument.
+**Both things are true at once.** §22's guarantee still holds: every published board is solvable by
+propagation and bounding without a guess, and if one ever needed a hint the answer is still to fix the
+generator. A hint is not an escape from an unsolvable board. It is an escape from **this player, on
+this board, today** — and being stuck is a fact about a person, not a defect in a puzzle.
+
+### ⚠️ Why the selected cell rather than a random one
+
+**A random cell is a lottery.** It might hand over the one the player was about to get, or the one that
+unlocks the whole board, and the player controls neither — so the same spend is worth wildly different
+amounts depending on where it lands.
+
+Revealing the cell they chose **rewards knowing where you are stuck**, which is part of solving rather
+than a way around it. It is also what sudoku does.
+
+### The superseded reasoning, kept
+
+> **Not primarily because they would ruin a shared time, though they would.**
+>
+> §22 guarantees that every published board is solvable by propagation and bounding **without a single
+> guess**. A hint is an escape from being stuck with no way forward — and by design that state cannot
+> happen. **If a board needed a hint, the guarantee failed**, and the answer is to fix the generator,
+> not to hand the player a way around it.
+>
+> **Without hints, the only exit from being stuck is to give up.** That is a real cost and it is
+> covered by §27's existing protections rather than by anything new: the free monthly grace day,
+> streak insurance in the paid tier, and the puzzle staying playable from the archive after midnight.
+
+⚠️ **Recorded rather than deleted, and the distinction is the point.** The first sentence of it is the
+tell: it set the comparison argument aside as secondary and then never returned to it. A decision
+overturned by an argument it never engaged with is worth keeping visible, because the same shape will
+happen again — and a document that quietly says the opposite of what it said last month teaches nobody
+anything.
+
+The §27 protections above are unchanged and still the answer to giving up. Hints are not a replacement
+for them: three cells do not rescue a board nobody can finish.
+
+---
+
+## 3b. A reference sheet, opened from a button
+
+**Also from the playtest: the player could not remember the formulas mid-game.** That is friction
+rather than difficulty — a game measuring memory as well as deduction, and only one of those is the
+product.
+
+**It is worse now than when this was first considered.** There are five families, and the batting order
+is the one that **cannot be inferred from looking at a board**. The operator lost a solve to exactly
+that on the day it was adopted.
+
+- **Contents: the five relations and the bounds** — the set the printed strip on the hand-solve pack
+  carries, plus the batting order, which that strip predates.
+- **It costs no hint and is not one.** A hint hands over an answer; this hands over the rules, which §8
+  teaches on first play. The difference is that §8 teaches them once and this is there when they are
+  wanted.
+- **A button rather than permanent**, because on 375px there is no room for a permanent strip. On paper
+  there is, and that is exactly what the pack does.
+- **In the board's chrome, not in the keypad.** Both were rendered: *The relations* wraps onto two lines
+  inside a 66px pad key. It also has to stay reachable on a finished board, where there is no keypad.
 
 ---
 
@@ -274,7 +332,10 @@ reasoning, so a later reading does not treat them as data kept "just in case".
 ## What this closes in §36
 
 - **Error handling** — validation on *done* only; no limit, because §27 forbids a fail state (§2 above)
-- **What a hint is** — there are none, and §22's guarantee is why (§3)
+- **What a hint is** — three per game, revealing the selected cell, shared alongside the time (§3).
+  ⚠️ This read *"there are none, and §22's guarantee is why"* until 2026-08-20; the guarantee is intact
+  and was never the question a hint answers
+- **The reference sheet** — the five relations on a button, costing no hint (§3b)
 - **Saving, pausing and resuming** — the mechanics, where §27 had only the promise (§6)
 - **What the clock counts** — visibility plus a generous inactivity timeout, invisible until the end
   (§4, §5)

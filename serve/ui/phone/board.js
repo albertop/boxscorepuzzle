@@ -17,7 +17,7 @@ import {
   inningsToDisplay,
   pitchingTotalCell,
 } from "../../engine/columns.js";
-import { text } from "../../engine/strings.js";
+import { fill, text } from "../../engine/strings.js";
 
 const el = (tag, className, content) => {
   const node = document.createElement(tag);
@@ -231,6 +231,10 @@ export function paint(node, game) {
   node.classList.toggle("blank", blank);
   node.classList.toggle("filled", blank && value !== null);
   node.classList.toggle("given", !blank);
+  // ⚠️ Derived here with the rest of the cell's appearance, never set once when the hint is spent. A
+  // hinted cell can be cleared and re-entered, and a class applied at the moment of the hint would
+  // outlive the fact it describes. Same redraw, same source: the game.
+  node.classList.toggle("hinted", blank && game.isHinted(name));
   const isInnings = name.startsWith("pitching") && name.endsWith(".outs");
   const shown = value === null ? "" : isInnings ? inningsToDisplay(value) : String(value);
   node.textContent = shown;
@@ -353,6 +357,13 @@ export function applyKey(game, name, key) {
     game.enter(name, null);
     return;
   }
+  if (key.hint) {
+    // The engine owns the allowance and refuses past it; the pad going dead is the visible half of the
+    // same rule. Both, because a control prevented only by being greyed out works again the moment
+    // anything reaches it another way — the note on the thirds keys, arriving again.
+    if (game.hintsLeft() > 0) game.hint(name);
+    return;
+  }
   const innings = isInningsCell(name);
   if (key.thirds !== undefined) {
     // ⚠️ **The guard that was missing.** A thirds key on a plain-integer cell computed
@@ -413,9 +424,24 @@ export function renderKeypad(onKey, onCheck) {
     key.addEventListener("click", () => onKey({ thirds }));
     pad.append(key);
   }
-  const clear = el("button", "wide", text("keypad.clear"));
+  // ⚠️⚠️ **`Clear` gives up its second column and the keypad does not grow.** Its 107px was measured
+  // against the board's height budget and every pixel it gains comes off visible rows, so a fourth row
+  // is not available at any price. The bottom row was full — thirds, thirds, `Clear` across two, and
+  // `Check` — and one of those five slots had to pay for the hint key. `Clear` is the only one that was
+  // wide for looks rather than for need: five characters fit a single column with room over.
+  const clear = el("button", null, text("keypad.clear"));
   clear.addEventListener("click", () => onKey({ clear: true }));
   pad.append(clear);
+
+  // ⚠️ **The hint acts on the selected cell**, so it belongs among the keys that act on the selected
+  // cell. The reference sheet does not and is not here — it is permanent context rather than input,
+  // and it lives in the board's own chrome.
+  const hint = el("button", "hint");
+  const hintLabel = el("span", "hint-label", text("keypad.hint"));
+  const hintLeft = el("span", "hint-left", "");
+  hint.append(hintLabel, hintLeft);
+  hint.addEventListener("click", () => onKey({ hint: true }));
+  pad.append(hint);
 
   // ⚠️⚠️ **Check sits in the pad's last slot, and this used to be an argument against.** The note that
   // stood here said a button ending the game must not sit under the thumb, because that is a game
@@ -451,6 +477,22 @@ export function renderKeypad(onKey, onCheck) {
     // The name has to say it too: a disabled control a screen reader announces as available reads as
     // broken rather than as inapplicable. Same rule as the thirds keys.
     check.setAttribute("aria-disabled", allowed ? "false" : "true");
+  };
+
+  /**
+   * How many hints are left, on the key.
+   *
+   * ⚠️ **The number is shown rather than only enforced.** A spend the player cannot count is a spend
+   * they will not make: three invisible hints are, in practice, zero hints and a mysteriously dead key
+   * at the end. Dead at zero, and the count is the label's second half so the key does not resize as
+   * it counts down.
+   */
+  pad.showHints = (left) => {
+    hintLeft.textContent = String(left);
+    hint.disabled = left === 0;
+    hint.setAttribute("aria-disabled", left === 0 ? "true" : "false");
+    // The key's accessible name has to carry the count too; a screen reader gets `Hint, 2 left`.
+    hint.setAttribute("aria-label", fill("keypad.hint_left", { left }));
   };
 
   pad.allowThirds(false);

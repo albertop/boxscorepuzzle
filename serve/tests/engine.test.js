@@ -1648,6 +1648,173 @@ suite("⚠️⚠️ A finished board stays finished, and its time stays what was
   });
 });
 
+suite("⚠️ Three hints, spent on the cell the player chose", () => {
+  const fresh = async () => {
+    const { createGame, HINTS_PER_GAME } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const puzzle = readPackage(packages[0].raw);
+    return { game: createGame(puzzle), puzzle, HINTS_PER_GAME };
+  };
+
+  test("a hint fills the named cell with its answer and is not a mistake", async () => {
+    const { game } = await fresh();
+    const name = game.blanks()[4];
+    const answer = game.cells().find((cell) => cell.name === name).answer;
+
+    equal(game.hint(name), answer);
+
+    equal(game.value(name), answer, "the hint did not fill the cell");
+    equal(game.isHinted(name), true);
+    equal(game.record().hints, 1);
+    equal(game.check().state, "incomplete");
+    equal(game.record().errors, 0, "a hint was counted as a mistake");
+  });
+
+  test("⚠️⚠️ the allowance is enforced by the engine, not by the key being disabled", async () => {
+    // A control prevented only by being greyed out works again the moment anything reaches it another
+    // way — the note the thirds keys already carry. The next interface will not remember the limit;
+    // the engine does.
+    const { game, HINTS_PER_GAME } = await fresh();
+    const blanks = game.blanks();
+
+    for (let i = 0; i < HINTS_PER_GAME; i += 1) game.hint(blanks[i]);
+
+    equal(game.hintsLeft(), 0);
+    throws(() => game.hint(blanks[HINTS_PER_GAME]), "no hints left");
+    equal(game.record().hints, HINTS_PER_GAME, "a refused hint was still counted");
+  });
+
+  test("hinting the same cell twice is one hint, because it was already given", async () => {
+    const { game } = await fresh();
+    const name = game.blanks()[0];
+
+    game.hint(name);
+    game.hint(name);
+
+    equal(game.record().hints, 1, "the same cell cost two hints");
+    equal(game.hintsLeft(), 2);
+  });
+
+  test("⚠️ a hint survives the reload and still counts", async () => {
+    // C7 is irreversible: a hint the reopen forgets is a shared result that overstates the solve.
+    const { game, puzzle } = await fresh();
+    const { createGame } = await import("../engine/game.js");
+    const name = game.blanks()[1];
+    game.hint(name);
+
+    const second = createGame(puzzle);
+    assert(second.restore(game.snapshot()), "the session was refused");
+
+    equal(second.record().hints, 1, "the reopen lost the hint");
+    equal(second.isHinted(name), true, "the reopen forgot which cell was given");
+    equal(second.hintsLeft(), 2);
+  });
+
+  test("⚠️⚠️ a hand-edited session cannot buy more than the allowance", async () => {
+    // The session is player-writable storage. Without a cap on the way in, an edited one hands out
+    // unlimited answers and the record still reads as a legitimate result.
+    const { game, puzzle, HINTS_PER_GAME } = await fresh();
+    const { createGame } = await import("../engine/game.js");
+    const forged = { ...game.snapshot(), hinted: game.blanks().slice(0, 12) };
+
+    const second = createGame(puzzle);
+    second.restore(forged);
+
+    equal(second.record().hints, HINTS_PER_GAME, "a forged session bought extra hints");
+  });
+
+  test("⚠️ a hinted cell is painted in its own ink, not the player's", async () => {
+    // The finished board has to show which cells were not deduced. Blue would claim work the player
+    // did not do; black would hide the spend from the person looking at their own result.
+    const { renderSection, columnsFor, totalNameFor } = await import("../ui/phone/board.js");
+    const { battingCell } = await import("../engine/columns.js");
+    const { game, puzzle } = await fresh();
+    const hinted = game.blanks()[0];
+    const typed = game.blanks().find((n) => n.startsWith("batting[") && n !== hinted);
+    game.hint(hinted);
+    game.enter(typed, game.cells().find((c) => c.name === typed).answer);
+
+    const grid = renderSection({
+      title: "x",
+      columns: columnsFor.batting,
+      rows: puzzle.puzzle.batting,
+      labels: puzzle.labels,
+      slots: puzzle.slotReferences,
+      cellName: battingCell,
+      totalName: totalNameFor.batting,
+      game,
+      onSelect: () => {},
+    });
+    document.getElementById("board").append(grid);
+    const ink = (name) => getComputedStyle(grid.querySelector(`.cell[data-cell="${name}"]`)).color;
+
+    assert(grid.querySelector(`.cell[data-cell="${hinted}"]`).classList.contains("hinted"));
+    assert(!grid.querySelector(`.cell[data-cell="${typed}"]`).classList.contains("hinted"));
+    assert(ink(hinted) !== ink(typed), `a hinted cell is the same colour as an entered one: ${ink(hinted)}`);
+
+    grid.remove();
+  });
+
+  test("⚠️ clearing a hinted cell stops it being painted as hinted", async () => {
+    // The class is derived on every repaint rather than set when the hint is spent. A class applied at
+    // the moment of the hint would outlive the fact it describes.
+    const { game } = await fresh();
+    const name = game.blanks()[0];
+    game.hint(name);
+    game.enter(name, null);
+
+    equal(game.value(name), null);
+    // ⚠️ Still spent: the answer was seen. The allowance does not refund.
+    equal(game.record().hints, 1, "clearing the cell refunded the hint");
+  });
+});
+
+suite("⚠️ The reference sheet, which costs no hint", () => {
+  test("it carries all five relations and the bounds", async () => {
+    // ⚠️⚠️ **Five, and the printed strip on the hand-solve pack carries four.** That strip predates the
+    // batting order, which is the one relation a player cannot infer from looking at a board. The gap
+    // is recorded in todo.md; the pack must not move while it is being solved, and the screen has no
+    // such constraint.
+    const { renderReference } = await import("../ui/phone/finish.js");
+    const panel = renderReference();
+    const text = panel.textContent;
+
+    for (const rule of ["PA = AB + BB + HBP + SF + SH + CI", "PA = Outs + Runs + LOB", "Outs = 3"]) {
+      assert(text.includes(rule), `the sheet is missing ${rule}`);
+    }
+    assert(/nine slots/.test(text), "the sheet is missing the batting order, which is the one nobody can infer");
+    assert(/AB \u2265 H|AB ≥ H/.test(text), "the sheet is missing the bounds");
+    equal(panel.querySelectorAll("dt").length, panel.querySelectorAll("dd").length, "a rule with no name");
+  });
+
+  test("⚠️ opening it spends no hint and changes no cell", async () => {
+    const { boot } = await import("../ui/phone/shell.js");
+    const { readPackage } = await import("../engine/package.js");
+    const { createStore } = await import("../engine/store.js");
+    const puzzle = readPackage(packages[0].raw);
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+    const kept = new Map();
+    const shell = boot({
+      puzzle,
+      root,
+      store: createStore({
+        getItem: (k) => kept.get(k) ?? null,
+        setItem: (k, v) => kept.set(k, v),
+        removeItem: (k) => kept.delete(k),
+      }),
+    });
+    const before = shell.game.blanks().map((n) => shell.game.value(n)).join(",");
+
+    root.querySelector(".reference-key").click();
+
+    assert(root.querySelector(".reference"), "the reference button opened nothing");
+    equal(shell.game.record().hints, 0, "opening the reference cost a hint");
+    equal(shell.game.blanks().map((n) => shell.game.value(n)).join(","), before, "it changed the board");
+    root.remove();
+  });
+});
+
 suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () => {
   /**
    * **`boot()` from `shell.js`, not the pieces it uses.** The suite below this one asserts component
@@ -1743,7 +1910,10 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
     assert(shell.root.querySelector(".reveal"), "solving did not open the reveal");
     assert(!shell.root.querySelector(".keypad"), "the keypad survived the end of the game");
-    assert(!shell.root.querySelector(".footer"), "the verdict strip survived the end of the game");
+    assert(!shell.root.querySelector(".verdict"), "the verdict survived the end of the game");
+    // ⚠️ **The reference stays and the verdict goes.** A finished board is still a boxscore somebody
+    // may want to read the rules against, and the keypad that was the other route to them is gone.
+    assert(shell.root.querySelector(".reference-key"), "a finished board lost the reference sheet");
     equal(shell.root.querySelector(".again")?.textContent, "See the boxscore");
     assert(shell.app.classList.contains("app-finished"), "the finished class was never applied");
     const cells = [...shell.root.querySelectorAll("td.cell")];

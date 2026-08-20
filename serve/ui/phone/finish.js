@@ -115,6 +115,22 @@ export function renderReveal(puzzle, record) {
   time.append(label, figure);
   sheet.append(time);
 
+  // ⚠️⚠️ **Beside the time, because that is the whole argument for allowing hints at all.** The
+  // decision against them was reversed on the crossword's reasoning: a hint does not corrupt a shared
+  // result *if it is shared alongside the time*. One minute with three hints and one minute with none
+  // are two different results and every reader takes them as two. Printed here whether or not any were
+  // used, so a clean solve says so rather than being the absence of a line nobody knows to look for.
+  const hints = document.createElement("p");
+  hints.className = "reveal-hints";
+  const hintLabel = document.createElement("span");
+  hintLabel.className = "reveal-hints-label";
+  hintLabel.textContent = text("reveal.hints");
+  const hintFigure = document.createElement("span");
+  hintFigure.className = "reveal-hints-figure";
+  hintFigure.textContent = record.hints === 0 ? text("reveal.no_hints") : String(record.hints);
+  hints.append(hintLabel, hintFigure);
+  sheet.append(hints);
+
   const clipping = document.createElement("div");
   clipping.className = "clipping";
   sheet.append(clipping);
@@ -337,4 +353,60 @@ function footnoteBlock(puzzle, reveal) {
   prefix.textContent = fill("printed.notes_for", { team: clubName(reveal.boxscore.offense) });
   block.append(prefix, ` ${parts.join(".  ")}`);
   return block;
+}
+
+/**
+ * The reference sheet: the five relations and the bounds, on demand.
+ *
+ * ⚠️⚠️ **This exists because a player could not remember the formulas mid-game, and that is friction
+ * rather than difficulty.** A game that measures whether you remembered `PA = Outs + Runs + LOB` is
+ * measuring memory as well as deduction, and only one of those is the product.
+ *
+ * ⚠️ **It costs no hint and is not one.** A hint hands over an answer; this hands over the rules,
+ * which §8's tutorial already teaches on first play. The difference is that the tutorial teaches them
+ * once and this is there at the moment they are wanted.
+ *
+ * ⚠️ **It carries five families and the printed strip carries four.** `build_pack.FORMULAS` predates
+ * the batting order, and the batting order is precisely the one that cannot be inferred from looking
+ * at a board — the operator lost a solve to exactly that. The strip is a launch-gate artefact that must
+ * not move while it is being solved, so the gap is recorded in `todo.md` and closed here.
+ */
+export function renderReference() {
+  const panel = document.createElement("div");
+  panel.className = "reveal reference";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-label", text("reference.title"));
+
+  const sheet = document.createElement("div");
+  sheet.className = "reveal-sheet";
+  panel.append(sheet);
+
+  const title = document.createElement("h2");
+  title.className = "reveal-title";
+  title.textContent = text("reference.title");
+  sheet.append(title);
+
+  const list = document.createElement("dl");
+  list.className = "reference-list";
+  // ⚠️ Ordered by how often a solve reaches for them, not by the order the design document lists them:
+  // the row identity and the column sums carry most boards, and the bounds are what a player checks
+  // last. A reference read under pressure is read from the top.
+  for (const key of ["row_identity", "column_sum", "global", "cross_team", "batting_order", "innings", "bounds"]) {
+    const name = document.createElement("dt");
+    name.textContent = text(`reference.${key}_name`);
+    const rule = document.createElement("dd");
+    rule.textContent = text(`reference.${key}`);
+    list.append(name, rule);
+  }
+  sheet.append(list);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "reveal-close";
+  close.textContent = text("reference.close");
+  close.addEventListener("click", () => panel.remove());
+  sheet.append(close);
+
+  return panel;
 }

@@ -63,6 +63,16 @@
      batting and pitching totals, so it is an input surface, in the one row every column sum closes on.
      Colour works everywhere; weight had a hole exactly where the board is most consulted. */
   --entered: #1b57c4;
+  /* ⚠⚠ **A third ink, because the finished board has to show what the player did not deduce.**
+     Black is given, blue is theirs, and a hinted cell is neither: the board handed it over. Painting
+     it blue would make the finished sheet claim work they did not do, which is the one thing the
+     reveal exists to show honestly — and painting it black would hide the spend from the person
+     looking at their own result.
+
+     ⚠️ **Violet, and the choice is by elimination rather than taste.** Red is spent on *wrong*
+     (`--wrong-ground`), amber on the selection, green is the scoreboard, blue is the player's. Violet
+     is the only hue left that is not already carrying a meaning on this board. */
+  --hinted: #6b3fa0;
 
   /* ⚠⚠ **The one place red is spent, and it is a badge rather than coloured text.**
      `--entered` above records why red is not available for the player's handwriting: it is the one

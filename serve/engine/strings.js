@@ -72,6 +72,10 @@ const en = {
   "side.away": "AWAY",
 
   "keypad.clear": "Clear",
+  "keypad.hint": "Hint",
+  // The accessible name, which has to carry the count: a key announced as "Hint" says nothing about
+  // whether pressing it will do anything.
+  "keypad.hint_left": "Hint, {left} left",
   // The fraction is composed from these rather than printed as `⅓`, because the face draws that glyph
   // badly at key size and a borrowed one rendered nothing. A language that writes thirds differently
   // changes them here.
@@ -100,6 +104,10 @@ const en = {
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
   "reveal.close": "Back to the board",
+  // ⚠️ Beside the time, because a shared result has to carry both. One minute with three hints and one
+  // minute with none are two different results, and that is the whole reason hints are allowed at all.
+  "reveal.hints": "Hints used",
+  "reveal.no_hints": "None",
   // ⚠️ The way back to the clipping from a finished board. It replaces the keypad, because a board that
   // cannot be typed into does not need one — and the boxscore has to stay reachable or closing the
   // reveal would throw away the thing the player earned.
@@ -134,6 +142,32 @@ const en = {
   // What a printed boxscore put between a term and its carriers: `Sacrifice hit—Shotton`. Tight, with
   // no spaces, because the line is a run-on and the separator is what breaks it into readable pieces.
   "printed.note_separator": "—",
+
+  // ---- the reference sheet ---------------------------------------------------------------------
+  // ⚠️⚠️ **The same set the printed strip carries, plus the batting order, which the printed strip does
+  // not have.** The strip predates the fifth family. That is a defect in the hand-solve pack and it is
+  // recorded in `todo.md`; the pack is not being regenerated because it must not move while it is being
+  // solved. On screen there is no such constraint, so the screen carries all five.
+  //
+  // ⚠️ **This is not a hint and does not cost one.** It is the information §8's tutorial teaches, made
+  // available when it is needed instead of only once at the start. A game that measures whether you
+  // remembered `PA = Outs + Runs + LOB` is measuring memory, not deduction.
+  "reference.title": "The relations",
+  "reference.close": "Close",
+  "reference.row_identity_name": "Every batting row",
+  "reference.row_identity": "PA = AB + BB + HBP + SF + SH + CI",
+  "reference.column_sum_name": "Every column",
+  "reference.column_sum": "Totals = the rows above them",
+  "reference.global_name": "Each team, over the game",
+  "reference.global": "PA = Outs + Runs + LOB",
+  "reference.cross_team_name": "The two halves",
+  "reference.cross_team": "Team H = hits allowed by the opposing pitchers (the same for BB, SO and R)",
+  "reference.batting_order_name": "The batting order",
+  "reference.batting_order": "PA dealt round nine slots: each gets T \u00f7 9, and the first T mod 9 get one more",
+  "reference.innings_name": "Innings",
+  "reference.innings": "Outs = 3 \u00d7 innings pitched",
+  "reference.bounds_name": "And nothing can break these",
+  "reference.bounds": "AB \u2265 H \u00b7 ER \u2264 R \u00b7 nothing below zero",
 
   // ---- dates -----------------------------------------------------------------------------------
   // ⚠️ Month names rather than `1913-08-17`. The reveal is the one screen written for a reader rather

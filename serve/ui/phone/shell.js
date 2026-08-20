@@ -19,7 +19,7 @@ import { battingCell, footnoteCell, pitchingCell, sectionOf } from "../../engine
 import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { browserStorage, createStore } from "../../engine/store.js";
-import { checkBoard, renderReveal } from "./finish.js";
+import { checkBoard, renderReference, renderReveal } from "./finish.js";
 import { text } from "../../engine/strings.js";
 import {
   applyKey,
@@ -185,6 +185,7 @@ export function boot({
         repaint();
         remember();
         keypad.allowCheck(boardIsFull());
+        keypad.showHints(game.hintsLeft());
       },
       () => check(),
     );
@@ -228,16 +229,36 @@ export function boot({
 
   // ⚠️ The strip is still here and now carries only the verdict. The key moved into the pad; the
   // sentence did not, because a message that replaces a keypad key is a message nobody reads.
+  // ⚠️⚠️ **In the chrome and not in the keypad, and both were rendered before choosing.** There is one
+  // spare slot and there are two buttons, so the question was never *keypad or chrome* for each: it was
+  // which one gets the slot.
+  //
+  // **The alternative was drawn and it decides itself.** *The relations* is thirteen characters and a
+  // pad key is 66px: it wraps onto two lines inside the key, beside a row where every other key is one
+  // short word. *Hint* plus a digit is the same shape as *Clear*.
+  //
+  // The reasons agree with the picture rather than standing in for it. The hint acts on the selected
+  // cell, so it belongs among the keys that act on the selected cell; the reference acts on nothing and
+  // is permanent context. And the reference has to stay reachable on a **finished** board, where there
+  // is no keypad at all.
+  const reference = doc.createElement("button");
+  reference.type = "button";
+  reference.className = "reference-key";
+  reference.textContent = text("reference.title");
+  reference.addEventListener("click", () => app.append(renderReference()));
+
   const footer = doc.createElement("div");
   footer.className = "footer";
-  footer.append(verdict);
+  footer.append(reference, verdict);
   app.append(footer);
 
   /** Swap the keypad for the way back to the clipping, in place, when the game ends mid-session. */
   function rebuildChrome() {
     markFinished();
     app.querySelector(".keypad")?.remove();
-    app.querySelector(".footer")?.remove();
+    // ⚠️ The verdict goes and the reference stays: a finished board is still a boxscore somebody may
+    // want to read the rules against, and the pad that used to be the other route to them is gone.
+    verdict.remove();
     const again = doc.createElement("button");
     again.type = "button";
     again.className = "again";
@@ -252,8 +273,8 @@ export function boot({
   // is sealed by `restore` and cannot be restarted; this is the other half, which is drawing what the
   // player already earned instead of asking them to press Check again. v30-P1-03.
   if (game.isFinished()) {
-    // The footer's verdict has nothing to say about a finished board, and the pad was never built.
-    app.querySelector(".footer")?.remove();
+    // The verdict has nothing to say about a finished board; the reference strip stays.
+    verdict.remove();
     showReveal(game.record());
   }
 
@@ -264,6 +285,7 @@ export function boot({
 
   draw();
   keypad?.allowCheck(boardIsFull());
+  keypad?.showHints(game.hintsLeft());
   // ⚠️ Returned rather than only stashed on `globalThis`. The globals stay because the browser
   // console is how this board gets poked at during development; a caller that has the handle does not
   // have to reach through a global to use it.
