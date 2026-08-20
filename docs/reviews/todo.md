@@ -2,9 +2,9 @@
 
 ## Where everything stands
 
-**Twenty-seven reviews (nine passes on the last), 121 findings, none rejected. Two are open and stated
-below, and a third was found and fixed while watching a run — all three without a reviewer, which is
-the point of the sweep.** Two are **declined on the environment**, each with its reason and its reactivation condition in
+**Twenty-eight reviews, 126 findings, none rejected. v28 was a full-tree review rather than a delta:
+five findings, all five closed.** Two more are open below, plus several found without a reviewer —
+which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
 `non-issue.md`.
 
 ### ⚠️⚠️ The standing observation: seven findings, one piece of work, five distinct shapes
@@ -93,6 +93,77 @@ arrived wrapped in an attack scenario that is out of scope here, and the defect 
 adversary at all.
 
 Declined so far: `v16-P1-01`'s launcher half, `v17-P2-01`'s digest widths. Both in `non-issue.md`.
+
+## ✅ v28 — a full-tree review, five findings, all five closed
+
+Not a delta review: `forge/src`, `forge/scripts`, `serve/engine`, `serve/ui`, `tools` and `discovery`,
+with both suites and the artifact templates.
+
+### ⚠⚠ v28-P2-01: the weak solver turned lower bounds into exact values
+
+`_bound_one_relation()` computed both ends of a finite window for every relation, then — for an
+inequality — reset `low` to zero and **left `high` alone**. Right only for a positive coefficient,
+where `c*x + rest <= k` caps `x` from above. With a **negative** coefficient the same relation is a
+*lower* bound and says nothing about how large the cell may be, so keeping the equality-derived `high`
+collapsed an open range onto one fabricated number.
+
+`H - AB <= 0` is `AB >= H`. With `H = 0` it recorded **`AB = 0`** — false on any row with a hit.
+
+⚠⚠ **`narrow()`, in the same module, has always had the rule right.** One rule, two implementations,
+disagreeing. Both sides now derive the same way: the bound that always holds, plus the opposite one
+only for an equality.
+
+⚠️ **The agreement test existed and did not fire.** `test_it_never_claims_more_than_the_strong_solver`
+asserts exactly this property — on **one** erasure, which never produced a blank whose only relation
+was a negative-coefficient inequality. A sample of one is how a predicate stays wrong through a
+passing suite. Now eight varied erasures.
+
+⚠️ **Layer 3b is report-only, so nothing invalid published — but every 3b figure came from this
+predicate**, including the 33% certified reported for the hand-solve pack. Those need re-running once
+the pack comes back.
+
+### ⚠⚠ v28-P2-02: the provenance rebuild could publish an empty table
+
+`load_provenance.ps1` dropped and recreated `dbo.retroGameProvenance` **before** the first insert, with
+no precondition and no transaction. An empty or mistyped `-ZipDirectory` replaced the canonical table
+with an empty one and reported zero rows **as a result rather than as a failure**. An interrupted batch
+left it half full.
+
+⚠️ Every cohort in the project inner-joins this table, so an empty one reads as *no game has
+admissible provenance*. **The filter passes on absence** — the shape this project keeps meeting.
+
+Closed three ways: preconditions checked **before the connection is opened**, so a refusal cannot touch
+the database at all; a shrink guard refusing a load materially smaller than what is there, with
+`-Force` as the deliberate override; and a **staging table swapped in under a transaction**, so the
+canonical table is only ever replaced by one already validated.
+
+**Verified against the live database, and the table never moved from 203,908 rows:** an empty directory
+is refused before connecting, and one zip of 116 is refused as *a drop of 99.4%*. The swap itself was
+rehearsed on throwaway tables — rolled back, the original survives intact and the staging table is
+gone; committed, the new rows are in. `DROP` plus `sp_rename` inside a transaction is atomic on this
+server, which was the one assumption that could not be made.
+
+### ⚠️ v28-P2-03: the discovery renderer drew a different clue surface from the product
+
+It built the footnote line from position labels and a truthiness test: `SH: P` where the board says
+`SH: 2 #9b`. Multiplicity gone, and the reference replaced by a label two rows can share — while its
+own docstring says *the board exactly as the player sees it*. Every discovery eye-check ran on weaker
+clues than the product gives, including the batting-order specimens.
+
+Now a **third consumer** of `serve/tests/footnote-line-vectors.json`, with a test that all three
+renderers agree case for case. ✅ The hand-solve pack was **not** affected — it has its own canonical
+`footnote_line()`, confirmed by reading the PDF the operator is solving.
+
+### v28-P3-01 and v28-P3-02
+
+The footnote-height instrument counted `.cell`, which the line has not contained for months, so every
+row reported zero and the table sorted by a constant. It now counts live terms and carriers and says
+on the page when no package carries one. First real reading: **the block is 43px regardless of
+carriers.**
+
+`check_pdf.py` skipped its key check when the named key did not exist, so a typo printed full success.
+A named key must now be a readable non-empty CSV; omitting it stays the only PDF-only mode. All five
+modes verified, and the real key was never opened — a synthetic one was used.
 
 ## ✅ FIXED, and the first diagnosis of it was wrong: every load paid ~20 minutes to a parameter type
 

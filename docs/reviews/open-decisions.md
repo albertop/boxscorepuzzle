@@ -21,55 +21,46 @@ This file exists so the state does not live only in a chat window. It is a snaps
 | Verifier's lineup step | **Not written.** This is the gate: layer 3 cannot replay a `batting_order` move, so no fallback board can publish. |
 | Weak solver (v28-P2-01) | Fixed. It treated every inequality as an upper bound and invented values. |
 | Discovery footnote renderer (v28-P2-03) | Now a third consumer of the canonical vectors. |
-| Inning cap | **12**, in `MAX_INNINGS`. Implemented and uncommitted at the time of writing. |
+| Inning cap | **12**, in `MAX_INNINGS`, with the 11px rule below 359px. |
+| Provenance loader (v28-P2-02) | Fixed: preconditions before connecting, a shrink guard, and a staging table swapped under a transaction. |
+| Half-inning marker | Raised from 2.21:1 to 4.51:1. |
 
 ---
 
-## ⚠️ Open, and both are the operator's call
+## Decided since this file was written
 
-### 1. The inning cap and the type-size exception are one decision
+### The inning cap is 12, with the type-size exception, and both were decided together
 
-The cap is 12. **At 320px that still needs the line score at 11px** — twelve at 13px leaves 2.7px
-between a two-digit R and a two-digit H, which is where `11 16 2` starts reading as `1116 2`.
+The operator's reading, recorded because it is the reasoning and not just the outcome: **the
+identical-board rule is about content** — same cells erased, same data, same puzzle. A different type
+size on a narrow screen changes none of that, and the line score is read-only, so it is the one element
+that can shrink without touching a touch target. Dropping to eleven to preserve a uniformity nobody
+would perceive costs a real baseball game that fits.
 
-The reading that "at 12 the board looks the same at both widths, with no type-size exception" is not
-what the measurement says. **Eleven** is the largest count that needs no exception: 4.0px at 13px on
-320px.
+⚠️ **Twelve does need the exception**, which an earlier reading had assumed away: at 320px, twelve at
+13px leaves 2.7px between a two-digit R and H. Eleven is the largest count that needs none (4.0px).
+Both stylesheets now state that rather than implying it.
 
-| | cap | 320px | exception to "identical board" |
-|---|---|---|---|
-| as implemented | 12 | 11px type | yes — type size only, never content |
-| the alternative | 11 | 13px type | none |
+### The `x` is fixed, and one of the two proposed remedies did not exist
 
-Pool cost is not the deciding factor either way: 12 costs 1,776 directions (0.89%), 11 costs 3,320
-(1.66%). Both are under 2%.
+Raised to **4.51:1**, the same brightness as a played digit, distinguished by weight and by being a
+letter among numerals. Two browser guards, both checked by reintroducing the old rule.
 
-### 2. The `x` marker has a real defect, and the cap does not fix it
+⚠⚠ **"A grey that reaches 4.5:1" is not available on this ground.** Against `--fenway`, **pure black
+reaches only 4.27:1**, so nothing darker than the panel can pass at all; a neutral grey must be
+`#f5f5f5` or brighter, which is the digit's own brightness. `--scoreboard-dim` at full opacity still
+only reaches 2.95:1. The first remedy was the only one that existed.
 
-⚠️ **The instruction that set the cap said the `x` clipped at 14 innings on 320px. It does not.** The
-glyph is **5.1px in a 14.8px column** — a 9.8px margin against the digits' 2.9px. It is the roomiest
-character on the board, and the constants module says so, because someone measuring digit widths later
-would otherwise find the note there and be misled.
-
-**But the concern behind it was right.** The `x` says the home side did not bat, which makes their outs
-24 rather than 27 and feeds the global identity — a marker the player cannot read is a **lost given,
-not a cosmetic flaw**. And it is hard to read:
-
-| | contrast against the scoreboard ground |
-|---|---|
-| a played digit | 4.51:1 |
-| the `x` | **2.21:1** |
-| WCAG floor for any content | 3.0 |
-
-`.linescore td.unplayed` sets a dim colour *and* `opacity: .7`. This happens at every inning count,
-nine included, so the cap is unrelated to it. **Not changed**, because it is a colour decision.
-
----
+⚠️ **And the marker was not the only thing below the floor.** The **inning header numbers** carry the
+same token and render at **2.95:1** — under both floors, on twelve-odd cells rather than one, and they
+are what tells the player which inning a column is. **Still open**, because it is a decision about the
+panel's colour. There is a clean one: darken `--fenway` to 75% of itself, `rgb(62,90,81)`. Today's dim
+colour then reaches 4.52:1 and the values 6.91:1 — the whole hierarchy survives, everything above the
+floor, one token. If that is taken, the `x` can go back to the dim colour and recover its original
+visual intent.
 
 ## Still open from before
 
-- **v28-P2-02** — the provenance loader drops and recreates its table with no non-empty precondition
-  and no transaction. An empty zip directory replaces the canonical table with an empty one.
 - **Layer 3b figures are void** and need re-running once the hand-solve pack is done — including the
   33% certified reported for the pack. They came from the predicate fixed in `a73bbc1`.
 - **Where `MAX_INNINGS` is enforced.** It is recorded but `eligibility()` does not filter on it, so the

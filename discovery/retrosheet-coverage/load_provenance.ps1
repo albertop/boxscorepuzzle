@@ -42,6 +42,18 @@
 param(
     [string]$ZipDirectory = "C:\Users\aperd\Documents\DGLv2\retrosheet\downloads\zip\events-reg",
     [switch]$DryRun,
+    # ⚠⚠ **v28-P2-02: a rebuild that found nothing used to publish nothing.** The table was
+    # dropped and recreated before the first insert, with no precondition and no transaction, so an
+    # empty or mistyped -ZipDirectory replaced the canonical table with an empty one and reported zero
+    # rows as a result rather than as a failure. Every cohort in this project inner-joins this table,
+    # and an empty one reads as "no game has admissible provenance" - the filter passing on absence,
+    # which is the shape this project keeps meeting.
+    #
+    # ShrinkTolerance refuses a load materially smaller than what is already there: a rebuild adds
+    # seasons, it does not lose them. 0.02 absorbs the noise of a re-download and stops a half-read
+    # directory. PROVISIONAL - chosen rather than measured, and -Force is the deliberate override.
+    [double]$ShrinkTolerance = 0.02,
+    [switch]$Force,
     [string]$ConnectionString = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
 )
 
@@ -78,6 +90,19 @@ Write-Output ""
 Write-Output "by source type:"
 $origin.Values | Group-Object | Sort-Object Name | ForEach-Object { "  $($_.Name.PadRight(4)) $($_.Count)" }
 
+# ⚠️ Checked before the connection is opened, so a refusal cannot leave the database touched at all.
+# The cheapest guarantee available is the one where nothing has happened yet.
+if ($fileCount -eq 0) {
+    throw "no .E?? entries under $ZipDirectory - nothing to load, and the existing table is untouched"
+}
+if ($origin.Count -eq 0) {
+    throw "$fileCount event files held no 'id,' line - the parse is wrong, and the existing table is untouched"
+}
+$types = @($origin.Values | Sort-Object -Unique)
+if (($types -notcontains 'EVA') -and ($types -notcontains 'EVN')) {
+    throw "no EVA or EVN games among [$($types -join ', ')] - this is not a regular-season event set"
+}
+
 if ($DryRun) {
     Write-Output "dry run - nothing written"
     return
@@ -88,17 +113,36 @@ $connection.Open()
 $command = $connection.CreateCommand()
 $command.CommandTimeout = 1800
 
+# ⚠️ How many rows the table holds today, read before anything is written. A rebuild that loses most
+# of the pool is a broken input, not a smaller season set.
+$command.CommandText = "SELECT CASE WHEN OBJECT_ID('dbo.retroGameProvenance','U') IS NULL THEN -1 " +
+    "ELSE (SELECT COUNT(*) FROM dbo.retroGameProvenance) END"
+$existing = [int]$command.ExecuteScalar()
+if ($existing -ge 0) { Write-Output "existing table holds     : $existing" }
+else { Write-Output "existing table           : none, this is a first load" }
+
+if (($existing -gt 0) -and ($origin.Count -lt ($existing * (1 - $ShrinkTolerance))) -and (-not $Force)) {
+    $connection.Close()
+    throw ("this load has $($origin.Count) games against the existing $existing, a drop of " +
+        "$([Math]::Round((1 - $origin.Count / $existing) * 100, 1))% - refusing. " +
+        "Check -ZipDirectory, or pass -Force if the shrink is intended. The table is untouched.")
+}
+
+$transaction = $connection.BeginTransaction()
+$command.Transaction = $transaction
 try {
-    # Dropped and rebuilt rather than merged. The zips are the source of truth, the table is derived
-    # from them in full, and a rebuild that cannot leave a stale row behind is easier to trust than a
-    # reconciliation that can.
+    # ⚠⚠ **Built beside the canonical table, never in place of it.** The old code dropped the
+    # real table and then inserted, so every failure between those two points - a bad path, a dropped
+    # connection, an interrupted batch - left the project's admissibility filter empty or half full,
+    # and nothing downstream can tell a truncated provenance table from a small one. Staging plus a
+    # transactional swap means the canonical table is only ever replaced by one already known good.
     $command.CommandText = @"
-IF OBJECT_ID('dbo.retroGameProvenance', 'U') IS NOT NULL DROP TABLE dbo.retroGameProvenance;
-CREATE TABLE dbo.retroGameProvenance (
+IF OBJECT_ID('dbo.retroGameProvenanceStaging', 'U') IS NOT NULL DROP TABLE dbo.retroGameProvenanceStaging;
+CREATE TABLE dbo.retroGameProvenanceStaging (
     GAME_ID     varchar(20)  NOT NULL PRIMARY KEY,
     source_type varchar(3)   NOT NULL,
     is_deduced  bit          NOT NULL,
-    loaded_at   datetime2(0) NOT NULL CONSTRAINT DF_retroGameProvenance_loaded_at DEFAULT SYSUTCDATETIME()
+    loaded_at   datetime2(0) NOT NULL CONSTRAINT DF_retroGameProvenanceStaging_loaded_at DEFAULT SYSUTCDATETIME()
 );
 "@
     [void]$command.ExecuteNonQuery()
@@ -107,7 +151,7 @@ CREATE TABLE dbo.retroGameProvenance (
     for ($offset = 0; $offset -lt $keys.Count; $offset += 200) {
         $chunk = $keys[$offset..([Math]::Min($offset + 199, $keys.Count - 1))]
         $command.Parameters.Clear()
-        $command.CommandText = "INSERT INTO dbo.retroGameProvenance (GAME_ID, source_type, is_deduced) VALUES " +
+        $command.CommandText = "INSERT INTO dbo.retroGameProvenanceStaging (GAME_ID, source_type, is_deduced) VALUES " +
             (($chunk | ForEach-Object { "(?,?,?)" }) -join ",")
         foreach ($id in $chunk) {
             [void]$command.Parameters.Add((New-Object System.Data.Odbc.OdbcParameter("", $id)))
@@ -118,6 +162,36 @@ CREATE TABLE dbo.retroGameProvenance (
     }
     $command.Parameters.Clear()
 
+    # ⚠️ The staged rows are checked before the swap, inside the same transaction, so a failure here
+    # rolls back to the table that was already there. Every count is what was intended to be written.
+    $command.CommandText = "SELECT COUNT(*) FROM dbo.retroGameProvenanceStaging"
+    $staged = [int]$command.ExecuteScalar()
+    if ($staged -ne $origin.Count) {
+        throw "staged $staged rows of $($origin.Count) parsed - the insert lost rows, rolling back"
+    }
+    $command.CommandText = "SELECT COUNT(*) FROM dbo.retroGameProvenanceStaging WHERE is_deduced = 0"
+    if ([int]$command.ExecuteScalar() -eq 0) {
+        throw "every staged game is deduced - a set with no playable source is not the pool, rolling back"
+    }
+
+    $command.CommandText = @"
+IF OBJECT_ID('dbo.retroGameProvenance', 'U') IS NOT NULL DROP TABLE dbo.retroGameProvenance;
+EXEC sp_rename 'dbo.retroGameProvenanceStaging', 'retroGameProvenance';
+"@
+    [void]$command.ExecuteNonQuery()
+    $transaction.Commit()
+    $command.Transaction = $null
+    Write-Output "swapped in $staged rows"
+}
+catch {
+    # ⚠️ Rolled back, then said out loud. A loader that fails quietly is how the table became empty.
+    $transaction.Rollback()
+    $command.Transaction = $null
+    Write-Output "ROLLED BACK - the previous table is intact"
+    throw
+}
+
+try {
     $command.CommandText = @"
 SELECT (SELECT COUNT(*) FROM dbo.retroGameProvenance) AS rows_written,
        (SELECT COUNT(*) FROM dbo.retroGameProvenance WHERE is_deduced = 1) AS deduced,
