@@ -166,7 +166,15 @@ class TestItFailsClosed:
             line_score=board.line_score,
         )
 
-        assert verify(package_for(broken), secret=UNSIGNED).accepted
+        # ⚠⚠ **`verify` used to accept this and no longer does.** The four arithmetic families cannot
+        # see a row of noughts; the batting order can, because a phantom row at the top takes the
+        # first place with nought appearances while the rest have four, and the cycle forbids it.
+        #
+        # The gate is still what this test is about, so what it asserts is unchanged: the board does
+        # not publish. What changed is that it is now refused twice, by two independent readings.
+        # ⚠️ Asserting only "not publishable" would pass even if the gate stopped running and verify
+        # did all the work, so both are named.
+        assert not verify(package_for(broken), secret=UNSIGNED).accepted
         assert not certify_for_publication(
             package_for(broken), evidence=good_evidence(broken), secret=UNSIGNED
         ).publishable

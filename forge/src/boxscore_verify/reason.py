@@ -20,7 +20,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import Final
 
-from boxscore_verify.rules import Relation
+from boxscore_verify.rules import Relation, batting, batting_total
 
 CELL_CAP: Final = 200
 """A modelling bound, **not** something §3 states.
@@ -116,7 +116,67 @@ def narrow(relations: Iterable[Relation], cells: Iterable[str], known: Mapping[s
     return bounds
 
 
-def derive(relations: Iterable[Relation], cells: Iterable[str], given: Mapping[str, int]) -> Derivation:
+LINEUP_SLOTS: Final = 9
+"""A batting order is nine places. Not a parameter: it is the shape of the game."""
+
+
+def lineup_values(slots: tuple[int, ...], values: Mapping[str, int]) -> dict[str, int]:
+    """Batting rows the cyclic order fixes once the team's plate-appearance total is known.
+
+    ⚠⚠ **Value-aware, because interval narrowing cannot reach this.** The relations in `rules.py` say
+    a slot never bats fewer times than the slot after it, and that the first and last differ by at most
+    one. Those bound the distribution; they do not produce it. Narrowing them to a fixed point still
+    leaves every slot a range, so a board leaning on the cyclic order was refused as underivable and
+    layer 3 could not certify it. This is the step that produces the value.
+
+    **The rule, derived here rather than carried across from the generator (§22).** The order is a
+    cycle: the team bats slot 1, 2, … 9, 1, 2, … and never skips. So `T` plate appearances are dealt
+    round the nine places in turn. Every place takes one on each complete pass, and the appearances left
+    over after the last complete pass go to the places at the front of the order, in order. Hence
+    `T // 9` for every slot, plus one more for the first `T % 9` of them. Nothing about baseball enters
+    beyond "the order is cyclic and unskippable" — which is why §8 has to teach it: unlike the other
+    four families, it cannot be read off a boxscore.
+
+    ⚠️ **Per slot, never per row.** A slot may hold several rows when a substitute enters, and then the
+    cycle fixes only their *sum*. One unknown among them is a subtraction; two are not separable, and
+    claiming otherwise would invent a value — which is what the whole layer exists to prevent.
+
+    Returns only cells it can *determine*. An empty result is the honest answer to a board whose total
+    is still blank.
+    """
+    total = values.get(batting_total("plate_appearances"))
+    if not slots or total is None:
+        return {}
+    if sorted(set(slots)) != list(range(1, LINEUP_SLOTS + 1)):
+        # The same refusal the relations make: a lineup that is not the nine places is not a lineup,
+        # and guessing which one is missing would be a fabricated given.
+        message = f"slots {sorted(set(slots))} are not the nine lineup positions"
+        raise ValueError(message)
+
+    complete, over = divmod(total, LINEUP_SLOTS)
+    rows_in: dict[int, list[int]] = {}
+    for row, slot in enumerate(slots):
+        rows_in.setdefault(slot, []).append(row)
+
+    found: dict[str, int] = {}
+    for slot, rows in rows_in.items():
+        wanted = complete + (1 if slot <= over else 0)
+        cells = [batting(row, "plate_appearances") for row in rows]
+        unknown = [cell for cell in cells if cell not in values]
+        if len(unknown) != 1:
+            continue
+        settled = wanted - sum(values[cell] for cell in cells if cell in values)
+        if settled >= 0:
+            found[unknown[0]] = settled
+    return found
+
+
+def derive(
+    relations: Iterable[Relation],
+    cells: Iterable[str],
+    given: Mapping[str, int],
+    slots: tuple[int, ...] = (),
+) -> Derivation:
     """Solve without ever guessing, which is the only kind of solving a puzzle may require (§4)."""
     relations = tuple(relations)
     cells = tuple(cells)
@@ -124,6 +184,9 @@ def derive(relations: Iterable[Relation], cells: Iterable[str], given: Mapping[s
     while True:
         bounds = narrow(relations, cells, values)
         settled = {cell: low for cell, (low, high) in bounds.items() if low == high and cell not in values}
+        # ⚠️ The cyclic step runs in the same loop rather than once before it: it needs the team total,
+        # which is often itself deduced, and what it settles feeds the next narrowing pass.
+        settled.update({cell: value for cell, value in lineup_values(slots, values).items() if cell not in values})
         if not settled:
             break
         values.update(settled)
@@ -137,6 +200,7 @@ def derive_in_view(
     given: Mapping[str, int],
     *,
     allow_bounding: bool = True,
+    slots: tuple[int, ...] = (),
 ) -> Derivation:
     """A deliberately weaker solver: one relation in view at a time.
 
@@ -176,6 +240,14 @@ def derive_in_view(
             if remainder % coefficient == 0:
                 values[cell] = remainder // coefficient
                 progressed = True
+        if not progressed:
+            # ⚠️ Tried before bounding, because it is the cheaper move for a person: read one total,
+            # deal it round the order. Bounding is the expensive one and should not be reached while a
+            # subtraction is still available.
+            for cell, value in lineup_values(slots, values).items():
+                if cell not in values:
+                    values[cell] = value
+                    progressed = True
         if not progressed and allow_bounding:
             progressed = _bound_one_relation(relations, values)
         if not progressed:

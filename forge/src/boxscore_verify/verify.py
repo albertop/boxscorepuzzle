@@ -202,6 +202,27 @@ def check_uniqueness(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     return None
 
 
+def slots_of(package: Package) -> tuple[int, ...]:
+    """The lineup place each batting row occupies, read from the board's own slot references.
+
+    ⚠⚠ **The batting-order relations existed for a day and were never generated.** `relations()` has
+    taken a `slots` argument since it was written, and every call site passed nothing, so the family
+    was dead code that read as a working constraint. A parameter defaulted to "off" and never supplied
+    is the same defect as a check that never fires.
+
+    ⚠️ Derived from `slot_references` rather than carried alongside, because the references are what
+    the package already publishes and a second copy would be a second thing to disagree. `"9a"` and
+    `"9b"` are two rows sharing the ninth place; the leading digits are the place.
+    """
+    references = package.slot_references
+    if not references:
+        # A version 1 package carries none. The relations are then not applied at all rather than
+        # applied to a guess -- one row per slot would be wrong on every board with a substitution,
+        # and wrong silently, because the board balances either way.
+        return ()
+    return tuple(int(reference[0]) for reference in references)
+
+
 def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
     """Layer 3: reachable without a guess.
 
@@ -210,8 +231,9 @@ def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None) 
     is not sufficient, and this is the layer that says so.
     """
     board = package.puzzle
+    slots = slots_of(package)
     try:
-        reached = derive(relations(board), all_cells(board), values_of(board))
+        reached = derive(relations(board, slots), all_cells(board), values_of(board), slots)
     except ContradictionError:
         return Rejection(Layer.DERIVABILITY, Fault.NO_SOLUTION, "narrowing emptied a cell")
     if not reached.is_complete:
@@ -313,7 +335,8 @@ def derivable_in_view(package: Package) -> bool:
     """
     board = package.puzzle
     try:
-        return derive_in_view(relations(board), all_cells(board), values_of(board)).is_complete
+        slots = slots_of(package)
+        return derive_in_view(relations(board, slots), all_cells(board), values_of(board), slots=slots).is_complete
     except ContradictionError:  # pragma: no cover - a contradictory board is rejected at layer 2
         return False
 

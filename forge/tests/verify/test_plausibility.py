@@ -13,7 +13,7 @@ from boxscore_domain import PITCHER_CAP
 from boxscore_package.format import Board, Package
 from boxscore_package.signing import sign
 from boxscore_verify.plausibility import faults
-from boxscore_verify.verify import verify
+from boxscore_verify.verify import Layer, verify
 
 Replace = Callable[..., Board]
 
@@ -82,13 +82,36 @@ class TestTheDefectItself:
 
         assert any("entirely nought" in fault.what for fault in found)
 
-    def test_the_verifier_passes_that_same_board_without_complaint(self, board: Board, replace: Replace) -> None:
-        # ⚠️ The whole finding, as a test. A row of noughts adds nothing to any sum, so every
-        # identity still balances and all four layers of §22 accept it. Internal consistency cannot
-        # see a board that does not correspond to reality.
+    def test_the_batting_order_now_catches_it_too_and_this_test_used_to_say_otherwise(
+        self, board: Board, replace: Replace
+    ) -> None:
+        """⚠⚠ **This asserted that the verifier accepts the phantom row, and it no longer does.**
+
+        The claim was the whole finding: a row of noughts adds nothing to any sum, so every identity
+        balances and all four layers accept it — internal consistency cannot see a board that does not
+        correspond to reality. **That was true of the four arithmetic families.** Adopting the
+        batting-order constraint added a fifth that is not arithmetic about totals but about the
+        *order*, and a phantom row inserted at the top takes the first place with nought appearances
+        while the rest have four. The cycle forbids that, so layer 3 rejects it.
+
+        ⚠️ **The plausibility layer is not thereby redundant, and reading it that way would be the
+        error.** The constraint catches this board because the fixture declares slot references. A
+        board carrying none — a version 1 package — applies no batting-order relation at all, and is
+        accepted exactly as before. And the defect that produced this file has a sibling the order
+        cannot see: three centre fielders in one lineup balances every identity *and* every place.
+
+        So the finding is now: two independent checks catch it, for different reasons, and neither
+        makes the other unnecessary.
+        """
         broken = with_phantom_row(board, replace)
 
-        assert verify(sign(package(broken, broken), SECRET), secret=PUBLIC).accepted
+        verdict = verify(sign(package(broken, broken), SECRET), secret=PUBLIC)
+
+        assert not verdict.accepted, "the batting order stopped catching the phantom row"
+        assert verdict.rejection is not None
+        assert verdict.rejection.layer is Layer.DERIVABILITY
+        # And plausibility still sees it on its own terms, which is what keeps both checks earning
+        # their place.
         assert faults(broken)
 
 

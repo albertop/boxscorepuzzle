@@ -18,6 +18,9 @@ from boxscore_forge.boxscore import (
     TeamFootnotes,
 )
 
+LINEUP_SLOTS = 9
+"""A batting order is nine places — the shape of the game, not a parameter."""
+
 
 def _split(draw: DrawFn, total: int, parts: int) -> list[int]:
     """Split a non-negative total into `parts` non-negative integers that add back to it.
@@ -63,31 +66,71 @@ def valid_directions(draw: DrawFn) -> Direction:
 
 
 def _draw_batting(draw: DrawFn) -> tuple[tuple[BattingLine, ...], tuple[BatterFootnotes, ...]]:
+    """A lineup, not nine independent rows.
+
+    ⚠⚠ **Plate appearances are dealt round the order, because that is what makes a boxscore a
+    boxscore.** This drew each row's components freely and let the total fall out, which satisfies
+    every arithmetic identity and produces a distribution no game can reach: a lineup bats in a cycle
+    and never skips, so the places differ by at most one before substitutions are counted.
+
+    That was invisible while the batting-order family was unused. The moment layer 3 could see it, the
+    property test asserting "a board built from the identities passes every layer" started failing —
+    correctly. **The identities never implied the cyclic distribution; the generator was producing
+    boards that balance and could not have happened.** Fixed here rather than by dropping the slot
+    references, because a fixture that declines to claim a lineup is a fixture that stops testing one.
+
+    So the total is drawn first, dealt out by the cycle, and each row's components are drawn to fit
+    the appearances it is owed.
+    """
     batter_count = draw(st.integers(min_value=9, max_value=12))
+    # Enough to give every place at least a couple of turns, and few enough to stay a plausible game.
+    team_total = draw(st.integers(min_value=27, max_value=54))
+    complete, over = divmod(team_total, LINEUP_SLOTS)
+    per_slot = [complete + (1 if slot <= over else 0) for slot in range(1, LINEUP_SLOTS + 1)]
+
+    # Rows beyond the ninth are substitutes: they share a place with the man they replaced, so the
+    # place's appearances are split between them rather than added to the team's.
+    # ⚠️ The ninth place, because that is where the slot references put them. `refs()` labels rows
+    # beyond the ninth `9a`, `9b`, `9c`, so a strategy that split some other place would build a board
+    # whose appearances and whose declared lineup disagree — and the disagreement surfaces as an
+    # unexplained layer-3 rejection rather than as a wrong fixture.
+    per_row = list(per_slot)
+    last = LINEUP_SLOTS - 1
+    for _ in range(batter_count - LINEUP_SLOTS):
+        taken = draw(st.integers(min_value=0, max_value=per_row[last]))
+        per_row[last] -= taken
+        per_row.append(taken)
+
     lines = []
     footnotes = []
-    for _ in range(batter_count):
-        at_bats = draw(st.integers(min_value=0, max_value=6))
+    for appearances in per_row:
+        # Every appearance is one of: a walk, a footnote term, or an at-bat. Drawn in that order so
+        # what is left over is the at-bats, which keeps `PA = AB + BB + HBP + SF + SH + CI` exact by
+        # construction rather than by arithmetic afterwards.
+        walks = draw(st.integers(min_value=0, max_value=min(appearances, 3)))
+        room = appearances - walks
+        row_footnotes = BatterFootnotes(
+            hit_by_pitch=draw(st.integers(min_value=0, max_value=min(room, 1))),
+            sacrifice_flies=0,
+            sacrifice_hits=0,
+            catcher_interference=0,
+        )
+        room -= row_footnotes.hit_by_pitch
+        if room:
+            row_footnotes = BatterFootnotes(
+                hit_by_pitch=row_footnotes.hit_by_pitch,
+                sacrifice_flies=draw(st.integers(min_value=0, max_value=min(room, 1))),
+                sacrifice_hits=0,
+                catcher_interference=0,
+            )
+            room -= row_footnotes.sacrifice_flies
+        at_bats = room
         hits = draw(st.integers(min_value=0, max_value=at_bats))
         strikeouts = draw(st.integers(min_value=0, max_value=at_bats - hits))
-        walks = draw(st.integers(min_value=0, max_value=3))
         runs = draw(st.integers(min_value=0, max_value=hits + walks))
-        # Footnote terms are rare in a real boxscore, and drawn rare here so the common shape stays
-        # common while the exceptional row still gets generated.
-        row_footnotes = BatterFootnotes(
-            hit_by_pitch=draw(st.integers(min_value=0, max_value=1)),
-            sacrifice_flies=draw(st.integers(min_value=0, max_value=1)),
-            sacrifice_hits=draw(st.integers(min_value=0, max_value=1)),
-            catcher_interference=draw(st.integers(min_value=0, max_value=1)),
-        )
         lines.append(
             BattingLine(
-                plate_appearances=at_bats
-                + walks
-                + row_footnotes.hit_by_pitch
-                + row_footnotes.sacrifice_flies
-                + row_footnotes.sacrifice_hits
-                + row_footnotes.catcher_interference,
+                plate_appearances=appearances,
                 at_bats=at_bats,
                 runs=runs,
                 hits=hits,
