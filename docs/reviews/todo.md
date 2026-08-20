@@ -2524,52 +2524,77 @@ comfortably, and the board he actually solved was **twice as erased as anything 
 
 Not review findings — the things the repairs unblocked, and what each one is waiting on.
 
-### Blocked right now
+### The one thing waiting on a person
 
-1. ⚠️ **The six reference packages are still schema 3 and the code reads only schema 4.** Every forge
-   test that reads them and every client test will fail until `write_reference_puzzles.py` runs again.
-   The change is in the boundary, not in the boards — their contents already satisfy 4 — but the
-   `schema` field is signed, so it is a regeneration rather than an edit. **Waiting on the database**,
-   which the five-board pack holds.
-2. **The five-board pack**, running. Two at 8 stalls and three at 5, at least one with six pitchers,
-   blanks reported per board. Erasures now persist before anything is formatted, so a failure below
-   the erasure loop costs a rerun of the cheap half only.
+**Solving the five boards.** The pack is built and printed (two at 8 stalls, three at 5, one with six
+pitchers, 30–40 blanks each). Everything below in *Waiting on the hand-solve* is blocked on it, and
+nothing else in this file is blocked on anything.
 
-### Waiting on the five boards
+⚠️ **It is not a review step.** Layer 3 propagates intervals to fixed point across forty-odd
+simultaneous relations, which is stronger than any person, so a board can pass it and be underivable by
+hand. Solving by hand is the only verification of human derivability that exists, and the only check the
+common-author risk does not touch.
 
-3. **The ladder's rungs.** They depend on whether the corrected scale corresponds to felt difficulty.
-   Reporting them will be a **correction, not a change of plan**: the earlier rungs were set against
-   stall counts that included the solver deducing zeros.
-4. **Nothing is labelled easy, medium or hard.** Five stalls was an example the operator gave, not a
+### Waiting on the hand-solve
+
+1. **The ladder's rungs.** Reporting them will be a **correction, not a change of plan**: the earlier
+   rungs were set against stall counts that included the solver deducing zeros.
+2. **Nothing is labelled easy, medium or hard.** Five stalls was an example the operator gave, not a
    standard.
-5. **What the pack answers**, in the order it settles them: whether the marked 1–6 tracks stall count
-   at all — if it does not, stalls measure something the player does not experience, which would be as
-   important as the chain finding was; whether the uncertified third is felt, which decides layer 3b;
-   and whether twelve blanks reads as a puzzle or as a sparse board.
+3. **Whether the marked 1–6 tracks stall count at all.** If it does not, stalls measure something the
+   player does not experience — which would be as important as the chain finding was.
+4. ⚠️ **Whether layer 3b becomes a gate.** It certified **none of the five**, and difficulty does not
+   explain it: against the reference set it fails at targets 3 and 7 and passes at 5. **No further
+   measurement is being run for it on purpose** — the question is *should it gate*, and if the operator
+   solves boards 3b rejects then it is too strict. A rate would only say how often to ask a question
+   about to be answered directly.
 
 ### Owed measurements
 
-6. ⚠⚠ **Every recorded discovery result was measured at ≤4 pitchers.** The scoreboard-duplicate
-   question, the erasure orderings, the stall-target coverage, the independent-cell counts — all of them
-   describe a board family with at most four pitching rows. The scripts follow the decided caps now, so
-   a rerun measures the new board; **the conclusions do not carry, and a justification does not travel.**
-   Nothing here is wrong yet. It is unverified at the cap that ships.
-7. **The scoreboard-duplicate question was never re-run.** The instrument was fixed — a failed arm is a
+5. ⚠⚠ **Every recorded discovery result was measured at ≤4 pitchers.** The scoreboard-duplicate
+   question, the erasure orderings, the stall-target coverage, the independent-cell counts. The scripts
+   follow the decided caps now, so a rerun measures the new board; **the conclusions do not carry, and a
+   justification does not travel.** Nothing here is wrong yet — it is unverified at the cap that ships.
+6. **The scoreboard-duplicate question was never re-run.** The instrument was fixed — a failed arm is a
    row rather than a missing one — and the measurement it was fixed for has not been taken.
+7. ⚠️ **Coverage at 8 stalls does not reconcile.** The cap comparison said 33%; the pack found 36 of 72
+   directions, 50%. Same gate, same caps, two instruments, and nobody has said how they differ. **The
+   newer number being the more favourable one is a reason to be more suspicious of it, not less.**
 
-### Built but not finished
+### `serve` — the engine is ahead of the shell
 
-8. **`build_pack.py` still targets chain and its `audit()` still speaks in chain rungs.** The last
-   chain-targeted producer, and the fifty-board pack it builds is the launch gate §22 cannot replace:
-   layer 3 propagates intervals across forty-odd simultaneous relations, which is stronger than any
-   person, so **solving fifty by hand is the only real verification of human derivability that exists.**
-9. **`serve` has an engine, a phone board and a browser suite** — 58 tests at the last full green,
-   plus two written for v20 that cannot run until the regeneration. What it does not have: the desktop
-   and the third interface, the share grid, the tutorial, `canAccess`, the two-phase boot, or anything
-   behind seam C7 beyond the record shape.
-10. **The RBI and HR columns**, with the canonical order, and a measurement of what they buy — recorded
+8. **Built in the engine and called by nothing.** `snapshot()`, `restore()`, `isSolved()`, `finish()`,
+   `record()` and `hint()` all exist and are tested; the phone calls none of them. Three consequences:
+
+   - ⚠⚠ **Nothing survives a reload.** No `localStorage` anywhere. §23 says the puzzle stays open all
+     day and saves itself; C7 says events are stored locally first, and **C7 is irreversible** — storing
+     aggregate state loses history that cannot be reconstructed. The piece is written and not plugged in.
+     This is the one that makes the current build a demo rather than a game.
+   - **Nothing happens on solving.** The `reveal` block ships in every package and **is drawn nowhere** —
+     names, teams, date, the real boxscore of §7.
+   - **No timer.** §26 wants it running for everyone, silently. `record(at)` accepts the clock; nobody
+     passes one.
+
+9. **Seams §C requires in v1 and that do not exist:** C6 routes (`/p/<id>` canonical, `/today` — today
+   it is `?p=`), C4 a loader that decides the day (there is no calendar; it takes `manifest.puzzles[0]`,
+   which is not a date), C8 `canAccess`, C9 reserved ad slots, C10 the two-phase boot. **C11 is done**,
+   but the catalogue holds `en` only.
+10. **Product surfaces:** the share grid (§7), the tutorial that is not skippable on first play (§8),
+    and any surfacing of hints and errors.
+11. **Tablet and desktop.** The brief says neither starts **before the phone has been used on a phone**,
+    and that has not happened.
+12. ⚠️ **What the directory name promises and does not hold.** `CLAUDE.md` says `serve/` carries "app,
+    nginx, docker, endpoints". There is no nginx, no docker and not one endpoint — **there is no way to
+    deploy this.** The backend is absent too (accounts, OAuth, Paddle, devices, percentiles), though
+    §23 guarantees play does not depend on it.
+
+### Built but not finished, in the forge
+
+13. **`build_pack.py` still targets chain and its `audit()` still speaks in chain rungs.** The last
+    chain-targeted producer, and it builds the fifty-board pack that is the launch gate.
+14. **The RBI and HR columns**, with the canonical order, and a measurement of what they buy — recorded
     in §6 and not built.
-11. **The generator at volume, the calendar builder, and signed packaging in batch.** Nothing in the
+15. **The generator at volume, the calendar builder, and signed packaging in batch.** Nothing in the
     forge produces an inventory; the six packages are a format sample, not a pool.
 
 ## v20 — verified, none rejected. **All three closed.**
