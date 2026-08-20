@@ -12,6 +12,7 @@ close on `PA = AB + BB` alone, which makes it the row that matters most here: ni
 as though the footnote columns are decoration.
 """
 
+import os
 from datetime import timedelta
 
 import pytest
@@ -29,7 +30,18 @@ from boxscore_forge.boxscore import (
 # Composite generation of a whole balanced boxscore is not fast, and a per-example deadline tuned
 # for trivial strategies turns into a flaky failure that says nothing about the code.
 settings.register_profile("forge", deadline=timedelta(seconds=5))
-settings.load_profile("forge")
+
+# ⚠⚠ **No deadline on a shared runner, because a deadline is an assertion about *performance* and a
+# shared runner cannot support one.** The Windows job failed on
+# `DeadlineExceeded: Test took 6362.99ms` against this 5s limit — on a machine where the whole suite
+# took 18m25s against 80s on the laptop and 4m on the Linux runner. Nothing about the code was slower;
+# the machine was. Keeping the deadline there would make the build fail on the runner's mood, and a
+# check that fires on noise is one people learn to re-run rather than read.
+#
+# ⚠️ **The deadline stays on locally, which is the point of it.** A test that suddenly takes six
+# seconds on the laptop is a finding. `CI` is set by GitHub Actions and by essentially every runner.
+settings.register_profile("ci", deadline=None)
+settings.load_profile("ci" if os.environ.get("CI") else "forge")
 
 _NO_FOOTNOTES = BatterFootnotes(hit_by_pitch=0, sacrifice_flies=0, sacrifice_hits=0, catcher_interference=0)
 

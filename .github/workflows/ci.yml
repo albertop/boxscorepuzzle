@@ -77,7 +77,17 @@ jobs:
       # The floor is `fail_under = 95` in pyproject.toml. Not repeated here: a threshold spelled in two
       # places is two thresholds.
       - name: Tests and coverage
+        if: runner.os == 'Linux'
         run: uv run pytest --cov --cov-report=term-missing
+
+      # ⚠️ **Windows runs the suite and not the coverage.** Coverage is what made this job take 18
+      # minutes against 4 on Linux, and it would measure the same lines twice — the floor is a property
+      # of the code, not of the platform. What Windows is here for is the platform-specific class: a
+      # redirected stream is cp1252 there, and this project has already lost three hours of compute to
+      # a report dying on a character it printed. That needs the tests to run, not to be measured.
+      - name: Tests
+        if: runner.os == 'Windows'
+        run: uv run pytest
 
   browser:
     # The engine's tests assert computed styles, element geometry and the cascade, so they need a real
