@@ -734,10 +734,19 @@ td.label.substitute { padding-left: 14px; }
    With `padding: 1px 0` a row of single digits printed `40 1  0 0 0` — four at-bats, no runs and a
    hit, rendered as forty-and-one. **Every width measurement passed**: nothing was clipped, nothing
    overflowed, no cell scrolled. The check that found it was looking at the screen. */
+/* ⚠️⚠️ **Centred on the column, header and figures alike.** Right-aligned, a three-character header
+   like `RBI` hung its last letter over a column of single digits, so the label and the numbers it
+   names sat on two different axes — visible on every row of a boxscore that is otherwise a grid.
+   Centring gives the column one centre line and puts the header on it.
+
+   ⚠️ **Safe here and not on the playing board.** These are printed figures nobody adds up on screen,
+   and `font-variant-numeric: tabular-nums` keeps the digits equal width so a `10` beside a `1` shifts
+   by half a digit rather than lurching. The board's own grid stays as it is: its columns are summed by
+   eye and by thumb, and a units digit that moves is a column that cannot be read down. */
 .clipping-grid th,
 .clipping-grid td {
   padding: 1px 0 1px 7px;
-  text-align: right;
+  text-align: center;
   white-space: nowrap;
 }
 /* The rules a newspaper had: under the header, and above the totals. Nowhere else. */
