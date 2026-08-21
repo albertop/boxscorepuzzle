@@ -4283,3 +4283,75 @@ no invocation ever pointed at it. They are a per-rule ratchet now.
 and `coverage at 8 stalls` for a figure with no committed run (22% → 33%). ⚠️ **The instrument was sound
 in two of the three.** What failed was the sentence, and nothing checks a sentence — which is why each
 correction is in the document that carried the number rather than in a changelog.
+
+---
+
+## ⚠️ `retroGameProvenance`: the clause that excludes the Negro Leagues fires on nothing
+
+Raised by the operator, who said 203,908 rows is a heavy way to say *exclude the Negro Leagues for
+ever*. He is right, and the measurement says something sharper than his objection: **that clause does
+not exclude them. Something else already did, and the clause has never removed a single game.**
+
+The pool query's source gate reads:
+
+```sql
+CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
+             WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN (...)) AS prov
+JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
+```
+
+Measured against the live database:
+
+| | |
+|---|---|
+| Rows in `retroGameProvenance` | 203,908 — one per game in `retroGamesReg`, exactly |
+| `EVR` (Negro Leagues) games | 1,872 |
+| **`EVR` games with a `retroGameLogs` row** | **0** |
+| Games where the `source_type` letter ≠ home league initial | **0 of 203,908** |
+| Deduced games | 3,465 |
+| **Deduced games that DO have a game-log row** | **3,451 — the entire real exposure** |
+
+**The `JOIN dbo.retroGameLogs` is what excludes the Negro Leagues**, and it does so completely, because
+Retrosheet publishes no game logs for them. Remove `source_type IN (...)` and the pool does not change
+by one game. ⚠️ **This is the recorded failure mode, not a new one:** *a check that never fires is
+indistinguishable from a check that is broken.* It reads like the thing enforcing §32's exclusion, it
+is named in three documents as that thing, and the exclusion is a side effect of a join written for
+another purpose entirely.
+
+**And the letter carries nothing either.** `EVA`/`EVN`/`EVF` is the home team's league in every one of
+203,908 rows, with zero exceptions — already in `retroGameLogs.HomeTeamLeague` and in `retroTeams.league`.
+
+**So the table's whole information content is `is_deduced`: 3,451 game IDs.** `extract_deduced_game_ids.ps1`
+already writes exactly that list, one per line.
+
+### The counterargument, which is why this is not simply "delete it"
+
+A list of 3,451 bad ids is an **exclusion list**, and this project has a rule against exactly that: a
+filter is written as `EXISTS` over an acceptance list, never `NOT EXISTS` over an exclusion list,
+because **the exclusion form passes on absence**. A game missing from a bad-id list is admitted; a game
+missing from `retroGameProvenance` is refused, because `CROSS APPLY` drops it. The 203,908 rows are the
+price of failing closed, and that is a real thing being bought — it is not accidental weight.
+
+What is *not* bought is the `source_type` clause. That one is redundant twice over.
+
+### The operational half — what happens on the next Retrosheet load
+
+**Today the table and `retroGamesReg` agree exactly: 0 games without a provenance row.** Nothing checks
+that, and two ways of breaking it are silent:
+
+1. **New data loaded, provenance not rebuilt.** The new games have no provenance row, `CROSS APPLY`
+   drops them, and the season is simply invisible to the pool. Fail-closed in direction — and **silent**,
+   so a whole season missing looks exactly like a season that produced no admissible boards.
+2. **Retrosheet revises a file.** A game shipped as `.EDN` becomes `.EVN` when a scoresheet is found.
+   The stale table still calls it deduced and it is excluded for ever. The reverse also holds: a game
+   whose provenance stays put but whose boxscore is corrected.
+
+The loader's own guards do not cover this. `$staged -ne $origin.Count` and the shrink check and *"every
+staged game is deduced"* all describe **one load**; none can see the table not being reloaded at all.
+Staleness has no signature in them.
+
+**Proposed, not built:** a correspondence assertion — every game in `retroGamesReg` has a provenance row,
+run wherever the pool is loaded, failing loudly with the count and the seasons affected. That is
+*correspondence, not consistency*: the table and the game table agreeing with each other rather than each
+being internally sound. The operator decides whether it lives in the loader, in the publication gate, or
+in both.
