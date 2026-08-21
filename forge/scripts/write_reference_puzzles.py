@@ -192,6 +192,23 @@ def evidence_for(loaded: Loaded) -> Evidence:
     ⚠️ **`is_deduced` is the provenance row's own value now.** It used to be rebuilt here as
     `source_type.startswith("ED")`, which is a second copy of a rule the database already states — so a
     deduced record filed under an accepted source type would have passed §32's exclusion.
+
+    ⚠️⚠️ **Four of these fields assert `to_board` fidelity and nothing more, and the list does not say
+    so.** (v36-P3-14) `official_errors`, `official_defense_runs`, `official_defense_hits` and
+    `official_defense_errors` are read from `loaded.direction.line_score` — **the same object the
+    package's line score is built from**, one `to_board` copy apart. `check_independent_correspondence`
+    compares the package against them, so what they can catch is a field swapped inside an eight-line
+    copy; they cannot catch a board that never happened.
+
+    **Only `official_at_bats` and `official_left_on_base` are correspondence in the strict sense**: they
+    come from `retroGameLogs`, a table the board is not built from. `Evidence`'s own docstring makes
+    that distinction and this call site presented all of them alike, which is the
+    anchor-derived-from-what-it-verifies shape in miniature — documented as deliberate only for the
+    query-level case.
+
+    They are kept because a `to_board` swap is a real defect and cheap to exclude. They are labelled
+    because a list where two entries mean something different from the other four, unmarked, is how a
+    reader comes to believe the gate is stronger than it is.
     """
     return Evidence(
         # ⚠️ **The board as the database has it**, which is what layer 4 must solve back to. The
@@ -204,10 +221,13 @@ def evidence_for(loaded: Loaded) -> Evidence:
         is_deduced=loaded.is_deduced,
         official_hits=loaded.official_hits,
         official_runs=loaded.official_runs,
+        # ⚠️ These four come from the direction the package is built from. They assert `to_board`
+        # fidelity, not correspondence with the game. See the note above.
         official_errors=loaded.direction.line_score.offense_errors,
         official_defense_runs=loaded.direction.line_score.defense_runs,
         official_defense_hits=loaded.direction.line_score.defense_hits,
         official_defense_errors=loaded.direction.line_score.defense_errors,
+        # ⚠️ The two real anchors: `retroGameLogs`, a table the board is not built from.
         official_at_bats=loaded.official_at_bats,
         official_left_on_base=loaded.official_left_on_base,
     )

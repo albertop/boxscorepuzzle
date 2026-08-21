@@ -124,6 +124,37 @@ FAMILY_OF: Final[dict[Identity, Family]] = {
 }
 
 
+UNMAPPED: Final[frozenset[Identity]] = frozenset(
+    {
+        Identity.HITS_WITHIN_AT_BATS,
+        Identity.PLATE_APPEARANCES_COVER_AT_BATS_AND_WALKS,
+        Identity.EARNED_RUNS_WITHIN_RUNS,
+        Identity.NON_NEGATIVE,
+    }
+)
+"""Identities deliberately outside the family axis, and the reason they are outside it.
+
+**Every member here is an inequality, not an equality.** `AB >= H`, `PA >= AB + BB`, `ER <= R` and
+`nothing below zero` bound a cell; they do not *close* a relation the way a column total or a row
+identity does. The family axis describes **which kind of reasoning produced a deduction**, and a bound
+narrowing a range is the bounding technique rather than one of the equation families — §4's two axes
+are technique and family, and these belong to the first.
+
+⚠️⚠️ **This set exists so that "deliberately unmapped" and "forgotten" stop looking the same.**
+(v36-P3-38) The membership rule was three hand-written lists — one here, one in `test_identities.py`,
+one in `test_constraints.py` — tied together only by `<= FAMILY_OF.keys()` subset assertions. A subset
+assertion fires when an identity is *removed* from `FAMILY_OF` while still on a hand list; **the
+realistic drift is the opposite**, a new equality identity added to `find_violations` and forgotten in
+`FAMILY_OF`, and the hand lists would not contain the newcomer either, so nothing would notice.
+
+`Identity.BATTING_ORDER` was the live demonstration: absent from all three, and no way to tell whether
+that was a decision or an oversight. It was an oversight, and it took a review to find out.
+
+With this, `set(Identity) - UNMAPPED == FAMILY_OF.keys()` is assertable, so **a newcomer must be
+classified somewhere or the suite goes red**.
+"""
+
+
 @dataclass(frozen=True, slots=True)
 class Violation:
     """One broken identity. `detail` is for the operator's logs, never for a player."""

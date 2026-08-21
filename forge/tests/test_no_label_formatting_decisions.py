@@ -25,7 +25,12 @@ _ROOT = Path(__file__).resolve().parents[2]
 _TREES = (_ROOT / "forge" / "src", _ROOT / "forge" / "scripts", _ROOT / "discovery")
 
 # The renderers may look at a label — drawing one is their job. Everything else must ask the data.
-_MAY_FORMAT = {"render_boards.py"}
+#
+# ⚠️ **By path, never by basename.** (v36-P3-18) A set of names checked against `path.name`
+# exempts *any* file so called anywhere in scope, and `docs/python-conventions.md` states the rule
+# the sibling constants guard already follows. An exemption that matches a filename is one a new
+# directory can claim by accident.
+_MAY_FORMAT = {_ROOT / "discovery" / "pitcher-cap" / "render_boards.py"}
 
 
 def _sources() -> list[Path]:
@@ -35,7 +40,18 @@ def _sources() -> list[Path]:
 
 
 def _label_formatting_tests(tree: ast.AST) -> list[int]:
-    """Lines asking whether a punctuation mark appears in something whose name mentions a label."""
+    """Lines asking whether a punctuation mark appears in something whose name mentions a label.
+
+    ⚠️ **The soft edge, recorded rather than left for someone to find.** (v36-P3-18) This matches
+    the `"<punct>" in label` shape and nothing else. `label.split("-")`, `label.endswith("-1")` and
+    `label.count("-")` are realistic reintroductions it cannot see — the same decision in different
+    syntax. The sibling constants guard documents its own narrowness; this one did not, and **an
+    undocumented blind spot in a guard reads as coverage**.
+
+    Widening it is a change to make when one of those shapes appears: a matcher firing on
+    `"-" in name` for any `name` would flag ordinary string work across the tree, and a check that
+    cries wolf gets switched off — worse than a narrow one that holds.
+    """
     offences: list[int] = []
     for node in ast.walk(tree):
         if not isinstance(node, ast.Compare) or not any(isinstance(op, ast.In) for op in node.ops):
@@ -56,7 +72,7 @@ class TestNoDecisionReadsALabelsFormatting:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         offences = _label_formatting_tests(tree)
 
-        assert not offences or path.name in _MAY_FORMAT, (
+        assert not offences or path in _MAY_FORMAT, (
             f"{path.name}:{offences} decides something by inspecting a label's formatting. "
             f"Ask the lineup slot — a label is drawn, not interrogated."
         )

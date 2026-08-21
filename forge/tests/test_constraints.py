@@ -13,22 +13,21 @@ from hypothesis import given
 
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.constraints import BoardShape, cell_values, equations, independent_cycles, shape_of
-from boxscore_forge.identities import Identity, find_violations
+from boxscore_forge.identities import UNMAPPED, Identity, find_violations
 from tests.strategies import valid_directions
 from tests.test_identity_properties import _perturbations
 
-EQUALITY_IDENTITIES = frozenset(
-    {
-        Identity.BATTING_COLUMN_SUM,
-        Identity.FOOTNOTE_COLUMN_SUM,
-        Identity.PITCHING_COLUMN_SUM,
-        Identity.CROSS_TEAM_TOTAL,
-        Identity.ROW_PLATE_APPEARANCES,
-        Identity.GLOBAL_PLATE_APPEARANCES,
-        Identity.LINE_SCORE_RUNS,
-        Identity.LINE_SCORE_HITS,
-    }
-)
+# ⚠️ **Derived, not hand-written.** (v36-P3-38) This was a second copy of a list that also lived in
+# `test_identities.py` and in `FAMILY_OF`; three copies tied only by subset assertions that cannot see
+# the drift that actually happens — an identity added and forgotten. `UNMAPPED` names the exceptions
+# and their reason, so the equalities are whatever is left.
+EQUALITY_IDENTITIES = frozenset(set(Identity) - UNMAPPED - {Identity.BATTING_ORDER})
+"""The equality identities: every `Identity` that is not a bound and is not the lineup rule.
+
+⚠️ `BATTING_ORDER` is subtracted here rather than added to `UNMAPPED`: it **is** on the family axis
+(it became the fifth family on 2026-08-21) and it is **not** an equality — it is an inequality between
+adjacent slots. The two questions are different and this file only asks the second one.
+"""
 
 
 def _all_satisfied(direction: Direction) -> bool:

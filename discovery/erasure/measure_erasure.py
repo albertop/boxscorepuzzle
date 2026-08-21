@@ -94,7 +94,12 @@ def first_reaching(snapshots: list[Snapshot], target: int) -> Snapshot | None:
 
 
 def check_equivalence(sample: list[Loaded]) -> None:
-    """The trajectory shortcut has to agree with the function it stands in for, or it measures air."""
+    """The trajectory shortcut has to agree with the function it stands in for, or it measures air.
+
+    ⚠️ **This instrument targets chain rungs and the generator's control variable is stalls.** The
+    numbers it produces are about a quantity the product no longer selects on, so it is a historical
+    measurement rather than a live one — kept runnable, and read with that in mind.
+    """
     mismatches = 0
     for loaded in sample[:5]:
         for ordering in sorted(ORDERINGS):
@@ -107,6 +112,17 @@ def check_equivalence(sample: list[Loaded]) -> None:
                 elif expected is not None and found is not None and expected.erased != found.erased:
                     mismatches += 1
     print(f"trajectory vs erase(): {mismatches} mismatches across 5 directions x 4 orderings x {len(TARGETS)} targets")
+    # ⚠️⚠️ **Raised, not printed.** (v36-P3-12) This file's own docstring says the shortcut has to agree
+    # with the function it stands in for *or it measures air* — and a non-zero count produced one line
+    # above four screens of ordering comparisons, which is a disclaimer nobody reads under a report
+    # everybody does. **Anything acting as a gate is asserted, not printed**; this one gates every
+    # number below it.
+    if mismatches:
+        message = (
+            f"the trajectory shortcut and erase() disagree on {mismatches} cases. Every table below "
+            f"would be about a shortcut that is not the function it stands in for."
+        )
+        raise SystemExit(message)
 
 
 def by_ordering(sample: list[Loaded]) -> dict[str, list[list[Snapshot]]]:

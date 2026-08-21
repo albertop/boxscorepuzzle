@@ -484,7 +484,20 @@ suite("The shared conformance vectors — the same file the Python reader runs",
         readPackage(document);
         return;
       }
-      throws(() => readPackage(document), undefined, `accepted: ${vector.because}`);
+      // ⚠️⚠️ **The error's TYPE, not a pattern over its words.** (v36-P3-28) With no pattern at all
+      // `throws` passes on any exception, so a refactor making `readPackage` die with a `TypeError`
+      // three layers in would keep every reject vector green — and *a controlled rejection naming
+      // the field, never an uncontrolled TypeError* is the exact distinction these vectors exist for.
+      //
+      // ⚠️ A first attempt matched a list of field names, which is **a second copy of the schema**
+      // living in the test: it went red on `offense_is_home` because that list was already out of
+      // date on the day it was written. The type is the contract; the wording is not.
+      const error = throws(() => readPackage(document), undefined, `accepted: ${vector.because}`);
+      assert(
+        error instanceof PackageError,
+        `${vector.because}: refused with ${error.constructor.name} rather than a PackageError — `
+          + `an uncontrolled throw is not a controlled rejection: ${error.message}`,
+      );
     });
   }
 

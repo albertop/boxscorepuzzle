@@ -826,6 +826,17 @@ def _check_rows(  # noqa: PLR0913
     if len(printed) != len(board):
         message = f"{where} has {len(printed)} rows and the board has {len(board)}"
         raise PackageError(message)
+    # ⚠️⚠️ **Lengths first, because the comparisons below used to skip what they could not reach.**
+    # They read `if index < len(names)`, so a `Reveal` with an empty `batter_names` constructed and
+    # parsed with **no name checked at all** — the absence of the data reading as agreement with it,
+    # which is the shape this file exists to refuse. `plausibility.reveal_faults` backstops it at the
+    # certification gate, and that is one gate later than this type's own doctrine allows: *a policy
+    # living only at the parse boundary let this type emit a document its own reader refused.*
+    # v36-P3-13.
+    for what, supplied in (("names", names), ("labels", labels)):
+        if len(supplied) != len(printed):
+            message = f"{where} has {len(printed)} rows and {len(supplied)} {what}"
+            raise PackageError(message)
     for index, (row, board_row) in enumerate(zip(printed, board, strict=True)):
         for column in shared:
             mine = getattr(row, column)
@@ -833,10 +844,10 @@ def _check_rows(  # noqa: PLR0913
             if mine != theirs:
                 message = f"{where}[{index}].{column} is {mine} and the board says {theirs}"
                 raise PackageError(message)
-        if index < len(names) and row.name != names[index]:
+        if row.name != names[index]:
             message = f"{where}[{index}].name is {row.name!r} and the reveal names {names[index]!r}"
             raise PackageError(message)
-        if index < len(labels) and getattr(row, label_field) != labels[index]:
+        if getattr(row, label_field) != labels[index]:
             message = (
                 f"{where}[{index}].{label_field} is {getattr(row, label_field)!r} "
                 f"and the board's label is {labels[index]!r}"

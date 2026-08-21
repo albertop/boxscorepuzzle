@@ -123,9 +123,32 @@ class TestEveryImplementedCheckIsWiredIn:
     def test_the_gate_names_every_registered_check_when_it_refuses(self, board: Board) -> None:
         # Each refusal is prefixed with the check that produced it, so a batch report says which gate
         # is rejecting rather than only how many.
+        # ⚠️⚠️ **This passed `evidence=None`, which returns before any check runs.** (v36-P3-17) So the
+        # test named for the prefixing could not produce a prefix even in principle — and it asserted
+        # only that a refusal happened, so removing the prefixing from `certify_for_publication` left
+        # the suite green. A batch report would then say how many gates rejected and not which.
+        #
+        # Real evidence, and a package that fails a real check: metadata still naming the game.
+        carrying = replace(package_for(board), metadata={"game_id": "BOS191305010"})
+
+        result = certify_for_publication(carrying, evidence=good_evidence(board), secret=UNSIGNED)
+
+        assert not result.publishable
+        assert result.refusals, "a refusal with no reasons"
+        for refusal in result.refusals:
+            assert any(refusal.startswith(f"{name}:") for name in CERTIFICATIONS), (
+                f"{refusal!r} is not prefixed by a registered check; a batch report cannot attribute it"
+            )
+
+    def test_a_refusal_before_any_check_names_no_check_and_says_so(self, board: Board) -> None:
+        """⚠️ The other path, kept apart because it is a different fact. Missing evidence fails closed
+        *before* the registry is entered, so its one refusal is deliberately unprefixed — there is no
+        check to attribute it to. Asserting it here stops someone 'fixing' the inconsistency by
+        prefixing a message that no check produced."""
         result = certify_for_publication(package_for(board), evidence=None, secret=UNSIGNED)
 
         assert not result.publishable
+        assert result.refusals == ("no evidence supplied: provenance and correspondence unknown",)
 
 
 class TestItFailsClosed:

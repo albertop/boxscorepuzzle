@@ -32,24 +32,41 @@ FIELDS = (
 )
 
 
-def line_score_arguments() -> dict[str, str]:
-    """How each line-score field is built, read out of the loader's `LineScore(...)` call."""
+def line_score_calls() -> list[dict[str, str]]:
+    """How each line-score field is built, for **every** `LineScore(...)` the loader constructs.
+
+    ⚠️⚠️ **This returned on the first match.** (v36-P3-19) A loader gaining a second
+    construction — a postseason branch, a fallback, a second cohort — would have every per-field
+    check applied to whichever one `ast.walk` reached first, leaving the *anchor manufactured from
+    what it anchors* defect free to return in the other. That is the defect this whole file exists
+    to prevent, and the reader was one `return` away from covering half of it.
+
+    ⚠️ **It is not hypothetical here.** The postseason work added a season seam to this loader
+    in the same week; today there is still one call, and the guard no longer depends on that.
+    """
     tree = ast.parse(LOADER.read_text(encoding="utf-8"))
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "LineScore":
-            return {keyword.arg: ast.unparse(keyword.value) for keyword in node.keywords if keyword.arg is not None}
-    message = "the loader no longer builds a LineScore"
-    raise AssertionError(message)
+    found = [
+        {keyword.arg: ast.unparse(keyword.value) for keyword in node.keywords if keyword.arg is not None}
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and getattr(node.func, "id", "") == "LineScore"
+    ]
+    if not found:
+        message = "the loader no longer builds a LineScore"
+        raise AssertionError(message)
+    return found
 
 
 class TestNoAnchorIsDerivedFromWhatItChecks:
     def test_every_field_is_present(self) -> None:
         # A field silently dropped would pass the per-field checks below by not existing.
-        assert set(line_score_arguments()) == set(FIELDS)
+        for call in line_score_calls():
+            assert set(call) == set(FIELDS)
 
     @pytest.mark.parametrize("field", FIELDS)
     def test_the_field_is_not_summed_from_the_board(self, field: str) -> None:
-        expression = line_score_arguments()[field]
+        # ⚠️ Every call, so a second `LineScore(...)` cannot carry the defect the first one is clear of.
+        for call in line_score_calls():
+            expression = call[field]
 
         assert not re.search(r"\bsum\(", expression), (
             f"{field} is summed from the rows it anchors, which is the defect this file exists for"
@@ -60,7 +77,7 @@ class TestNoAnchorIsDerivedFromWhatItChecks:
     def test_the_inning_arrays_are_parsed_from_the_game_log(self) -> None:
         # These two are the exception that proves the rule: they come from the game log's line-score
         # string, which is a different file from the daily rows, so parsing is loading.
-        arguments = line_score_arguments()
+        arguments = line_score_calls()[0]
 
         for field in ("offense_by_inning", "defense_by_inning"):
             assert "innings" in arguments[field]

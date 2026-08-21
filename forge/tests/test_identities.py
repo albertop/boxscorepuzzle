@@ -10,7 +10,7 @@ import dataclasses
 import pytest
 
 from boxscore_forge.boxscore import BattingLine, Direction, LineScore, PitchingLine
-from boxscore_forge.identities import FAMILY_OF, Family, Identity, find_violations
+from boxscore_forge.identities import FAMILY_OF, UNMAPPED, Family, Identity, find_violations
 
 
 class TestBalancedBoxscore:
@@ -110,18 +110,33 @@ class TestRowIdentity:
         assert Identity.ROW_PLATE_APPEARANCES in {violation.identity for violation in violations}
 
     def test_detects_a_row_with_the_wrong_plate_appearance_count(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️⚠️ **The rotation is gone, because it was what fired the assertion.** (v36-P3-15)
+
+        This raised row 3's plate appearances to 5 *and* rotated the batting tuple while
+        `batter_footnotes` stayed in the original order. After the rotation the mutated row sat beside
+        the leadoff man's `SH = 1`, so its identity **held** — `5 = 4 + 0 + 1` — and what actually
+        broke `ROW_PLATE_APPEARANCES` was footnote misalignment, which the test above already covers.
+
+        **Reverting the mutation to 4 left the test passing.** So a regression in the row identity on
+        exactly the case this test is named for — a wrong plate-appearance count with footnotes
+        correctly aligned — would have gone unnoticed. One broken thing at a time.
+        """
         broken = dataclasses.replace(
             cubs_at_braves_1968,
             batting=(
+                *cubs_at_braves_1968.batting[:3],
                 dataclasses.replace(cubs_at_braves_1968.batting[3], plate_appearances=5),
                 *cubs_at_braves_1968.batting[4:],
-                *cubs_at_braves_1968.batting[:3],
             ),
         )
 
         violations = find_violations(broken)
 
-        assert Identity.ROW_PLATE_APPEARANCES in {violation.identity for violation in violations}
+        broke = {violation.identity for violation in violations}
+        assert Identity.ROW_PLATE_APPEARANCES in broke
+        # ⚠️ And that the *row* is the reason: with the rotation gone nothing else on the board moved,
+        # so a footnote identity appearing here would mean the fixture is doing something else again.
+        assert Identity.FOOTNOTE_COLUMN_SUM not in broke, f"something other than the row broke: {broke}"
 
     def test_names_which_row_broke(self, cubs_at_braves_1968: Direction) -> None:
         broken = dataclasses.replace(
@@ -206,24 +221,40 @@ class TestBounds:
 
 
 class TestFamilies:
-    def test_every_equality_identity_belongs_to_a_family(self) -> None:
-        # The family axis is one of the two things that describe a puzzle's difficulty. An identity
-        # missing from the map would silently drop out of that description.
-        equalities = {
-            Identity.BATTING_COLUMN_SUM,
-            Identity.FOOTNOTE_COLUMN_SUM,
-            Identity.PITCHING_COLUMN_SUM,
-            Identity.CROSS_TEAM_TOTAL,
-            Identity.ROW_PLATE_APPEARANCES,
-            Identity.GLOBAL_PLATE_APPEARANCES,
-            Identity.LINE_SCORE_RUNS,
-            Identity.LINE_SCORE_HITS,
-        }
+    def test_every_identity_is_either_in_a_family_or_deliberately_outside_one(self) -> None:
+        """⚠️⚠️ **Equality, not a subset, and that is the whole finding.** (v36-P3-38)
 
-        assert equalities <= FAMILY_OF.keys()
+        This asserted a **hand-written** list of equalities was `<= FAMILY_OF.keys()` — one of three
+        copies of that list, the others being `test_constraints.py` and `FAMILY_OF` itself. A subset
+        assertion fires when an identity is *removed* from the map while still on a hand list.
 
-    def test_all_four_families_are_represented(self) -> None:
+        **The realistic drift is the opposite**: a new equality identity added to `find_violations` and
+        forgotten in `FAMILY_OF`. The hand list would not contain the newcomer either, so nothing went
+        red. `BATTING_ORDER` was the live demonstration — absent from all three, with no way to tell a
+        decision from an oversight. It was an oversight, and a review found it rather than a test.
+
+        `UNMAPPED` names the exceptions and says why each one is outside the axis, so this can be an
+        equality: **a new identity must be classified somewhere or this goes red.**
+        """
+        assert set(Identity) - UNMAPPED == FAMILY_OF.keys()
+
+    def test_the_unmapped_ones_are_bounds_rather_than_forgotten(self) -> None:
+        # ⚠️ The other half. `UNMAPPED` could be used to silence a genuine omission, so its members are
+        # asserted to be the inequalities they claim to be: each one bounds a cell rather than closing
+        # a relation, which is what puts it on the technique axis instead of the family axis.
+        assert {
+            Identity.HITS_WITHIN_AT_BATS,
+            Identity.PLATE_APPEARANCES_COVER_AT_BATS_AND_WALKS,
+            Identity.EARNED_RUNS_WITHIN_RUNS,
+            Identity.NON_NEGATIVE,
+        } == UNMAPPED
+        assert not (UNMAPPED & FAMILY_OF.keys()), "an identity is both mapped and declared unmapped"
+
+    def test_all_five_families_are_represented(self) -> None:
+        # Five since 2026-08-21: the batting order is the one family that cannot be read off a
+        # boxscore, and the player was already being taught it while the axis counted four.
         assert set(FAMILY_OF.values()) == set(Family)
+        assert len(set(Family)) == 5
 
 
 class TestViolationReporting:

@@ -11,9 +11,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from boxscore_domain import PITCHER_CAP
 from boxscore_package.format import Board, Package
-from boxscore_package.signing import sign
 from boxscore_verify.plausibility import faults
-from boxscore_verify.verify import Layer, verify
 
 Replace = Callable[..., Board]
 
@@ -77,52 +75,21 @@ class TestTheDefectItself:
 
         assert any("entirely nought" in fault.what for fault in found)
 
-    def test_and_a_row_of_pure_nought_is_caught_separately(self, board: Board, replace: Replace) -> None:
-        # Two checks rather than one on purpose. A row can be all zeros with a plate appearance
-        # recorded, and a row can have no plate appearance while carrying stray numbers; both are
-        # wrong and they are wrong for different reasons.
-        found = faults(with_phantom_row(board, replace))
-
-        assert any("entirely nought" in fault.what for fault in found)
-
-    def test_the_batting_order_now_catches_it_too_and_this_test_used_to_say_otherwise(
-        self, board: Board, replace: Replace
-    ) -> None:
-        """⚠⚠ **This asserted that the verifier accepts the phantom row, and it no longer does.**
-
-        The claim was the whole finding: a row of noughts adds nothing to any sum, so every identity
-        balances and all four layers accept it — internal consistency cannot see a board that does not
-        correspond to reality. **That was true of the four arithmetic families.** Adopting the
-        batting-order constraint added a fifth that is not arithmetic about totals but about the
-        *order*, and a phantom row inserted at the top takes the first place with nought appearances
-        while the rest have four. The cycle forbids that, so layer 3 rejects it.
-
-        ⚠️ **The plausibility layer is not thereby redundant, and reading it that way would be the
-        error.** The constraint catches this board because the fixture declares slot references. A
-        board carrying none — a version 1 package — applies no batting-order relation at all, and is
-        accepted exactly as before. And the defect that produced this file has a sibling the order
-        cannot see: three centre fielders in one lineup balances every identity *and* every place.
-
-        So the finding is now: two independent checks catch it, for different reasons, and neither
-        makes the other unnecessary.
-        """
-        broken = with_phantom_row(board, replace)
-
-        verdict = verify(sign(package(broken, broken), SECRET), secret=PUBLIC, source=broken)
-
-        assert not verdict.accepted, "the batting order stopped catching the phantom row"
-        assert verdict.rejection is not None
-        # ⚠️ **Layer 1, not layer 3, and the move is the improvement.** When only the derivability
-        # layers read the lineup this was caught as *underivable*, which is a statement about the
-        # puzzle. Layer 1 checks the source boxscore against every rule the board is built on, so it is
-        # caught as **bad data** — which is what a phantom row is. The earlier layer is the better
-        # answer and the more specific message: it names the slots rather than a stalled solve.
-        assert verdict.rejection.layer is Layer.IDENTITIES
-        assert "PA(slot" in verdict.rejection.detail
-        # And plausibility still sees it on its own terms, which is what keeps both checks earning
-        # their place.
-        assert faults(broken)
-
+    # ⚠️⚠️ **The second test here was deleted rather than repaired, and the reason matters.**
+    # (v36-P3-16) It ran the identical fixture through the identical function and asserted the
+    # identical substring as the test above — two tests, one assertion — under a comment claiming they
+    # covered different cases: *a row all zeros with a plate appearance recorded*, and *a row with no
+    # plate appearance while carrying stray numbers*.
+    #
+    # ⚠️ **The second case is one this file deliberately does not check**, and `_batting_row_faults`
+    # says so at length: a pinch runner comes in, scores, and never bats — a plate appearance of nought
+    # with a run beside it — and a filter that required a plate appearance **dropped him and his run
+    # with him**. That was a real defect, recorded in `CLAUDE.md`, and the comment here described the
+    # rule that caused it as though it were implemented.
+    #
+    # So writing the missing test would have asserted a rule the code refuses to have. The duplicate
+    # is gone and the claim with it; the invariant that *is* implemented — a row must have contributed
+    # something — is what the test above exercises.
 
 class TestARealBoardPasses:
     def test_the_fixture_is_plausible(self, board: Board) -> None:
