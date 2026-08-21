@@ -417,6 +417,9 @@ td.label.substitute { padding-left: 14px; }
   color: var(--key-ink);
   font: inherit;
   font-size: 18px;
+  /* The digits and the two fractions. `.word` below sets its own weight through the `font` shorthand,
+     so `Clear`, `Hint` and `Check` are unaffected by this. */
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .keypad button:active { background: var(--selected); }
