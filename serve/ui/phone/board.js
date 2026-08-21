@@ -117,9 +117,18 @@ export function renderLineScore(score, offenseIsHome, labels = null) {
 
 function headerRow(columns, withSlot) {
   const row = el("tr");
-  if (withSlot) row.append(el("th", null, text("board.slot")));
-  row.append(el("th", null, ""));
-  for (const column of columns) row.append(el("th", null, text(`column.${column}`)));
+  // ⚠️ `scope="col"` on every header (v36-P3-39). Without it a screen reader has to guess the
+  // association from the table's geometry, and this table's geometry is unusual — a colgroup, a
+  // colspanned title row above, and two label columns before the data starts. The reveal's tables
+  // already carry it; the board's did not, and the board is the surface people spend an hour in.
+  const heading = (label) => {
+    const cell = el("th", null, label);
+    cell.scope = "col";
+    return cell;
+  };
+  if (withSlot) row.append(heading(text("board.slot")));
+  row.append(heading(""));
+  for (const column of columns) row.append(heading(text(`column.${column}`)));
   return row;
 }
 
@@ -182,6 +191,10 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
   const titleRow = el("tr");
   const titleCell = el("th", "section-title", title);
   titleCell.colSpan = columns.length + 2;
+  // ⚠️ `colgroup`, not `col` (v36-P3-39). This heading names every column beneath it rather than one,
+  // which is what the attribute is for — and it is the distinction that makes the totals cells legible
+  // now that they say which section they belong to.
+  titleCell.scope = "colgroup";
   titleRow.append(titleCell);
   head.append(titleRow);
   head.append(headerRow(columns, true));
@@ -205,7 +218,16 @@ export function renderSection({ title, columns, rows, labels, slots, cellName, t
   table.append(body);
 
   const foot = el("tfoot");
-  foot.append(totalsRow(columns, totalName, game, (name) => cellNode(name, text("board.totals"))));
+  // ⚠️⚠️ **The section, then the word.** (v36-P3-39) This passed `text("board.totals")` alone, so the
+  // batting totals hits cell and the pitching totals hits cell both announced *Totals, hits, blank* —
+  // two different cells with one name, on a board where `role="button"` means the table-header context
+  // a reader would otherwise fall back on is not reliably announced. Every reference package leaves
+  // totals cells blank, so these are among the most edited cells there are.
+  //
+  // `title` is already `HOME BATTING` / `AWAY PITCHING`, composed from catalogue keys upstream, so
+  // this stays inside C11 and needs no new string.
+  const totalsLabel = `${title} ${text("board.totals")}`;
+  foot.append(totalsRow(columns, totalName, game, (name) => cellNode(name, totalsLabel)));
   table.append(foot);
 
   wrapper.append(table);

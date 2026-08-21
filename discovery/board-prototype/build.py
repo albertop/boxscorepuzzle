@@ -116,7 +116,9 @@ def to_json(loaded: Loaded, note: str) -> dict[str, object]:
 
 
 def main() -> None:
-    pool = [item for item in load(20) if not find_violations(item.direction)]
+    # ⚠️ `gated=True` states what this call has always received (v36-P2-20). The flag did nothing
+    # until 2026-08-21, so omitting it never meant ungated; naming it keeps this figure reproducible.
+    pool = [item for item in load(20, gated=True) if not find_violations(item.direction)]
     taken: set[str] = set()
 
     def claim(candidates: list[Loaded], note: str) -> tuple[Loaded, str] | None:

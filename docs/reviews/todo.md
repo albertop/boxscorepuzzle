@@ -1,5 +1,49 @@
 # Review backlog
 
+## ⚠️⚠️ READ FIRST — which pool every discovery figure describes
+
+**2026-08-21.** Two separate defects touched the pool every instrument samples. Neither made a *number*
+wrong; both make a *comparison* wrong if you do not know about them.
+
+### 1. Twelve instruments measured at a gate of `0.25` against a decided `0.30`
+
+They spelled the gate by hand and disagreed with `boxscore_domain`. **A stricter gate is not a smaller
+sample of the same thing** — it removes precisely the boards that compress least, so those figures
+describe a **livelier population than production draws from**. They read `ZERO_DENSITY_GATE` now, each
+says at its own `GATE` which gate produced its figures, and the twelve are listed further down.
+
+### 2. `load(gated=...)` did nothing, and its docstring said the opposite of the truth — `v36-P2-20`
+
+⚠️⚠️ **This one is a hazard to reasoning rather than to data, and it has already misled once.**
+`gate_clause` was built unconditionally and `eligibility()` interpolated it unconditionally, so **every
+sample `load()` ever returned was gated.** Meanwhile the signature said `gated: bool = False` and the
+docstring said *off by default*.
+
+**Read the signature and you conclude the opposite of the truth**: that the eight call sites omitting
+the flag measured the unfiltered pool, and therefore that every absolute figure in the tree is wrong.
+They did not, and it is not. **No figure needs re-running on this account.** The flag is read now, and
+the eight name it explicitly so nothing they measured moves.
+
+⚠️ **What it does mean is that eight instruments got a population they never asked for.** Whether each
+*should* have been ungated is a live question, not a defect with a known fix — see below. The sharpest
+case is `zero-density-gate/`: the instrument that **chose the 30% threshold** was handed a sample the
+threshold had already filtered.
+
+### What is **not** affected
+
+**The six published packages are correct.** `write_reference_puzzles.py` passes `gated=True` and now
+the decided gate, and the boards were regenerated on 2026-08-21 — the divergence was in `discovery/`
+only, and the reference writer's own `0.25` literal is fixed and the batch redrawn.
+
+### The rule this leaves behind
+
+**Any figure compared against a recorded one inherits whichever of these two applied to it.** Before
+comparing a new run against a number in this file, check which gate the instrument used and which
+population it drew — the annotation is at each instrument's own `GATE`, which is where it travels with
+the code rather than only with this page.
+
+---
+
 ## Where everything stands
 
 **Twenty-nine reviews (five passes on the last), 135 findings, none rejected — including the first
@@ -3733,6 +3777,52 @@ Fixed, and `forge/tests/test_the_writer_passes_its_own_gate.py` now calls the wr
 without a database. **The gate's two directions were already tested; the call site was not**, and the
 existing fixture builds a package it calls *"the way production builds it"* with no metadata at all.
 
+### Which recorded figures the gate divergence actually moves — comparative against absolute
+
+**The distinction saves most of the work, and it is the right one.** A measurement that ran both arms
+on one population carries the same bias in both, so **the comparison survives even when the population
+was not the publishable one.** An absolute figure has nothing to cancel against.
+
+**Comparative — these survive, and nothing needs re-running:**
+
+| figure | why it holds |
+|---|---|
+| footnote cells erasable against given | both arms drawn from one sample; the correction that closed it was about *what the solver counted*, not about which boards it counted |
+| four pitchers against six | both arms from one draw at one gate; what moved the conclusion was the zero-fill correction |
+| batting order on against off | `discovery/batting-order/` does not use `load()` at all — it builds its own query and **honours the gate flag correctly**, reporting the gated and ungated arms separately and saying which decides |
+| erasure orderings, global-identity phase, footnote grouping | ordering and phase comparisons within one sample |
+
+**Absolute — these describe a pool, and the pool they describe is the `0.25` one:**
+
+| figure | instrument | gate in force |
+|---|---|---|
+| coverage per stall target (`22% → 33%`, `coverage at 8 stalls`) | `pitcher-cap/measure_pitching.py` | **0.30** — this one already describes the decided pool |
+| the median stall ceiling of **5** | `board-configurations/measure.py` | **0.25** |
+| reachable targets and blanks per target | `stall-targeted/measure.py` | **0.25** |
+| independent-cell counts | `independent-cells/` | **0.25** |
+| scoreboard-blank prevalence, footnote-group sizes | `scoreboard-blanks/`, `footnote-groups/` | **0.25** |
+| the zero-density distribution and the `+0.79` correlation | `difficulty-metrics/compressibility.py` | **0.30**, and see below |
+
+⚠️⚠️ **One of these is worse than annotated and is a finding rather than a caveat.**
+`difficulty-metrics/zero_density_gate.py` — **the instrument that chose the 30% threshold** — called
+`load(25)` believing the docstring's *off by default*, and received a sample the gate had already
+filtered at 0.30. **A threshold chosen from data the threshold had already removed.** That is the
+baseline-removes-what-it-tests shape `CLAUDE.md` names, and no number in its output distinguishes it.
+`compressibility.py` has the same defect in a milder form: a correlation computed on a **truncated**
+zero-density range is systematically attenuated, so the `+0.79` is a lower bound rather than an
+estimate — which does not weaken the conclusion drawn from it, since that conclusion was *this
+correlates too strongly to rank on*.
+
+⬜ **What is worth re-running, and it is two things.** The **stall ceiling** and **coverage per
+target**, at the decided gate, because the ladder's rungs come from the first and the inventory
+question from the second. Everything else stays annotated: it informs, nothing rests on it, and the
+comparative forms hold anyway.
+
+⬜ **And a decision that is not mine:** each of the eight instruments that omitted `gated` now says
+`gated=True`, which preserves exactly what it measured. **Whether `zero_density_gate.py` should be
+ungated is a real question about what that instrument is for**, and changing it changes what a
+published figure means.
+
 ### ⚠️ Which gate produced which figure — the record that keeps the centralisation from destroying information
 
 **2026-08-21. Seventeen instruments in `discovery/` spelled the zero-density gate as a literal: fourteen
@@ -4722,7 +4812,28 @@ that whichever notation wins — an operator decision, since the two docstrings 
 arguments (column alignment against *the way a printed boxscore writes them*) — the pack's fidelity is
 re-checked rather than assumed. v36-P2-15.
 
-### ✅ v36's P2s are closed — all sixteen, 2026-08-21
+### ⚠️⚠️ ~~v36's P2s are closed — all sixteen~~ — **twelve, and this heading was wrong**
+
+**Corrected 2026-08-21, and the correction matters more than the count.** This said *all sixteen* while
+four were untouched, in the file people read to learn what is done. That is the shape `CLAUDE.md`
+records against its own *"`main` is protected"* paragraph: **a false claim is worst in the place the
+rules are looked up.**
+
+| still open | what it is | state |
+|---|---|---|
+| `P2-17` | all three pages shipped an identical hardcoded `<title>boxscore</title>` | ✅ **closed 2026-08-21** with `P3-46/47` — `applyHead()` takes the title, description and language from the catalogue |
+| `P2-18` | the landing page's whole indexable content is client-rendered behind a package fetch | ⬜ **open.** Needs server-rendering; `P3-49`'s share preview depends on it |
+| `P2-19` | `serve/tests/` ships to production under the deployment rule | ⬜ **open, and not yet buildable** — there is no production shape at all: no Dockerfile, no nginx. It belongs with the URL contract recorded in `serve-brief.md` |
+| `P2-20` | `load()`'s `gated` flag is dead and the docstring promises the opposite | ✅ **closed 2026-08-21** — see the banner at the top of this file |
+
+⚠️ **How the miscount happened is worth more than the miscount.** The closing paragraph listed nine
+findings by number and leaned on *"eight closed in the first pass"* for the rest — **a total asserted
+from two sources neither of which enumerates the whole set.** Nine plus eight is seventeen against
+sixteen findings, so the arithmetic never checked out; nobody added it up, because the sentence read
+as a summary rather than as a claim. **A count is a claim, and this project's rule is that a claim
+gets checked against an independent source** — here, the review file's own headings.
+
+### ✅ Twelve of v36's P2s are closed, 2026-08-21
 
 `P2-01` the bounding loop is bounded, with a cap measured over 10,442 real calls (worst: 5 passes on a
 143-cell board) and a `ContradictionError` on exhaustion; the seeding is **deliberately unchanged**,
@@ -4808,8 +4919,8 @@ resolving it re-bases the reporting.
 | **G. Measurement correctness** | 21, 36, 40, 41, 42 | ✅ four fixed, one recorded |
 | **H. Structure and typing** | 05, 08, 37 | ✅ |
 | **I. Security documentation** | 29 | ✅ fixed in the doc *and* in the writer |
-| **J. Page basics** | 39, 46, 47 | ⬜ |
-| **K. Decisions to record, not code** | 48, 49 | ⬜ |
+| **J. Page basics** | 39, 46, 47 | ✅ and `P2-17` with them |
+| **K. Decisions to record, not code** | 48, 49 | ✅ recorded in `serve-brief.md` |
 
 **Grouped before starting rather than taken one at a time.** Several are the same shape, and doing a
 category together is both faster and a cleaner record than forty-nine commits.

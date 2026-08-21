@@ -3331,6 +3331,77 @@ suite("⚠️⚠️ C11 over what the player actually reads, not over what the c
     );
   });
 
+  const PAGES = ["index.html", "play.html", "tutorial.html"];
+
+  /**
+   * ⚠️⚠️ **The seam's blind spot was a file extension.**
+   *
+   * Every C11 guard above reads `.js`, and all three shipped pages carried
+   * `<title>boxscore</title>` — hardcoded, identical, and a fourth copy of a string that was already
+   * in the catalogue (v36-P2-17). Nothing fired, because markup is not code to a scan that reads
+   * code. The `<title>` is the most player-visible string there is: tab, history, bookmark, and the
+   * headline of every search result.
+   *
+   * The elements checked are the ones that carry copy. `<meta charset>`, `viewport` and `lang` carry
+   * identifiers rather than language and are not translated — `lang` in particular **must** be in the
+   * markup, because a crawler and a screen reader need it before any script runs.
+   */
+  const copyInMarkup = (source) =>
+    [
+      ...[...source.matchAll(/<title>([^<]*)<\/title>/gi)].map(([, one]) => `<title>${one}`),
+      ...[...source.matchAll(/<meta\s+name="(description|og:[a-z:]+)"[^>]*content="([^"]+)"/gi)].map(
+        ([, name, one]) => `<meta ${name}>${one}`,
+      ),
+      ...[...source.matchAll(/(?:aria-label|placeholder|alt|title)="([^"]*[A-Za-z]\s+\S[^"]*)"/gi)].map(
+        ([, one]) => `attribute: ${one}`,
+      ),
+    ].filter((one) => /[A-Za-z]/.test(one.split(">").slice(1).join(">") || one));
+
+  test("no shipped page spells a player-visible string in its markup", async () => {
+    const offenders = [];
+    for (const page of PAGES) {
+      const source = await (await fetch(`../ui/phone/${page}`)).text();
+      for (const one of copyInMarkup(source)) offenders.push(`${page}  ${one}`);
+    }
+
+    assert(
+      offenders.length === 0,
+      `player-visible words spelled in markup instead of the catalogue:\n  ${offenders.join("\n  ")}`,
+    );
+  });
+
+  test("⚠️ the markup scan catches the defect it was written for, and spares what belongs there", () => {
+    // The exact line all three pages carried, and the exact lines they still carry.
+    equal(copyInMarkup("<title>boxscore</title>").length, 1);
+    equal(copyInMarkup('<meta name="description" content="Rebuild a real boxscore.">').length, 1);
+    equal(copyInMarkup('<img alt="A finished boxscore sheet">').length, 1);
+
+    // ⚠️ The other half, and the half that decides whether this guard survives: a scan that fires on
+    // `<html lang="en">` or the viewport would be switched off within a week, and `lang` is required
+    // to be in the markup by the same reasoning that took the title out of it.
+    equal(
+      copyInMarkup(
+        [
+          "<!doctype html>",
+          '<html lang="en">',
+          '<meta charset="utf-8">',
+          '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+          '<link rel="stylesheet" href="tokens.css">',
+          '<div id="landing"></div>',
+        ].join("\n"),
+      ).length,
+      0,
+    );
+  });
+
+  test("every shipped page declares a language, and it is the catalogue's", async () => {
+    for (const page of PAGES) {
+      const source = await (await fetch(`../ui/phone/${page}`)).text();
+      assert(/<html lang="en">/.test(source), `${page} has no lang attribute (v36-P3-46)`);
+    }
+    equal(text("catalog.lang"), "en");
+  });
+
   test("⚠️ the scan catches the defect it was written for, and spares the code around it", async () => {
     // A guard that finds nothing looks exactly like a broken one, and this one is a regular expression
     // over source — the instrument this project has been burned by twice, both times for matching the

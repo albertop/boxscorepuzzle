@@ -15,6 +15,11 @@ import { PackageError } from "../../engine/package.js";
 import { boot } from "./shell.js";
 import { loadPuzzle } from "./daily.js";
 import { text } from "../../engine/strings.js";
+import { applyHead } from "./head.js";
+
+// The tab, the bookmark and the search result, from the catalogue rather than the markup
+// (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
+applyHead("board");
 
 try {
   const loaded = await loadPuzzle();

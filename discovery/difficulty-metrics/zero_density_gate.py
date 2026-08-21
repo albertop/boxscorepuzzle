@@ -35,7 +35,9 @@ SEED = 20260821
 
 def main() -> None:
     rng = random.Random(SEED)
-    sample = [item for item in load(25) if not find_violations(item.direction)]
+    # ⚠️ `gated=True` states what this call has always received (v36-P2-20). The flag did nothing
+    # until 2026-08-21, so omitting it never meant ungated; naming it keeps this figure reproducible.
+    sample = [item for item in load(25, gated=True) if not find_violations(item.direction)]
     density = {id(item): proxies(item)["zero_density"] for item in sample}
     print(f"{len(sample)} directions\n")
 

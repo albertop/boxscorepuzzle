@@ -8,5 +8,10 @@
  */
 
 import { renderTutorial } from "./tutorial.js";
+import { applyHead } from "./head.js";
+
+// The tab, the bookmark and the search result, from the catalogue rather than the markup
+// (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
+applyHead("tutorial");
 
 renderTutorial({ root: document.getElementById("tutorial") });

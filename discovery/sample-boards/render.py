@@ -238,7 +238,9 @@ def zero_density(loaded: Loaded) -> float:
 
 def main() -> None:
     rng = random.Random(SEED)
-    everything = [item for item in load(6) if not find_violations(item.direction)]
+    # ⚠️ `gated=True` states what this call has always received (v36-P2-20). The flag did nothing
+    # until 2026-08-21, so omitting it never meant ungated; naming it keeps this figure reproducible.
+    everything = [item for item in load(6, gated=True) if not find_violations(item.direction)]
 
     # The gate, applied.
     pool = sorted((item for item in everything if zero_density(item) < GATE), key=lambda item: item.game_id)

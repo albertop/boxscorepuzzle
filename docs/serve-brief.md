@@ -573,9 +573,71 @@ Client-side that is the `package.unreadable` path; server-side it is a real 404.
 The fallback can stay until the routes are built — it is the only thing that makes `?p=` usable by
 hand — and it goes when they arrive. v36-P3-45.
 
+## ⬜ Decision to record before anything is indexed: the URL and status-code contract — `v36-P3-48`
+
+**URLs are the one thing that cannot be renamed after indexing**, only redirected from, forever. There
+is no production server yet, and `tools/dev_server.py` is the only executable statement of route
+semantics — it answers `/` with a **302 to `/ui/phone/index.html`** and `ROUTES` in `daily.js` are
+relative `.html` filenames. A launch that mirrors that shape indexes three mistakes permanently: an
+**implementation path** as the homepage, `.html` URLs living beside the eventual clean ones as
+duplicate content, and a homepage that redirects rather than answering.
+
+**The decision, so the first nginx config is written against a sentence rather than against the dev
+server:**
+
+| URL | Answer | Why this and not the other thing |
+|---|---|---|
+| `/` | **200**, the landing page, by rewrite | Every visit lands here (`serve-flow.md` §1). A redirect makes the canonical homepage a second URL |
+| `/p/<id>` | **200** | C6's canonical puzzle URL. An unknown id is a real **404**, never a substitution — see the section above |
+| `/today` | **302** | C6 says it redirects, and **302 rather than 301**: its target changes daily, and a 301 is cached by browsers and intermediaries effectively forever |
+| `/ui/phone/*.html` | **not reachable** | Implementation paths are never exposed as alternates. They are where the files happen to live today |
+
+⚠️ **`/today` and the manifest carry the same caching rule for the same reason.** `daily.js` fetches
+`manifest.json` with `no-store` because a stale pointer and a stale build are indistinguishable from
+outside; `/today` is the same pointer wearing a URL, so it is `no-store` too. Caching either one
+serves yesterday's puzzle to somebody, and CLAUDE.md's *cache the day's puzzle, never the week* is the
+rule this follows.
+
+**Nothing to build now.** This exists so the routes are implemented from a decision rather than from
+whatever the dev server happens to do.
+
+## ⬜ Decision to record before the share ships: what a link preview shows — `v36-P3-49`
+
+`serve-flow.md` §7b's share is a PNG posted into a chat. **The moment those messages also carry the
+site URL, every messaging platform scrapes the target for `og:*`** — and today it would find an empty
+JS shell, so the growth funnel would open with a blank preview.
+
+**The decision:**
+
+- **Static Open Graph and Twitter Card tags**, from the same catalogue keys as the titles and
+  descriptions (`page.*.title`, `page.*.description`) — one source, so a preview cannot drift from the
+  page it previews.
+- ⚠️⚠️ **`og:image` is static branding and never board state.** Two independent reasons, and either
+  alone decides it. **The scraper fetches server-side, without the sharer's session**, so a dynamic
+  image cannot reflect their board even in principle — it would show *some* board, presented as
+  theirs. And §7's rule that the share must never leak the solution or player names extends to a
+  static image trivially and to a dynamic one never: the leak surface would be fetched by the
+  platform rather than by the player, so **it would not appear in any test a person performs.**
+
+⚠️ **This is recorded rather than built because it depends on something not decided.** Server-rendered
+`og:*` needs the pages to have server-rendered content at all, which is the open item this brief
+records under the landing page; a scraper that does not run scripts sees what `applyHead` sets only if
+something on the server sets it too.
+
 ## Decisions taken
 
 Recorded here as they are made, with the date and the reason.
+
+**2026-08-21 — the page's own strings come from the catalogue, and the `<title>` element leaves the
+markup.** All three pages shipped an identical hardcoded `<title>boxscore</title>` — four copies of one
+user-facing string, invisible to every C11 guard because **markup is not code to a scan that reads
+code**. `applyHead(page)` sets the title, the description and the language from the catalogue.
+
+⚠️ **The alternative was keeping the element and asserting it matches the catalogue**, which is two
+places saying one thing with a guard between them — the arrangement this project keeps finding
+defects in. The cost of removing it is that the tab shows the URL for the moment before the module
+runs, and that is the smaller of the two. **`lang` goes the other way and stays in the markup**,
+because a crawler and a screen reader both need it before any script has run.
 
 **2026-08-19 — one puzzle, three interfaces.** The operator's decision, stated above. The alternative
 considered and rejected: a reduced board on phone. Rejected because the share grid, streaks and

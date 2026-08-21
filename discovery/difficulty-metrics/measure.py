@@ -639,8 +639,22 @@ def load(
     """Sample directions from the pool, stratified by decade.
 
     `gated` applies §5's zero-density gate in SQL, which matters more than it sounds: the gate keeps
-    only 11% of the pool at 30%, so an ungated sample is nine parts boards that will never ship. Off
-    by default so that measurements taken before the gate existed stay comparable to themselves.
+    only 11% of the pool at 30%, so an ungated sample is nine parts boards that will never ship.
+
+    ⚠️⚠️ **It did nothing at all until 2026-08-21, and the docstring promised the opposite of the
+    truth.** (v36-P2-20) `gate_clause` was built unconditionally and `eligibility()` interpolated it
+    unconditionally, so **every sample this function has ever returned was gated** — while this
+    paragraph said *off by default*, and the signature still says `gated: bool = False`.
+
+    ⚠️ **The damage was to reasoning rather than to data.** No figure is wrong because of it: every
+    caller that wanted a gated sample got one. What it produced was a *belief* — a reader of the
+    signature concludes that eight call sites omitting the flag measured the unfiltered pool, and they
+    did not. **A parameter that lies about what it does is a hazard with no callers at all**, because
+    it is read far more often than it is passed.
+
+    Those eight now pass `gated=True` explicitly, which is what they were already getting, so no
+    recorded figure moves. Whether each of them *should* have been ungated is a separate question and
+    is recorded in `docs/reviews/todo.md` rather than decided here.
 
     `min_pitchers` exists to sample an *exact* pitcher count rather than a cap, which is what
     comparing a two-pitcher board against a five-pitcher one requires — under a cap the five-pitcher
@@ -663,7 +677,9 @@ def load(
     """
     import pyodbc  # noqa: PLC0415
 
-    gate_clause = zero_density_clause(gate)
+    # ⚠️ The flag is read now (v36-P2-20). This was `zero_density_clause(gate)` unconditionally, so
+    # `gated` was declared, documented, passed at thirty-three call sites — and never consulted.
+    gate_clause = zero_density_clause(gate) if gated else ""
     # Bound before the query so the f-string stays inside the line budget, and so the two queries below
     # cannot drift: `named_query` is built from `query`, and both take this one cohort.
     cohort = eligibility(
@@ -1141,7 +1157,9 @@ def ambiguity(sample: list[Loaded], rng: random.Random) -> None:
 
 
 def main() -> None:
-    sample = load(35)
+    # ⚠️ `gated=True` states what this call has always received (v36-P2-20). The flag did nothing
+    # until 2026-08-21, so omitting it never meant ungated; naming it keeps this figure reproducible.
+    sample = load(35, gated=True)
     balanced = [item for item in sample if not find_violations(item.direction)]
     print(f"loaded {len(sample)} directions, {len(balanced)} balance every identity")
     by_decade = Counter((item.season // 10) * 10 for item in balanced)

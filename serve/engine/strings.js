@@ -177,6 +177,29 @@ const en = {
   "reference.bounds": "AB \u2265 H \u00b7 ER \u2264 R \u00b7 nothing below zero",
 
   // -------------------------------------------------------------------------------------------
+  // What the page itself says it is: the tab, the bookmark, the search result. (v36-P2-17, P3-46/47)
+  //
+  // ⚠️⚠️ **All three pages shipped the identical hardcoded `<title>boxscore</title>`** — one one-word
+  // title for three distinct pages, spelled in three HTML files *and* here, four copies of one
+  // user-facing string. It was invisible to the C11 scans because those read `.js`, and this lived in
+  // markup. **The `<title>` is the most player-visible string there is** — browser tab, history,
+  // bookmark, and the headline of every search result — and "boxscore" alone competes with a
+  // dictionary word while saying nothing about the product.
+  //
+  // ⚠️ **The language tag is a catalogue entry too**, so the page's `lang` and its words cannot
+  // disagree. `<html lang="en">` is still written in the markup, because a crawler and a screen reader
+  // both need it before any script has run; `applyHead` keeps it in step when the catalogue changes.
+  "catalog.lang": "en",
+  "page.landing.title": "boxscore — the daily baseball logic puzzle",
+  "page.board.title": "Today’s puzzle — boxscore",
+  "page.tutorial.title": "How to play — boxscore",
+  // ⚠️ The board and the tutorial get their own sentence; the landing page composes its description
+  // from the two it already shows, so the pitch a visitor reads and the pitch a search result shows
+  // cannot drift apart. See `applyHead`.
+  "page.board.description": "Rebuild today’s real major-league boxscore from the numbers that are left. One puzzle a day.",
+  "page.tutorial.description": "The five relations that solve every board, one at a time. No baseball knowledge needed.",
+
+  // -------------------------------------------------------------------------------------------
   // The landing page (`docs/serve-flow.md` §1). Every visit lands here, not only the first.
   // -------------------------------------------------------------------------------------------
   "landing.name": "boxscore",
