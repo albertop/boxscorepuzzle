@@ -7,19 +7,34 @@
  */
 
 import { PackageError } from "../../engine/package.js";
-import { createStore } from "../../engine/store.js";
+import { browserStorage, createStore } from "../../engine/store.js";
 import { text } from "../../engine/strings.js";
 import { loadPuzzle } from "./daily.js";
 import { renderLanding } from "./landing.js";
 
 const root = document.getElementById("landing");
 
+/**
+ * ⚠️⚠️ **`browserStorage()`, and outside the `try` below. Both halves matter.** (v35-P2-01)
+ *
+ * This read the global `localStorage` directly. `createStore` guards `getItem`, `setItem` and
+ * `removeItem` — it cannot guard the property access that produces the object, and in a browser with
+ * storage denied **reading `window.localStorage` throws before `createStore` is ever called**.
+ * `browserStorage()` exists for exactly that: its `try` wraps the access, and it answers with something
+ * that accepts everything and remembers nothing. The board has always used it; the new default entry
+ * page did not, so the defensive path regressed on the one screen every visit now passes through.
+ *
+ * **And it is acquired here rather than inside the `try`, because that catch means something else.**
+ * Left where it was, a storage `SecurityError` would have been caught by the package handler and shown
+ * the visitor *this puzzle cannot be read* — a true failure reported as an entirely different one, on a
+ * page whose puzzle was fine. §23 says play survives a backend failure; a page that misdiagnoses its
+ * own failure is worse than one that falls over, because the report sends the reader somewhere else.
+ */
+const store = createStore(browserStorage());
+
 try {
   const { puzzle } = await loadPuzzle();
-  // ⚠️ The real store, because the label on the button depends on whether today is already finished —
-  // and §23 requires that reading it can fail without taking the page down. `createStore` swallows a
-  // storage that throws and answers null, which renders as *play* rather than as an error.
-  renderLanding({ puzzle, root, store: createStore(localStorage) });
+  renderLanding({ puzzle, root, store });
 } catch (error) {
   root.replaceChildren();
   const message = document.createElement("p");

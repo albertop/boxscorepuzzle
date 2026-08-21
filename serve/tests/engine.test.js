@@ -2969,6 +2969,50 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   });
 });
 
+suite("⚠️ Storage is acquired the one safe way, on every entry point", () => {
+  test("⚠️⚠️ no entry point reads the global localStorage directly", async () => {
+    // v35-P2-01. `createStore` guards `getItem`, `setItem` and `removeItem`; it cannot guard the
+    // property access that produces the object, and **reading `window.localStorage` throws outright**
+    // in a browser with storage denied. `browserStorage()` exists for that — its `try` wraps the
+    // access — and the landing page, the new default entry, went straight to the global instead.
+    //
+    // ⚠️ Written over every entry point rather than over the one that was wrong. A guard naming
+    // `landing-main.js` has to be written again for the next page, and there are three now.
+    for (const file of ["main.js", "landing-main.js", "tutorial-main.js"]) {
+      const source = await (await fetch(`../ui/phone/${file}`)).text();
+      const code = source
+        .split("\n")
+        .filter((line) => !line.trim().startsWith("*") && !line.trim().startsWith("//"));
+
+      for (const line of code) {
+        assert(
+          !/\blocalStorage\b/.test(line) || /browserStorage/.test(line),
+          `${file} reaches for the global localStorage: ${line.trim()}`,
+        );
+      }
+    }
+  });
+
+  test("the landing page renders on the storage a denied browser gets", async () => {
+    // What `browserStorage()` answers with when the access throws: accepts everything, remembers
+    // nothing. The page must be whole on it — §23 keeps the play path free of backend dependencies,
+    // and the way in is the whole of this page.
+    const { renderLanding } = await import("../ui/phone/landing.js");
+    const { createStore } = await import("../engine/store.js");
+    const { readPackage } = await import("../engine/package.js");
+    const forgetful = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+
+    const view = renderLanding({ puzzle: readPackage(packages[0].raw), root, store: createStore(forgetful) });
+
+    assert(view.play, "the way in is missing when nothing can be remembered");
+    assert(view.how, "the way to the tutorial is missing when nothing can be remembered");
+    assert(!view.finished, "a storage that remembers nothing reported a finished day");
+    root.remove();
+  });
+});
+
 suite("⚠️ Every page agrees on where the other pages are", () => {
   test("no navigation target is spelled by hand", async () => {
     // A page that spells a sibling's filename is a link that breaks silently when the file is renamed:
