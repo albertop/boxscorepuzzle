@@ -244,7 +244,12 @@ def main() -> None:
         ("HARD — the same depth on a different game", pool[5], 20),
     ]
 
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
+    # ⚠️ **Beside the script, not wherever the operator was standing.** (v36-P3-03) This defaulted
+    # to `.`, so the artefacts landed in the caller's working directory — and this project's rule
+    # is *reproducible from the script alone, no reliance on the caller's working directory*. Both
+    # of these use `bootstrap()` for imports and then undercut it for output. `argv[1]` still
+    # overrides, which is what the argument is for.
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent
     solved_text: list[str] = []
     for title, loaded, target in picks:
         given, solution = erase_to_chain(loaded, target, rng)

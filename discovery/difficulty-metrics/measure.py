@@ -24,10 +24,15 @@ import sys
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from string import ascii_lowercase
 from typing import Final
 
-sys.path.insert(0, str(__file__).rsplit("discovery", 1)[0] + "forge/src")
+# ⚠️ `pathlib`, not string surgery. (v36-P3-07) This split the path on the literal `discovery` and
+# concatenated — in the single most-imported file in the tree, against the convention every sibling
+# follows, and it would have produced nonsense the first time a directory above this one was named
+# `discovery` too.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "forge" / "src"))
 
 from boxscore_domain import (  # noqa: E402
     BATTER_CAP,
@@ -735,7 +740,12 @@ def load(
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
     {cohort}
-    ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
+    -- ⚠️⚠️ **The tiebreaker is what makes the sample repeatable.** (v36-P3-07) `CHECKSUM` is
+    -- 32-bit, so ties exist, and SQL Server's order among tied rows is not defined — a `TOP (?)`
+    -- draw could in principle return a different sample on the same data on the same day. This
+    -- project's rule is that a discovery result which cannot be re-run identically is not
+    -- evidence, and every figure in `docs/reviews/` rests on draws from this line.
+    ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID)), g.GAME_ID, o.TEAM_ID
     """
     # The same SELECT with the sampling replaced by a name list. Built from the query above rather
     # than written out, so the caps, the gate and the provenance join cannot drift between the two:

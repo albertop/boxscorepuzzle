@@ -149,7 +149,12 @@ def main() -> None:
     chosen = [claimed for candidates, note in wanted if (claimed := claim(candidates, note))]
     boards = [to_json(item, note) for item, note in chosen]
 
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
+    # ⚠️ **Beside the script, not wherever the operator was standing.** (v36-P3-03) This defaulted
+    # to `.`, so the artefacts landed in the caller's working directory — and this project's rule
+    # is *reproducible from the script alone, no reliance on the caller's working directory*. Both
+    # of these use `bootstrap()` for imports and then undercut it for output. `argv[1]` still
+    # overrides, which is what the argument is for.
+    out = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parent
     template = (out / "template.html").read_text(encoding="utf-8")
     # ⚠️⚠️ **`</` is escaped, because the injection point is inside a `<script>` block.** (v36-P3-33)
     # The template's runtime rendering escapes properly, but that runs *after* the browser has parsed

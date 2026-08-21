@@ -18,8 +18,18 @@ import string
 import urllib.parse
 import urllib.request
 
-OUT = pathlib.Path("serve/ui/fonts")
-OUT.mkdir(parents=True, exist_ok=True)
+# ⚠️⚠️ **Anchored on this file, not on where the caller happens to stand.** (v36-P3-02) Every path here
+# was relative to the working directory while all three sibling tools compute a root from `__file__`.
+# Run from anywhere but the repository root this either crashed **after creating a stray
+# `serve/ui/fonts` tree wherever the operator was**, or — quieter and worse — globbed a nonexistent
+# `serve/data/puzzles`, found no packages, and **silently dropped every package-carried glyph from the
+# subset**: the one-glyph-in-the-fallback-face failure this file's own docstring warns about, arriving
+# through the door the docstring did not look at.
+#
+# `discovery/` scripts carry this rule explicitly — *a discovery result that cannot be re-run
+# identically is not evidence* — and a font subset is the same kind of artefact.
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+OUT = ROOT / "serve" / "ui" / "fonts"
 AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36"
 
 FAMILIES = {
@@ -43,10 +53,10 @@ WEIGHTS = (400, 600, 700)
 def characters() -> str:
     used = set(string.digits)
     # Every user-facing string in the catalogue.
-    catalogue = pathlib.Path("serve/engine/strings.js").read_text(encoding="utf-8")
+    catalogue = (ROOT / "serve" / "engine" / "strings.js").read_text(encoding="utf-8")
     used.update("".join(re.findall(r':\s*"([^"]*)"', catalogue)))
     # Every label and slot reference the real packages carry.
-    for path in pathlib.Path("serve/data/puzzles").rglob("*.json"):
+    for path in (ROOT / "serve" / "data" / "puzzles").rglob("*.json"):
         raw = json.loads(path.read_text(encoding="utf-8"))
         if "labels" not in raw:
             continue
@@ -109,5 +119,7 @@ header = (
     + chr(10)
     + chr(10)
 )
-pathlib.Path("serve/ui/phone/fonts.css").write_text(header + chr(10).join(rules), encoding="utf-8", newline=chr(10))
+(ROOT / "serve" / "ui" / "phone" / "fonts.css").write_text(
+    header + chr(10).join(rules), encoding="utf-8", newline=chr(10)
+)
 print(f"total {sum(f.stat().st_size for f in OUT.glob('*.woff2')) / 1024:.1f} KB")
