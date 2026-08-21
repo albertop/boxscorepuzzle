@@ -145,7 +145,28 @@ The resulting claim in `batting-order-plan.md` that the confirmation found 346 c
 
 ### Security engineer, backend architect, and baseball domain expert
 
-#### v30-P1-02 - Publication certification accepts a fabricated half of the printed boxscore
+#### ⚠️ v30-P1-02 — RETRACTED. The original text is kept below and is **not** a live requirement
+
+**Read the retraction at the top of this file first.** What follows is the finding as it was written,
+preserved because the reasoning is worth having and because deleting a retracted finding hides why the
+boundary sits where it does. **Its "Recommended fix" is refused**, in that wording, by the operator's
+decision on 2026-08-20: the unplayed half is reveal-only, contributes no clue, and cannot affect
+uniqueness, derivability or the player's result, so certifying it row by row would expand §22 into a
+second Retrosheet validator without protecting the puzzle guarantee.
+
+⚠️⚠️ **This heading exists because the document was saying two opposite things about one id.** The
+retraction was recorded at the top and the finding below was left exactly as filed, so a reader
+arriving at `## Findings` — which is where the detail is, and therefore where anyone goes to act — met
+an open P1 with a mandate. Two places that should agree, disagreeing, with nothing checking: the shape
+this project meets more than any other, found here in the ledger that records it.
+
+**What was built instead, and it is not nothing:** `check_printed_boxscore_corresponds()` anchors the
+unshared grids on the line score — the defence's runs and hits, the offence's staff allowing the same,
+outs bounded by innings. Aggregate corroboration against an independent source, stopping short of
+row-by-row. v33 reviewed that boundary and agreed it is the right one.
+
+<details>
+<summary>The finding as originally filed (retracted)</summary>
 
 **Hat:** Security engineer; backend architect; baseball historian / boxscore domain expert  
 **Severity:** P1  
@@ -165,6 +186,8 @@ The test fixtures make the gap conclusive rather than hypothetical. `forge/tests
 **Recommended fix:** Extend the certification evidence with canonical complete-boxscore rows obtained independently of the `Package` being judged. Add a registered certification that compares every unshared batting and pitching row, row order, player identity, role or position, RBI, and club identity. Keep `check_reveal_agrees()` for the shared half; the two checks protect different boundaries. Replace the certification happy-path fixture with canonical evidence and add mutations proving that every unshared numeric and identity field causes refusal. If no independent source can supply these rows, the gate must not claim to certify a complete boxscore; fail closed or narrow the published promise.
 
 **Security analysis:** The trust boundary is candidate reveal data entering the signed publication namespace. No second developer or hostile contributor is required; a normal loader or mapping defect is sufficient. A hostile or corrupted producer could use the same unchecked path. This is primarily CWE-345, Insufficient Verification of Data Authenticity, and maps to OWASP A08 Software and Data Integrity Failures. It exposes no private data, but it invalidates the integrity guarantee attached to signed packages.
+
+</details>
 
 ### Frontend engineer and backend architect
 
@@ -221,9 +244,9 @@ The test fixtures make the gap conclusive rather than hypothetical. `forge/tests
 
 **UX / visual design:** The phone board, completed-state clipping, responsive scoreboard, typography, and modal presentation were inspected. Known contrast and real-device screen-reader work is already recorded in `todo.md`; no separate untracked visual finding was added.
 
-**Baseball domain:** Lineup-cycle arithmetic, substitution aggregation, visitor-first rendering, innings-as-outs, line-score ordering, and complete-boxscore side mapping were inspected. The only new domain-integrity issue is v30-P1-02.
+**Baseball domain:** Lineup-cycle arithmetic, substitution aggregation, visitor-first rendering, innings-as-outs, line-score ordering, and complete-boxscore side mapping were inspected. The only new domain-integrity issue was v30-P1-02, ⚠️ **since retracted** — the unplayed half is reveal-only and is offered as-is, and the line-score anchoring that was built instead is the agreed boundary.
 
-**Security:** Signing, package parsing, publication gating, static serving, development server exposure, subprocess use, and browser rendering sinks were inspected. No private-data or practical solo-environment exploit was found beyond the publication-integrity failure in v30-P1-02.
+**Security:** Signing, package parsing, publication gating, static serving, development server exposure, subprocess use, and browser rendering sinks were inspected. No private-data or practical solo-environment exploit was found. ⚠️ This line originally ended *"beyond the publication-integrity failure in v30-P1-02"*; that finding is retracted and the sentence is corrected rather than left pointing at it.
 
 ## Review scope and residual risk
 

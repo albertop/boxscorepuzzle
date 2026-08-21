@@ -33,6 +33,9 @@ if (-not (Test-Path $ZipDirectory)) {
 
 $byExtension = @{}
 $offenders = New-Object System.Collections.Generic.List[string]
+# Reported and survivable: an unexpected kind the floor already covers. Kept apart from $offenders so
+# that "worth knowing" and "stop" are two lists rather than one list and a judgement at the end.
+$notices = New-Object System.Collections.Generic.List[string]
 $fileCount = 0
 
 foreach ($zip in Get-ChildItem $ZipDirectory -Filter *.zip) {
@@ -57,8 +60,30 @@ foreach ($zip in Get-ChildItem $ZipDirectory -Filter *.zip) {
                     }
                 } finally { $reader.Close() }
                 $above = @($seasons.Keys | Where-Object { $_ -ge $SeasonFloor })
-                $where = if ($above.Count) { "seasons $($above -join ', ')" } else { "all below the floor" }
-                $offenders.Add("$($zip.Name)/$($entry.Name) is .$kind - $where")
+                $named = "$($zip.Name)/$($entry.Name) is .$kind"
+
+                # ⚠️⚠️ **v33: an unreadable file used to report as "all below the floor".** Empty
+                # $seasons makes $above empty too, and the message was chosen from $above alone — so a
+                # file whose contents could not be classified announced itself as safely old. That is
+                # the absence of a check reading as the presence of a passing one, three lines under a
+                # comment about that exact shape. Unclassifiable is fatal, and it is tested first
+                # BECAUSE it is indistinguishable from the benign case downstream of here.
+                if ($seasons.Count -eq 0) {
+                    $offenders.Add("$named - and no 'id,' line could be read, so it cannot be placed in time")
+                }
+                elseif ($above.Count) {
+                    $offenders.Add("$named - seasons $($above -join ', '), at or above the floor")
+                }
+                else {
+                    # ⚠️ **v33-P3-01: this used to be fatal and it is not a failure.** The floor
+                    # already excludes every game in the file, so the pool is exactly as safe as the
+                    # PASS below claims. Throwing here made the documented reload procedure stop on a
+                    # download that changed in a way the SQL already handles — a check that fires when
+                    # nothing is wrong, which this project has watched get loosened until it says
+                    # nothing. It is worth saying out loud, because the character of the download has
+                    # changed and next year's file may not be below the floor. Saying is not failing.
+                    $notices.Add("$named - seasons $(($seasons.Keys | Sort-Object) -join ', '), all below the floor")
+                }
             }
         }
     } finally { $archive.Dispose() }
@@ -86,7 +111,17 @@ if ($offenders.Count) {
     throw "$($offenders.Count) postseason event files are not .$Expected"
 }
 
-Write-Output "PASS - every postseason event file is .$Expected"
-Write-Output "  no league letter, so no Negro Leagues file to separate"
-Write-Output "  no .ED? twin, so no deduced reconstruction to exclude"
-Write-Output "  the floor at $SeasonFloor therefore has nothing to protect against in this download"
+if ($notices.Count) {
+    Write-Output "NOTE - the download is no longer a single kind of file, and the floor still covers it:"
+    $notices | ForEach-Object { "  $_" }
+    Write-Output ""
+    Write-Output "  Nothing to do today: every game in those files is below $SeasonFloor and the pool"
+    Write-Output "  excludes them already. Worth knowing because Retrosheet has started publishing a"
+    Write-Output "  kind of postseason file it did not publish before, and the next one may not be old."
+    Write-Output ""
+}
+
+Write-Output "PASS - the postseason download admits nothing the floor does not cover"
+Write-Output "  every file at or above $SeasonFloor is .$Expected"
+Write-Output "  no league letter above the floor, so no Negro Leagues file to separate"
+Write-Output "  no .ED? twin above the floor, so no deduced reconstruction to exclude"
