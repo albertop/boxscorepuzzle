@@ -1,5 +1,58 @@
 # Review backlog
 
+## 2026-08-21 — v37, a follow-up pass: one finding, and it points at a stale reason rather than a fragile gate
+
+**Nine of v36's P2s verified resolved by reading the code, no tests run.** One new finding, and two
+statements about state that were false when written.
+
+### `v37-P3-01` — **accepted in its cause and rejected in its impact**
+
+The claim: `_traits_survived` requires only **one** board with a suffixed slot reference and one with a
+live footnote, which is fragile — *"la condición de tutorial puede colapsar sin un fallo de cobertura
+explícito"*.
+
+⚠️ **The impact is the opposite of what happens.** The gate raises `SystemExit` before `_publish`, so a
+batch missing either trait **refuses to publish and leaves the previous generation serving**. It cannot
+collapse silently; being an explicit failure is the entirety of what `v36-P2-06` added. A floor of one
+means the writer *refuses* one discard sooner — an operational cost, not a correctness risk.
+
+⚠️⚠️ **But the reviewer was reading a stale reason, and that is a real defect.** The docstring said
+*"the two cases **the tutorial** has to teach"*. **The tutorial reads none of this** — `tutorial-main.js`
+fetches no package, no manifest and no network, teaching on a made-up four-batter board, which is
+deliberate and recorded there. The justification was true while the tutorial was going to be built on
+real data and stopped being true when it was not. **A stale reason in a gate's own docstring is worse
+than none**: it produced a confident finding about a dependency that does not exist.
+
+**Who actually needs these boards:** `serve/tests/engine.test.js` searches the shipped packages for one
+with a live footnote total in three places, and `board.js`'s substitution indentation keys off a slot
+reference longer than one character. **Rendering coverage, not editorial coverage.** The docstring says
+so now.
+
+**Measured rather than assumed, since the finding is about redundancy:** the current batch carries
+**three** boards with a shared slot and **five** with a live footnote. The comment claiming *exactly one
+of the six* was true of the batch drawn under the old gate and went stale the moment it was redrawn — a
+count in a comment cannot survive a regeneration, and it is gone.
+
+⬜ **Raising the floor from one to two is an operator decision and is not taken.** It makes the writer
+refuse *more* often, which works against the stated concern, and it would be a third quota over six
+boards that already carry one-direction-per-game and distinct stall targets. `CLAUDE.md` records a
+weighted sample producing **zero** boards at a rung under exactly that pressure.
+
+### ⚠️ v37's *Pendientes* section is false, and the source of it is inside v36's own file
+
+It reports *"`v36` deja en estado abierto `P3: 44, none started`"*, citing `code_review_v36.md:1550`.
+That line is the review's **own snapshot from the day it was written**, in a section headed *"Open, and
+not started"* — accurate then, and now describing nothing: **all 44 P3s, all 16 P2s and the P1 are
+closed.**
+
+**Not corrected in the review file**, which is the reviewer's artefact and not mine to rewrite; recorded
+here, where this project tracks state. ⚠️ **The general shape is one this file has already been caught
+by today**: a status line inside a document that is not the status tracker gets read as current long
+after it stopped being. The same paragraph shape produced the *"all sixteen P2s closed"* claim corrected
+above.
+
+---
+
 ## ⚠️⚠️ READ FIRST — which pool every discovery figure describes
 
 **2026-08-21.** Two separate defects touched the pool every instrument samples. Neither made a *number*

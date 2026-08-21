@@ -303,7 +303,7 @@ def claim(wanted: list[Loaded], seen: set[str], item: Loaded) -> bool:
 
 
 def _traits_survived(published: list[Package]) -> None:
-    """⚠️⚠️ **The two cases the tutorial has to teach, asserted over what shipped.** (v36-P2-06)
+    """⚠️⚠️ **Two rendering cases the shipped batch must contain, asserted over what shipped.** (v36-P2-06)
 
     `_choose` puts a board with a suffixed label and a board with a live footnote into the *candidate*
     list, and this module's docstring promises the published six carry both. The write loop then
@@ -311,12 +311,34 @@ def _traits_survived(published: list[Package]) -> None:
     that **two of six candidates produced no puzzle at any target from 12 down**. So the promise held
     over twelve candidates and nothing held it over the six files.
 
-    If the substitution board or the footnote board is among the discards, six boards publish with the
-    guarantee silently broken, and `serve`'s tutorial ends up referring to a case its own data does not
-    contain. This project's rule: **anything acting as a launch gate is asserted, not printed** — and
-    `_choose`'s selection is exactly a promise printed and believed.
+    This project's rule: **anything acting as a launch gate is asserted, not printed** — and `_choose`'s
+    selection is exactly a promise printed and believed.
 
-    Raised before `_publish`, so a batch missing either trait leaves the published set untouched.
+    ⚠️⚠️ **This said "the two cases *the tutorial* has to teach" and the tutorial reads none of this.**
+    (v37-P3-01) `tutorial-main.js` fetches nothing at all — no package, no manifest, no network — and
+    teaches on a made-up four-batter board, which is deliberate and recorded there: the one screen a
+    stranger is most likely to open first is the one with nothing to go wrong. **The justification was
+    true when the tutorial was going to be built on real data and stopped being true when it was not**,
+    and a stale reason in a gate's own docstring is worse than none: v37's reviewer read it, believed
+    the tutorial depended on this, and filed a fragility finding about a dependency that does not exist.
+
+    **Who actually needs these boards is the client and its suite.** `serve/tests/engine.test.js`
+    searches the shipped packages for one with a live footnote total in three places, and
+    `board.js`'s substitution indentation keys off a slot reference longer than one character — so a
+    batch with neither trait leaves both paths unexercised against real data. That is a rendering
+    coverage requirement, not an editorial one.
+
+    ⚠️ **One of each is the floor, not a target.** Today the batch carries **three** boards with a
+    shared slot and **five** with a live footnote; a previous batch carried exactly one of the first,
+    which is what made this worth asserting. Raising the floor to two was proposed and is **not**
+    taken here: it makes the writer refuse *more* often rather than less, and it would be a third
+    quota over six boards that already carry one-direction-per-game and distinct stall targets.
+    `CLAUDE.md` records a weighted sample producing zero boards at a rung under exactly that pressure.
+    Recorded in `docs/reviews/todo.md` as an operator decision.
+
+    Raised before `_publish`, so a batch missing either trait leaves the published set untouched —
+    **loudly, and with the previous generation still serving.** A collapse here is a refusal to
+    publish, never a silent publication.
     """
     # ⚠️⚠️ **A *suffixed* reference, and the first version of this check could not fail.** It asked
     # whether `slot_references` was present and non-empty — but `Package.__post_init__` already refuses
@@ -325,8 +347,9 @@ def _traits_survived(published: list[Package]) -> None:
     # gate closing a finding about promises nobody verifies.
     #
     # The trait is a lineup slot shared by two rows, which the reference marks by suffixing: `5a`, `5b`
-    # against a plain `5`. Exactly **one of the six** published boards carries it today, which is what
-    # makes this worth asserting — the promise is one discard away from being false.
+    # against a plain `5`. ⚠️ This said **exactly one of the six** carries it, which was true of the
+    # batch drawn under the old gate and is not true of the current one — three of six do. A count in a
+    # comment goes stale the first time the batch is redrawn; what is asserted below is the floor.
     with_slot = [one for one in published if any(not ref.isdigit() for ref in one.slot_references or ())]
     with_footnote = [
         one for one in published if any(value for row in one.solution.footnotes for value in row if value is not None)
