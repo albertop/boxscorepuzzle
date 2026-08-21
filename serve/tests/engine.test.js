@@ -846,9 +846,13 @@ suite("⚠️ The highlight paints over a filled cell", () => {
         onSelect: () => {},
       }),
     );
-    // Visible for the duration: `getComputedStyle` on a `hidden` subtree still resolves colours, but a
-    // test that depends on that is a test that breaks when someone changes how it is hidden.
-    host.hidden = false;
+    // ⚠️⚠️ **This used to set `host.hidden = false` here and `true` again at the end of each test, and
+    // that restore was a hardcoded copy of the page's initial state.** When `#board` stopped being
+    // `hidden` and started rendering off-screen, these three lines put it back to `display: none` for
+    // every test that ran afterwards — so the focus assertions failed against a board that no test in
+    // this file had hidden on purpose. Two places encoding one fact, and the copy won.
+    //
+    // The board renders now, permanently and off-screen, so nothing needs revealing for the duration.
     const blanks = [...host.querySelectorAll(".cell.blank")];
     assert(blanks.length >= 2, "this package has fewer than two blanks, so the test proves nothing");
     for (const cell of blanks.slice(0, 2)) {
@@ -863,7 +867,6 @@ suite("⚠️ The highlight paints over a filled cell", () => {
     const plain = getComputedStyle(blanks[0]).backgroundColor;
     blanks[0].classList.add("peer");
     const peered = getComputedStyle(blanks[0]).backgroundColor;
-    host.hidden = true;
 
     assert(blanks[0].classList.contains("filled"), "the cell under test is not filled, so it proves nothing");
     assert(peered !== plain, `a filled peer kept its ground colour ${plain}`);
@@ -875,7 +878,6 @@ suite("⚠️ The highlight paints over a filled cell", () => {
     const peered = getComputedStyle(blanks[1]).backgroundColor;
     blanks[1].classList.add("selected");
     const chosen = getComputedStyle(blanks[1]).backgroundColor;
-    host.hidden = true;
 
     assert(blanks[1].classList.contains("filled"), "the cell under test is not filled, so it proves nothing");
     assert(chosen !== peered, `a filled selected cell painted as a peer, ${chosen}`);
@@ -2146,6 +2148,92 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     press(shell.root, ".again");
 
     equal(shell.root.querySelector(".reveal-time-figure").textContent, first, "the shared time moved");
+
+    shell.teardown();
+  });
+
+  // -------------------------------------------------------------------------------------------
+  // v34-P2-01. `role="dialog"` with `aria-modal="true"` is a promise to assistive technology that
+  // everything behind the panel is unavailable. Nothing was keeping it: the board kept its tab stops,
+  // the opener kept focus behind the overlay, and a second activation appended a second dialog.
+  //
+  // ⚠️ **These assert the DOM facts the attribute claims**, not the attribute. A test that checked for
+  // `aria-modal="true"` would have passed on every version of this code, including the broken one.
+  // -------------------------------------------------------------------------------------------
+
+  test("⚠️ opening a panel moves focus into it and takes the board out of reach", async () => {
+    const shell = await bootShell(packages[0].raw);
+
+    press(shell.root, ".reference-key");
+    const opened = shell.root.querySelector(".reference");
+
+    assert(opened.contains(document.activeElement), "focus stayed behind the panel it opened");
+    equal(document.activeElement.className, "reveal-close", "focus did not land on an actionable control");
+    const behind = [...shell.root.children].filter((child) => child !== opened);
+    assert(behind.length > 0, "nothing was behind the panel, so this proves nothing");
+    assert(behind.every((child) => child.inert), "the board behind the modal is still focusable");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ activating the opener again cannot stack a second dialog", async () => {
+    const shell = await bootShell(packages[0].raw);
+
+    press(shell.root, ".reference-key");
+    // The exact failure: the opener kept focus behind the overlay, so a keyboard user pressing Enter
+    // twice appended two panels and closing one left the other.
+    press(shell.root, ".reference-key");
+
+    equal(shell.root.querySelectorAll(".reference").length, 1, "a second dialog was appended over the first");
+
+    shell.teardown();
+  });
+
+  test("⚠️ closing a panel restores focus to whatever opened it", async () => {
+    const shell = await bootShell(packages[0].raw);
+    const opener = shell.root.querySelector(".reference-key");
+
+    opener.click();
+    press(shell.root, ".reveal-close");
+
+    assert(!shell.root.querySelector(".reference"), "the panel did not close");
+    // ⚠️ `assert(a === b)`, not `equal(a, b)`: every DOM node stringifies to `{}`, so the `equal` form
+    // of this line passed against a build with the focus restoration deleted. See `harness.js`.
+    assert(document.activeElement === opener, "focus did not return to the opener");
+    assert([...shell.root.children].every((child) => !child.inert), "the board is still inert after closing");
+
+    shell.teardown();
+  });
+
+  test("⚠️ Escape closes a panel, and closes exactly one", async () => {
+    const shell = await bootShell(packages[0].raw);
+    const opener = shell.root.querySelector(".reference-key");
+
+    opener.click();
+    shell.root
+      .querySelector(".reference")
+      .dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    assert(!shell.root.querySelector(".reference"), "Escape did not close the panel");
+    assert(document.activeElement === opener, "Escape closed the panel without restoring focus");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ the reveal after Check takes focus, whose opener no longer exists", async () => {
+    // The complementary failure, and the one with no opener to return to: `rebuildChrome()` removes
+    // *Check* before the reveal is appended, so a keyboard user arrived at the payoff holding nothing.
+    const shell = await bootShell(packages[0].raw);
+    fill(shell);
+
+    press(shell.root, ".keypad button.check");
+
+    const reveal = shell.root.querySelector(".reveal");
+    assert(reveal.contains(document.activeElement), "the reveal opened without taking focus");
+    assert(!shell.root.querySelector(".keypad button.check"), "Check survived completion, so this is not that path");
+
+    press(shell.root, ".reveal-close");
+    equal(document.activeElement.className, "again", "closing left focus nowhere; the opener was gone");
 
     shell.teardown();
   });

@@ -11,7 +11,13 @@
   h1 { font-size: 15px; } h2 { font-size: 13px; color: #8ab; margin: 1.2em 0 .3em; }
   p { margin: .1em 0; } .pass { color: #7c7; } .fail { color: #f77; }
 </style>
-<div id="board" hidden></div>
+<!-- ⚠️⚠️ **Rendered off-screen, not `hidden`, and the difference is not cosmetic.** `hidden` is
+     `display: none`: the board had no boxes, `getClientRects()` returned nothing, and **no element
+     inside it could take focus** — `focus()` silently did nothing and `document.activeElement` stayed
+     on `<body>`. A test page where nothing is laid out cannot see a layout defect, which is the class
+     of defect this project has been caught by most often, and it could not test the focus behaviour
+     `aria-modal` promises. Off-screen keeps the board out of the report and keeps it real. -->
+<div id="board" style="position: fixed; left: -10000px; top: 0; width: 375px; height: 812px;"></div>
 <main id="out"></main>
 <script type="module">
   import { run } from "./harness.js";

@@ -169,9 +169,63 @@ export function boot({
   // mouse still offered them as clickable. v31-P3-01.
   const markFinished = () => app.classList.add("app-finished");
 
-  const showReveal = (record) => {
+  // ⚠️⚠️ **One way in and one way out, because `aria-modal` was a claim nothing was making true.**
+  //
+  // Both panels tell assistive technology `role="dialog"` and `aria-modal="true"`, which says *every
+  // surface behind this one is unavailable*. Opening was `app.append(panel)` and closing was
+  // `panel.remove()`, so none of it was: the board's controls kept their tab stops, the opener kept
+  // focus **behind** the overlay — so a second Enter appended a second dialog — and closing dropped
+  // focus to the top of the document. The accessibility tree and the DOM described different screens
+  // with nothing checking that they agree, which is this project's usual defect wearing an ARIA
+  // attribute. v34-P2-01.
+  //
+  // Lifecycle lives here rather than in the renderers: the shell is what appends them, what knows
+  // whether one is already open, and the only thing that can put focus back where it came from.
+  let panel = null;
+
+  const dismiss = () => {
+    if (!panel) return;
+    const { node, hidden, opener } = panel;
+    panel = null;
+    for (const sibling of hidden) sibling.inert = false;
+    node.remove();
+    // ⚠️ **The opener is gone on the solve path.** `rebuildChrome()` removes *Check* before the reveal
+    // is appended, so there is nothing to return to — a keyboard user would land at the top of the
+    // document holding nothing. The control that replaced it is the honest destination.
+    const back = opener?.isConnected ? opener : app.querySelector(".again");
+    back?.focus();
+  };
+
+  const present = (build, opener) => {
+    // Refuse rather than replace. A second panel stacked on the first is never what was asked for, and
+    // replacing would silently discard a reveal the player was reading.
+    if (panel) return;
+    const node = build();
+    // Snapshot before appending, so the new panel is not in its own hidden set.
+    const hidden = [...app.children];
+    for (const sibling of hidden) sibling.inert = true;
+    app.append(node);
+    panel = { node, hidden, opener };
+
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") dismiss();
+    });
+    const close = node.querySelector(".reveal-close");
+    close?.addEventListener("click", dismiss);
+    // ⚠️ The close button rather than the heading. It is always present and always actionable, and a
+    // screen reader announces the dialog's `aria-label` on entry either way — so this costs nothing and
+    // leaves the user on a control instead of on text they cannot act from.
+    close?.focus();
+  };
+
+  // ⚠️ **The opener is passed, never read from `document.activeElement`.** A pointer press does not
+  // focus the button it presses, so the active element at this moment is the body on every mouse and
+  // touch path — the caller is the only thing that knows what opened this. Read from `activeElement`
+  // it would have restored focus to `<body>` and the test asserting restoration would still pass,
+  // because focusing the body silently succeeds.
+  const showReveal = (record, opener = null) => {
     app.classList.add("solved");
-    app.append(renderReveal(puzzle, record));
+    present(() => renderReveal(puzzle, record), opener);
   };
 
   // ⚠️⚠️ **The keypad exists while the board is an input surface and not afterwards.** A finished board
@@ -187,7 +241,7 @@ export function boot({
     again.type = "button";
     again.className = "again";
     again.textContent = text("done.see_boxscore");
-    again.addEventListener("click", () => showReveal(game.record()));
+    again.addEventListener("click", () => showReveal(game.record(), again));
     app.append(again);
   } else {
     keypad = renderKeypad(
@@ -255,7 +309,7 @@ export function boot({
   reference.type = "button";
   reference.className = "reference-key";
   reference.textContent = text("reference.title");
-  reference.addEventListener("click", () => app.append(renderReference()));
+  reference.addEventListener("click", () => present(renderReference, reference));
 
   const footer = doc.createElement("div");
   footer.className = "footer";
@@ -273,7 +327,7 @@ export function boot({
     again.type = "button";
     again.className = "again";
     again.textContent = text("done.see_boxscore");
-    again.addEventListener("click", () => showReveal(game.record()));
+    again.addEventListener("click", () => showReveal(game.record(), again));
     app.append(again);
   }
 

@@ -157,7 +157,10 @@ export function renderReveal(puzzle, record) {
   close.className = "reveal-close";
   close.textContent = text("reveal.close");
   sheet.append(close);
-  close.addEventListener("click", () => panel.remove());
+  // ⚠️ **Built here, wired by the shell.** This used to call `panel.remove()` itself, which closes the
+  // panel and nothing else — it cannot restore the focus the shell moved, cannot un-inert what the
+  // shell hid, and cannot know a panel is open. Two half-owners of one lifecycle. See `present()` and
+  // `dismiss()` in `shell.js`; v34-P2-01.
 
   return panel;
 }
@@ -420,8 +423,8 @@ export function renderReference() {
   close.type = "button";
   close.className = "reveal-close";
   close.textContent = text("reference.close");
-  close.addEventListener("click", () => panel.remove());
   sheet.append(close);
+  // ⚠️ Wired by the shell, for the reason on the other renderer's close button.
 
   return panel;
 }

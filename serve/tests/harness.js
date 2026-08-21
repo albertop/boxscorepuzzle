@@ -26,6 +26,20 @@ export function assert(condition, message) {
 }
 
 export function equal(actual, expected, message) {
+  // ⚠️⚠️ **A DOM node stringifies to `{}`, so `equal(node, other)` could never fail.** It was written
+  // in a focus test — `equal(document.activeElement, opener)` — which passed against a build where the
+  // focus restoration had been deleted. The test named the property, asserted nothing, and was found
+  // only because the mutation run showed the wrong test going red. A comparison that cannot
+  // distinguish is the same defect as a check that never fires, and it hid inside the helper rather
+  // than inside the test.
+  //
+  // Refused rather than repaired: identity comparison on nodes is what was meant, and `assert(a === b)`
+  // says so at the call site instead of making this helper guess.
+  for (const value of [actual, expected]) {
+    if (value instanceof Node) {
+      throw new Error(`equal() cannot compare DOM nodes — every node stringifies to {}. Use assert(a === b)`);
+    }
+  }
   const a = JSON.stringify(actual);
   const b = JSON.stringify(expected);
   if (a !== b) throw new Error(`${message ?? "not equal"}: got ${a}, expected ${b}`);
