@@ -3691,40 +3691,59 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
 
 ### `serve` — the engine is ahead of the shell
 
-8. **Half of this is now built, and the halves have to be told apart.**
+8. **The shell has caught up with the engine. What is left is a backend, not a screen.**
 
-   ✅ **Done.** The session survives a reload: `store.js` keyed one-puzzle-one-key, restored before the
-   board is drawn, saved on every entry and at the moment the clock stops. The clock is an accumulated
-   duration that excludes hidden and idle spans (`clock.js`, `followAttention()`), and it is invisible
-   during play as §26 and `docs/serve-flow.md` §4 require. A malformed saved session is refused
-   atomically and costs nothing but the session.
+   ✅ **The session.** Survives a reload: `store.js` keyed one-puzzle-one-key, restored before the board
+   is drawn, saved on every entry and at the moment the clock stops. The clock is an accumulated
+   duration excluding hidden and idle spans, invisible during play (§26). A malformed saved session is
+   refused atomically and costs nothing but the session.
 
-   ⬜ **Still unwired, and the reason it is one item is that they are one screen.** `isSolved()`,
-   `finish()` and `record()` exist and nothing calls them: **nothing happens when the board is
-   finished.** The `reveal` block ships in every package and **is drawn nowhere** — names, teams, date,
-   the real boxscore of §7. That is the game's payoff and it is the single thing the player never
-   receives.
+   ✅ **The ending, which used to be the whole of this item.** *Check* gives one of three answers and
+   never names a cell or a count. A solved board draws the reveal — a **printed boxscore**, both clubs,
+   `AB R H RBI BB SO`, the clubs' real names, schema 5 carries it. A finished board is **read-only**:
+   no keypad, no cells that are controls, and the clock is **sealed** rather than held, so no tap can
+   restart a duration that has already been earned. Reopening the same day returns to exactly that.
+
+   ✅ **Three hints**, spent on the cell the player chose, drawn in a third ink, counted beside the time
+   on the reveal. ⚠️ This item used to read *"`hint()` is dead by decision"*; `serve-flow.md` §3 was
+   reversed on 2026-08-20 and keeps the superseded reasoning.
+
+   ✅ **A reference sheet** on a button (§3b): the five relations and the bounds, costing no hint.
 
    ⬜ **The C7 record is computed and goes nowhere.** It travels inside the snapshot, so it survives a
    reload; there is no endpoint to upload it to, because `serve/` has none. ⚠️ **C7 is irreversible** —
    storing aggregate state instead of the event record loses history that cannot be reconstructed — so
-   the shape being right already is the part that mattered.
-
-   ⬜ **`hint()` is dead by decision, not by omission.** `docs/serve-flow.md` §3: there are none, because
-   §22 guarantees no board needs one. It stays in the engine as a seam and no interface should call it.
+   the shape being right already is the part that mattered. It now carries `assisted`, which is `false`
+   on every real game and `true` on anything the development test mode filled in.
 
 9. **Seams §C requires in v1 and that do not exist:** C6 routes (`/p/<id>` canonical, `/today` — today
    it is `?p=`), C4 a loader that decides the day (there is no calendar; it takes `manifest.puzzles[0]`,
    which is not a date), C8 `canAccess`, C9 reserved ad slots, C10 the two-phase boot. **C11 is done**,
    but the catalogue holds `en` only.
-10. **Product surfaces:** the share grid (§7), the tutorial that is not skippable on first play (§8),
-    and any surfacing of hints and errors.
-11. **Tablet and desktop.** The brief says neither starts **before the phone has been used on a phone**,
-    and that has not happened.
+10. **Product surfaces:** the share grid (§7) and the tutorial that is not skippable on first play (§8).
+    ⚠️ **The share grid blocks the reveal's primary action**: §20 makes it the main growth channel and
+    the finished screen should lead with it, but §36 has *what it encodes without leaking anything* open
+    — so the button waits on the design rather than shipping pointed at nothing.
+    **Hints are surfaced** (count beside the time). **Errors are not, deliberately**: marking makes
+    probing beat deducing and a count is a binary search over the board. The mistake count stays in the
+    C7 record, where it is a measurement rather than a message.
+11. **Tablet and desktop.** The brief says neither starts before the phone has been used on a phone.
+    ✅ **That precondition is met**: `docker compose up` publishes on every interface, and the operator
+    has played on a handset. Whether to start either is his call and neither is started.
+    ⚠️ The shell was made bootable with its boundaries injected (`shell.js`, taking root, clock, store
+    and document) for the test mode, and that is most of what a second interface needs from it.
 12. ⚠️ **What the directory name promises and does not hold.** `CLAUDE.md` says `serve/` carries "app,
-    nginx, docker, endpoints". There is no nginx, no docker and not one endpoint — **there is no way to
-    deploy this.** The backend is absent too (accounts, OAuth, Paddle, devices, percentiles), though
-    §23 guarantees play does not depend on it.
+    nginx, docker, endpoints". **There is still no way to deploy this.**
+
+    A `compose.yaml` at the repository root runs `tools/dev_server.py` in a container and publishes it
+    on the network — that is the **development** environment and nothing more. ⚠️ **It is not the
+    production shape and must not be mistaken for one**: no nginx, no image, no caching contract, not
+    one endpoint. A full nginx configuration was written and **deleted rather than kept**, because a
+    half-built production config that nobody runs drifts; what it established is two sentences at the
+    end of this file.
+
+    The backend is absent too (accounts, OAuth, Paddle, devices, percentiles), though §23 guarantees
+    play does not depend on it.
 
 ### Built but not finished, in the forge
 
@@ -4218,3 +4237,49 @@ move while it is being solved — a mid-flight change makes the fifty boards two
 the next pack, and check the same thing then: **every relation the boards can require is on the strip.**
 
 The on-screen reference sheet (`serve-flow.md` §3b) carries all five and is not affected.
+
+
+## 2026-08-20 — what closed, in one place
+
+A long day. The individual findings are recorded above and in the review files; this is the shape of
+what moved, so the next session does not have to reconstruct it from commits.
+
+### The reveal became the product's payoff
+
+**Schema 5.** The reveal was the board relabelled — six columns of one club, in monospace, with names
+attached. It is a printed boxscore now: both clubs, `AB R H RBI BB SO`, the clubs' real names from
+`retroTeams` keyed by team *and season*, footnotes naming carriers. ⚠️ **`RBI` is the point**: it is the
+one number on the finished sheet the puzzle never asked for, so the reveal tells the player something
+instead of repeating what they worked out.
+
+⚠️⚠️ **One game, one puzzle** came with it and is not optional. The reveal prints both clubs, and the
+other club's half **is the other direction's board** — publishing both hands the second away inside the
+first one's reveal. Asserted over a batch; **the calendar inherits it** the moment it exists.
+
+### The ending, and a rule about the clock
+
+*Check* moved into the keypad and is dead until the board is full. A finished board is a **record, not a
+surface**: no keypad, no cell that is a control, and the clock is **sealed** — `hold()` stops it and the
+next tap starts it again, which is how a solved board reopened and quietly rewrote the time it had
+earned.
+
+**Three hints**, reversing `serve-flow.md` §3 on an argument the original never engaged with: a hint does
+not corrupt a comparison if it is shared *alongside* the time.
+
+### Infrastructure that was claimed and did not exist
+
+**CI runs** — ruff, the discovery ratchet, mypy, the suite with the coverage floor, and the browser
+suite headless, on Ubuntu **and Windows**. ⚠️ **`main` is not protected and cannot be**: GitHub gates
+branch protection and rulesets behind a paid plan for private repositories. `CLAUDE.md` said all three
+were true and none was; it now says what is actually enforced, and `.githooks/pre-push` is the opt-in
+local substitute that is deliberately not called protection.
+
+**`discovery/`'s 199 lint findings had never been reported once** — ruff's config included the tree and
+no invocation ever pointed at it. They are a per-rule ratchet now.
+
+### Three figures that said more than they measured
+
+`causal` for a subtraction (346), `causal` for a technique count (47, which does not reproduce at all),
+and `coverage at 8 stalls` for a figure with no committed run (22% → 33%). ⚠️ **The instrument was sound
+in two of the three.** What failed was the sentence, and nothing checks a sentence — which is why each
+correction is in the document that carried the number rather than in a changelog.
