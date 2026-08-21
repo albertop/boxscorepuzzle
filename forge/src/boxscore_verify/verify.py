@@ -248,12 +248,22 @@ def slots_of(package: Package) -> tuple[int, ...]:
     the package already publishes and a second copy would be a second thing to disagree. `"9a"` and
     `"9b"` are two rows sharing the ninth place; the leading digits are the place.
     """
+    # ⚠️⚠️ **A `if not references: return ()` branch stood here and could not be reached.** Deleted
+    # 2026-08-21. Its comment read *"a version 1 package carries none"* — and schema 1 is gone: the
+    # constructor raises on `None` with that very sentence, and `_check_slot_references` refuses an
+    # empty tuple with *"0 slot references for 9 batting rows"*. Verified by constructing both.
+    #
+    # It is worse than dead weight: it described a path where **the lineup relations are not applied at
+    # all**, so a reader had to reason about a degraded mode that cannot occur. Same shape and same day
+    # as the five unreachable checks removed from `plausibility.reveal_faults`.
     references = package.slot_references
-    if not references:
-        # A version 1 package carries none. The relations are then not applied at all rather than
-        # applied to a guess -- one row per slot would be wrong on every board with a substitution,
-        # and wrong silently, because the board balances either way.
-        return ()
+    if references is None:  # pragma: no cover - the constructor refuses it; see above
+        # ⚠️ **A raise, not `return ()`.** The annotation still says `| None` because the dataclass
+        # field defaults to it, so the type admits a state the constructor rejects. Answering that
+        # state with an empty tuple is the silent degraded mode this branch used to be; answering it
+        # with an error is the project's rule that absence must not read as a passing check.
+        message = "the package carries no slot references; the constructor should have refused it"
+        raise ValueError(message)
     return tuple(int(reference[0]) for reference in references)
 
 

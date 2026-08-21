@@ -54,6 +54,20 @@ def a_package(board: Board, boxscore: PrintedBoxscore | None = None) -> Package:
     )
 
 
+def _rebuilt(board: Board, reveal: Reveal) -> Package:
+    """The same package with a different reveal — so the constructor is what judges it."""
+    return Package(
+        puzzle_id="0123456789abcdef",
+        puzzle=board,
+        solution=board,
+        labels=tuple("C" for _ in board.batting),
+        pitcher_labels=tuple("SP" for _ in board.pitching),
+        slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+        offense_is_home=True,
+        reveal=reveal,
+    )
+
+
 def _tamper(reveal: Reveal, side: str, grid: str, index: int, **fields: object) -> PrintedBoxscore:
     """Change one cell of the printed sheet and leave everything else alone."""
     box = reveal.boxscore
@@ -137,6 +151,58 @@ class TestTheSheetCannotDisagreeWithTheBoard:
 
         with pytest.raises(PackageError, match="rows and the board has"):
             a_package(board, dataclasses.replace(box, offense=short))
+
+
+class TestTheConstructorHoldsWhatPlausibilityUsedToClaim:
+    """⚠️⚠️ Five checks in `reveal_faults` could not fire, because these refusals run first.
+
+    They asked whether the reveal names every batter, names every pitcher, carries a placeholder team
+    code, gives both clubs the same code, or reveals an empty name — **and `Package.__post_init__`
+    calls `check_reveal_agrees`, which refuses every one of those packages before any plausibility
+    layer sees them.** `Reveal.boxscore` is a required field, so there is always something to compare
+    against.
+
+    **One predicate, two places, and the stricter copy ran first.** The weaker set was deleted rather
+    than marked unreachable, and this class is where the guarantee now lives — case by case, so the
+    comment in `plausibility.py` saying so is exactly true rather than approximately.
+    """
+
+    def test_a_reveal_that_names_too_few_batters_is_refused(self, board: Board) -> None:
+        reveal = a_package(board).reveal
+        assert reveal is not None
+
+        with pytest.raises(PackageError, match="names"):
+            _rebuilt(board, dataclasses.replace(reveal, batter_names=reveal.batter_names[:-1]))
+
+    def test_a_reveal_that_names_too_few_pitchers_is_refused(self, board: Board) -> None:
+        reveal = a_package(board).reveal
+        assert reveal is not None
+
+        with pytest.raises(PackageError, match="names"):
+            _rebuilt(board, dataclasses.replace(reveal, pitcher_names=reveal.pitcher_names[:-1]))
+
+    @pytest.mark.parametrize("placeholder", ["TBD", "OPP", "???"])
+    def test_a_placeholder_club_code_is_refused(self, board: Board, placeholder: str) -> None:
+        """These would reach a player as the name of the club they beat."""
+        reveal = a_package(board).reveal
+        assert reveal is not None
+
+        with pytest.raises(PackageError, match="reveal names"):
+            _rebuilt(board, dataclasses.replace(reveal, offense_team=placeholder))
+
+    def test_both_clubs_carrying_one_code_is_refused(self, board: Board) -> None:
+        reveal = a_package(board).reveal
+        assert reveal is not None
+
+        with pytest.raises(PackageError, match="reveal names"):
+            _rebuilt(board, dataclasses.replace(reveal, defense_team=reveal.offense_team))
+
+    def test_a_blank_player_name_is_refused(self, board: Board) -> None:
+        reveal = a_package(board).reveal
+        assert reveal is not None
+
+        with pytest.raises(PackageError, match="name"):
+            _rebuilt(board, dataclasses.replace(reveal, batter_names=("", *reveal.batter_names[1:])))
 
 
 class TestTheClubHasToBeNamed:

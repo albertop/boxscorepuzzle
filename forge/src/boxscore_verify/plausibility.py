@@ -152,33 +152,24 @@ def reveal_faults(package: Package) -> list[Implausible]:
     if reveal is None:
         return [Implausible("no reveal", "§7 shows teams, date and context at the end; there is none")]
 
-    if len(reveal.batter_names) != len(package.puzzle.batting):
-        found.append(
-            Implausible(
-                "the reveal does not name every batter",
-                f"{len(reveal.batter_names)} names against {len(package.puzzle.batting)} rows",
-            )
-        )
-    if len(reveal.pitcher_names) != len(package.puzzle.pitching):
-        # §7's progressive reveal names a pitching row on completion exactly as it names a batting
-        # row. A short list means the pitching section reveals nothing.
-        found.append(
-            Implausible(
-                "the reveal does not name every pitcher",
-                f"{len(reveal.pitcher_names)} names against {len(package.puzzle.pitching)} rows",
-            )
-        )
-    for field, value in (
-        ("offense_team", reveal.offense_team),
-        ("defense_team", reveal.defense_team),
-    ):
-        if value.strip().upper() in PLACEHOLDERS:
-            found.append(Implausible(f"{field} is a placeholder", f"{value!r} would reach a player"))
-    if reveal.offense_team and reveal.offense_team == reveal.defense_team:
-        found.append(Implausible("both teams are the same club", reveal.offense_team))
-    placeholder_names = [name for name in (*reveal.batter_names, *reveal.pitcher_names) if not name.strip()]
-    if placeholder_names:
-        found.append(Implausible("a row would reveal an empty name", f"{len(placeholder_names)} of them"))
+    # ⚠️⚠️ **Five checks stood here and none of them could fire.** Deleted 2026-08-21, not disabled.
+    #
+    # They asked whether the reveal names every batter, names every pitcher, carries a placeholder team
+    # code, gives both clubs the same code, or reveals an empty name. **`Package.__post_init__` calls
+    # `check_reveal_agrees` and refuses every one of those packages before this function can run** —
+    # `Reveal.boxscore` is a required field, so the agreement check has something to compare against on
+    # every package that exists. Verified by construction, case by case, rather than by reading:
+    # each of the five raises `PackageError` from the constructor.
+    #
+    # **One predicate, two places, and the stricter copy runs first** — so the weaker one was dead code
+    # wearing the shape of a safety net. *A check that never fires is indistinguishable from a check
+    # that is broken*, and this file's own purpose is to catch what the arithmetic cannot; a reader
+    # counting its checks would have credited it with five it did not perform.
+    #
+    # The guarantee is not lost, it is somewhere better: `forge/tests/verify/test_reveal_agreement.py`
+    # asserts the constructor refuses each case. Deleted rather than left with a `no cover` marker,
+    # which is what this project did with the footnote-erasure machinery and with `traversal()`'s
+    # unreachable branch.
     if not reveal.played_on.strip():
         found.append(Implausible("no date on the reveal", "§7 shows the date at the end"))
     return found
