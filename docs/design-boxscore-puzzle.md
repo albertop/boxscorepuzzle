@@ -731,7 +731,33 @@ iPhone SE: ~667px, minus browser chrome, minus the custom numeric keypad (250–
 - Pitching for the **opposing team**: rows × IP, H, R, ER, BB, K + totals
 - **Footnote line: LOB, HBP, SF, SH** — given, read-only, never erased *(decided; see below)*
 
-⚠️ **Superseded: the per-batter footnote cells ARE erasable.** Measured twice, the second time paired per board on the canonical list: with the line given, the median board reaches **5** stalls and only half the pool reaches five at all; with the per-batter cells open it is **16**, and **47 of 47 boards are higher**. The footnote line is not a source of marginal difficulty — it is what makes a pool exist above five stalls. The **totals row and LOB stay given** (§6): they are what closes the row identity.
+⚠️⚠️ **~~Superseded: the per-batter footnote cells ARE erasable.~~ This note was itself superseded and
+went on standing for months, saying the opposite of the decision.** Corrected 2026-08-21.
+
+~~Measured twice, the second time paired per board on the canonical list: with the line given, the
+median board reaches **5** stalls and only half the pool reaches five at all; with the per-batter cells
+open it is **16**, and **47 of 47 boards are higher**.~~
+
+**Those figures were counting zeros.** When `HBP`, `SF`, `SH` and `CI` are all zero for a batter the
+row identity is `PA = AB + BB`: the erased terms contribute nothing **because they did not happen**.
+The solver deduced each zero correctly and recorded a step for it, so the boards scored as harder while
+a person never met one — **35 of 36 footnote cells are zero on the reference fixture, and 96% of the
+pool's footnote terms are zero.**
+
+**The pool run settled it: coverage with the cells erasable and with them given is the same at every
+target, identical on every field in 91% of paired trials.** The cells are **given**, the line above
+stands as written, and everything built for the open case was **deleted rather than disabled**.
+
+⚠️ **It was found by a person solving a board and noticing the numbers did not match his experience**,
+not by a test — nothing about the instrument was broken. `CLAUDE.md` carries the full account under
+*a metric can be correctly computed and still measure something the player never encounters*, and the
+code agrees: `erasable()` returns the grid and no footnote cell, per-batter or total.
+
+⚠️⚠️ **The defect worth recording is not the stale figure, it is where it stood.** This document is the
+one `CLAUDE.md` says to read before proposing architecture or product changes, and it disagreed with
+`CLAUDE.md` about a §6 decision with nothing checking that the two agree. **Two places saying different
+things is this project's named failure shape**, and the most expensive place for it is the place the
+rules are looked up.
 
 **What is actually decided:** six data columns maximum (derived from the width budget above), the
 column sets, one team's offense against the other team's pitching, the line score as anchor, and

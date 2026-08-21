@@ -203,7 +203,12 @@ def report(results: list[Reached], attempts: int) -> None:
 def main() -> None:
     loaded = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     sample = [item for item in loaded if not find_violations(item.direction)]
-    print(f"{len(sample)} gated directions, gate {GATE:.0%}, footnotes erasable")
+    # ⚠️⚠️ **This said "footnotes erasable" and the footnotes have been given since the zero-fill
+    # correction.** `erasable()` returns the grid and nothing else — the label was prose left behind by
+    # a configuration that was deleted, and it is worse in a report than in a docstring: a reader of
+    # this output would conclude the figures are on the superseded scale that counted the solver
+    # deducing zeros, and discount them. It nearly happened while re-running this at the decided gate.
+    print(f"{len(sample)} gated directions, gate {GATE:.0%}, footnotes given (§6)")
     print(f"decades: {dict(sorted(Counter((item.season // 10) * 10 for item in sample).items()))}")
 
     results = [found for item in sample for seed in SEEDS for found in erase_to_stalls(item, seed)]

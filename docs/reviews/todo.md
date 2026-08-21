@@ -3777,6 +3777,47 @@ Fixed, and `forge/tests/test_the_writer_passes_its_own_gate.py` now calls the wr
 without a database. **The gate's two directions were already tested; the call site was not**, and the
 existing fixture builds a package it calls *"the way production builds it"* with no metadata at all.
 
+### ⚠️ Coverage per stall target, re-run at the decided gate — and the move is **not** the gate
+
+**2026-08-21.** `discovery/stall-targeted/measure.py` at `ZERO_DENSITY_GATE`, 48 gated directions, four
+per decade across twelve decades, footnotes given, caps ≤13/≤6.
+
+| stalls | boards | **of pool** | blanks p50 | p10–p90 | chain | trivial |
+|---|---|---|---|---|---|---|
+| 5 | 68 | **71%** | 31 | 28–36 | 17 | 14% |
+| 6 | 58 | 60% | 33 | 30–37 | 19 | 12% |
+| 7 | 49 | 51% | 35 | 31–40 | 21 | 11% |
+| 8 | 39 | **41%** | 36 | 33–41 | 24 | 10% |
+| 9 | 29 | 30% | 37 | 34–42 | 26 | 9% |
+| 10 | 19 | 20% | 39 | 37–45 | 29 | 7% |
+| 11 | 8 | 8% | 40 | 38–46 | 32 | 7% |
+| 12 | 0 | **0%** | — | — | — | — |
+
+**Against what was recorded:** `write_reference_puzzles.py` says *"on the corrected scale only **54%**
+of boards reach five stalls and **21%** reach eight"*, and `CLAUDE.md` records coverage at eight stalls
+as **33%** at the ≤6 pitcher cap. The new run says **71%** and **41%**.
+
+⚠️⚠️ **The direction contradicts the gate hypothesis, so the gate is not the explanation.** 0.30 is
+*looser* than 0.25: it admits more zero-heavy boards, which are the ones that compress least, so
+coverage should have gone **down**. It went up at every target. **Whatever moved these numbers, it is
+not the gate**, and this run does not establish what did — the caps, the sample and the scale have all
+changed at least once since those figures were taken, and no run isolates them.
+
+**Recorded as a new measurement rather than as a correction of the old ones.** Both are visible, the
+old ones keep their instruments and their conditions, and **the difference is stated as unexplained
+rather than attributed.** A confound has no signature in the output, so reading harder cannot decide
+it; only a run that varies one thing can.
+
+⬜ **What this does decide, and it is the thing the re-run was for:** at the decided gate the pool is
+**not thin at the top** — 41% of boards reach eight stalls and 8% reach eleven — and **nothing reaches
+twelve.** A ladder with a rung above eleven has no inventory behind it.
+
+⚠️ **One thing found by reading the output rather than the numbers.** The report's own header said
+*"footnotes erasable"*. It has been wrong since the zero-fill correction — `erasable()` returns the
+grid and no footnote cell — and it is worse in a report than in a docstring: a reader would conclude
+these figures are on the superseded scale that counted the solver deducing zeros, and discount them.
+**It nearly worked on me while re-running this.** Fixed to say *footnotes given (§6)*.
+
 ### Which recorded figures the gate divergence actually moves — comparative against absolute
 
 **The distinction saves most of the work, and it is the right one.** A measurement that ran both arms
@@ -3815,7 +3856,7 @@ correlates too strongly to rank on*.
 
 ⬜ **What is worth re-running, and it is two things.** The **stall ceiling** and **coverage per
 target**, at the decided gate, because the ladder's rungs come from the first and the inventory
-question from the second. Everything else stays annotated: it informs, nothing rests on it, and the
+question from the second. ✅ **Coverage is done — see the entry above.** ⬜ The ceiling is running. Everything else stays annotated: it informs, nothing rests on it, and the
 comparative forms hold anyway.
 
 ⬜ **And a decision that is not mine:** each of the eight instruments that omitted `gated` now says
@@ -4970,6 +5011,68 @@ refused, never substituted — decided now so it is not invented during the rout
 **Every fix in both groups is verified by mutation** where a mutation exists.
 
 ### Still open from v36
+
+### ✅ v36 is closed — 61 findings, and four of them were found by closing the others
+
+**All 44 P3s, all 16 P2s and the P1.** ⚠️ The count is stated against the review file's own headings
+rather than against a running total, because the previous closing claim in this file was a total
+asserted from two summaries and it was wrong — see the corrected entry above.
+
+**Four findings were not in the review.** The P1's blind ratchet voided five commit messages; the
+regeneration exposed one game yielding two different boards under one id; `P2-17` and `P2-20` were
+open while this file said every P2 was closed; and `load()`'s gate flag had been decoration for as
+long as it existed. **Every one came from acting on a finding rather than from reading the review**,
+which is the argument for closing them rather than triaging them.
+
+#### Group J — the seam's blind spot was a file extension
+
+`P3-39` **the batting totals row and the pitching totals row announced the identical name.** Both
+said *"Totals, hits, blank"*, and `role="button"` means the table-header context a screen reader would
+otherwise fall back on is not reliably announced — on cells **every reference package leaves blank**,
+so among the most edited on the board. They carry their section now, read back from the real DOM:
+`HOME BATTING Totals, PA, blank` against `AWAY PITCHING Totals, BB, blank`. Composed from the
+catalogue keys the section heading already uses, so it needed no new string. Sixteen column headers
+carry `scope="col"`; the two section headings carry `scope="colgroup"`, which is what a heading
+spanning a column group is for.
+
+⚠️⚠️ **`P3-46` and `P3-47` could not be done without `P2-17`, which this file said was closed.** All
+three pages shipped an identical hardcoded `<title>boxscore</title>` — **four copies of one
+user-facing string**, in a project where C11 is mandatory from day one. It survived every C11 guard
+because **markup is not code to a scan that reads code.**
+
+`applyHead(page)` takes the title, the description and the language from the catalogue. ⚠️ **The
+`<title>` element leaves the markup rather than staying as a copy with a guard over it** — two places
+saying one thing with a guard between them is the arrangement this project keeps finding defects in,
+and the cost is a moment of URL in the tab. **`lang` goes the other way and stays in the markup**,
+because a crawler and a screen reader both need it before any script has run.
+
+**The C11 scan reads markup now**, which is where the defect hid. Mutation: put the title back in one
+page and remove `lang` from another, two go red. And what it must *not* fire on is asserted too — a
+guard flagging `<html lang="en">` or the viewport gets switched off within a week.
+
+⬜ **What this does not fix, stated so nobody reads it as fixed.** A crawler that does not execute
+JavaScript still sees nothing, because the pages have no server-rendered body — `P2-18`, open. This
+puts the strings in one place and delivers them to every reader that runs scripts, which is every
+human.
+
+#### Group K — two decisions recorded in `serve-brief.md`, neither of them code
+
+`P3-48` **the URL and status-code contract**, because URLs are the one thing that cannot be renamed
+after indexing, only redirected from. `/` answers **200** by rewrite; `/p/<id>` is **200**; `/today`
+is **302 and not 301**, because its target changes daily and a 301 is cached by browsers and
+intermediaries effectively forever; implementation paths are never reachable alternates. ⚠️ `/today`
+carries the manifest's `no-store` rule **for the manifest's reason** — it is the same pointer wearing
+a URL, and a stale pointer is indistinguishable from a stale build.
+
+`P3-49` **the link preview.** Static OG tags from the same catalogue keys as the titles, and
+`og:image` is **static branding, never board state** — two independent reasons, either of which
+decides it. The scraper fetches server-side without the sharer's session, so a dynamic image cannot
+reflect their board **even in principle**; and §7's no-leak rule extends to a static image trivially
+and to a dynamic one never, because that surface is fetched **by the platform rather than by the
+player** and would not appear in any test a person performs.
+
+⬜ Recorded rather than built: server-rendered `og:*` needs the pages to have server-rendered content,
+which is `P2-18`.
 
 **Groups H through K: 9 items.**
 
