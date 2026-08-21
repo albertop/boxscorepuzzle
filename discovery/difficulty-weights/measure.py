@@ -47,6 +47,7 @@ sys.path.insert(0, str(_ROOT / "discovery"))
 from compressibility import proxies  # noqa: E402
 from measure import Loaded, load  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import ORDERINGS, erasable  # noqa: E402
 from boxscore_forge.identities import FAMILY_OF, Family, find_violations  # noqa: E402
@@ -54,7 +55,20 @@ from boxscore_forge.solver import solve  # noqa: E402
 
 TARGETS = (5, 7, 9, 11)
 EASY = (5, 7)
-GATE = 0.25
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+⚠️⚠️ **This read `GATE = 0.25` and the figures this script has published were measured at 0.25**, not at
+the decided 0.30 — recorded here rather than in a commit message so a stale number is interpretable
+instead of mysterious, and so a re-run's difference from it is explainable rather than a new
+discrepancy. Fourteen instruments carried the literal; twelve of them, including this one, were
+silently stricter than the pool the board actually draws from.
+
+⚠️ **A stricter gate is not a smaller sample of the same thing.** It removes the zero-heavy boards,
+which are the ones that compress least, so every figure about coverage, reachable stall targets or
+chain length was taken over a livelier population than production. See `docs/reviews/todo.md` for the
+two instruments whose disagreement this explains.
+"""
 SEEDS = (1, 2)
 SAMPLE_PER_DECADE = 8
 ORDERING = "row_first"

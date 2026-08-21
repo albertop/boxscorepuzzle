@@ -50,12 +50,26 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 
 from measure import load  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge import erasure  # noqa: E402
 from boxscore_forge.erasure import SCOREBOARD_DUPLICATES, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 
 SAMPLE_PER_DECADE = 6
-GATE = 0.25
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+⚠️⚠️ **This read `GATE = 0.25` and the figures this script has published were measured at 0.25**, not at
+the decided 0.30 — recorded here rather than in a commit message so a stale number is interpretable
+instead of mysterious, and so a re-run's difference from it is explainable rather than a new
+discrepancy. Fourteen instruments carried the literal; twelve of them, including this one, were
+silently stricter than the pool the board actually draws from.
+
+⚠️ **A stricter gate is not a smaller sample of the same thing.** It removes the zero-heavy boards,
+which are the ones that compress least, so every figure about coverage, reachable stall targets or
+chain length was taken over a livelier population than production. See `docs/reviews/todo.md` for the
+two instruments whose disagreement this explains.
+"""
 SEEDS = (401, 402)
 TARGETS = (5, 8, 11, 14, 17)
 """Stratified across the range the ladder uses, so *whether they cluster at any stall target* is
@@ -254,11 +268,7 @@ def provenance(directions: int, pairs: int) -> str:
 
 def main() -> None:
     out = _HERE / "results.txt"
-    sample = [
-        item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
-        if not find_violations(item.direction)
-    ]
+    sample = [item for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE) if not find_violations(item.direction)]
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate"
         raise SystemExit(message)

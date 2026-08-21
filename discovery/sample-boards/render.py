@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from bootstrap import bootstrap, require  # noqa: E402
+from bootstrap import bootstrap, require
 
 bootstrap()
 
@@ -27,6 +27,7 @@ from pathlib import Path
 
 from measure import Loaded, load, slot_references
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of
 from boxscore_forge.erasure import erasable
 from boxscore_forge.errors import ContradictionError
@@ -64,7 +65,14 @@ SEED = 20260819
 # the boards passing through have a median of three runs, and because 30% still leaves 21 years of
 # calendar against a requirement of five months of forward inventory. With that much slack a generous
 # threshold buys nothing and a strict one costs almost nothing.
-GATE = 0.30
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+**Nothing about this instrument changes but the source of the number** — it spelled `0.30` and the
+decided gate is 0.30, so its published figures were taken at the gate production uses. It is written
+here because the literal was one of seventeen in `discovery/`, fourteen of which disagreed with the
+constants module, and a correct copy is still a copy.
+"""
 
 
 def _innings(outs: int) -> str:

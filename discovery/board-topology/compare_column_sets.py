@@ -196,6 +196,6 @@ for board in BOARDS:
     if best >= 2:
         a, b, shared = examples[0]
         print(f"    overlap example      : {shared}")
-    print(f"    solvable by T1/T2 after erasing N batting cells (% of 4000 random draws):")
+    print("    solvable by T1/T2 after erasing N batting cells (% of 4000 random draws):")
     for size, pct in survey(board, range(2, 13)).items():
         print(f"        {size:2d} cells: {pct:5.1f}%")

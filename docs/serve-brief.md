@@ -511,6 +511,41 @@ Checked directly as well, because *the id did not move* and *the code does not l
 observation from outside: all six carry **all four** of `SCOREBOARD_DUPLICATES` given, and each one
 equals what the line score prints beside it.
 
+### ⚠️⚠️ Regenerated on 2026-08-21, and the new set is materially different — `950d6b77e486`
+
+**The six were drawn under `GATE = 0.25`**, a literal in the writer overriding the decided
+`ZERO_DENSITY_GATE` of 0.30 (v36-P3-36). So the client was developed, and its layout judged, against
+boards **less zero-heavy than the ones that will ship**. The operator's call was to regenerate before
+building more of `serve` on top, on the grounds that this has happened twice already — the unpruned
+pack and the pack with old labels — and both times the work built on top had to be redone.
+
+| | `d61a2e49980d` (gate 0.25) | `950d6b77e486` (gate 0.30) |
+|---|---|---|
+| median zero density | 21% | **29%** |
+| range | 15–24% | 24–29% |
+| median blanks | 30 | **37** |
+| total blanks | 177 | 217 |
+| stall targets | 1, 2, 3, 4, 7, 10 | 2, 3, 5, 7, 10, **12** |
+| largest roster | 10 batters / 3 pitchers | **12 batters** / 3 pitchers |
+| boards using the batting order | — | **1** |
+
+**Five of the six new boards sit above the old set's maximum zero density.** The layout holds: no
+horizontal overflow at 375px on any of the six, pinned header and totals intact, the footnote line and
+the pitching section reached by scrolling as designed — **checked with a screenshot of each, not with
+an assertion about them.** The twelve-batter board is the first with a roster near the cap, and it
+renders with the slot column, indented substitutions and `2a/2b`-style rows without crowding.
+
+⚠️ **One board kept its id and changed its content.** `1dc57470b44caded` is the same game and the same
+direction — `puzzle_id` derives from those (§21) — but it is now a 2-stall board with 21 blanks where
+it was a 3-stall board with 30. The writer asks each board for the highest target not already taken by
+the batch, so **which board a package holds depends on the batch it was built in**.
+
+For reference data that costs nothing. **For inventory it is a contradiction of §21's first
+idempotence rule** — *the same Retrosheet game always yields the same puzzle with the same ID* — and it
+is the calendar that will inherit the problem, because §21's fourth rule says a played date can never
+change. A regeneration that renames nothing and silently rewrites a played board is the worst available
+shape. Recorded in `docs/reviews/todo.md`; the fix belongs with the calendar, not here.
+
 ⚠️ **A wrong reading got as far as being reported before this, and it is worth recording how.** A check
 took `puzzle.batting[-1]` as the totals row and found `hits` erased in two packages. `batting` is the
 nine batter rows; the totals are a **separate `batting_totals` field**, so the cell being read was the

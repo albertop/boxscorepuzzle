@@ -49,13 +49,27 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 from measure import Loaded, load  # noqa: E402
 from metrics import completions, derivable, stops_progress, uses_the_group  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.constraints import cell_values, footnote_cell, shape_of  # noqa: E402
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identities import FOOTNOTE_COLUMNS, find_violations  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 
 SAMPLE_PER_DECADE = 20
-GATE = 0.25
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+⚠️⚠️ **This read `GATE = 0.25` and the figures this script has published were measured at 0.25**, not at
+the decided 0.30 — recorded here rather than in a commit message so a stale number is interpretable
+instead of mysterious, and so a re-run's difference from it is explainable rather than a new
+discrepancy. Fourteen instruments carried the literal; twelve of them, including this one, were
+silently stricter than the pool the board actually draws from.
+
+⚠️ **A stricter gate is not a smaller sample of the same thing.** It removes the zero-heavy boards,
+which are the ones that compress least, so every figure about coverage, reachable stall targets or
+chain length was taken over a livelier population than production. See `docs/reviews/todo.md` for the
+two instruments whose disagreement this explains.
+"""
 SEEDS = (907, 908, 909)
 """⚠️ **One erasure per board is one sample, not a rate.** Whether a group gates progress depends on
 which cells are blank, and the erasure decides that. Third instance of that shape, after the stall
@@ -654,11 +668,7 @@ def main() -> None:
     # progressing experiment is worse than an immediate refusal.
     _refuse_unless_identified(identity)
     _refuse_unwritable(out)
-    sample = [
-        item
-        for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
-        if not find_violations(item.direction)
-    ]
+    sample = [item for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE) if not find_violations(item.direction)]
     if not sample:
         message = f"no directions survived the {GATE:.0%} gate"
         raise SystemExit(message)

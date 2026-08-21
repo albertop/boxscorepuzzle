@@ -48,6 +48,7 @@ import json  # noqa: E402
 from measure import Loaded, load  # noqa: E402
 from render import render, render_path  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.boxscore import Direction  # noqa: E402
 from boxscore_forge.constraints import batting_total_cell, cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import DEFAULT_ORDERING, ORDERINGS, erasable  # noqa: E402
@@ -57,7 +58,14 @@ from boxscore_forge.solver import Solution, Technique, solve  # noqa: E402
 ARMS = ("off", "on_total_given", "on_total_erasable")
 TARGETS = (3, 4, 5, 6, 8)
 SAMPLE_PER_DECADE = 4
-GATE = 0.30
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+**Nothing about this instrument changes but the source of the number** — it spelled `0.30` and the
+decided gate is 0.30, so its published figures were taken at the gate production uses. It is written
+here because the literal was one of seventeen in `discovery/`, fourteen of which disagreed with the
+constants module, and a correct copy is still a copy.
+"""
 SEEDS = (1, 2, 3)
 PA_TOTAL = batting_total_cell("plate_appearances")
 PA_COLUMN = ".plate_appearances"

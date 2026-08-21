@@ -306,9 +306,7 @@ def _what_it_buys(cursor: object, broken: list) -> None:
     #
     # Placeholders are generated from the *length* of `broken` — that count is genuinely a program
     # value — and the identifiers travel as bound parameters.
-    excluded = (
-        " AND NOT (" + " OR ".join(["(a.GAME_ID = ? AND a.TEAM_ID = ?)"] * len(broken)) + ")" if broken else ""
-    )
+    excluded = " AND NOT (" + " OR ".join(["(a.GAME_ID = ? AND a.TEAM_ID = ?)"] * len(broken)) + ")" if broken else ""
     exclusions = [value for pair in broken for value in pair]
     # ⚠️ **No suppression, and that is the point of the change.** This carried an S608 waiver claiming
     # *module constants only* while interpolating database rows — a false justification sitting exactly

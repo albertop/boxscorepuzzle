@@ -34,13 +34,13 @@ from typing import Final
 # `discovery` too.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "forge" / "src"))
 
-from boxscore_domain import (  # noqa: E402
+from boxscore_domain import (
     BATTER_CAP,
     PITCHER_CAP,
     POSTSEASON_SEASON_FLOOR,
     ZERO_DENSITY_GATE,
 )
-from boxscore_forge.boxscore import (  # noqa: E402
+from boxscore_forge.boxscore import (
     BatterFootnotes,
     BattingLine,
     Direction,
@@ -48,19 +48,19 @@ from boxscore_forge.boxscore import (  # noqa: E402
     PitchingLine,
     TeamFootnotes,
 )
-from boxscore_forge.constraints import (  # noqa: E402
+from boxscore_forge.constraints import (
     cell_values,
     shape_of,
 )
-from boxscore_forge.erasure import erasable  # noqa: E402
-from boxscore_forge.errors import ContradictionError  # noqa: E402
-from boxscore_forge.identities import (  # noqa: E402
+from boxscore_forge.erasure import erasable
+from boxscore_forge.errors import ContradictionError
+from boxscore_forge.identities import (
     BATTING_COLUMNS,
     PITCHING_COLUMNS,
     find_violations,
 )
-from boxscore_forge.solver import Solution, solve  # noqa: E402
-from boxscore_package.format import (  # noqa: E402
+from boxscore_forge.solver import Solution, solve
+from boxscore_package.format import (
     PrintedBatter,
     PrintedBoxscore,
     PrintedPitcher,
@@ -269,6 +269,8 @@ def shape_cte(season: Season = REGULAR) -> str:
              SUM(CASE WHEN P_G=1 THEN P_BB ELSE 0 END) AS t_pbb,
              SUM(CASE WHEN P_G=1 THEN P_SO ELSE 0 END) AS t_pso
       FROM {season.daily} GROUP BY GAME_ID, TEAM_ID)"""
+
+
 SHAPE_CTE: Final = shape_cte(REGULAR)
 """The regular season's shape, derived from `shape_cte()` rather than spelled a second time.
 

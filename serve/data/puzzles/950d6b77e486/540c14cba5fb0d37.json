@@ -1,0 +1,897 @@
+{
+ "labels": [
+  "RF",
+  "CF",
+  "CF",
+  "3B",
+  "1B",
+  "2B",
+  "C",
+  "LF",
+  "LF",
+  "SS",
+  "P",
+  "PH"
+ ],
+ "metadata": {
+  "batters": 12,
+  "blanks": 50,
+  "chain_length": 37,
+  "difficulty_model": "stalls",
+  "families": [
+   "batting_order",
+   "column_sum",
+   "cross_team",
+   "global_identity",
+   "row_identity"
+  ],
+  "lineup": "fallback",
+  "note": "reference data for serve, not inventory",
+  "pitchers": 3,
+  "seed": 6,
+  "stalls": 10,
+  "target_stalls": 10
+ },
+ "offense_is_home": true,
+ "pitcher_labels": [
+  "SP",
+  "RP-1",
+  "RP-2"
+ ],
+ "puzzle": {
+  "batting": [
+   [
+    null,
+    null,
+    1,
+    2,
+    0,
+    null
+   ],
+   [
+    4,
+    2,
+    2,
+    2,
+    null,
+    null
+   ],
+   [
+    null,
+    1,
+    null,
+    null,
+    null,
+    1
+   ],
+   [
+    null,
+    null,
+    3,
+    null,
+    2,
+    null
+   ],
+   [
+    5,
+    null,
+    1,
+    1,
+    null,
+    1
+   ],
+   [
+    4,
+    null,
+    2,
+    2,
+    1,
+    null
+   ],
+   [
+    null,
+    null,
+    null,
+    2,
+    0,
+    1
+   ],
+   [
+    1,
+    1,
+    null,
+    null,
+    null,
+    null
+   ],
+   [
+    null,
+    null,
+    null,
+    1,
+    0,
+    null
+   ],
+   [
+    null,
+    null,
+    1,
+    3,
+    0,
+    null
+   ],
+   [
+    3,
+    null,
+    null,
+    1,
+    0,
+    1
+   ],
+   [
+    null,
+    null,
+    1,
+    1,
+    null,
+    null
+   ]
+  ],
+  "batting_totals": [
+   null,
+   34,
+   11,
+   15,
+   null,
+   null
+  ],
+  "footnote_totals": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 5,
+  "line_score": {
+   "defense_by_inning": [
+    0,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "defense_errors": 5,
+   "defense_hits": 8,
+   "defense_runs": 3,
+   "offense_by_inning": [
+    3,
+    0,
+    1,
+    0,
+    5,
+    0,
+    0,
+    2
+   ],
+   "offense_errors": 3,
+   "offense_hits": 15,
+   "offense_runs": 11
+  },
+  "pitching": [
+   [
+    15,
+    null,
+    9,
+    8,
+    5,
+    3
+   ],
+   [
+    6,
+    2,
+    null,
+    null,
+    null,
+    0
+   ],
+   [
+    null,
+    3,
+    null,
+    2,
+    0,
+    null
+   ]
+  ],
+  "pitching_totals": [
+   null,
+   15,
+   11,
+   null,
+   null,
+   4
+  ]
+ },
+ "puzzle_id": "540c14cba5fb0d37",
+ "reveal": {
+  "batter_names": [
+   "Danny Moeller",
+   "Clyde Milan",
+   "Joe Gedeon",
+   "Eddie Foster",
+   "Chick Gandil",
+   "Ray Morgan",
+   "Eddie Ainsmith",
+   "Howie Shanks",
+   "Merito Acosta",
+   "George McBride",
+   "Joe Boehling",
+   "Carl Cashion"
+  ],
+  "boxscore": {
+   "defense": {
+    "batting": [
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 0,
+      "name": "Wally Rehg",
+      "position": "RF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 0,
+      "name": "Bill Mundy",
+      "position": "1B",
+      "r": 0,
+      "rbi": 1,
+      "so": 2
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Clyde Engle",
+      "position": "CF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 3,
+      "name": "Duffy Lewis",
+      "position": "LF",
+      "r": 2,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Larry Gardner",
+      "position": "3B",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 2,
+      "bb": 0,
+      "h": 1,
+      "name": "Steve Yerkes",
+      "position": "2B",
+      "r": 0,
+      "rbi": 2,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 0,
+      "name": "Hal Janvrin",
+      "position": "SS",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Pinch Thomas",
+      "position": "C",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 1,
+      "h": 0,
+      "name": "Earl Moseley",
+      "position": "P",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 2,
+      "bb": 0,
+      "h": 1,
+      "name": "Harry Hooper",
+      "position": "P",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     }
+    ],
+    "city": "Boston",
+    "code": "BOS",
+    "nickname": "Red Sox",
+    "pitching": [
+     {
+      "bb": 5,
+      "er": 8,
+      "h": 10,
+      "name": "Earl Moseley",
+      "outs": 15,
+      "r": 9,
+      "role": "SP",
+      "so": 3
+     },
+     {
+      "bb": 1,
+      "er": 0,
+      "h": 2,
+      "name": "Harry Hooper",
+      "outs": 6,
+      "r": 0,
+      "role": "RP-1",
+      "so": 0
+     },
+     {
+      "bb": 0,
+      "er": 2,
+      "h": 3,
+      "name": "Duffy Lewis",
+      "outs": 3,
+      "r": 2,
+      "role": "RP-2",
+      "so": 1
+     }
+    ]
+   },
+   "offense": {
+    "batting": [
+     {
+      "ab": 5,
+      "bb": 0,
+      "h": 2,
+      "name": "Danny Moeller",
+      "position": "RF",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 2,
+      "bb": 2,
+      "h": 2,
+      "name": "Clyde Milan",
+      "position": "CF",
+      "r": 2,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Joe Gedeon",
+      "position": "CF",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 3,
+      "bb": 2,
+      "h": 0,
+      "name": "Eddie Foster",
+      "position": "3B",
+      "r": 3,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 1,
+      "name": "Chick Gandil",
+      "position": "1B",
+      "r": 1,
+      "rbi": 1,
+      "so": 1
+     },
+     {
+      "ab": 3,
+      "bb": 1,
+      "h": 2,
+      "name": "Ray Morgan",
+      "position": "2B",
+      "r": 2,
+      "rbi": 3,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "Eddie Ainsmith",
+      "position": "C",
+      "r": 0,
+      "rbi": 2,
+      "so": 1
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Howie Shanks",
+      "position": "LF",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 3,
+      "bb": 0,
+      "h": 1,
+      "name": "Merito Acosta",
+      "position": "LF",
+      "r": 0,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 3,
+      "name": "George McBride",
+      "position": "SS",
+      "r": 1,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 3,
+      "bb": 0,
+      "h": 1,
+      "name": "Joe Boehling",
+      "position": "P",
+      "r": 0,
+      "rbi": 1,
+      "so": 1
+     },
+     {
+      "ab": 1,
+      "bb": 0,
+      "h": 1,
+      "name": "Carl Cashion",
+      "position": "PH",
+      "r": 1,
+      "rbi": 0,
+      "so": 0
+     }
+    ],
+    "city": "Washington",
+    "code": "WS1",
+    "nickname": "Senators",
+    "pitching": [
+     {
+      "bb": 2,
+      "er": 2,
+      "h": 2,
+      "name": "Joe Boehling",
+      "outs": 15,
+      "r": 3,
+      "role": "SP",
+      "so": 1
+     },
+     {
+      "bb": 0,
+      "er": 0,
+      "h": 4,
+      "name": "Tom Hughes",
+      "outs": 6,
+      "r": 0,
+      "role": "RP-1",
+      "so": 2
+     },
+     {
+      "bb": 0,
+      "er": 0,
+      "h": 1,
+      "name": "Rex Dawson",
+      "outs": 3,
+      "r": 0,
+      "role": "RP-2",
+      "so": 1
+     },
+     {
+      "bb": 0,
+      "er": 0,
+      "h": 1,
+      "name": "Harry Hedgpeth",
+      "outs": 3,
+      "r": 0,
+      "role": "RP-3",
+      "so": 0
+     }
+    ]
+   }
+  },
+  "card": "",
+  "defense_team": "BOS",
+  "offense_team": "WS1",
+  "pitcher_names": [
+   "Earl Moseley",
+   "Harry Hooper",
+   "Duffy Lewis"
+  ],
+  "played_on": "1913-10-03"
+ },
+ "schema": 5,
+ "signature": "b56cc577be4180071fe9c88ec4d0eb0864577a1e796f876d0b73a1f1815d65af83087d46d72c018415a4ff6cec1e7229a513ceeca3e60766db57c1fe96098300",
+ "slot_references": [
+  "1",
+  "2a",
+  "2b",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7a",
+  "7b",
+  "8",
+  "9a",
+  "9b"
+ ],
+ "solution": {
+  "batting": [
+   [
+    5,
+    5,
+    1,
+    2,
+    0,
+    0
+   ],
+   [
+    4,
+    2,
+    2,
+    2,
+    2,
+    0
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
+    1
+   ],
+   [
+    5,
+    3,
+    3,
+    0,
+    2,
+    0
+   ],
+   [
+    5,
+    4,
+    1,
+    1,
+    1,
+    1
+   ],
+   [
+    4,
+    3,
+    2,
+    2,
+    1,
+    0
+   ],
+   [
+    4,
+    4,
+    0,
+    2,
+    0,
+    1
+   ],
+   [
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    0,
+    1,
+    0,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
+    3,
+    0,
+    0
+   ],
+   [
+    3,
+    3,
+    0,
+    1,
+    0,
+    1
+   ],
+   [
+    1,
+    1,
+    1,
+    1,
+    0,
+    0
+   ]
+  ],
+  "batting_totals": [
+   40,
+   34,
+   11,
+   15,
+   6,
+   4
+  ],
+  "footnote_totals": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "footnotes": [
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    0,
+    0
+   ]
+  ],
+  "left_on_base": 5,
+  "line_score": {
+   "defense_by_inning": [
+    0,
+    1,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "defense_errors": 5,
+   "defense_hits": 8,
+   "defense_runs": 3,
+   "offense_by_inning": [
+    3,
+    0,
+    1,
+    0,
+    5,
+    0,
+    0,
+    2
+   ],
+   "offense_errors": 3,
+   "offense_hits": 15,
+   "offense_runs": 11
+  },
+  "pitching": [
+   [
+    15,
+    10,
+    9,
+    8,
+    5,
+    3
+   ],
+   [
+    6,
+    2,
+    0,
+    0,
+    1,
+    0
+   ],
+   [
+    3,
+    3,
+    2,
+    2,
+    0,
+    1
+   ]
+  ],
+  "pitching_totals": [
+   24,
+   15,
+   11,
+   10,
+   6,
+   4
+  ]
+ }
+}

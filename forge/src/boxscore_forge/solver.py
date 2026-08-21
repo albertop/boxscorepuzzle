@@ -370,6 +370,17 @@ against — but it is a fact the reader of the number has to have, because §31 
 five seeds, 4 of 34 boards fall below the floor — **all of them at target 1 or 2**, which are two of
 the six rungs in `STALL_TARGETS`. So the two easiest rungs report a maximum under a name promising
 otherwise, and against a metric whose maximum barely varies they look like the hard ones.
+
+⚠️⚠️ **This number came from the run and not from the reasoning, which is the reason the run was worth
+doing.** It was written as 11 first, from the algebra of the defect: `int(0.9n) == n - 1` holds for
+every `n <= 10`, so eleven looked like where the collapse ends. That algebra is about the **old**
+formula. The floor is a property of the **new** one — nearest rank puts the p90 at `ceil(0.9n) - 1`,
+which at `n = 10` is index 8 and no longer the last — so the collapse ends one step sooner and the
+floor is 10.
+
+**Both numbers are defensible from a sentence, and only one is true of the code.** The test below the
+fix pins it from both sides — every size under the floor must return the maximum, and the floor itself
+must not — so the off-by-one cannot come back by being reasoned about again.
 """
 
 

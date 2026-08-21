@@ -39,6 +39,7 @@ from reportlab.lib.styles import ParagraphStyle  # noqa: E402
 from reportlab.lib.units import mm  # noqa: E402
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # noqa: E402
 
+from boxscore_domain import HAND_SOLVE_ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
 from boxscore_package.format import FOOTNOTE_COLUMNS, Board  # noqa: E402
@@ -65,8 +66,14 @@ UNCERTIFIED_SHARE = 1 / 3
 PRE_1950_ALLOWANCE = 2
 """§5's pre-1950 preference, applied so the pack looks like what will actually ship."""
 
-GATE = 0.25
-"""§5's zero-density gate at its strict end. The corrected pool is abundant enough to afford it."""
+GATE = HAND_SOLVE_ZERO_DENSITY_GATE
+"""Tighter than `ZERO_DENSITY_GATE`, deliberately and only for the hand-solve packs.
+
+This pack puts boards in front of a person to judge, so it draws from the cleaner end — a board
+rejected for zero density is not the board being asked about, and the corrected pool is abundant enough
+to afford it. **The reason and the number now live together in `boxscore_domain`**, because a deviation
+with its reason attached is not the defect a bare literal is.
+"""
 
 SEED = 50
 SAMPLE_PER_DECADE = 8
@@ -127,9 +134,7 @@ def footnote_line(board: Board, slots: "Sequence[int]") -> str:
     parts = []
     for field, short in FOOTNOTE_LABELS:
         column = FOOTNOTE_COLUMNS.index(field)
-        carriers = [
-            f"{row[column]} #{references[index]}" for index, row in enumerate(board.footnotes) if row[column]
-        ]
+        carriers = [f"{row[column]} #{references[index]}" for index, row in enumerate(board.footnotes) if row[column]]
         if carriers:
             parts.append(f"{short}: {', '.join(carriers)}")
     parts.append(f"LOB: {board.left_on_base}")

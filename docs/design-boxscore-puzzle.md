@@ -369,6 +369,16 @@ nothing. That reasoning survives the re-measurement: the threshold now sits near
 percentile rather than a third of the way up it, and 18.1 years is still far more calendar than the
 product needs.
 
+⚠️⚠️ **30% is the decision, and for a long time twelve instruments measured at 25% instead.** Until
+2026-08-21 the gate was spelled by hand in seventeen `discovery/` scripts — fourteen at `0.25`, three
+at `0.30` — so a figure quoted downstream of one of them may describe a **stricter pool than this
+section decides**, and a stricter gate is not a smaller sample of the same thing: it removes exactly
+the boards that compress least, leaving a livelier population than production draws from. Every script
+reads `ZERO_DENSITY_GATE` now, each says at its own `GATE` which gate produced its figures, and
+`docs/reviews/todo.md` lists the twelve. **The figures are annotated rather than re-run**, on the same
+grounds as the four-family and zero-fill corrections: they were not wrong, they were counting a
+different pool.
+
 **It removes the right boards, not merely the correlated ones** (300-direction sample, old caps):
 
 | | Boards | Median runs | Median hits | Shutouts |

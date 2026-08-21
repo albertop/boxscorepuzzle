@@ -69,7 +69,8 @@ def write_examples(
 
 
 def _draw(sample: list[Any], out_path: Path | str, options: Options) -> int:
-    from render_boards import page, render as render_board  # noqa: PLC0415
+    from render_boards import page  # noqa: PLC0415
+    from render_boards import render as render_board  # noqa: PLC0415
 
     from boxscore_forge.erasure import erase  # noqa: PLC0415
 

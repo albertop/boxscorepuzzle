@@ -28,7 +28,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from bootstrap import bootstrap  # noqa: E402
+from bootstrap import bootstrap
 
 bootstrap()
 
@@ -37,7 +37,7 @@ import statistics
 import time
 from collections import Counter
 
-from measure import Loaded, load  # noqa: F401
+from measure import Loaded, load
 
 from boxscore_forge.constraints import cell_values, shape_of
 from boxscore_forge.erasure import erasable

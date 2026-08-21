@@ -84,6 +84,22 @@ compressibility, which correlates +0.79 with zero density and therefore selects 
 says how much can be removed, not whether what remains is worth solving.
 """
 
+HAND_SOLVE_ZERO_DENSITY_GATE: Final = 0.25
+"""The hand-solve packs draw from the cleaner end of the pool. **A deviation, named and reasoned.**
+
+⚠️ Tighter than `ZERO_DENSITY_GATE` **deliberately, and only for the packs that put boards in front of
+a person to judge**: a board rejected for zero density is not the board being asked about, and the
+corrected pool is abundant enough to afford the stricter draw. The launch gate is *is this derivable
+by a human*, so the sample is chosen to answer that question rather than to be representative.
+
+⚠️⚠️ **It exists as a constant because a deviation with its reason attached is not the defect — a bare
+number is.** Fourteen discovery instruments carried `GATE = 0.25` with no reason, no measurement and
+no `PROVISIONAL` marker, silently overriding the decided gate; they read `ZERO_DENSITY_GATE` now. These
+two packs are the only place the stricter draw is intended, so the intent is spelled here rather than
+inferred from a literal that happens to differ. See `test_constants_are_not_copied.py` for why no guard
+could have found the difference on its own.
+"""
+
 MAX_PLATE_APPEARANCES_PER_OUT: Final = 2.2
 """Plausibility ceiling on how much a lineup can bat per out recorded. **Measured, with headroom.**
 

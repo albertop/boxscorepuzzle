@@ -33,7 +33,7 @@ from measure import Loaded, load  # noqa: E402
 
 from boxscore_forge.boxscore import Direction  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
-from boxscore_forge.erasure import ORDERINGS, erase, erasable  # noqa: E402
+from boxscore_forge.erasure import ORDERINGS, erasable, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.solver import solve  # noqa: E402
 
@@ -107,9 +107,9 @@ def check_equivalence(sample: list[Loaded]) -> None:
             for target in TARGETS:
                 expected = erase(loaded.direction, target_chain=target, seed=1, ordering=ordering)
                 found = first_reaching(snapshots, target)
-                if (expected is None) != (found is None):
-                    mismatches += 1
-                elif expected is not None and found is not None and expected.erased != found.erased:
+                if (expected is None) != (found is None) or (
+                    expected is not None and found is not None and expected.erased != found.erased
+                ):
                     mismatches += 1
     print(f"trajectory vs erase(): {mismatches} mismatches across 5 directions x 4 orderings x {len(TARGETS)} targets")
     # ⚠️⚠️ **Raised, not printed.** (v36-P3-12) This file's own docstring says the shortcut has to agree

@@ -42,7 +42,7 @@ import build_pack  # noqa: E402
 from build_pack import Candidate, build_pdf, write_sheet  # noqa: E402
 from measure import Loaded, load, slot_references  # noqa: E402
 
-from boxscore_domain import BATTER_CAP, MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
+from boxscore_domain import BATTER_CAP, HAND_SOLVE_ZERO_DENSITY_GATE, MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import DEFAULT_ORDERING, Puzzle, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
@@ -61,12 +61,14 @@ tells you where the top is and nothing about the product.
 """
 
 WANTED = sum(COMPOSITION.values())
-GATE = 0.25
-"""Tighter than `ZERO_DENSITY_GATE`, deliberately and only here.
+GATE = HAND_SOLVE_ZERO_DENSITY_GATE
+"""Tighter than `ZERO_DENSITY_GATE`, deliberately and only for the hand-solve packs.
 
-The decided pool gate is 30%. This pack puts boards in front of a person to judge, so it draws from the
-cleaner end — a board rejected for zero density is not the board being asked about. **Stated rather
-than left as a bare number that looks like it disagrees with the constants module.**"""
+This pack puts boards in front of a person to judge, so it draws from the cleaner end — a board
+rejected for zero density is not the board being asked about, and the corrected pool is abundant enough
+to afford it. **The reason and the number now live together in `boxscore_domain`**, because a deviation
+with its reason attached is not the defect a bare literal is.
+"""
 SEED = 118
 SAMPLE_PER_DECADE = 6
 SIX_PITCHER_BOARDS = 1

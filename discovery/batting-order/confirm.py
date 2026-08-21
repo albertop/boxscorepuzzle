@@ -441,8 +441,10 @@ def _report_filler(rows: list[Row]) -> None:
     clean = sum(1 for row in decided if row.division == 0)
     share = division / max(other_steps + division, 1)
     print("")
-    print(f"  over {len(decided)} directions: {division} division steps in {other_steps + division} "
-          f"deductions ({share:.1%} filler)")
+    print(
+        f"  over {len(decided)} directions: {division} division steps in {other_steps + division} "
+        f"deductions ({share:.1%} filler)"
+    )
     print("  NOTE the other steps are every non-division deduction, NOT deductions the constraint")
     print("       caused. A causal count needs a counterfactual solve; see _steps().")
     print(f"  {clean} of {len(decided)} directions carry no division filler at all, against 9 of 11 before")

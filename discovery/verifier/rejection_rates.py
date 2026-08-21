@@ -38,7 +38,7 @@ from measure import Loaded, load  # noqa: E402
 from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.publish import to_board as production_board  # noqa: E402
-from boxscore_package.format import Board, LineScore, Package  # noqa: E402
+from boxscore_package.format import Board, Package  # noqa: E402
 from boxscore_package.signing import sign  # noqa: E402
 from boxscore_verify.verify import LAYERS, Layer, Rejection, derivable_in_view, verify  # noqa: E402
 

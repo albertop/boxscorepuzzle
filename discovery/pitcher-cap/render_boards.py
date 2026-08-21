@@ -217,7 +217,7 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
     columns = max(len(batting_columns), len(pitching_columns))
     grid = (
         f"<colgroup style='--columns:{columns}'></colgroup>"
-        + "<thead><tr><th class='label'></th>"
+        "<thead><tr><th class='label'></th>"
         + _headers(batting_columns)
         + f"</tr></thead><tbody><tr class='section'><td colspan='{len(batting_columns) + 1}'>{esc(batting_team)} BATTING</td></tr>"
     )

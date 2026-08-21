@@ -36,8 +36,19 @@ from measure import (  # noqa: E402
     zero_density_clause,
 )
 
-GATE = 0.30
-"""§5's decided pool gate. The question is about boards that would ship, so the gate is applied."""
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
+
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+**Nothing about this instrument changes but the source of the number** — it spelled `0.30` and the
+decided gate is 0.30, so its published figures were taken at the gate production uses. It is written
+here because the literal was one of seventeen in `discovery/`, fourteen of which disagreed with the
+constants module, and a correct copy is still a copy.
+
+The question this script asks is about boards that would ship, so the gate is applied rather than
+left off.
+"""
 
 ALWAYS_SHOW_TO = 12
 """Print every rung up to here even when empty, then skip empty ones.

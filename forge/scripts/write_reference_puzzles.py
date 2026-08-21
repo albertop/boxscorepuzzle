@@ -191,11 +191,30 @@ def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None
     )
     # ⚠️ The gate, not `verify()`. Assembling a subset of the checks at each call site is the defect
     # this boundary exists to remove, and this writer was one of the sites doing it.
-    certified = certify_for_publication(package, evidence=evidence_for(loaded), secret=key.public_key())
+    #
+    # ⚠️⚠️ **`published()`, because that is the object the gate is named for — and this call site said
+    # otherwise for one commit, which stopped the writer publishing anything at all.**
+    #
+    # The metadata above deliberately carries `game_id` and `season`: the producer needs them, and
+    # `published()` strips them on the way out. `check_no_leaking_metadata` (v36-P2-10) was added to
+    # the registry so the strip is verified at the boundary rather than trusted — and it is right.
+    # What was wrong is what this line handed it: **the working object, which never ships.** Every
+    # candidate was refused, the run wrote 0 of 6, and the fail-closed staging left the published set
+    # untouched, which is the only reason this cost nothing.
+    #
+    # **`canonical_bytes` had already decided the question.** The signature is computed over
+    # `package.published().as_json()` — the signer's object of record is the shape that travels, so a
+    # gate certifying a different shape was disagreeing with the signature about what the package *is*.
+    #
+    # ⚠️ The leak check cannot fire here, by construction, and that is not a check switched off: the
+    # one that can fire is in `main`, over the package **read back from the file**. This call is a
+    # pre-screen that discards a candidate cheaply; the boundary is disk.
+    for_publication = package.published()
+    certified = certify_for_publication(for_publication, evidence=evidence_for(loaded), secret=key.public_key())
     if not certified.publishable:
         print(f"  refused {loaded.game_id} at {target} stalls: {'; '.join(certified.refusals)}")
         return None
-    return package
+    return for_publication
 
 
 def evidence_for(loaded: Loaded) -> Evidence:

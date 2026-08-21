@@ -58,6 +58,7 @@ sys.path.insert(0, str(_ROOT / "discovery" / "pitcher-cap"))
 
 from measure import Loaded, load  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge import bounds, erasure, publish, solver  # noqa: E402
 from boxscore_forge import constraints as C  # noqa: E402
 from boxscore_forge import identities as I  # noqa: E402
@@ -66,7 +67,20 @@ from boxscore_forge.identities import Identity  # noqa: E402
 from boxscore_forge.solver import Solution, Technique  # noqa: E402
 
 SAMPLE_PER_DECADE = 3
-GATE = 0.25
+GATE = ZERO_DENSITY_GATE
+"""§5's zero-density gate, from the one place it is decided.
+
+⚠️⚠️ **This read `GATE = 0.25` and the figures this script has published were measured at 0.25**, not at
+the decided 0.30 — recorded here rather than in a commit message so a stale number is interpretable
+instead of mysterious, and so a re-run's difference from it is explainable rather than a new
+discrepancy. Fourteen instruments carried the literal; twelve of them, including this one, were
+silently stricter than the pool the board actually draws from.
+
+⚠️ **A stricter gate is not a smaller sample of the same thing.** It removes the zero-heavy boards,
+which are the ones that compress least, so every figure about coverage, reachable stall targets or
+chain length was taken over a livelier population than production. See `docs/reviews/todo.md` for the
+two instruments whose disagreement this explains.
+"""
 SEED = 20260818
 TARGETS = tuple(range(4, 16))
 RENDERED = 4
@@ -653,11 +667,7 @@ def main() -> None:
         # headers written out by hand, so a seven-column board rendered as six and looked right. The
         # numbers survived that - the instrument assertions are what proved the columns changed - but
         # the page did not, and re-running the whole measurement to redraw it would take an hour.
-        sample = [
-            item
-            for item in load(1, gated=True, gate=GATE)
-            if not I.find_violations(item.direction)
-        ][:RENDERED]
+        sample = [item for item in load(1, gated=True, gate=GATE) if not I.find_violations(item.direction)][:RENDERED]
         if not sample:
             message = "no gated direction to render"
             raise SystemExit(message)

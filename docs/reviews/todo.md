@@ -3577,13 +3577,116 @@ Composition and the six-pitcher quota asserted in `audit()`, order shuffled, sta
 search, and the maximising search is not a generator. The question was worth asking and it is answered
 by the change of method rather than by the cap.
 
-### ⚠️ Coverage at 8 stalls does not match the cap measurement, and the difference is not explained
+### ✅ ~~Coverage at 8 stalls does not match the cap measurement, and the difference is not explained~~
 
-The cap comparison reported **33%**. Here 36 of 72 directions reach 8 stalls — **50%** of the sample,
-56% of those reaching any target. Same gate, same caps. The instruments differ and nobody has said how.
-**Recorded as a discrepancy rather than smoothed into agreement**: two numbers for one quantity is this
-project's named shape, and the fact that the newer one is more favourable is a reason to be more
-suspicious of it, not less.
+~~The cap comparison reported **33%**. Here 36 of 72 directions reach 8 stalls — **50%** of the sample,
+56% of those reaching any target. Same gate, same caps.~~
+
+**Closed on 2026-08-21. The premise was false in both halves: not the same gate, and not the same
+caps.** The two instruments were measuring two different populations, so there was never a
+disagreement to explain — there was a comparison nobody had checked the terms of.
+
+| | cap comparison — **33%** | hand-solve pack — **50%** |
+|---|---|---|
+| instrument | `discovery/pitcher-cap/measure_pitching.py` | `discovery/hand-solve/build_pack.py` |
+| gate | `load(..., gated=True)` with **no `gate=`** → the default, **0.30** | `gate=GATE` where `GATE = 0.25` |
+| roster | `min_pitchers=count, max_pitchers=count` — **exactly** *N* | the ordinary caps — **at most** |
+| sample | 5 per decade | 8 per decade |
+
+⚠️ **The gate difference is invisible at the call site, which is why "same gate" was written down and
+believed.** One instrument states its gate and the other omits the argument, and an omitted argument
+looks like *no gate* rather than like *the default gate* — `load`'s signature is
+`gate: float = ZERO_DENSITY_GATE`. Nothing in either script is wrong; the two lines simply do not say
+what they have in common, and the comparison was made from the outside.
+
+⚠️ **The sign is consistent with the gate, and that is not the same as being explained by it.** A
+stricter gate removes the zero-heavy boards, which are the ones that compress least, so the 0.25 arm
+draws a livelier population and should reach 8 stalls *more* often — 50% against 33%. But the
+exactly-*N* roster is a second uncontrolled variable moving at the same time, and **no run separates
+them.** This is the confound `CLAUDE.md` describes: the report reads exactly as clean either way, and
+looking harder at the output cannot decide it.
+
+**What this changes:** the entry stops being an unexplained disagreement between two correct
+instruments — the shape this project treats as a defect — and becomes two figures about two
+populations, each interpretable on its own. **Neither number is a measurement of the other's
+quantity**, and any future comparison of the two has to re-run one of them under the other's terms.
+
+### ⚠️⚠️ One game, one id, two different boards — §21's first idempotence rule does not hold today
+
+**Found by regenerating the six on 2026-08-21.** `1dc57470b44caded` appears in both generations: same
+game, same direction, same `puzzle_id` — and a **different puzzle**. It was a 3-stall board with 30
+blanks; it is now a 2-stall board with 21.
+
+Nothing is broken in the sense of a failing check. `puzzle_id` derives from the game and the offensive
+club (§21), which is exactly what makes it stable — but **the board is not determined by the id**. The
+writer asks each candidate for the highest stall target not already claimed by the batch, so *which*
+board a package holds depends on **what else was in the batch**, and the seed is shared across the run.
+
+⚠️ **`CLAUDE.md` §3 states the rule this breaks:** *the same Retrosheet game always yields the same
+puzzle with the same ID.* Half of that holds. The id is idempotent; the puzzle is not.
+
+**For reference data this costs nothing** — the six exist so `serve` has something real to build
+against. **For inventory it is the shape §21's fourth rule exists to prevent:** a played date can never
+change, and a regeneration that renames nothing while silently rewriting the board is worse than one
+that produces a new id, because nothing downstream can notice. A player's stored progress, their C7
+event record and the shared grid all hang off an id that no longer means one board.
+
+**Not fixed here, and it is not a writer fix.** The candidate ordering and the target claiming are
+batch-level decisions; making the board a function of the game alone means the *generator* takes the
+target from the game rather than from what the batch has left. **That is the calendar's problem and it
+inherits it at construction**, alongside the one-game-one-puzzle rule it already has to carry.
+
+⬜ **Decide before the calendar is built, not after inventory exists.**
+
+### ⚠️ The client was judged against a pool it will not ship — closed by regenerating
+
+**2026-08-21.** The consequence recorded under group G's `P3-36` is closed. The six were redrawn at the
+decided gate and the difference is not cosmetic: **median zero density 21% → 29%, five of six new
+boards above the old set's maximum**, median blanks 30 → 37, and the roster reaching **12 batters**
+against 10 before. The stall targets spread from 1–10 to 2–12, and one board depends on the batting
+order — the first published board to use the fifth family.
+
+**Looked at, not only measured.** Every board photographed at 375px: no horizontal overflow, pinned
+header and totals intact, the footnote line and pitching section reached by scrolling as designed. The
+twelve-batter board renders without crowding. ⚠️ The numeric check and the pictures were both taken
+because `CLAUDE.md` records a case where the numbers said *fine* and the sheet was unreadable.
+
+⚠️ **The regeneration wrote 0 of 6 on its first attempt, from a defect introduced in this same review
+cycle.** `check_no_leaking_metadata` (v36-P2-10) was registered on the publication gate; `build()` was
+handing that gate the **working** package, which carries `game_id` deliberately and never ships. Every
+candidate was refused. `canonical_bytes` had already settled which object is the package of record —
+the signature is computed over `published()` — so the writer was disagreeing with its own signer.
+Fixed, and `forge/tests/test_the_writer_passes_its_own_gate.py` now calls the writer's own `build()`
+without a database. **The gate's two directions were already tested; the call site was not**, and the
+existing fixture builds a package it calls *"the way production builds it"* with no metadata at all.
+
+### ⚠️ Which gate produced which figure — the record that keeps the centralisation from destroying information
+
+**2026-08-21. Seventeen instruments in `discovery/` spelled the zero-density gate as a literal: fourteen
+at `0.25`, three at `0.30`, and only three of the seventeen said why.** They read `ZERO_DENSITY_GATE`
+from `boxscore_domain` now, so **the code no longer matches the numbers twelve of them produced.**
+
+⚠️ **A stricter gate is not a smaller sample of the same thing.** It removes precisely the boards that
+compress least, so every figure these twelve published about coverage, reachable stall targets, chain
+length or family usage describes a **livelier population than production draws from.** The figures are
+not withdrawn and not re-run — the same treatment as the four-family and zero-fill corrections — but a
+figure traceable to one of these was measured at **0.25**:
+
+`board-configurations/measure.py` · `difficulty-weights/measure.py` · `footnote-grouping/measure.py` ·
+`footnote-groups/measure.py` · `footnotes-open-or-given/measure.py` · `global-identity-phase/compare.py` ·
+`independent-cells/measure.py` · `independent-cells/prune.py` · `rbi-and-hr/measure.py` ·
+`scoreboard-blanks/measure.py` · `stall-targeted/measure.py` · `zero-footnotes/measure.py`
+
+**Measured at 0.30 all along, so nothing but the source of the number changed:**
+`batting-order/arms.py` · `innings/pool.py` · `sample-boards/render.py`
+
+**Deliberately stricter, and now named rather than merely different:** the two `hand-solve` packs read
+`HAND_SOLVE_ZERO_DENSITY_GATE = 0.25`, whose reason lives with it — the packs put boards in front of a
+person to judge, and a board rejected for zero density is not the board being asked about.
+
+⚠️ **Anything else in `docs/` carrying a gated figure should be read against this list rather than
+against the current source.** Each script now says the same thing at its own `GATE`, so the annotation
+travels with the instrument instead of only with this page.
 
 ### ⚠⚠ Layer 3b certified none of the five, and difficulty does not explain it
 
