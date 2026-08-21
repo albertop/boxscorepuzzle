@@ -4446,3 +4446,66 @@ Full analysis in `discovery/retrosheet-coverage/postseason.md`. The short form, 
 - ⚠️ **The cut is a weaker guarantee than the table**, and the difference should be stated when it is
   decided: the table asserts *this game came from a scored file*; a cut asserts *no game in this era came
   from a deduced file*, which is a claim about Retrosheet's future behaviour.
+
+
+---
+
+## 2026-08-21 — v36, and the question of what has to be measured again
+
+61 findings (1 P1, 16 P2, 44 P3). Eight closed in the first pass; the rest are listed with the
+disposition in `code_review_v36.md`. This entry records the two things that outlive the review file:
+**what the P1 means for everything this session reported**, and **which measurements survive**.
+
+### ⚠️⚠️ The ratchet was blind, so every lint claim in today's commits is void
+
+`tools/lint_discovery.py` run with an interpreter that has no ruff exits 1 with empty stdout — the same
+code ruff uses for *findings found* — and `json.loads(stdout or "[]")` turned that into **zero
+findings**, which beats every baseline. It printed *"these rules improved"* and returned 0.
+
+**Five commit messages today said "ratchet at zero" on the strength of that.** Run properly, four rules
+had grown, all four from this session's own work. The tool now refuses to run unless ruff answers
+`--version`, and treats exit 1 with empty stdout as fatal.
+
+⚠️ **The lesson is not "check the interpreter".** It is that a tool reporting success while unable to
+report at all is indistinguishable from one reporting success — and this project's own instrument for
+catching that shape had it. Nothing in the output distinguished the two states.
+
+### ⚠️ Which measurements have to be re-run: **none**, and each answer was checked rather than assumed
+
+This is the question worth asking after a review this size, so the reasoning is here rather than in a
+commit message.
+
+| Finding | Could it have contaminated a measurement? | Checked how |
+|---|---|---|
+| **P2-03** — the batting-order instrument died on `ImportError` | **No.** The break came from the postseason rename, *after* the adoption decision; and the rename did not move the population — the regular season's **executable SQL is byte-identical**, comments aside | Compared the rendered cohort against `HEAD` with comments stripped, at the time of the change; the instrument's own "the provenance rule moved" guard now runs and passes |
+| **PLR1704** — the `season` parameter shadowed by a loop variable | **No.** Every use after the shadow wanted the *year*, which is what the shadow held: two `team_name(...)` calls and the `Loaded` field, all of which mean the calendar year | Read all three uses; the queries are built before the loop, so `season.daily` was already interpolated |
+| **P2-16** — a test asserting a staff's outs always divide by three | **No, and this is the one that could have.** The false rule lives **only in a client test**. No pool filter, no plausibility rule, and `eligibility()` has no innings condition at all — so **the pool has never excluded walkoffs** | `grep` for `% 3` across `forge/src` and `discovery`: three hits, all display formatters, none a filter |
+| **P2-15** — innings notation in three copies with two rules | **No.** Nothing in production or discovery parses a displayed innings string back; `from_display` / `inningsFromDisplay` appear only in tests | `grep` over `forge`, `discovery`, `serve`, `tools` |
+| **P2-06** — the tutorial's traits never checked on what shipped | **No.** The published six satisfy the gate today | Ran the new gate against the shipped batch |
+| **P2-07** — the cap's boundary test never called the implementation | **No.** The implementation was correct; only the test was decoration, so no board was wrongly kept or discarded | The mutation that the rewritten test now catches is a change to the code, not a record of one |
+
+**So no discovery run and no forge measurement needs repeating.** What does need repeating is the
+*lint* claim, which has been repeated correctly.
+
+### ⬜ Recorded, not fixed: the hand-solve pack prints innings the board does not
+
+⚠️ `innings.py` prints twelve outs as `4.0`; `columns.js` prints `4`; `finish.js` has a third
+hand-written copy printing `9.0` on the reveal. **Five copies of the formula exist outside tests.** The
+player meets `4` on the board and the tutorial, then `9.0` on the reveal.
+
+**The hand-solve pack uses the Python rule**, and the pack is the §22 launch gate whose boards are
+supposed to feel like the product. That is a fidelity claim the notation split quietly weakens.
+
+⚠️ **The pack must not move while it is being solved**, so this is deliberately not a fix. It is here so
+that whichever notation wins — an operator decision, since the two docstrings carry contradictory design
+arguments (column alignment against *the way a printed boxscore writes them*) — the pack's fidelity is
+re-checked rather than assumed. v36-P2-15.
+
+### Still open from v36
+
+**8 of 16 P2s and all 44 P3s.** `P2-01` `narrow()` looping on a contradictory system · `P2-02`
+construction and parsing applying different rules to the same fields · `P2-04` the pre-push hook gating
+on the checked-out branch rather than the refs being pushed · `P2-08` the package boundary never
+checking a given cell against the solution · `P2-10` leaking metadata and keys outside the signed
+surface · `P2-11` SQL assembled from database-derived values · `P2-12` a fallback board's dependence on
+the batting order recorded nowhere in the package · `P2-15` and `P2-16` above.
