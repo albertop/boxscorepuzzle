@@ -490,6 +490,35 @@ def _report(rows: list[Row]) -> None:
         _techniques(rows, arm)
         _families(rows, arm)
         _ceiling(rows, arm)
+    _caveats()
+
+
+def _caveats() -> None:
+    """What the tables above do not say.
+
+    ⚠⚠ **Printed by `_report`, so it reaches both paths.** It used to sit at the end of `main()`,
+    which meant `--report-only` -- the cheap path, and therefore the one anyone actually runs to re-read
+    a result -- printed the numbers without the sentence that bounds them. A caveat belongs to the
+    figures, not to the mode that produced them.
+    """
+    print("")
+    print("NOTE: the comparison that answers the question is `off` against `on_total_erasable`.")
+    print("  `on_total_given` is there so the choice about the total is visible rather than assumed:")
+    print("  with the total given the nine slots follow from one number and the player types filler.")
+    print("")
+    print("NOT MEASURED HERE: whether these boards pass the verifier's layer 3. No number above is a")
+    print("  claim about derivability, because this run never asked the verifier anything.")
+    print("")
+    print("  This block used to say something stronger and it is no longer true: that the verifier had")
+    print("  no twin of the lineup step, so any board leaning on the constraint would be refused as")
+    print("  underivable. `boxscore_verify.reason.lineup_values()` is that twin - the independent,")
+    print("  value-producing step - and every layer that can speak about the batting order reads it.")
+    print("  It is what made adoption possible. A stale limitation in a report is a false release")
+    print("  constraint: it sends the reader back into work that is already finished.")
+    print("")
+    print("  What IS still true, and is the reason to keep a caveat here at all: these rows were")
+    print("  measured before that step existed, so they describe what the GENERATOR produces rather")
+    print("  than what can ship. `confirm.py` is the re-run against the publication gate.")
 
 
 def report_only() -> None:
@@ -558,17 +587,6 @@ def main() -> None:
     )
     print(f"wrote {len(rows)} rows to arms.json before formatting anything")
     _report(rows)
-
-    print("")
-    print("NOTE: the comparison that answers the question is `off` against `on_total_erasable`.")
-    print("  `on_total_given` is there so the choice about the total is visible rather than assumed:")
-    print("  with the total given the nine slots follow from one number and the player types filler.")
-    print("")
-    print("NOT MEASURED HERE: whether these boards pass the verifier's layer 3. The constraint is in the")
-    print("  generator's solver and in the verifier's RELATIONS, but the verifier has no twin of the")
-    print("  lineup step - its solver narrows intervals, which cannot reach the cyclic distribution. So")
-    print("  a board leaning on the constraint would be refused as underivable. Said rather than left")
-    print("  implied: no number below is a claim about derivability.")
 
 
 if __name__ == "__main__":

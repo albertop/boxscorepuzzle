@@ -202,9 +202,9 @@ export function boot({
     app.append(keypad);
   }
 
-  // ⚠⚠ **The end of the game, and until now there was not one.** A player could fill every cell and
+  // ⚠️ **The end of the game, which for a long time did not exist.** A player could fill every cell and
   // nothing happened — no verdict, no ending, and the `reveal` block shipped in every package and was
-  // drawn nowhere. That is the product's payoff and it was the one thing never delivered.
+  // drawn nowhere. Kept as the reason this path was built before the rest of the finish work.
   const verdict = doc.createElement("p");
   verdict.className = "verdict";
   // Announced rather than merely painted: a player using a screen reader gets the same answer, and it

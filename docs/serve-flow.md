@@ -226,9 +226,18 @@ is carried across.
 **A screen effect, then a transition to the official boxscore of the game: names, teams, date, the real
 thing.**
 
-This is §7's reveal. ⚠️ **It ships in every package already and is drawn nowhere.** It is the game's
-payoff and it is the single thing the player currently never receives — the board is solved and then
-nothing happens.
+This is §7's reveal, and it is **built**. A successful *Check* draws it, and a finished session that is
+reopened draws it again from the frozen record rather than from a fresh reading of the clock.
+
+⚠️ **This read "it ships in every package already and is drawn nowhere — the single thing the player
+never receives".** That was true when this document was written and it is history now. Kept as history
+rather than deleted, because the sentence records why the reveal was built before anything else in the
+finish path: it was the payoff, and it was shipping unopened in every file.
+
+**It is a printed boxscore, not a results card.** Both clubs, `AB R H RBI BB SO`, the clubs' real names,
+the footnote line and the line score — package schema 5 exists to carry it. The first attempt drew the
+board's own six columns with the names attached, which is the board relabelled rather than the object
+the player reconstructed.
 
 The reveal is where the names appear for the first time. Nothing during play is labelled by name (§7);
 rows are positions throughout, and the boxscore at the end is the answer to *whose game was this*.
@@ -348,8 +357,12 @@ encodes, and how candidates mode works without hover.
 
 ## Then, and not before
 
-The implementation order stands: **persistence, then the solved state and the reveal.** Persistence
-because C7 is irreversible and the piece is already written and tested; the reveal because it is the
-payoff and it is the one thing the player never receives.
+The implementation order was: **persistence, then the solved state and the reveal.** Persistence
+because C7 is irreversible; the reveal because it was the payoff and, at the time, the one thing the
+player never received.
+
+⚠️ **Both are done.** Persistence survives a reload and a completed board reopens finished, read-only,
+with its earned time unchanged. The reveal is a printed boxscore. This section is kept as the record of
+the order the work was taken in, and it is no longer a plan.
 
 Neither should have been started before this document existed.
