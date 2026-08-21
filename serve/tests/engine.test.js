@@ -3040,6 +3040,99 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   });
 });
 
+suite("⚠️ The boundary checks the pointer too, and a finished board is immutable in the engine", () => {
+  test("a malformed manifest is refused by name, not by TypeError", async () => {
+    // v36-P3-23. The package gets rigorous validation and the pointer selecting it got none: a bad
+    // manifest died on `.includes`, and an empty `puzzles` array fetched `.../undefined.json` and
+    // failed inside `.json()`. Both entry points catch and show `package.unreadable`, so the player
+    // outcome survived — while the console carried an unrelated error and **the page misdiagnosed its
+    // own failure**, the same shape as a storage error reported as an unreadable puzzle.
+    const { readManifest } = await import("../ui/phone/daily.js");
+
+    for (const [raw, because] of [
+      [null, "null"],
+      [[], "an array"],
+      [{ puzzles: ["a"] }, "no generation"],
+      [{ generation: "", puzzles: ["a"] }, "an empty generation"],
+      [{ generation: "g" }, "no puzzles"],
+      [{ generation: "g", puzzles: [] }, "an empty puzzle list"],
+      [{ generation: "g", puzzles: [1] }, "an id that is not a string"],
+    ]) {
+      const error = throws(() => readManifest(raw), /manifest/, `accepted ${because}`);
+      assert(error instanceof PackageError, `${because}: refused with ${error.constructor.name}`);
+    }
+  });
+
+  test("the real manifest still reads", async () => {
+    // ⚠️ The other half: a check that refuses everything is as useless as one that refuses nothing.
+    const { readManifest } = await import("../ui/phone/daily.js");
+    const raw = await (await fetch("../data/puzzles/manifest.json")).json();
+
+    assert(readManifest(raw) === raw, "the shipped manifest is refused by its own reader");
+  });
+
+  test("⚠️ a date that is not a date is refused at the boundary, not inside the reveal", () => {
+    // v36-P3-24. `played_on` was checked as "a string", so `"yesterday"` parsed and `longDate` then
+    // computed `month.NaN` and threw **inside renderReveal** — in `check()`'s success path, on the one
+    // screen the player reaches once, after they have solved the board.
+    for (const bad of ["yesterday", "1913-13-01", "1913-08-32", "13-08-1913", "1913-8-1", ""]) {
+      const document = structuredClone(packages[0].raw);
+      document.reveal.played_on = bad;
+      throws(() => readPackage(document), /played_on/, `accepted ${JSON.stringify(bad)}`);
+    }
+    // And a real one still passes.
+    assert(readPackage(packages[0].raw).reveal.playedOn.length === 10);
+  });
+
+  test("⚠️ a card that is not text is refused even though nothing reads it", () => {
+    // v36-P3-25. A field with no consumer is exactly where a pass-through waits: there is no test to
+    // go red first, which is the story `reveal()`'s own header tells about `raw.reveal` one field up.
+    for (const bad of [{}, [], 7, true]) {
+      const document = structuredClone(packages[0].raw);
+      document.reveal.card = bad;
+      throws(() => readPackage(document), /card/, `accepted ${JSON.stringify(bad)}`);
+    }
+  });
+
+  test("⚠️⚠️ a finished board refuses entries, clears and hints in the engine", async () => {
+    // v36-P3-26. The clock was sealed *in the engine* because "sealing is a fact about the clock
+    // rather than a promise every future shell has to keep" — and the board's immutability got the
+    // opposite treatment: only the phone layer removed the handlers. `__game.enter(...)` from a
+    // console changed a finished board, the next visibility-save persisted it under the frozen
+    // `finishedAt`, and `record().solved` could flip on a result already reported.
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage: read } = await import("../engine/package.js");
+    const game = createGame(read(packages[0].raw));
+    const [first] = game.blanks();
+    for (const cell of game.cells()) {
+      if (game.isBlank(cell.name)) game.enter(cell.name, cell.answer);
+    }
+    game.check();
+    game.finish();
+
+    throws(() => game.enter(first, 1), /finished/, "a finished board took an entry");
+    throws(() => game.clear(first), /finished/, "a finished board took a clear");
+    throws(() => game.hint(first), /finished/, "a finished board gave a hint");
+    assert(game.record().solved, "the record changed under the refusals");
+  });
+
+  test("⚠️ restore installs nothing into a given cell", async () => {
+    // v36-P3-27. `restore()` filtered on the cell existing, not on it being blank, so a hand-edited
+    // session's junk entry on a given cell survived every snapshot round trip — harmless while
+    // `valueOf` prefers the given, and waiting for the first consumer that reads `entries` directly.
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage: read } = await import("../engine/package.js");
+    const puzzle = read(packages[0].raw);
+    const game = createGame(puzzle);
+    const given = game.cells().find((cell) => !game.isBlank(cell.name));
+
+    assert(given !== undefined, "this package has no given cells, so it proves nothing");
+    game.restore({ entries: { [given.name]: 999 }, hinted: [], elapsed: 0 });
+
+    equal(game.snapshot().entries[given.name], undefined, "a given cell kept an entry from a session");
+  });
+});
+
 suite("⚠️⚠️ A given cell may not contradict the answer", () => {
   // v36-P2-08. `isSolved()` walks every cell, givens included, so one wrong given makes it
   // permanently false: *Check* answers "Something doesn't add up yet" for ever on a board where every

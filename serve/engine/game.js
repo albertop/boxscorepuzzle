@@ -149,6 +149,22 @@ export function createGame(puzzle, clock = createClock()) {
   let assisted = false;
 
   const require = (name) => cells.get(name) ?? raise(name);
+
+  /**
+   * ⚠️⚠️ **A finished board is immutable, and the engine is what says so.** (v36-P3-26)
+   *
+   * The clock was sealed *here* with the argument that "sealing is a fact about the clock rather than
+   * a promise every future shell has to keep" — and the board's immutability got the opposite
+   * treatment: only the phone layer removed the handlers and the keypad, so `__game.enter(...)` from
+   * a console changed entries on a finished board. The next visibility-save persisted them **under
+   * the frozen `finishedAt`**, and `record().solved` could flip on a result already reported.
+   *
+   * Tablet and desktop are planned. Each would have had to remember this rule, and a rule every
+   * interface has to remember is one that will be forgotten by the third.
+   */
+  const refuseWhenFinished = (what) => {
+    if (finishedAt !== null) throw new Error(`this board is finished; nothing can be ${what}`);
+  };
   const raise = (name) => {
     throw new Error(`no such cell: ${name}`);
   };
@@ -207,6 +223,7 @@ export function createGame(puzzle, clock = createClock()) {
      */
     enter(name, value) {
       const cell = require(name);
+      refuseWhenFinished("entered");
       if (cell.given !== null) throw new Error(`${name} is given and cannot be entered`);
       if (value !== null && !(Number.isInteger(value) && value >= 0)) {
         throw new Error(`${name} entry ${JSON.stringify(value)} is not a whole number`);
@@ -228,6 +245,7 @@ export function createGame(puzzle, clock = createClock()) {
 
     clear(name) {
       const cell = require(name);
+      refuseWhenFinished("cleared");
       if (cell.given !== null) throw new Error(`${name} is given and cannot be cleared`);
       entries.delete(name);
     },
@@ -246,6 +264,7 @@ export function createGame(puzzle, clock = createClock()) {
      */
     hint(name) {
       const cell = require(name);
+      refuseWhenFinished("hinted");
       if (cell.given !== null) throw new Error(`${name} is given and needs no hint`);
       if (hinted.size >= HINTS_PER_GAME && !hinted.has(name)) {
         throw new Error(`no hints left: ${HINTS_PER_GAME} is the whole allowance`);
@@ -385,7 +404,13 @@ export function createGame(puzzle, clock = createClock()) {
       entries.clear();
       hinted.clear();
       firstWrong.clear();
-      for (const [name, value] of Object.entries(saved.entries ?? {})) if (cells.has(name)) entries.set(name, value);
+      // ⚠️ `given === null`, the same rule `enter()` applies. (v36-P3-27) This filtered on the cell
+      // existing and nothing else, so a hand-edited session's junk entry on a *given* cell survived
+      // every snapshot round trip. Harmless while `valueOf` prefers the given — and waiting for the
+      // first consumer that reads `entries` directly. Restore and enter apply one rule now.
+      for (const [name, value] of Object.entries(saved.entries ?? {})) {
+        if (cells.get(name)?.given === null) entries.set(name, value);
+      }
       // ⚠️ **Capped on the way in.** A session is player-writable storage; without this a hand-edited
       // one hands out unlimited answers and the record still reads as a legitimate result. §23 says a
       // refused session costs nothing, and a truncated hint list costs less than an uncapped one.

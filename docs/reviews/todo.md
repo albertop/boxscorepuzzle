@@ -4617,9 +4617,74 @@ meets five relations — the reference sheet and the tutorial both teach the bat
 the product and the measurement axis disagree about how many there are. That is worth resolving, and
 resolving it re-bases the reporting.
 
+### v36's P3s — grouped, and worked group by group
+
+⚠️ **They are 49, not 44**: `P3-45` to `P3-49` were added to the review after the count was quoted.
+
+| Group | Items | State |
+|---|---|---|
+| **A. Checks that do not check** | 12, 13, 14, 15, 16, 17, 18, 19, 28, 38 | ✅ done |
+| **B. The client's boundary, and immutability** | 23, 24, 25, 26, 27, 45 | ✅ done |
+| **C. Escaping in instruments** | 32, 33, 34 | ⬜ |
+| **D. Reproducible from the script alone** | 02, 03, 07 | ⬜ |
+| **E. Stale docs and dead code** | 04, 06, 20, 22, 35, 44 | ⬜ |
+| **F. Tooling, CI, container** | 01, 09, 10, 11, 30, 31, 43 | ⬜ |
+| **G. Measurement correctness** | 21, 36, 40, 41, 42 | ⬜ |
+| **H. Structure and typing** | 05, 08, 37 | ⬜ |
+| **I. Security documentation** | 29 | ⬜ |
+| **J. Page basics** | 39, 46, 47 | ⬜ |
+| **K. Decisions to record, not code** | 48, 49 | ⬜ |
+
+**Grouped before starting rather than taken one at a time.** Several are the same shape, and doing a
+category together is both faster and a cleaner record than forty-nine commits.
+
+#### ⚠️ Group A — one of them was not a P3, and is reported rather than absorbed
+
+**P3-16** said two plausibility tests assert the same thing under a comment promising two cases. True.
+But **the second case is one the code deliberately refuses to check**: a row with no plate appearance
+carrying numbers is the pinch runner who scored without batting, and a filter demanding a plate
+appearance **deleted him and his run with him** — a real defect, recorded in `CLAUDE.md`. Writing the
+"missing" test would have asserted the rule that caused it. The duplicate and its false claim are
+deleted instead. *(This is what led to the ghost-runner question recorded further down: the ghost
+runner is the case the pinch-runner reasoning does **not** settle.)*
+
+**Two were worse than filed.** `P3-17`'s test passed `evidence=None`, which returns **before any check
+runs**, so its fixture could not produce the prefixes its name promised even in principle — removing
+the prefixing left the suite green. And `P3-19` stopped being cosmetic **because of this week's own
+work**: the line-score anchor guard returned on the *first* `LineScore(...)` call, and the postseason
+change added a season seam to that loader.
+
+The rest: `P3-13` a fail-open where an empty names tuple checked no row at all · `P3-15` a rotation,
+not the named mutation, was what fired the assertion — reverting the mutation left it green · `P3-38`
+the identity set lived in **three hand-written lists** tied by subset assertions that fire only on
+removal, while the real drift is addition; `UNMAPPED` makes the rule an equality · `P3-28` the reject
+vectors accepted *any* throw, and a first patch of mine matched a list of field names, **a second copy
+of the schema inside the test** · `P3-12`, `P3-14`, `P3-18`.
+
+#### Group B — the boundary, and a rule that lived in one interface
+
+**`P3-26` is the one that mattered.** The clock is sealed *in the engine*, on the stated argument that
+sealing is a fact about the clock rather than a promise every future shell has to keep — and the
+board's immutability got the opposite treatment. Only the phone layer removed the handlers, so
+`__game.enter(...)` from a console changed a finished board, the next save persisted it under the
+frozen `finishedAt`, and `record().solved` could flip on a result already reported. **Tablet and
+desktop are planned**, and a rule every interface must remember is one the third forgets.
+
+`P3-23` the package is validated rigorously and **the pointer selecting it was not** — and it is the
+one file served `no-store` · `P3-24` `played_on` was "a string", so a bad date threw **inside the
+reveal**, in `check()`'s success path · `P3-25` a field nothing reads, which is where a pass-through
+waits because no test goes red first · `P3-27` `restore()` and `enter()` applied different rules.
+
+**`P3-45` is a decision, recorded beside C6 in `serve-brief.md`:** an unknown `?p=` serves the first
+puzzle with a 200. Harmless as a development convenience; the moment `/p/<id>` exists, a link to a
+retired or mistyped id renders **a different puzzle as if it were the one asked for**. Unknown ids are
+refused, never substituted — decided now so it is not invented during the route work.
+
+**Every fix in both groups is verified by mutation** where a mutation exists.
+
 ### Still open from v36
 
-**All 44 P3s.**
+**Groups C through K: 33 items.**
 
 
 ---

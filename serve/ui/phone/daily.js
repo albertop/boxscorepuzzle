@@ -11,9 +11,39 @@
  * pages ask the same question and get their answer from one place.
  */
 
-import { readPackage } from "../../engine/package.js";
+import { PackageError, readPackage } from "../../engine/package.js";
 
 const DATA = "../../data/puzzles";
+
+/**
+ * The manifest, checked before it is trusted to name a file.
+ *
+ * ⚠️⚠️ **The package gets rigorous boundary validation and the pointer that selects it got none.**
+ * (v36-P3-23) A malformed manifest died as a `TypeError` on `.includes`, and an empty `puzzles` array
+ * fetched `.../undefined.json` and failed inside `.json()` as a `SyntaxError`. Both entry points catch
+ * and render `package.unreadable`, so the player outcome survived — **but the console carried an
+ * unrelated error and the page misdiagnosed its own failure**, which is the shape recorded a day
+ * earlier when a storage `SecurityError` was reported as an unreadable puzzle.
+ *
+ * ⚠️ And this is the one file served `no-store`: the most exposed thing in the tree to a half-written
+ * deploy, and the only one that had no check at all.
+ */
+export function readManifest(raw) {
+  const fail = (why) => {
+    throw new PackageError(`manifest ${why}`);
+  };
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) fail("is not an object");
+  if (typeof raw.generation !== "string" || raw.generation === "") {
+    fail(`generation is ${JSON.stringify(raw.generation)}, expected a non-empty string`);
+  }
+  if (!Array.isArray(raw.puzzles) || raw.puzzles.length === 0) {
+    fail(`puzzles is ${JSON.stringify(raw.puzzles)}, expected a non-empty array`);
+  }
+  if (!raw.puzzles.every((id) => typeof id === "string" && id !== "")) {
+    fail("puzzles holds something that is not a puzzle id");
+  }
+  return raw;
+}
 
 /**
  * The manifest is a **pointer** and the packages are **immutable**, so they cache differently.
@@ -32,8 +62,14 @@ const DATA = "../../data/puzzles";
  * caching rule in CLAUDE.md: cache the day's puzzle, never the pointer to it.
  */
 export async function loadPuzzle(search = location.search) {
-  const manifest = await (await fetch(`${DATA}/manifest.json`, { cache: "no-store" })).json();
+  const manifest = readManifest(await (await fetch(`${DATA}/manifest.json`, { cache: "no-store" })).json());
   const wanted = new URLSearchParams(search).get("p");
+  // ⚠️ **An unknown `?p=` falls back to the first puzzle, and that is a development convenience with
+  // a decision attached.** (v36-P3-45) Serving different content under the requested id with a 200 is
+  // a soft-404 and an unbounded duplicate-URL space; once `/p/<id>` routes exist (C6) a shared link
+  // to a retired or mistyped id would render *a different puzzle as if it were the one asked for* —
+  // the absence of the requested puzzle reading as the presence of another. The decision is recorded
+  // beside C6 in `docs/serve-brief.md` so it is taken rather than invented during the route work.
   const id = manifest.puzzles.includes(wanted) ? wanted : manifest.puzzles[0];
   const raw = await (await fetch(`${DATA}/${manifest.generation}/${id}.json`)).json();
   return { puzzle: readPackage(raw), manifest, id };

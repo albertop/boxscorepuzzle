@@ -297,6 +297,21 @@ export function readPackage(raw) {
  * validate at the boundary, so a bad package is a controlled rejection rather than a `TypeError`
  * three layers later.
  */
+/**
+ * A calendar date, `YYYY-MM-DD`, refused at the boundary rather than downstream.
+ *
+ * ⚠️ The pattern is deliberately not a full calendar check — `2026-02-31` matches. What it guarantees
+ * is the shape `longDate` can split and index a month name with, which is the failure that reached the
+ * reveal. A month of `13` would render as a missing catalogue key and throw there instead; that is a
+ * narrower hole and it is named here rather than left as an assumption.
+ */
+const isoDate = (raw, where) => {
+  if (typeof raw !== "string" || !/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(raw)) {
+    fail(`${where} is ${JSON.stringify(raw)}, expected a date as YYYY-MM-DD`);
+  }
+  return raw;
+};
+
 function reveal(raw, board) {
   if (raw === undefined || raw === null) return null;
   if (typeof raw !== "object" || Array.isArray(raw)) {
@@ -313,8 +328,17 @@ function reveal(raw, board) {
     pitcherNames: strings(raw.pitcher_names, pitchers, "reveal.pitcher_names"),
     offenseTeam: text(raw.offense_team, "reveal.offense_team"),
     defenseTeam: text(raw.defense_team, "reveal.defense_team"),
-    playedOn: text(raw.played_on, "reveal.played_on"),
-    card: raw.card ?? "",
+    // ⚠️⚠️ **A date, not merely a string.** (v36-P3-24) This was `text(...)`, so `"yesterday"` parsed
+    // fine and `longDate` then computed `month.NaN` and threw **inside `renderReveal`** — which sits in
+    // `check()`'s success path, on the one screen the player reaches once, after they have solved the
+    // board. A controlled rejection at the boundary is what `reveal()` promises; an exception at the
+    // payoff is the opposite of it.
+    playedOn: isoDate(raw.played_on, "reveal.played_on"),
+    // ⚠️ **Validated even though nothing reads it.** (v36-P3-25) `raw.card ?? ""` accepted an object,
+    // an array, anything — and this function's own header tells the story of `raw.reveal` one field
+    // up, where a pass-through incubated until something rendered `undefined` as a heading. A field
+    // with no consumer is exactly where that waits: there is no test to go red first.
+    card: text(raw.card ?? "", "reveal.card"),
     boxscore: {
       // ⚠️ **The half the board also carries is counted against the board.** `offense.batting` is
       // the batting grid with runs batted in added, and `defense.pitching` is the pitching grid; the

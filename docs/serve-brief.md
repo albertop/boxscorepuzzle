@@ -520,6 +520,24 @@ row off, and its answer was specific, plausible and wrong.
 **Tablet and desktop do not exist.** Phone first was the decision and the other two are additive from
 it. Neither should start before the phone has been used on a phone.
 
+## ⬜ Decision to record before the routes exist: an unknown puzzle id is refused
+
+**Today `?p=<unknown>` silently serves the first puzzle with a 200.** Garbage, a retired id, a future
+id — all render identical content under the id that was asked for. It is a development convenience and
+it is fine while the only reader is the operator.
+
+⚠️ **It stops being fine the moment C6's `/p/<id>` routes exist.** A shared link to a retired or
+mistyped puzzle would render **a different puzzle as if it were the one requested** — the absence of
+the asked-for thing reading as the presence of another, which is this project's named failure shape
+with a URL attached. It is also a soft-404 and an unbounded duplicate-URL space, which matters for
+anything that indexes.
+
+**The decision, taken now so it is not invented during the route work:** an unknown id is **refused**.
+Client-side that is the `package.unreadable` path; server-side it is a real 404. **Never substituted.**
+
+The fallback can stay until the routes are built — it is the only thing that makes `?p=` usable by
+hand — and it goes when they arrive. v36-P3-45.
+
 ## Decisions taken
 
 Recorded here as they are made, with the date and the reason.
