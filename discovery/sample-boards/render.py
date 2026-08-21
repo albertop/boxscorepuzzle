@@ -25,13 +25,14 @@ import random
 import sys
 from pathlib import Path
 
-from measure import Loaded, load, slot_references
+from measure import Loaded, load
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of
 from boxscore_forge.erasure import erasable
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
+from boxscore_forge.publish import slot_references  # noqa: E402
 from boxscore_forge.solver import Solution, Technique, solve
 from boxscore_package.innings import Innings, to_display
 

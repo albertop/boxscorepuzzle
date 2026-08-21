@@ -7,38 +7,12 @@ passed the defective board without a murmur.
 
 from collections.abc import Callable
 
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from boxscore_domain import PITCHER_CAP
 from boxscore_package.format import Board, Package
 from boxscore_verify.plausibility import faults
+from tests.verify.helpers import refs
 
 Replace = Callable[..., Board]
-
-_KEY = Ed25519PrivateKey.generate()
-SECRET = _KEY
-"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
-with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
-signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
-test key checked into the repository is a key anybody can sign with."""
-
-PUBLIC = _KEY.public_key()
-
-
-def refs(board: object) -> tuple[str, ...]:
-    """One slot reference per batting row, in the shape the format actually allows.
-
-    ⚠️ **This produced `"10"`, `"11"`… and those are not references.** A lineup has nine slots; a
-    thirteen-row board carries thirteen references drawn from those nine, and what distinguishes rows
-    inside a slot is the letter. The helper invented a tenth slot, and only the stricter constructor
-    noticed — the fixtures had been carrying impossible values.
-    """
-    from string import ascii_lowercase  # noqa: PLC0415
-
-    return tuple(
-        str(index + 1) if index < 9 else f"9{ascii_lowercase[index - 9]}"
-        for index in range(len(board.batting))  # type: ignore[attr-defined]
-    )
 
 
 def package(puzzle: Board, source: Board) -> Package:

@@ -92,7 +92,7 @@ from bootstrap import bootstrap  # noqa: E402
 
 bootstrap()
 
-from measure import Loaded, load, slot_references  # noqa: E402
+from measure import Loaded, load  # noqa: E402
 from write_reference_puzzles import reveal_for  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
@@ -100,7 +100,10 @@ from boxscore_forge.erasure import erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
-from boxscore_forge.publish import to_board  # noqa: E402
+from boxscore_forge.publish import (  # noqa: E402
+    slot_references,
+    to_board,
+)
 from boxscore_forge.solver import Technique  # noqa: E402
 from boxscore_package.format import Package  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402

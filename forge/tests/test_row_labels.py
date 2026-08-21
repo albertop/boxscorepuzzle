@@ -27,6 +27,7 @@ from boxscore_forge.boxscore import (
     TeamFootnotes,
 )
 from boxscore_forge.identities import Identity, find_violations
+from boxscore_forge.publish import slot_references
 
 _LOADER = Path(__file__).resolve().parents[2] / "discovery" / "difficulty-metrics"
 
@@ -110,7 +111,7 @@ class TestAFootnoteBelongsToARowAndNotToAPosition:
         # `SF: CF` on a board with two CF rows is unresolvable, and so is `SF: CF-2` once the suffix
         # numbers by position while the indentation groups by slot. The slot reference is neither: it
         # names a row, and it is the same string the slot cell prints.
-        references = _loader().slot_references([9, 9])
+        references = slot_references([9, 9])
         _, footnotes = self._lineup()
         carriers = [references[index] for index, note in enumerate(footnotes) if note.sacrifice_flies]
 
@@ -175,17 +176,17 @@ class TestTheSlotReferenceHasOneSource:
 
     def test_a_slot_with_one_row_carries_no_letter(self) -> None:
         # Never `2a` when there is no `2b`: the letter is the signal that a slot is shared.
-        assert _loader().slot_references([1, 2, 3]) == ("1", "2", "3")
+        assert slot_references([1, 2, 3]) == ("1", "2", "3")
 
     def test_a_shared_slot_letters_every_one_of_its_rows(self) -> None:
-        assert _loader().slot_references([1, 2, 2, 3]) == ("1", "2a", "2b", "3")
+        assert slot_references([1, 2, 2, 3]) == ("1", "2a", "2b", "3")
 
     def test_it_applies_to_every_slot_not_only_the_pitcher(self) -> None:
         # Slot 9 dominates the examples only because the pitcher is the position most substituted.
-        assert _loader().slot_references([5, 5, 9]) == ("5a", "5b", "9")
+        assert slot_references([5, 5, 9]) == ("5a", "5b", "9")
 
     def test_three_in_a_slot_keep_counting(self) -> None:
-        assert _loader().slot_references([9, 9, 9]) == ("9a", "9b", "9c")
+        assert slot_references([9, 9, 9]) == ("9a", "9b", "9c")
 
     def test_the_cell_and_the_footnote_are_the_same_string_for_the_same_row(self) -> None:
         """⚠️ **This assigned both names from one expression and was a tautology**: it stayed green if
@@ -236,7 +237,7 @@ class TestTheSlotReferenceHasOneSource:
     def test_every_reference_carries_its_slot_number(self) -> None:
         # `9b`, never a bare `b`. The footnote prints the same string the cell does, so finding the
         # row is recognition rather than composing the number from the row above.
-        assert all(reference[0].isdigit() for reference in _loader().slot_references([1, 9, 9, 9]))
+        assert all(reference[0].isdigit() for reference in slot_references([1, 9, 9, 9]))
 
 
 class TestAFootnoteReferenceNamesExactlyOneRow:
@@ -254,14 +255,14 @@ class TestAFootnoteReferenceNamesExactlyOneRow:
 
     def test_every_reference_is_unique(self) -> None:
         for slots in ([1, 2, 3], [9, 9, 9], [1, 2, 2, 3, 9, 9], [5, 5, 5, 5, 5], list(range(1, 10))):
-            references = _loader().slot_references(slots)
+            references = slot_references(slots)
 
             assert len(set(references)) == len(references), f"{slots} produced {references}"
 
     def test_two_men_at_one_position_in_different_slots_get_different_references(self) -> None:
         # The case the retired experiment would have called ambiguous: same label, different slot.
         labels = _loader()._batting_labels(["CF", "SS", "CF"])
-        references = _loader().slot_references([2, 3, 6])
+        references = slot_references([2, 3, 6])
 
         assert labels[0] == labels[2] == "CF"
         assert references[0] != references[2]

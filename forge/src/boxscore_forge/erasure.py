@@ -22,8 +22,9 @@ throwing one away costs nothing and bending the rule costs everything.
 """
 
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Final
 
 from boxscore_forge.boxscore import Direction
@@ -42,12 +43,29 @@ from boxscore_forge.solver import Solution, solve
 
 @dataclass(frozen=True, slots=True)
 class Puzzle:
-    """What the player is handed, plus the proof that it can be reasoned through."""
+    """What the player is handed, plus the proof that it can be reasoned through.
+
+    ⚠️⚠️ **`given` is a read-only view, because `frozen=True` freezes the binding and not the value.**
+    (v36-P3-05) It was a bare `dict`, so a caller could add or remove a given cell on a *frozen* result
+    — and `solution` beside it is the proof that **the board as it was** can be reasoned through. The
+    two would go on sitting in one object, silently describing different boards, and every difficulty
+    figure already computed from it would be about the board that no longer exists.
+
+    ⚠️ **This one matters more than the others because it outlives the solve.** A `Solution` is consumed
+    where it is made; a `Puzzle` is carried into erasure loops, comparisons and the reference writer.
+    `format.py` refuses a `list` where a tuple is meant for exactly this reason, one field over.
+    """
 
     shape: BoardShape
-    given: dict[str, int]
+    given: Mapping[str, int]
     erased: frozenset[str]
     solution: Solution
+
+    def __post_init__(self) -> None:
+        # `object.__setattr__` is how a frozen dataclass initialises a derived field; the `dict()`
+        # inside is not decoration — a proxy over a dict the caller still holds is a window onto
+        # something that can change, which is the defect with an extra step.
+        object.__setattr__(self, "given", MappingProxyType(dict(self.given)))
 
 
 SCOREBOARD_DUPLICATES: Final = (

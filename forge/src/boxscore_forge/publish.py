@@ -13,10 +13,24 @@ The erased set is applied **uniformly** here, to every section including the foo
 footnote, so a future decision to open any of them cannot reintroduce the same gap. §6 currently gives
 the footnote line complete, so nothing is erased there today; the code does not depend on that.
 
+⚠️⚠️ **`slot_references` moved here on 2026-08-21 for the same reason and by the same argument**
+(v36-P3-37). It produces `Package.slot_references` — **a published field the schema validates** — and
+it was living in `discovery/difficulty-metrics/measure.py`, outside `mypy --strict` and inside the
+ratcheted lint tree, imported by the production writer. That is the paragraph above, repeated with a
+different function; a fixed defect recorded in a docstring is not a rule the next case obeys.
+
+⚠️ The pool **loader** is still in that instrument and is not moved. It carries the SQL, the connection
+and the era windows, and promoting it is the inventory pipeline's work rather than a rename — recorded
+in `docs/reviews/todo.md`. What is closed here is the part that reaches a published file.
+
 This is the generator's job rather than the verifier's. §22 forbids the verifier sharing code with the
 generator, and the file format belongs to neither — so the side that *produces* a package owns the
 conversion into it, and the verifier reads only what the format defines.
 """
+
+from collections import Counter
+from collections.abc import Sequence
+from string import ascii_lowercase
 
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.identities import BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS, TEAM_FOOTNOTE_FIELDS
@@ -85,3 +99,31 @@ def to_board(direction: Direction, erased: frozenset[str] | None = None) -> Boar
 
 
 __all__ = ["to_board"]
+
+
+def slot_references(slots: Sequence[int]) -> tuple[str, ...]:
+    """The reference for each row: `9` when its slot holds one row, `9a`/`9b`/`9c` when it is shared.
+
+    ⚠️ **One function, and both callers use it.** The slot cell and the footnote line apply the same
+    condition — *is this slot shared* — and two places applying one condition is the defect this
+    project has spent the day closing. The cell prints what this returns and the footnote prints what
+    this returns, so `SH: 9b` and the cell reading `9b` cannot drift into disagreeing.
+
+    The letter appears **only** where a slot is shared, which makes it the signal that a substitution
+    happened rather than decoration on every row: nine rows numbered 1 to 9, with letters exactly where
+    somebody was replaced. Never `2a` when there is no `2b`.
+
+    Every reference carries the slot number, never a bare letter. The footnote says `9b`, so a cell
+    saying `9b` makes finding the row a recognition rather than a composition — and leaves no second
+    representation of the same thing to go stale.
+
+    This applies to every slot, not only the ninth. A substituted left fielder gives `5a` and `5b`; the
+    pitcher's slot dominates the examples only because it is the position most often substituted.
+    """
+    shared = {slot for slot in slots if list(slots).count(slot) > 1}
+    seen: Counter[int] = Counter()
+    references: list[str] = []
+    for slot in slots:
+        seen[slot] += 1
+        references.append(f"{slot}{ascii_lowercase[seen[slot] - 1]}" if slot in shared else str(slot))
+    return tuple(references)

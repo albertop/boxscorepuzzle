@@ -32,7 +32,7 @@ sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from collections.abc import Sequence  # noqa: E402
 
-from measure import Loaded, load, slot_references  # noqa: E402
+from measure import Loaded, load  # noqa: E402
 from reportlab.lib import colors  # noqa: E402
 from reportlab.lib.pagesizes import A4  # noqa: E402
 from reportlab.lib.styles import ParagraphStyle  # noqa: E402
@@ -41,7 +41,10 @@ from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, 
 
 from boxscore_domain import HAND_SOLVE_ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.erasure import erase  # noqa: E402
-from boxscore_forge.publish import to_board  # noqa: E402
+from boxscore_forge.publish import (  # noqa: E402
+    slot_references,
+    to_board,
+)
 from boxscore_package.format import FOOTNOTE_COLUMNS, Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402

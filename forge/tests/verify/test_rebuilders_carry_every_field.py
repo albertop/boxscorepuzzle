@@ -130,3 +130,46 @@ class TestTheSweepWouldNoticeAStaleList:
             "signature",
         }
         assert sign(package, KEY) is not package, "sign must not mutate its input"
+
+
+class TestTheTestTreesOwnRebuilderCarriesEveryFieldToo:
+    """⚠️⚠️ This file existed for exactly this defect, and two fresh instances of it stood in the test
+    tree the whole time — in the helpers the rule is enforced *from*.
+
+    `conftest.swapped()` and a byte-identical `test_layers.replacing()` each named all eight `Board`
+    fields by hand (v36-P3-08). Both are the shape the module docstring above describes, and neither
+    was covered, because the sweep looks at `Package` rebuilders in `boxscore_package` and these
+    rebuild a `Board` in `forge/tests`.
+
+    **A rule applied outward does not automatically apply inward** — `CLAUDE.md` records that as its
+    own failure mode, and this is an instance of it sitting inside the guard written against it.
+    """
+
+    def test_a_rebuild_with_nothing_changed_returns_an_equal_board(self, package: Package) -> None:
+        """⚠️ The one assertion a hand-written field list fails.
+
+        It cannot fail for a field the list *names*; it fails the moment a field is added to `Board`
+        and the list is not updated — which is the failure nobody is present for. Derived from
+        `dataclasses.fields` so tomorrow's field is covered without anyone remembering.
+        """
+        from tests.verify.conftest import swapped  # noqa: PLC0415
+
+        board = package.solution
+        rebuilt = swapped(board)
+
+        assert rebuilt == board
+        for field in fields(Board):
+            assert getattr(rebuilt, field.name) == getattr(board, field.name), (
+                f"{field.name} did not survive a rebuild that changed nothing"
+            )
+
+    def test_the_rebuilder_changes_what_it_is_asked_to_and_nothing_else(self, package: Package) -> None:
+        from tests.verify.conftest import swapped  # noqa: PLC0415
+
+        board = package.solution
+        rebuilt = swapped(board, left_on_base=7)
+
+        assert rebuilt.left_on_base == 7
+        for field in fields(Board):
+            if field.name != "left_on_base":
+                assert getattr(rebuilt, field.name) == getattr(board, field.name), f"{field.name} was disturbed"

@@ -18,6 +18,7 @@ guarantee would be theatre. **The duplication is the design.** See `boxscore_ver
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Final
 
 from boxscore_verify.rules import Relation, batting, batting_total
@@ -49,10 +50,22 @@ class UndecidedError(Exception):
 
 @dataclass(frozen=True, slots=True)
 class Derivation:
-    """What `derive` reached, and whether it got all the way."""
+    """What `derive` reached, and whether it got all the way.
 
-    values: dict[str, int]
+    ⚠️ `values` is a read-only view: `frozen=True` freezes the binding and not the value, and this
+    object is layer 3's evidence (v36-P3-05).
+
+    ⚠️⚠️ **The same three lines stand in `boxscore_forge`, and they stay duplicated deliberately.**
+    §22 requires the verifier to share no code with the generator — a helper imported from there would
+    make the two sides agree by construction, which is the property the layer exists to *test* rather
+    than to assume. Duplication at this size is the price the section names and accepts.
+    """
+
+    values: Mapping[str, int]
     unresolved: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", MappingProxyType(dict(self.values)))
 
     @property
     def is_complete(self) -> bool:
@@ -306,7 +319,7 @@ def solutions(
     given: Mapping[str, int],
     *,
     limit: int = 2,
-) -> list[dict[str, int]]:
+) -> list[Mapping[str, int]]:
     """Every way the board can be completed, up to `limit`.
 
     `limit=2` is what uniqueness needs: one is unique, two is enough to know it is not, and counting
@@ -314,7 +327,10 @@ def solutions(
     """
     relations = tuple(relations)
     cells = tuple(cells)
-    found: list[dict[str, int]] = []
+    # ⚠️ `Mapping`, not `dict`: `Derivation.values` is a read-only view now (v36-P3-05) and this list
+    # is read by callers rather than edited. Copying each one back into a `dict` to satisfy the
+    # annotation would undo the freeze at the one place the results leave the search.
+    found: list[Mapping[str, int]] = []
     budget = [NODE_BUDGET]
 
     def walk(values: dict[str, int]) -> None:

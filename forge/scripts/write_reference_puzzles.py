@@ -26,12 +26,12 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
-from measure import Loaded, load, slot_references  # noqa: E402
+from measure import Loaded, load  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
-from boxscore_forge.publish import to_board  # noqa: E402
+from boxscore_forge.publish import slot_references, to_board  # noqa: E402
 from boxscore_package.format import Package, PrintedBoxscore, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
 from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402

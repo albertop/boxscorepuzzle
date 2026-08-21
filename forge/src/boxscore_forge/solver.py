@@ -27,6 +27,7 @@ the choice of next move became.
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
+from types import MappingProxyType
 
 from boxscore_forge.bounds import narrow
 from boxscore_forge.constraints import (
@@ -166,9 +167,19 @@ class Deduction:
 
 @dataclass(frozen=True, slots=True)
 class Solution:
-    values: dict[str, int]
+    """What the reasoning reached, and how.
+
+    ⚠️ `values` is a read-only view for the reason `Puzzle.given` is (v36-P3-05): `frozen=True` freezes
+    the binding, not the value, and `deductions` beside it is a record of how *these* numbers were
+    arrived at. A mutated `values` makes the record describe a derivation that did not happen.
+    """
+
+    values: Mapping[str, int]
     deductions: tuple[Deduction, ...]
     unsolved: frozenset[str]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", MappingProxyType(dict(self.values)))
 
     @property
     def is_complete(self) -> bool:

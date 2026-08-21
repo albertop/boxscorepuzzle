@@ -16,24 +16,9 @@ from boxscore_package.format import Board, Package
 from boxscore_verify.reason import derive, derive_in_view
 from boxscore_verify.rules import all_cells, relations, values_of
 from boxscore_verify.verify import derivable_in_view
+from tests.verify.helpers import refs
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
-
-
-def refs(board: object) -> tuple[str, ...]:
-    """One slot reference per batting row, in the shape the format actually allows.
-
-    ⚠️ **This produced `"10"`, `"11"`… and those are not references.** A lineup has nine slots; a
-    thirteen-row board carries thirteen references drawn from those nine, and what distinguishes rows
-    inside a slot is the letter. The helper invented a tenth slot, and only the stricter constructor
-    noticed — the fixtures had been carrying impossible values.
-    """
-    from string import ascii_lowercase  # noqa: PLC0415
-
-    return tuple(
-        str(index + 1) if index < 9 else f"9{ascii_lowercase[index - 9]}"
-        for index in range(len(board.batting))  # type: ignore[attr-defined]
-    )
 
 
 def weakly(board: Board, **kwargs: bool) -> object:

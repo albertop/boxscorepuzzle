@@ -9,38 +9,14 @@ is rejected but *which layer* rejected it and *why*.
 from collections.abc import Callable
 
 import pytest
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from boxscore_package.format import Board, LineScore, Package, PackageError
 from boxscore_package.signing import sign
 from boxscore_verify.verify import UNSIGNED, Fault, Layer, check_derivability, verify
+from tests.verify.conftest import swapped
+from tests.verify.helpers import PUBLIC, SECRET, refs
 
 Blank = Callable[[Board, dict[str, list[tuple[int, int]]]], Board]
-
-_KEY = Ed25519PrivateKey.generate()
-SECRET = _KEY
-"""⚠️ **A key pair, not a shared secret.** The forge signs with the private half and `serve` verifies
-with the public one, which is the property a MAC cannot express: every verifier of an HMAC is also a
-signer, so the verification key on the VPS *was* the signing authority (§33). Generated per run — a
-test key checked into the repository is a key anybody can sign with."""
-
-PUBLIC = _KEY.public_key()
-
-
-def refs(board: object) -> tuple[str, ...]:
-    """One slot reference per batting row, in the shape the format actually allows.
-
-    ⚠️ **This produced `"10"`, `"11"`… and those are not references.** A lineup has nine slots; a
-    thirteen-row board carries thirteen references drawn from those nine, and what distinguishes rows
-    inside a slot is the letter. The helper invented a tenth slot, and only the stricter constructor
-    noticed — the fixtures had been carrying impossible values.
-    """
-    from string import ascii_lowercase  # noqa: PLC0415
-
-    return tuple(
-        str(index + 1) if index < 9 else f"9{ascii_lowercase[index - 9]}"
-        for index in range(len(board.batting))  # type: ignore[attr-defined]
-    )
 
 
 def package(puzzle: Board, source: Board) -> Package:
@@ -53,22 +29,6 @@ def package(puzzle: Board, source: Board) -> Package:
         slot_references=refs(puzzle),
         offense_is_home=True,
     )
-
-
-def replacing(board: Board, **changes: object) -> Board:
-    """A board with some parts swapped, so a test can state only what it breaks."""
-    fields: dict[str, object] = {
-        "batting": board.batting,
-        "batting_totals": board.batting_totals,
-        "footnotes": board.footnotes,
-        "footnote_totals": board.footnote_totals,
-        "left_on_base": board.left_on_base,
-        "pitching": board.pitching,
-        "pitching_totals": board.pitching_totals,
-        "line_score": board.line_score,
-    }
-    fields.update(changes)
-    return Board(**fields)  # type: ignore[arg-type]
 
 
 class TestItAcceptsACorrectPuzzle:
@@ -101,7 +61,7 @@ class TestLayerOneCatchesBadData:
         # cross-team link to the pitchers who supposedly allowed it.
         rows = list(board.batting)
         rows[3] = (4, 4, 0, 2, 0, 1)
-        source = replacing(board, batting=tuple(rows))
+        source = swapped(board, batting=tuple(rows))
 
         verdict = verify(package(source, source), secret=UNSIGNED, source=source)
 
@@ -111,7 +71,7 @@ class TestLayerOneCatchesBadData:
 
     def test_a_line_score_whose_innings_do_not_add_up(self, board: Board) -> None:
         score = board.line_score
-        source = replacing(
+        source = swapped(
             board,
             line_score=LineScore(
                 offense_by_inning=(0, 1, 0, 0, 1, 0, 0, 0, 0),  # adds to two, and three are claimed
@@ -142,7 +102,7 @@ class TestLayerOneCatchesBadData:
         Asserting the earlier refusal is the stronger statement: a fault caught by the type cannot
         reach a verifier that might have been skipped.
         """
-        puzzle = replacing(board, footnote_totals=(None, *board.footnote_totals[1:]))
+        puzzle = swapped(board, footnote_totals=(None, *board.footnote_totals[1:]))
 
         with pytest.raises(PackageError, match="footnote_totals has a blank"):
             package(puzzle, board)
@@ -168,7 +128,7 @@ class TestLayerTwoCatchesAmbiguity:
         cannot be constructed now — in either runtime — because that board is unwinnable and the player
         has no way to discover it.
         """
-        contradicting = replacing(blank(board, {"batting": [(0, 3)]}), batting_totals=(36, 36, 3, 40, 0, 5))
+        contradicting = swapped(blank(board, {"batting": [(0, 3)]}), batting_totals=(36, 36, 3, 40, 0, 5))
 
         with pytest.raises(PackageError, match="the solution says"):
             package(contradicting, board)
@@ -187,7 +147,7 @@ class TestLayerTwoCatchesAmbiguity:
         `test_cells_erased_that_were_not_forced` covers. Recorded in `todo.md`; whether the
         now-unreachable branch stays as defence in depth is an operator decision, not a test's.
         """
-        impossible = replacing(board, batting_totals=(36, 36, 3, 40, 0, 5))
+        impossible = swapped(board, batting_totals=(36, 36, 3, 40, 0, 5))
         puzzle = blank(impossible, {"batting": [(0, 3)]})
 
         verdict = verify(package(puzzle, impossible), secret=UNSIGNED, source=impossible)
@@ -243,7 +203,7 @@ class TestLayerFourCatchesACorruptedArtefact:
         """
         rows = [list(row) for row in board.batting]
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
-        corrupted = replacing(board, batting=tuple(tuple(row) for row in rows))
+        corrupted = swapped(board, batting=tuple(tuple(row) for row in rows))
 
         # Both halves swapped, which is what an altered artefact looks like: the puzzle gives what the
         # solution claims, so nothing before layer 4 has anything to object to.
@@ -266,7 +226,7 @@ class TestLayerFourCatchesACorruptedArtefact:
         """
         rows = [list(row) for row in board.batting]
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
-        corrupted = replacing(board, batting=tuple(tuple(row) for row in rows))
+        corrupted = swapped(board, batting=tuple(tuple(row) for row in rows))
 
         verdict = verify(package(corrupted, corrupted), secret=UNSIGNED, source=corrupted)
 
@@ -287,7 +247,7 @@ class TestLayerFourCatchesACorruptedArtefact:
         """
         rows = [list(row) for row in board.batting]
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
-        altered = replacing(board, batting=tuple(tuple(row) for row in rows))
+        altered = swapped(board, batting=tuple(tuple(row) for row in rows))
 
         with pytest.raises(PackageError, match="the solution says"):
             package(altered, board)

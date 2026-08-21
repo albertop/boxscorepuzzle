@@ -13,6 +13,7 @@ false in a place people read to learn what the boundary is.
 """
 
 from collections.abc import Callable
+from dataclasses import replace
 
 import pytest
 
@@ -86,23 +87,22 @@ def board() -> Board:
 
 
 def swapped(board: Board, **changes: object) -> Board:
-    """A board with some parts replaced, so a test can state only what it breaks."""
-    fields: dict[str, object] = {
-        "batting": board.batting,
-        "batting_totals": board.batting_totals,
-        "footnotes": board.footnotes,
-        "footnote_totals": board.footnote_totals,
-        "left_on_base": board.left_on_base,
-        "pitching": board.pitching,
-        "pitching_totals": board.pitching_totals,
-        "line_score": board.line_score,
-    }
-    fields.update(changes)
-    return Board(**fields)  # type: ignore[arg-type]
+    """A board with some parts replaced, so a test can state only what it breaks.
+
+    ⚠️⚠️ **`replace`, not a hand-written field list** (v36-P3-08). This named all eight fields, and a
+    second identical copy stood in `test_layers.py` as `replacing()`. That is the shape `CLAUDE.md`
+    records twice in `boxscore_package`: `offense_is_home` was added to `Package` and **both**
+    rebuilders dropped it without a word, so the object that got signed was not the object handed in.
+    A rebuilder that enumerates fields is a copy of the dataclass that nobody updates; `replace`
+    carries every field there is, including the ones that do not exist yet.
+    """
+    return replace(board, **changes)  # type: ignore[arg-type]
 
 
-@pytest.fixture
-def replace() -> Callable[..., Board]:
+@pytest.fixture(name="replace")
+def replace_fixture() -> Callable[..., Board]:
+    """⚠️ Named for the tests, defined under another name: `replace` is `dataclasses.replace` in this
+    module now, and a fixture shadowing it would make `swapped` call itself."""
     return swapped
 
 

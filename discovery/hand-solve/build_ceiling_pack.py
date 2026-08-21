@@ -40,13 +40,16 @@ sys.path.insert(0, str(_HERE))
 
 import build_pack  # noqa: E402
 from build_pack import Candidate, build_pdf, write_sheet  # noqa: E402
-from measure import Loaded, load, slot_references  # noqa: E402
+from measure import Loaded, load  # noqa: E402
 
 from boxscore_domain import BATTER_CAP, HAND_SOLVE_ZERO_DENSITY_GATE, MEDIAN_STALL_CEILING, PITCHER_CAP  # noqa: E402
 from boxscore_forge.constraints import cell_values, shape_of  # noqa: E402
 from boxscore_forge.erasure import DEFAULT_ORDERING, Puzzle, erase  # noqa: E402
 from boxscore_forge.identities import find_violations  # noqa: E402
-from boxscore_forge.publish import to_board  # noqa: E402
+from boxscore_forge.publish import (  # noqa: E402
+    slot_references,
+    to_board,
+)
 from boxscore_forge.solver import solve  # noqa: E402
 from boxscore_package.format import Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402

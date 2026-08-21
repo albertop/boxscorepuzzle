@@ -3611,6 +3611,41 @@ instruments — the shape this project treats as a defect — and becomes two fi
 populations, each interpretable on its own. **Neither number is a measurement of the other's
 quantity**, and any future comparison of the two has to re-run one of them under the other's terms.
 
+#### Group H — the rule was written and then not applied to the place it was written from
+
+`P3-05` three frozen result containers handed out a **mutable `dict`** — `frozen=True` freezes the
+binding, not the value. `Puzzle` holds `given` *and* the `Solution` proving that board is derivable;
+mutating the mapping leaves the pair describing two different boards. They are `MappingProxyType` over
+a **copy** now, and the copy is the point: a proxy over a dict the caller still holds is the same
+defect with one step added. ⚠️ The first version of the `Solution` test **could not fail** — it went
+through `solve()`, which builds its own dict, so removing the copy left it green while the other two
+went red. Rewritten to construct directly. Cost measured rather than assumed: 1.25 ms per solve
+against 1.30 ms with the freeze switched off — **inside the noise**.
+
+`P3-08` `refs()` stood in **seven files byte for byte**, and its own docstring records that it once
+invented a tenth batting-order slot, which no lineup has. The key pair stood in four. Both live in
+`tests/verify/helpers.py` now. ⚠️ Imported rather than made fixtures: `refs()` has 42 call sites and a
+fixture would mean editing 42 signatures to gain nothing the import gives.
+
+⚠️⚠️ **And the same item carried two hand-written rebuilders of `Board`** — `conftest.swapped()` and an
+identical `test_layers.replacing()`, each naming all eight fields. That is precisely the defect
+`test_rebuilders_carry_every_field.py` exists for, whose docstring records `offense_is_home` being
+added and **both** `Package` rebuilders silently dropping it. **The guard was looking only at
+`boxscore_package`**, so two fresh instances sat in the test tree the rule is enforced from — *a rule
+applied outward does not automatically apply inward*. One rebuilder now, using `dataclasses.replace`,
+and the sweep reaches it: reintroducing a hand list with one field missing turns it red.
+
+`P3-37` **`slot_references` produced a published, schema-validated field from inside a discovery
+instrument**, imported by the production writer — the exact pattern `publish.py`'s own docstring
+records as fixed ("a research experiment supplying the conversion for the artefact that ships"). It
+is in `boxscore_forge/publish.py` now, under `mypy --strict` and outside the ratcheted tree. ⚠️ Five
+call sites across `discovery/` and the test tree were repointed, and **the rewrite was caught by
+running rather than by reading**: ruff removed the now-unused re-export and three suites failed to
+import.
+
+⬜ **The pool loader itself is not moved and that is deliberate.** It carries the SQL, the connection
+and the era windows; promoting it is the inventory pipeline's work rather than a rename.
+
 ### ⚠️⚠️ One game, one id, two different boards — §21's first idempotence rule does not hold today
 
 **Found by regenerating the six on 2026-08-21.** `1dc57470b44caded` appears in both generations: same
@@ -4733,7 +4768,7 @@ resolving it re-bases the reporting.
 | **E. Stale docs and dead code** | 04, 06, 20, 22, 35, 44 | ✅ done |
 | **F. Tooling, CI, container** | 01, 09, 10, 11, 30, 31, 43 | ✅ done |
 | **G. Measurement correctness** | 21, 36, 40, 41, 42 | ✅ four fixed, one recorded |
-| **H. Structure and typing** | 05, 08, 37 | ⬜ |
+| **H. Structure and typing** | 05, 08, 37 | ✅ |
 | **I. Security documentation** | 29 | ⬜ |
 | **J. Page basics** | 39, 46, 47 | ⬜ |
 | **K. Decisions to record, not code** | 48, 49 | ⬜ |

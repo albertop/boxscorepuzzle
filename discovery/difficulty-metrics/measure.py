@@ -22,10 +22,8 @@ import random
 import statistics
 import sys
 from collections import Counter
-from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from string import ascii_lowercase
 from typing import Final
 
 # ⚠️ `pathlib`, not string surgery. (v36-P3-07) This split the path on the literal `discovery` and
@@ -454,34 +452,6 @@ def _position(
     if entered_as == 10:
         return "DH"
     return appeared_at or "?"
-
-
-def slot_references(slots: Sequence[int]) -> tuple[str, ...]:
-    """The reference for each row: `9` when its slot holds one row, `9a`/`9b`/`9c` when it is shared.
-
-    ⚠️ **One function, and both callers use it.** The slot cell and the footnote line apply the same
-    condition — *is this slot shared* — and two places applying one condition is the defect this
-    project has spent the day closing. The cell prints what this returns and the footnote prints what
-    this returns, so `SH: 9b` and the cell reading `9b` cannot drift into disagreeing.
-
-    The letter appears **only** where a slot is shared, which makes it the signal that a substitution
-    happened rather than decoration on every row: nine rows numbered 1 to 9, with letters exactly where
-    somebody was replaced. Never `2a` when there is no `2b`.
-
-    Every reference carries the slot number, never a bare letter. The footnote says `9b`, so a cell
-    saying `9b` makes finding the row a recognition rather than a composition — and leaves no second
-    representation of the same thing to go stale.
-
-    This applies to every slot, not only the ninth. A substituted left fielder gives `5a` and `5b`; the
-    pitcher's slot dominates the examples only because it is the position most often substituted.
-    """
-    shared = {slot for slot in slots if list(slots).count(slot) > 1}
-    seen: Counter[int] = Counter()
-    references: list[str] = []
-    for slot in slots:
-        seen[slot] += 1
-        references.append(f"{slot}{ascii_lowercase[seen[slot] - 1]}" if slot in shared else str(slot))
-    return tuple(references)
 
 
 def _batting_labels(positions: list[str]) -> tuple[str, ...]:
