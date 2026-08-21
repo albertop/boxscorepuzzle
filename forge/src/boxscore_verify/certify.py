@@ -31,12 +31,23 @@ from boxscore_verify.expected_id import expected_puzzle_id
 from boxscore_verify.plausibility import faults, reveal_faults
 from boxscore_verify.verify import UNSIGNED, Unsigned, Verdict, verify
 
-ACCEPTED_SOURCES: Final = ("EVA", "EVN", "EVF")
+ACCEPTED_SOURCES: Final = ("EVA", "EVN", "EVF", "EVE")
 """Stated here as well as in the loader, and the duplication is deliberate.
 
 §22 forbids the verifier importing from the generator, so the gate cannot read the loader's list. Two
 copies of a rule drift — this project has watched it happen — so `tests/test_certification.py`
 asserts the two agree rather than trusting that they do.
+
+`EVA` / `EVN` / `EVF` are regular-season event files, American / National / Federal, and a game
+carrying one has a row in `dbo.retroGameProvenance` saying so. **`EVE` is the postseason**, where every
+event file carries that single extension: no league letter and no deduced twin, so there is no
+provenance row and none is needed — the pool admits those games by a season floor instead.
+
+⚠️ **This list is what the *gate* accepts, which is deliberately not what the pool's SQL accepts.** The
+loader keeps `PROVENANCE_SOURCES` for the regular season's `CROSS APPLY`, without `EVE`, because
+widening the predicate that admits every game already in the pool is a change to the existing pool
+whether or not today's data notices. Here the question is different — *may this package be published* —
+and the answer covers both seasons.
 """
 
 

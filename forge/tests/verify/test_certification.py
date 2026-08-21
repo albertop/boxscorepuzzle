@@ -6,9 +6,9 @@ registry, and the list still says everything is covered. This walks the modules 
 `check_*` or `*_faults` that nothing calls fails here.
 """
 
-import ast
 import dataclasses
 import inspect
+import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -302,14 +302,31 @@ class TestTheDuplicatedSourceListAgrees:
         # §22 forbids the verifier importing from the generator, so the list exists twice on purpose.
         # Two copies of a rule drift — this project has watched it happen — so they are asserted equal
         # rather than trusted.
-        tree = ast.parse(LOADER.read_text(encoding="utf-8"))
-        loader_sources = next(
-            tuple(ast.literal_eval(node.value))  # type: ignore[arg-type]
-            for node in tree.body
-            if isinstance(node, ast.AnnAssign) and getattr(node.target, "id", "") == "ACCEPTED_SOURCES"
-        )
+        # ⚠️ **Imported, not parsed, and the change is the point.** This read the assignment with
+        # `ast.literal_eval`, which works only while the loader spells the tuple out. It stopped
+        # working the moment the list was derived from another constant — a guard that fails because
+        # the *spelling* changed while the rule held is the failure mode this project has recorded
+        # twice, and the fix both times was to compare what the code produces.
+        sys.path.insert(0, str(LOADER.parent))
+        import measure  # noqa: PLC0415
 
-        assert loader_sources == certification.ACCEPTED_SOURCES
+        assert measure.ACCEPTED_SOURCES == certification.ACCEPTED_SOURCES
+
+    def test_the_pool_sql_is_narrower_than_the_gate(self) -> None:
+        """⚠️ **The postseason source must not widen what admits the existing pool.**
+
+        `EVE` belongs to the gate, because a postseason package may be published. It must **not** reach
+        the regular season's provenance predicate, which is interpolated from `PROVENANCE_SOURCES`. The
+        first version of the postseason change put it in one list serving both, and the regression was
+        invisible in the data — no provenance row carries `EVE`, so nothing would have failed. *Harmless
+        in fact* is not the test; the rule was that the pool does not change.
+        """
+        sys.path.insert(0, str(LOADER.parent))
+        import measure  # noqa: PLC0415
+
+        assert "EVE" not in measure.PROVENANCE_SOURCES, "the postseason source reached the regular season's SQL"
+        assert "EVE" not in measure.PROVENANCE_LITERAL, "the rendered SQL list carries the postseason source"
+        assert set(measure.PROVENANCE_SOURCES) < set(measure.ACCEPTED_SOURCES), "the gate must be the wider of the two"
 
 
 class TestEvidenceMustBeAboutThisPackage:

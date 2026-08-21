@@ -48,7 +48,12 @@ from boxscore_forge.identities import (  # noqa: E402
     PITCHING_COLUMNS,
     find_violations,
 )
-from boxscore_domain import BATTER_CAP, PITCHER_CAP, ZERO_DENSITY_GATE  # noqa: E402
+from boxscore_domain import (  # noqa: E402
+    BATTER_CAP,
+    PITCHER_CAP,
+    POSTSEASON_SEASON_FLOOR,
+    ZERO_DENSITY_GATE,
+)
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 from boxscore_package.format import (  # noqa: E402
     PrintedBatter,
@@ -73,12 +78,42 @@ contributors and the rows loaded only batters, a game could pass the roster cap 
 the loaded board did not have.
 """
 
-ACCEPTED_SOURCES: Final = ("EVA", "EVN", "EVF")
-"""The event-file kinds a puzzle may come from: American, National, Federal.
+POSTSEASON_SOURCE: Final = "EVE"
+"""The extension every postseason event file carries. **Verified against the download, not assumed.**
+
+All 121 `events-post` zips hold 403 files and every one is `.EVE` — 1,878 games, no league letter and
+no deduced variant. Regular-season files split by league (`.EVA`/`.EVN`/`.EVF`) and carry a deduced
+twin (`.EDA`/`.EDN`/`.EDF`); postseason files do neither.
+
+⚠️ Spelled once and interpolated into both the acceptance list and the SQL, because it is the same
+fact in two places and this project has shipped the same rule twice before with the copies drifting.
+"""
+
+PROVENANCE_SOURCES: Final = ("EVA", "EVN", "EVF")
+"""What `dbo.retroGameProvenance` may hold and the pool may accept: American, National, Federal.
 
 An **acceptance** list, not an exclusion list. `EVR` is Negro Leagues — transcribed newspaper box
 scores that balance every identity and are still not scored games (§32) — and `ED?` is deduced. Both
 are excluded by not appearing here rather than by being named somewhere a future kind could miss.
+
+⚠️⚠️ **`EVE` is deliberately NOT in this tuple, and the first version of the postseason change put it
+here.** That version was wrong and an instrument caught it: adding a member to the list the regular
+season's `CROSS APPLY` interpolates *widens the predicate that admits every game the pool already
+holds*. It was harmless in fact — no provenance row carries `EVE` — and harmless in fact is not the
+test. The rule was that the existing pool does not change, and a widened predicate is a change to it
+whether or not today's data notices.
+
+**The two lists are separate because they answer different questions.** This one is *what a provenance
+row may say*. `ACCEPTED_SOURCES` is *what the publication gate may accept*, which is this plus the
+postseason, and the postseason has no provenance row to say anything.
+"""
+
+ACCEPTED_SOURCES: Final = (*PROVENANCE_SOURCES, POSTSEASON_SOURCE)
+"""Every source the publication gate accepts: the three provenanced kinds, and the postseason.
+
+Derived from `PROVENANCE_SOURCES` rather than spelled again, so a change to what the pool admits
+cannot leave the gate behind — the failure this project meets most often is two places that should
+agree and nothing checking that they do.
 """
 
 CONNECTION = "DSN=LocalServer;DATABASE=DGL;Encrypt=no;TrustServerCertificate=yes"
@@ -89,8 +124,11 @@ TAIL_TRIM = 3
 SEED = 20260817
 
 
-ACCEPTED_LITERAL: Final = ", ".join(f"'{source}'" for source in ACCEPTED_SOURCES)
-"""§32's accepted source types as a SQL list. Derived from `ACCEPTED_SOURCES`, never spelled."""
+PROVENANCE_LITERAL: Final = ", ".join(f"'{source}'" for source in PROVENANCE_SOURCES)
+"""§32's provenanced source types as a SQL list. Derived from `PROVENANCE_SOURCES`, never spelled.
+
+⚠️ Built from `PROVENANCE_SOURCES` and **not** from `ACCEPTED_SOURCES`: the SQL this feeds is the
+regular season's admission, and the postseason's `EVE` has no business widening it."""
 
 SEASON_WINDOW: Final = (1910, 2029)
 """The seasons the sampler draws from, hoisted out of the decade loop that spelled it.
@@ -101,6 +139,58 @@ cannot return.
 """
 
 
+@dataclass(frozen=True)
+class Season:
+    """Which season's tables a cohort draws from, and how §32 admissibility is established for it.
+
+    ⚠️⚠️ **`admission` is a `CROSS APPLY`, in both seasons, and that is the point rather than a
+    coincidence.** The rule this project keeps rediscovering is that *the absence of a check must not
+    read as the presence of a passing one*. A `CROSS APPLY` producing no row drops the game; an
+    `OUTER APPLY` would admit it with nulls. Adding the postseason by loosening the regular season's
+    apply to `OUTER` was the obvious change and would have silently made a regular-season game with a
+    missing provenance row admissible — a defect in the half nobody was editing, arriving attached to
+    a feature that has nothing to do with it.
+
+    So each season carries its own **positive** admission, and both fail the same way.
+    """
+
+    games: str
+    daily: str
+    substitutions: str
+    admission: str
+
+
+REGULAR: Final = Season(
+    games="dbo.retroGamesReg",
+    daily="dbo.retroDailyReg",
+    substitutions="dbo.retroSubstitutionsReg",
+    # ⚠️ Unchanged, and it must stay unchanged: this is what admits every game the pool already holds.
+    # Deduced games and Negro Leagues games are out (§32) and both balance every identity, which is why
+    # the exclusion is a join rather than a check — nothing downstream can catch a board that is
+    # consistent and still wrong. A game with no accepted, non-deduced provenance row produces no row.
+    admission=f"""CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
+                 WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({PROVENANCE_LITERAL})
+                 ORDER BY p.source_type) AS prov""",
+)
+"""The pool as it has always been. **Nothing about the postseason changes what this admits.**"""
+
+POSTSEASON: Final = Season(
+    games="dbo.retroGamesPost",
+    daily="dbo.retroDailyPost",
+    substitutions="dbo.retroSubstitutionsPost",
+    # There is no provenance table for the postseason and none is needed: every postseason event file
+    # is `.EVE`, with no deduced twin and no league letter, so there is nothing to exclude per game.
+    # The floor is protection against Retrosheet publishing something later that would need excluding.
+    # ⚠️ Still a CROSS APPLY: a game below the floor produces **no row**, exactly as an unprovenanced
+    # regular-season game does. The two seasons fail identically, which is the only reason it is safe
+    # to have two of them.
+    admission=f"""CROSS APPLY (SELECT '{POSTSEASON_SOURCE}' AS source_type, CAST(0 AS bit) AS is_deduced
+                 WHERE g.SEASON >= {POSTSEASON_SEASON_FLOOR}) AS prov""",
+)
+"""The postseason from `POSTSEASON_SEASON_FLOOR`. **Opt-in everywhere** — every caller that does not
+ask for it gets `REGULAR`, so adding this changed no existing measurement and no existing board."""
+
+
 def eligibility(
     *,
     max_batters: int = BATTER_CAP,
@@ -108,6 +198,7 @@ def eligibility(
     max_pitchers: int = PITCHER_CAP,
     gate_clause: str = "",
     seasons: str = "g.SEASON BETWEEN ? AND ?",
+    season: Season = REGULAR,
 ) -> str:
     """**The whole candidate cohort**: the provenance rule, both roster caps, the game-log join, the
     line score requirement, the season window and — when asked for — §5's zero-density gate.
@@ -119,10 +210,8 @@ def eligibility(
     solves most of a problem reads exactly like one that solves all of it**, which is why the whole
     thing is one string now rather than three shared fragments and a hope.
     """
-    return f"""FROM dbo.retroGamesReg g
-    CROSS APPLY (SELECT TOP 1 p.source_type, p.is_deduced FROM dbo.retroGameProvenance p
-                 WHERE p.GAME_ID = g.GAME_ID AND p.is_deduced = 0 AND p.source_type IN ({ACCEPTED_LITERAL})
-                 ORDER BY p.source_type) AS prov
+    return f"""FROM {season.games} g
+    {season.admission}
     JOIN shape o ON o.GAME_ID = g.GAME_ID
     JOIN shape d ON d.GAME_ID = g.GAME_ID AND d.TEAM_ID <> o.TEAM_ID
     JOIN dbo.retroGameLogs l ON l.GAME_ID = g.GAME_ID
@@ -134,21 +223,20 @@ def eligibility(
     WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
       AND l.VisLineScore IS NOT NULL
       AND {seasons}
-      -- Deduced games and Negro Leagues games are out of the pool (§32). Both balance every
-      -- identity, which is why the exclusion has to be a join rather than a check: nothing
-      -- downstream can catch a board that is consistent and still wrong.
-      -- ⚠️ EXISTS over an acceptance list, never NOT EXISTS over an exclusion list. The previous
-      -- form admitted a game with **no provenance row at all**: absence satisfied "not excluded", so
-      -- a partial import, a new season or an identifier mismatch silently turned "source unknown"
-      -- into "source approved". Completeness of the provenance table was an unstated precondition.
-      -- The acceptance rule lives in the CROSS APPLY above: a game with no accepted, non-deduced
-      -- provenance row produces no row at all. Stating it twice is the defect this file spent the day
-      -- closing, so the EXISTS that used to sit here is gone rather than kept as a belt.
+      -- ⚠️ The source rule (§32) is the CROSS APPLY above and is stated **only** there. It is an
+      -- acceptance list, never an exclusion list: the form that used to sit here admitted a game with
+      -- no provenance row at all, because absence satisfied "not excluded", so a partial import or an
+      -- identifier mismatch silently turned "source unknown" into "source approved". Stating it twice
+      -- is the defect this file spent a day closing, so the EXISTS that used to be here is gone
+      -- rather than kept as a belt — and `Season.admission` is why it stays one place now that there
+      -- are two seasons to admit.
       {gate_clause}
     """
 
 
-SHAPE_CTE: Final = f"""    WITH shape AS (
+def shape_cte(season: Season = REGULAR) -> str:
+    """The per-team shape a cohort query needs, over one season's daily table."""
+    return f"""    WITH shape AS (
       SELECT GAME_ID, TEAM_ID,
              -- Only rows that actually batted. See the note on the batting query below.
              SUM(CASE WHEN {CONTRIBUTED} THEN 1 ELSE 0 END) AS batters,
@@ -175,9 +263,16 @@ SHAPE_CTE: Final = f"""    WITH shape AS (
              SUM(CASE WHEN P_G=1 THEN P_ER ELSE 0 END) AS t_per,
              SUM(CASE WHEN P_G=1 THEN P_BB ELSE 0 END) AS t_pbb,
              SUM(CASE WHEN P_G=1 THEN P_SO ELSE 0 END) AS t_pso
-      FROM dbo.retroDailyReg GROUP BY GAME_ID, TEAM_ID)"""
-"""The per-team shape every cohort query needs: roster sizes **and the twelve zero counts §5's
-gate divides by.**
+      FROM {season.daily} GROUP BY GAME_ID, TEAM_ID)"""
+SHAPE_CTE: Final = shape_cte(REGULAR)
+"""The regular season's shape, derived from `shape_cte()` rather than spelled a second time.
+
+⚠️ **Kept as a module constant because eight scripts import it by that name.** When a mechanism grows a
+parameter, the callers that were reading the old one do not disappear — this project has already broken
+three consumers by removing something only one place wrote. Deriving the constant means there is still
+one definition, and nothing that imports `SHAPE_CTE` changed at all.
+
+Roster sizes **and the twelve zero counts §5's gate divides by.**
 
 ⚠️ **Hoisted after an instrument reimplemented a partial copy of it.**
 `discovery/footnote-multiplicity` computed only the roster counts and applied only the caps, then
@@ -562,6 +657,7 @@ def load(
     min_pitchers: int = 0,
     max_pitchers: int = PITCHER_CAP,
     also: tuple[str, ...] = (),
+    season: Season = REGULAR,
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
 
@@ -580,12 +676,19 @@ def load(
     still face every filter: the caps, the gate and the provenance rule apply to them exactly as they
     apply to the draw, so `also` cannot smuggle in a board the pool would refuse. **A named game that
     does not come back was rejected, and the caller must say so rather than fall silent.**
+
+    ⚠️ **`season` defaults to `REGULAR`, and every existing caller therefore loads exactly what it
+    loaded before.** Passing `POSTSEASON` swaps the three source tables and the admission rule
+    together — never one of them, which is why they travel as one record. The postseason has no
+    provenance table and needs none (every postseason event file is `.EVE`, no deduced twin), so its
+    admission is the season floor; a game below it produces no row, the same way an unprovenanced
+    regular-season game does.
     """
     import pyodbc  # noqa: PLC0415
 
     gate_clause = zero_density_clause(gate)
     query = f"""
-    {SHAPE_CTE}
+    {shape_cte(season)}
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN 1 ELSE 0 END AS offense_is_home,
            CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN g.HOME_LOB_CT ELSE g.AWAY_LOB_CT END AS lob,
@@ -622,7 +725,7 @@ def load(
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_at_bats,
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
-    {eligibility(max_batters=max_batters, min_pitchers=min_pitchers, max_pitchers=max_pitchers, gate_clause=gate_clause)}
+    {eligibility(max_batters=max_batters, min_pitchers=min_pitchers, max_pitchers=max_pitchers, gate_clause=gate_clause, season=season)}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     # The same SELECT with the sampling replaced by a name list. Built from the query above rather
@@ -656,10 +759,10 @@ def load(
       -- point", and the CASE picks by a fixed priority, so a pinch hitter who later took centre came
       -- out as CF and three men who each spent an inning there became CF-1, CF-2, CF-3. A lineup with
       -- three centre fielders is not a thing that happens, and no identity on the board can see it.
-      (SELECT TOP 1 s.SUB_FLD_CD FROM dbo.retroSubstitutionsReg s
+      (SELECT TOP 1 s.SUB_FLD_CD FROM {season.substitutions} s
        WHERE s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID AND s.SUB_FLD_CD BETWEEN 1 AND 9
        ORDER BY s.EVENT_ID) AS entered_fielding,
-      (SELECT TOP 1 s.SUB_FLD_CD FROM dbo.retroSubstitutionsReg s
+      (SELECT TOP 1 s.SUB_FLD_CD FROM {season.substitutions} s
        WHERE s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID
        ORDER BY s.EVENT_ID) AS entered_as,
       -- The batting-order slot. Always 1 to 9, and every direction has exactly nine distinct ones —
@@ -668,8 +771,8 @@ def load(
       d.SLOT_CT,
       CASE WHEN (CASE d.SLOT_CT {lineup_bat} END) = d.PLAYER_ID
            THEN (CASE d.SLOT_CT {lineup_fld} END) END AS started_at
-    FROM dbo.retroDailyReg d
-    LEFT JOIN dbo.retroGamesReg g ON g.GAME_ID = d.GAME_ID
+    FROM {season.daily} d
+    LEFT JOIN {season.games} g ON g.GAME_ID = d.GAME_ID
     -- The Retrosheet master file, keyed by the same identifier the daily rows carry.
     LEFT JOIN dbo.retroMaster m ON m.playerID = d.PLAYER_ID
     -- B_G = 1 marks a player as having appeared, not as having batted: 18.8% of those rows have no
@@ -689,13 +792,13 @@ def load(
     # game ahead of one who pitched the sixth. The substitution table has the event that put each
     # pitcher in, which is the real order. The starter has no substitution row, and P_GS puts him
     # first regardless.
-    pitch_query = """
+    pitch_query = f"""
     SELECT d.P_OUT, d.P_H, d.P_R, d.P_ER, d.P_BB, d.P_SO, d.P_GS, m.nickname, m.last, d.P_HR
-    FROM dbo.retroDailyReg d
+    FROM {season.daily} d
     -- The Retrosheet master file, keyed by the same identifier the daily rows carry.
     LEFT JOIN dbo.retroMaster m ON m.playerID = d.PLAYER_ID
     LEFT JOIN (SELECT GAME_ID, SUB_ID, MIN(EVENT_ID) AS entered
-               FROM dbo.retroSubstitutionsReg WHERE SUB_FLD_CD = 1
+               FROM {season.substitutions} WHERE SUB_FLD_CD = 1
                GROUP BY GAME_ID, SUB_ID) s
       ON s.GAME_ID = d.GAME_ID AND s.SUB_ID = d.PLAYER_ID
     WHERE d.GAME_ID = ? AND d.TEAM_ID = ? AND d.P_G = 1

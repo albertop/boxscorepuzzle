@@ -119,6 +119,49 @@ decade describes that decade's roster habits rather than the board. The specific
 """
 
 # ---------------------------------------------------------------------------------------------------
+# Which games the pool may draw from (§32)
+# ---------------------------------------------------------------------------------------------------
+
+POSTSEASON_SEASON_FLOOR: Final = 1969
+"""Earliest postseason season the pool admits. **Measured, and it arrives from two directions.**
+
+The postseason is a second source of boards. It needs a floor because the pool's source rule (§32)
+excludes deduced reconstructions and Negro Leagues games, and the regular season establishes that per
+game through `dbo.retroGameProvenance`. **No such table exists for the postseason and none is needed**
+— all 121 `events-post` zips hold 403 files and every one is `.EVE`: 1,878 games, not one deduced, no
+league letter. There is nothing there to exclude.
+
+So the floor is not doing the work the provenance table does. It is protection against Retrosheet
+publishing something later that would need excluding — a Negro Leagues postseason, a reconstruction —
+and it is set where two independent facts meet:
+
+  the first LCS is 1969        before it the postseason was the World Series alone, and a
+                               multi-round postseason is what makes a modern one
+  the last deduced game is 1968  across the whole database, regular season included
+
+Neither was derived from the other: one is about how baseball was organised, the other about how
+Retrosheet reconstructed missing scoresheets. Divisional play begins and the mound is lowered the same
+year, so the line is explicable to a player as well.
+
+⚠️ **A floor is a weaker guarantee than the provenance table, and the difference is the reason this
+docstring exists.** The table asserts *this game came from a scored file*. A floor asserts *no game in
+this era came from one that was not*, which is a claim about Retrosheet's future behaviour rather than
+about a row. `discovery/retrosheet-coverage/check_postseason_sources.ps1` is what re-establishes it
+against a new download; without that it is an assumption that ages silently.
+
+**What it admits:** 572 directions — LCS 233, DVS 179, WS 141, WCG 19 — against the regular season's
+102,228. ⚠️ **The postseason is not a pool argument at 0.6%**, and it was not adopted as one: postseason
+boards survive §5's gate *worse* than regular boards of the same decade (14.1% against 23.2% in the
+2010s), because October means deeper bullpens and less scoring. It is here for §7's reveal, where a
+board resolving to a World Series game is a different payoff from a Tuesday in June.
+
+**⚠️ The regular season is untouched by this.** It keeps every game it has, back to 1910, and keeps the
+provenance table that admits them. The floor applies to the postseason and nowhere else — a change
+here must never become a change to what the pool already contains.
+
+"""
+
+# ---------------------------------------------------------------------------------------------------
 # Operations (§33)
 # ---------------------------------------------------------------------------------------------------
 
