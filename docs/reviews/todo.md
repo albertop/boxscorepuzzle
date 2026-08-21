@@ -3831,6 +3831,58 @@ Fixed, and `forge/tests/test_the_writer_passes_its_own_gate.py` now calls the wr
 without a database. **The gate's two directions were already tested; the call site was not**, and the
 existing fixture builds a package it calls *"the way production builds it"* with no metadata at all.
 
+### The stall ceiling, re-run at the decided gate — **6, against a recorded 5**
+
+**2026-08-21.** `discovery/board-configurations/measure.py` at `ZERO_DENSITY_GATE`, 48 gated
+directions, four per decade across twelve decades, 432 measured ceilings.
+
+| | p50 | p90 | max | reach five or more |
+|---|---|---|---|---|
+| **the live board** (footnotes given, §6) | **6** | 10 | 12 | **67%** |
+
+`MEDIAN_STALL_CEILING` is recorded as **5**, *"unchanged by the pitcher cap change"*. At the decided
+gate the median board reaches **6**.
+
+⚠️ **Not changed in `boxscore_domain`, and the reason is the same one that applies to the coverage
+run.** A looser gate admits *more* zero-heavy boards, which compress least, so the median should have
+moved **down** if the gate were the cause. It moved up. **One run at one gate does not establish what
+moved it**, and `STALL_TARGETS` is already marked `PROVISIONAL` pending the hand-solve pack — which is
+the thing that decides whether the stall scale corresponds to felt difficulty at all. Changing a
+decided constant on a figure whose cause is unidentified would be inventing a parameter that shapes
+the product.
+
+**Both re-runs agree with each other on the shape**: 67% of boards reach a ceiling of five or more
+here, and 71% can be erased to a five-stall target in the coverage run. Two instruments, two
+definitions, one answer — **the pool is not thin in the middle.**
+
+### ⚠️⚠️ And the instrument still offers a deleted option as a live choice
+
+Its comparison table prints three rows — `baseline`, `footnotes`, `footnotes+lob` — with the footnote
+arms reporting a median of **16** stalls against the baseline's 6. **Those two configurations were
+decided against, and their production machinery was deleted rather than disabled.** `erasable_for()`
+is where it survives: `erasable()` returns no footnote cell, and that function adds them back.
+
+**Their numbers are the zero-counting ones.** With `HBP`, `SF`, `SH` and `CI` all zero for a batter the
+row identity is `PA = AB + BB`, so an erased term asks the solver to deduce a value that exists only
+because the thing did not happen — **96% of the pool's footnote terms are zero.** So `16 against 6` is
+not a board ten stalls harder; it is a board with ten more zeros to type, and the pool run that settled
+this found coverage identical at every target with the cells open and given.
+
+⚠️ **The hazard is that the table reads as a live comparison.** Anyone running this instrument today
+sees the corrected error restated as a current result, in the format of a decision aid. The two arms
+are **labelled in the docstring and in the printed table** now — the header says which single row is
+real — and nothing may draw a conclusion from them.
+
+⚠️ **And labelling them broke the build, which is the fourth instance of a rule this project keeps
+re-breaking.** The header line went in as `print("  ⚠ ONLY \`baseline\` ...")`, and a redirected
+stream on Windows is cp1252 — `UnicodeEncodeError` **after the compute, before the numbers reach
+anyone**. `test_reports_survive_a_redirected_stream.py` caught it on the pre-push hook, which is what
+that guard exists for and the reason it stopped being a comment. Plain text now.
+
+⬜ **Whether the two arms are deleted is an operator decision.** Keeping them lets the recorded figures
+be reproduced, which is the argument that kept every other superseded instrument intact; deleting them
+is what `CLAUDE.md` says was done everywhere else for this particular option.
+
 ### ⚠️ Coverage per stall target, re-run at the decided gate — and the move is **not** the gate
 
 **2026-08-21.** `discovery/stall-targeted/measure.py` at `ZERO_DENSITY_GATE`, 48 gated directions, four
@@ -3908,9 +3960,10 @@ zero-density range is systematically attenuated, so the `+0.79` is a lower bound
 estimate — which does not weaken the conclusion drawn from it, since that conclusion was *this
 correlates too strongly to rank on*.
 
-⬜ **What is worth re-running, and it is two things.** The **stall ceiling** and **coverage per
-target**, at the decided gate, because the ladder's rungs come from the first and the inventory
-question from the second. ✅ **Coverage is done — see the entry above.** ⬜ The ceiling is running. Everything else stays annotated: it informs, nothing rests on it, and the
+✅ **Both re-runs are done, 2026-08-21** — the **stall ceiling** and **coverage per target** at the
+decided gate, because the ladder's rungs come from the first and the inventory question from the
+second. See the two entries above. ⚠️ **Neither difference is attributable to the gate**: both moved in
+the direction a *looser* gate cannot explain. Everything else stays annotated: it informs, nothing rests on it, and the
 comparative forms hold anyway.
 
 ⬜ **And a decision that is not mine:** each of the eight instruments that omitted `gated` now says

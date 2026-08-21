@@ -103,9 +103,25 @@ def _stalls(solution: object) -> int:
 def erasable_for(loaded: Loaded, configuration: str) -> list[str]:
     """Which cells this configuration allows to be unknown.
 
-    The baseline is §6's board: the grid only, with the line score and the footnote line given. The
-    two free configurations open the footnote line and left-on-base, which sit *inside* identities
-    rather than beside them.
+    The baseline is §6's board: the grid only, with the line score and the footnote line given.
+
+    ⚠️⚠️ **The two other configurations measure an option that was decided against and whose production
+    machinery was deleted**, and this function is where it survives — `erasable()` returns no footnote
+    cell, and the lines below add them back. Their figures are **the zero-counting ones**: when `HBP`,
+    `SF`, `SH` and `CI` are all zero for a batter the row identity is `PA = AB + BB`, so an erased term
+    asks the solver to deduce a value that exists only because the thing did not happen. It does,
+    correctly, recording a step each time — **96% of the pool's footnote terms are zero.**
+
+    **So the `footnotes` arm reporting a median of 16 against the baseline's 6 is not a board that is
+    ten stalls harder; it is a board with ten more zeros to type.** The pool run that settled this found
+    coverage identical at every target with the cells open and given, field-for-field in 91% of paired
+    trials.
+
+    ⚠️ **Kept and labelled rather than deleted**, because the recorded figures belong to it and an
+    instrument that cannot reproduce them is worse than one that can — but **nothing may draw a
+    conclusion from those two arms**, and a reader of the comparison table has to be told that here
+    rather than work it out. Whether they go is an operator decision, recorded in
+    `docs/reviews/todo.md`.
     """
     cells = list(erasable(loaded.direction))
     if configuration in {"footnotes", "footnotes+lob"}:
@@ -160,6 +176,11 @@ def ceiling_for(loaded: Loaded, configuration: str, seed: int) -> Ceiling | None
 def report(results: list[Ceiling]) -> None:
     print("")
     print("=== WHAT EACH CONFIGURATION BUYS, AGAINST THE BASELINE ===")
+    # ⚠️ Printed with the table rather than left to the reader. Two of these three rows measure an
+    # option that was decided against, on a measurement, and their numbers are inflated by the solver
+    # deducing footnote zeros. See `erasable_for`.
+    print("  ONLY `baseline` IS A LIVE CONFIGURATION. The footnote arms measure a deleted option and")
+    print("    their stall counts are inflated by zeros the player never types -- see erasable_for().")
     print("Ceiling is not chain length. Chain measures how long the board is, not how hard.")
     heads = (
         f"{'configuration':>16}{'boards':>8}{'blanks':>8}{'chain':>7}"
