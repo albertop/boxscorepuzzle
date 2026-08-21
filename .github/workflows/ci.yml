@@ -28,6 +28,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# ⚠️ **Actions pinned by commit, not by tag.** (v36-P3-30) `@v4` and `@v5` are mutable references: the
+# code they resolve to can change without this file changing. `permissions: contents: read` is already
+# minimal and no secrets are referenced, so the entire supply-chain risk here is **exfiltration of the
+# checked-out `forge/`** — which is the one asset that keeps this repository private permanently (§16).
+# Low likelihood, high asymmetry, one line each.
 permissions:
   contents: read
 
@@ -46,7 +51,7 @@ jobs:
         working-directory: forge
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       # pyodbc builds against unixODBC. Nothing in the test suite opens a connection — `load()` imports
       # pyodbc lazily and only the discovery scripts call it — but the package still has to install.
@@ -55,7 +60,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
         working-directory: .
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
         with:
           enable-cache: true
 
@@ -67,6 +72,11 @@ jobs:
 
       - name: Lint the forge
         run: uv run ruff check src scripts tests
+
+      # ⚠️ Mandated by docs/python-conventions.md and run nowhere until v36-P3-01. A documented check
+      # that does not exist is the shape the CI section of CLAUDE.md was rewritten to close.
+      - name: Format the forge
+        run: uv run ruff format --check src scripts tests
 
       - name: Lint discovery and tools, against the baseline
         run: uv run python ../tools/lint_discovery.py
@@ -95,12 +105,12 @@ jobs:
     # every way of not finishing.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       - name: ODBC headers
         run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
         with:
           enable-cache: true
 

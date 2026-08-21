@@ -91,6 +91,7 @@ class TestTheDefectItself:
     # is gone and the claim with it; the invariant that *is* implemented — a row must have contributed
     # something — is what the test above exercises.
 
+
 class TestARealBoardPasses:
     def test_the_fixture_is_plausible(self, board: Board) -> None:
         # A check that rejects a real boxscore is worse than no check, because it gets loosened until

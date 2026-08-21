@@ -343,6 +343,7 @@ class TestTheTwoKeyModesAreExclusive:
         assert "if ephemeral and material:" in source
         assert "Refusing to guess which trust" in source
 
+
 _PUBLISHED = Path(__file__).resolve().parents[2] / "serve" / "data" / "puzzles"
 
 

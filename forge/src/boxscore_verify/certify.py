@@ -310,9 +310,8 @@ def check_printed_boxscore_corresponds(
         )
     return refusals
 
-def check_no_leaking_metadata(
-    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
-) -> list[str]:
+
+def check_no_leaking_metadata(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """The metadata carries nothing that gives the game away. (v36-P2-10)
 
     ⚠️⚠️ **The gate never asked.** `published()` strips `LEAKING_METADATA` — `game_id`, `retrosheet_id`,

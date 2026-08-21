@@ -54,13 +54,26 @@ echo "  ruff, forge"
 uv run ruff check src scripts tests
 
 echo "  ruff, discovery and tools, against the baseline"
-uv run python ../tools/lint_discovery.py > /dev/null
+# ⚠️⚠️ **Captured and printed on failure, not discarded.** (v36-P3-09) This sent everything to
+# `/dev/null`, so a push aborted with **no indication of what to fix** — and the operator's next move
+# after a silent refusal is `--no-verify`, which defeats the hook entirely. It also contradicted the
+# ratchet's own recorded design: *the whole report is printed every run*. Quiet on success, complete on
+# failure.
+if ! ratchet=$(uv run python ../tools/lint_discovery.py); then
+  echo "$ratchet"
+  exit 1
+fi
 
 echo "  mypy"
 uv run mypy src
 
 echo "  tests and the coverage floor"
 uv run pytest --cov --cov-report=term-missing -q
+
+echo "  ruff format"
+# ⚠️ `docs/python-conventions.md` mandates `ruff format` and neither this hook nor CI ran it, so the
+# drift it exists to catch had reached `main`. v36-P3-01.
+uv run ruff format --check src scripts tests
 
 echo "  the browser suite"
 uv run python ../tools/run_browser_tests.py

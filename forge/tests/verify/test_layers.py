@@ -173,9 +173,7 @@ class TestLayerTwoCatchesAmbiguity:
         with pytest.raises(PackageError, match="the solution says"):
             package(contradicting, board)
 
-    def test_an_impossible_board_is_caught_by_layer_one_rather_than_layer_two(
-        self, board: Board, blank: Blank
-    ) -> None:
+    def test_an_impossible_board_is_caught_by_layer_one_rather_than_layer_two(self, board: Board, blank: Blank) -> None:
         """⚠️ **And putting the contradiction in both halves moves it one layer earlier, not later.**
 
         With the givens forced to match the solution, the only way to express *forty hits against eight

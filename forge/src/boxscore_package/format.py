@@ -1114,9 +1114,7 @@ def _check_givens_agree(puzzle: Board, solution: Board) -> None:
                 message = f"puzzle.{name}[{column}] gives {value} and the solution says {answer_row[column]}"
                 raise PackageError(message)
     if puzzle.left_on_base != solution.left_on_base:
-        message = (
-            f"puzzle.left_on_base is {puzzle.left_on_base} and the solution says {solution.left_on_base}"
-        )
+        message = f"puzzle.left_on_base is {puzzle.left_on_base} and the solution says {solution.left_on_base}"
         raise PackageError(message)
 
 

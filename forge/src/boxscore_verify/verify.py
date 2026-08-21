@@ -145,9 +145,7 @@ def verify(package: Package, *, secret: Ed25519PublicKey | Unsigned | None, sour
     return Verdict(puzzle_id=package.puzzle_id)
 
 
-def check_signature(
-    package: Package, secret: Ed25519PublicKey | Unsigned | None, _source: Board
-) -> Rejection | None:
+def check_signature(package: Package, secret: Ed25519PublicKey | Unsigned | None, _source: Board) -> Rejection | None:
     """Checked first: nothing else is worth computing about a file that arrived damaged."""
     if secret is None:
         message = "no signing secret: pass UNSIGNED to skip this layer, deliberately"

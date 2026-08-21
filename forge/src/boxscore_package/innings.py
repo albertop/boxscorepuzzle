@@ -46,6 +46,8 @@ class Innings(Enum):
 
     PRINTED = "printed"
     BOARD = "board"
+
+
 _PATTERN: Final = re.compile(r"^(\d+)(?:\.([0-9]))?$")
 
 

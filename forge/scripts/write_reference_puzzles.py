@@ -278,9 +278,7 @@ def _traits_survived(published: list[Package]) -> None:
     # makes this worth asserting — the promise is one discard away from being false.
     with_slot = [one for one in published if any(not ref.isdigit() for ref in one.slot_references or ())]
     with_footnote = [
-        one
-        for one in published
-        if any(value for row in one.solution.footnotes for value in row if value is not None)
+        one for one in published if any(value for row in one.solution.footnotes for value in row if value is not None)
     ]
     missing = []
     if not with_slot:

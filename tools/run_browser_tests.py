@@ -52,6 +52,28 @@ def free_port() -> int:
         return int(probe.getsockname()[1])
 
 
+def _stop(server: "subprocess.Popen[str]", *, explain: bool) -> None:
+    """Shut the development server down and, when something went wrong, say what it said.
+
+    ⚠️ **The wait used to be a bare `server.wait(timeout=10)` inside the `finally`.** A
+    `TimeoutExpired` raised there **replaces whatever exception was already travelling** — the
+    runner losing the diagnosis on its way to reporting one. v36-P3-11.
+
+    ⚠️ `explain` rather than always: the server's log on a green run is noise, and noise is how a
+    report stops being read.
+    """
+    server.terminate()
+    try:
+        leftover = server.communicate(timeout=10)[0]
+    except subprocess.TimeoutExpired:
+        server.kill()
+        leftover = "the development server did not stop; killed"
+    if explain and leftover and leftover.strip():
+        print("the development server said:")
+        for line in leftover.strip().splitlines()[-20:]:
+            print(f"  {line}")
+
+
 def main() -> int:
     try:
         from playwright.sync_api import sync_playwright  # noqa: PLC0415
@@ -60,12 +82,22 @@ def main() -> int:
         return 2
 
     port = free_port()
+    # ⚠️⚠️ **The server's own diagnostics are kept, not discarded.** (v36-P3-11) Both streams went to
+    # `DEVNULL`, so a port stolen between `free_port()` and here, or a crash inside `dev_server.py`,
+    # presented as a bare `net::ERR_CONNECTION_REFUSED` with the one explanation thrown away. Every
+    # path already failed closed; what was missing was any way to find out why.
     server = subprocess.Popen(  # noqa: S603
         [sys.executable, str(SERVER), str(port)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     console: list[str] = []
+    # ⚠️ Set before every failing exit and read in the `finally`. The server's own log is
+    # diagnosis: printing it on a green run is noise, and noise is how a report stops being read.
+    trouble = False
     try:
         with sync_playwright() as play:
             browser = play.chromium.launch(headless="--headed" not in sys.argv)
@@ -93,21 +125,36 @@ def main() -> int:
                     timeout=READY_TIMEOUT_MS,
                 )
             except Exception:  # noqa: BLE001
+                trouble = True
                 print("the browser suite never finished — no window.__results after "
                       f"{READY_TIMEOUT_MS // 1000}s. The console said:")
                 print("\n".join(console) or "  (nothing)")
                 return 1
 
             if page.evaluate("window.__results === undefined"):
+                trouble = True
                 print("the browser suite died before it could run. The console said:")
                 print("\n".join(console) or "  (nothing)")
                 return 1
 
             results = page.evaluate("window.__results")
+            # ⚠️ **A page error after the results are set is still a page error.** (v36-P3-11) The
+            # docstring calls one fatal; the check happened only while waiting, so an exception thrown
+            # during teardown — or by anything the suite kicked off and did not await — was collected
+            # into `console` and then ignored, and the run reported the passes it had.
+            if page.evaluate("window.__fatal === 1"):
+                trouble = True
+                print("the page raised after the suite finished. The console said:")
+                print("\n".join(console) or "  (nothing)")
+                browser.close()
+                return 1
             browser.close()
+    except BaseException:
+        # A crash on the way out is exactly when the server's log is worth having.
+        trouble = True
+        raise
     finally:
-        server.terminate()
-        server.wait(timeout=10)
+        _stop(server, explain=trouble)
 
     failures = results["failures"]
     for failure in failures:

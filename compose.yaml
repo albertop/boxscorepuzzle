@@ -17,6 +17,12 @@ services:
     image: python:3.13-alpine
     container_name: boxscorepuzzle-serve
     working_dir: /app
+    # ⚠️ **`init: true`, so something reaps signals.** (v36-P3-43) The exec-form command makes CPython
+    # PID 1, `dev_server.py` installs no SIGTERM handler, and PID 1 gets no default signal
+    # dispositions — so `docker compose stop` sent SIGTERM, nothing happened, and the runtime SIGKILLed
+    # after the grace period: a ten-second stall on every stop. Cosmetic in development, and **a server
+    # that ignores SIGTERM is the kind of shape that silently becomes the production path**.
+    init: true
     command: ["python", "tools/dev_server.py", "8080"]
 
     # ⚠️ **Read-only mounts.** The server only ever reads, and the laptop's tree is the source of
@@ -38,4 +44,13 @@ services:
     ports:
       - "0.0.0.0:8137:8080"
 
-    restart: unless-stopped
+    # ⚠️⚠️ **`no`, not `unless-stopped`.** (v36-P3-31) The all-interfaces publish above is deliberate —
+    # it is what puts the board on a phone — but combined with `unless-stopped` the container
+    # **auto-started with Docker Desktop on every boot, indefinitely, including on public Wi-Fi**,
+    # serving the whole `serve/` tree through a stdlib handler with directory listings.
+    #
+    # That interaction was written down nowhere. What it serves is low value today (`forge/` is not
+    # mounted; the mounts are `./serve` and `./tools`, read-only) and the standing exposure is the
+    # point rather than the payload. `docker compose up` when the board is wanted on a handset is one
+    # command; a listener on every network the laptop joins is not something to acquire by default.
+    restart: "no"

@@ -159,6 +159,7 @@ class TestItNeverExcludesTheTruth:
 
             assert bounds.low <= original[cell] <= _upper(bounds)
 
+
 class TestAContradictionIsRaisedRatherThanRunForever:
     """⚠️⚠️ **The loop had no bound and an inconsistent system made it run for ever.** v36-P2-01.
 
@@ -195,9 +196,7 @@ class TestAContradictionIsRaisedRatherThanRunForever:
         with pytest.raises(ContradictionError, match="did not settle"):
             narrow(shape, {}, system=self._impossible_pair(shape))
 
-    def test_the_message_names_the_shape_rather_than_blaming_the_board(
-        self, cubs_at_braves_1968: Direction
-    ) -> None:
+    def test_the_message_names_the_shape_rather_than_blaming_the_board(self, cubs_at_braves_1968: Direction) -> None:
         # The operator reading this is looking at a batch that stopped. "Slow" and "impossible" need
         # different responses, and the message has to say which one this is.
         shape = shape_of(cubs_at_braves_1968)
@@ -234,4 +233,3 @@ class TestAContradictionIsRaisedRatherThanRunForever:
             f"a real board took {passes['count']} passes against a ceiling of {ceiling}; "
             f"the headroom this cap was set with is gone"
         )
-
