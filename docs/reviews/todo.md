@@ -4625,7 +4625,7 @@ resolving it re-bases the reporting.
 |---|---|---|
 | **A. Checks that do not check** | 12, 13, 14, 15, 16, 17, 18, 19, 28, 38 | ✅ done |
 | **B. The client's boundary, and immutability** | 23, 24, 25, 26, 27, 45 | ✅ done |
-| **C. Escaping in instruments** | 32, 33, 34 | ⬜ |
+| **C. Escaping in instruments** | 32, 33, 34 | ✅ done |
 | **D. Reproducible from the script alone** | 02, 03, 07 | ⬜ |
 | **E. Stale docs and dead code** | 04, 06, 20, 22, 35, 44 | ⬜ |
 | **F. Tooling, CI, container** | 01, 09, 10, 11, 30, 31, 43 | ⬜ |
@@ -4684,7 +4684,7 @@ refused, never substituted — decided now so it is not invented during the rout
 
 ### Still open from v36
 
-**Groups C through K: 33 items.**
+**Groups D through K: 30 items.**
 
 
 ---

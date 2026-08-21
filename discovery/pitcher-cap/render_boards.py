@@ -257,16 +257,23 @@ def _board_html(board: dict[str, object], *, heading: str | None = None) -> str:
 
 
 def page(boards: list[dict[str, object]], *, title: str = "", intro: str = "") -> str:
+    # ⚠️⚠️ **The title and the intro go through `esc()` like everything else.** (v36-P3-32) `esc()`'s
+    # own docstring says *everything interpolated into generated HTML goes through here*, and every
+    # board value did — these two did not. All eight call sites pass literals today, which is exactly
+    # the condition under which the exception survives: nothing is wrong until the first caller builds
+    # a title from a database label, and then a label carrying markup runs in the operator's browser
+    # when the report opens. CLAUDE.md states the rule and names discovery instruments in it.
+    heading = esc(title) if title else "Boards to look at"
     return (
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        f"<title>{title or 'Boards to look at'}</title>"
+        f"<title>{heading}</title>"
         f"<style>{STYLE}</style></head><body>"
-        f"<h1>{title or 'Boards to look at'}</h1>"
+        f"<h1>{heading}</h1>"
         # A measurement instrument whose title contradicts its content misleads whoever reads it in
         # six months, so the caller states what the page is rather than inheriting an old answer.
         + (
-            f"<p class='intro'>{intro}</p>"
+            f"<p class='intro'>{esc(intro)}</p>"
             if intro
             else "<p class='intro'>Drawn at the 375px width the board is designed for. Shaded cells are"
             " the blanks the player fills.</p>"

@@ -39,7 +39,9 @@
     const game = createGame(puzzle);
     const frame = document.createElement("div");
     frame.className = "frame";
-    frame.append(renderFootnotes(puzzle, game, () => {}));
+    // ⚠️ Two arguments. The third was a callback from the erasable-footnote era and the function has
+    // not taken one since those cells became given again (v36-P3-34, secondary).
+    frame.append(renderFootnotes(puzzle, game));
     out.append(frame);
     const line = frame.querySelector(".footnotes");
     // ⚠⚠ **v28-P3-01: this counted `.cell`, and the footnote line has not contained one for months.**
@@ -63,6 +65,12 @@
     });
   }
 
+  // ⚠️ **Ids escaped before they reach `innerHTML`.** (v36-P3-34) `r.id` comes from
+  // `manifest.puzzles`, and nothing validates that array — the package reader checks the *file's*
+  // `puzzle_id`, never the manifest entry it was fetched by. Rule-conformance rather than a live hole,
+  // since whoever controls the manifest controls the served content anyway; CLAUDE.md names discovery
+  // and measurement pages in the rule for the same reason it names everything else.
+  const esc = (value) => String(value).replace(/[&<>"']/g, (one) => `&#${one.charCodeAt(0)};`);
   const table = document.createElement("table");
   table.innerHTML =
     "<caption>the footnote block at 375px, rendered with the board's own renderer</caption>" +
@@ -72,7 +80,7 @@
       .sort((a, b) => a.carriers - b.carriers || a.terms - b.terms)
       .map(
         (r) =>
-          `<tr><td>${r.id}</td><td>${r.terms}</td><td>${r.carriers}</td><td>${r.height}px</td>` +
+          `<tr><td>${esc(r.id)}</td><td>${r.terms}</td><td>${r.carriers}</td><td>${r.height}px</td>` +
           `<td>${((r.height / 812) * 100).toFixed(0)}%</td><td>${Math.round(r.height / 44)}</td></tr>`,
       )
       .join("");

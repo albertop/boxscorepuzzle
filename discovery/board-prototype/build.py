@@ -151,7 +151,14 @@ def main() -> None:
 
     out = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
     template = (out / "template.html").read_text(encoding="utf-8")
-    (out / "board.html").write_text(template.replace("/*BOARDS*/", json.dumps(boards, indent=1)), encoding="utf-8")
+    # ⚠️⚠️ **`</` is escaped, because the injection point is inside a `<script>` block.** (v36-P3-33)
+    # The template's runtime rendering escapes properly, but that runs *after* the browser has parsed
+    # the element — and `json.dumps` does not escape `/`, so a string holding `</script>` closes the
+    # block before any of the page's own escaping exists. The values are player names from
+    # `dbo.retroMaster`; no Retrosheet surname does this, and the fix removes the assumption rather
+    # than resting on it.
+    payload = json.dumps(boards, indent=1).replace("</", "<\\/")
+    (out / "board.html").write_text(template.replace("/*BOARDS*/", payload), encoding="utf-8")
     for board in boards:
         print(f"  {board['id']} {board['season']}: {board['note']}, {len(board['labels'])} batting rows")
     print(f"wrote {out / 'board.html'}")
