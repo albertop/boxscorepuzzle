@@ -94,11 +94,13 @@
    * means something wrapped, which is the same defect seen from the side.
    */
   const measure = (host, innings, fontSize) => {
-    const frame = document.createElement("div");
-    frame.className = "linescore";
+    // ⚠️ The frame comes from `renderLineScore` now. This page used to build the
+    // `.linescore` wrapper itself, which is the harness supplying a property of the thing under
+    // test — it happened to match, and a sample cannot judge what the sample provides.
+    const frame = renderLineScore(scoreFor(innings), false);
     frame.style.fontSize = "";
     host.append(frame);
-    const table = renderLineScore(scoreFor(innings), false);
+    const table = frame.querySelector("table");
     table.style.fontSize = `${fontSize}px`;
     frame.append(table);
 
@@ -175,11 +177,12 @@
     label.className = "device-label";
     label.textContent = `${innings} innings at ${size}px`;
     device.append(label);
-    const frame = document.createElement("div");
-    frame.className = "linescore";
-    const table = renderLineScore(scoreFor(innings), false);
+    // ⚠️ The frame comes from `renderLineScore` now. This page used to build the
+    // `.linescore` wrapper itself, which is the harness supplying a property of the thing under
+    // test — it happened to match, and a sample cannot judge what the sample provides.
+    const frame = renderLineScore(scoreFor(innings), false);
+    const table = frame.querySelector("table");
     table.style.fontSize = `${size}px`;
-    frame.append(table);
     device.append(frame);
     out.append(device);
   }

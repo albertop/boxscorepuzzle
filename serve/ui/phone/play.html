@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>boxscore</title>
+<link rel="stylesheet" href="fonts.css">
+<!-- Tokens before the rules that spend them: the cascade needs the custom properties defined first. -->
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="board.css">
+<!-- ⚠️ **The board moved here from `index.html`, which is now the landing page.**
+     `docs/serve-flow.md` §1: every visit lands on the landing page, not only the first, because the
+     archive, the streak and the subscription live there and a player routed past it would never meet
+     any of them. The board keeps `?p=` and `?test=` exactly as before. -->
+<div id="app"></div>
+<script type="module" src="main.js"></script>

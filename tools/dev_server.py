@@ -28,7 +28,8 @@ from pathlib import Path
 from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1] / "serve"
-BOARD = "/ui/phone/index.html"
+BOARD = "/ui/phone/play.html"
+LANDING = "/ui/phone/index.html"
 PORT = 8137
 
 
@@ -52,7 +53,14 @@ class NoCache(SimpleHTTPRequestHandler):
         # laptop and miserable on a handset — and the whole point of the test mode is checking a change
         # on the device it was designed for.
         #
-        # `/` opens the board. `/t/<mode>` opens it with that mode.
+        # ⚠️ **`/` opens the LANDING page, not the board, and that changed on 2026-08-20.** Every visit
+        # lands there (`docs/serve-flow.md` §1) because the archive, the streak and the subscription
+        # live on it — a player routed past it would never meet any of them. `/p` is the short way
+        # straight to a board for someone who is working on the board.
+        #
+        # `/t/<mode>` still goes straight to the board with that mode: it exists for checking a change
+        # on a handset, and routing a development mode through the landing page would add a tap to
+        # every single check.
         #
         # ⚠️ **One rule rather than a list of modes.** `serve/ui/phone/testmode.js` owns which modes
         # exist; this forwards whatever it is given, and an unknown one lands on a page that ignores it.
@@ -61,6 +69,11 @@ class NoCache(SimpleHTTPRequestHandler):
         # ⚠️ **And this can never reach a player.** It is `tools/`, which deployment does not ship — the
         # same boundary that keeps this whole server out of production.
         if self.path == "/":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", LANDING)
+            self.end_headers()
+            return
+        if self.path in ("/p", "/p/"):
             self.send_response(HTTPStatus.FOUND)
             self.send_header("Location", BOARD)
             self.end_headers()
@@ -114,7 +127,7 @@ def _reachable_at(port: int) -> list[str]:
         # interface, which is the one a phone on the same network would reach. No packet is sent.
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
             probe.connect(("10.255.255.255", 1))
-            addresses.append(f"http://{probe.getsockname()[0]}:{port}/   <- from a phone; /t/fill, /t/solved, /t/reset")
+            addresses.append(f"http://{probe.getsockname()[0]}:{port}/   <- from a phone; /p for the board, /t/fill, /t/solved, /t/reset")
     except OSError:
         addresses.append("(no network address found: this laptop is not on a network)")
     return addresses

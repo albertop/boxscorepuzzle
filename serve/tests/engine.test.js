@@ -1414,11 +1414,12 @@ suite("⚠️⚠️ The half-inning marker is a given, so it has to be legible",
       },
       false,
     );
-    const frame = document.createElement("div");
-    frame.className = "linescore";
-    frame.append(table);
+    // ⚠️ The frame comes from `renderLineScore` now. This page used to build the
+    // `.linescore` wrapper itself, which is the harness supplying a property of the thing under
+    // test — it happened to match, and a sample cannot judge what the sample provides.
+    const frame = table;
     document.body.append(frame);
-    return { table, frame };
+    return { table: frame.querySelector("table"), frame };
   };
 
   test("the not-played marker meets the contrast floor, and so does a played digit", async () => {
@@ -2656,5 +2657,340 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
     equal(formatDuration(62_000), "1:02");
     equal(formatDuration(3_600_000), "1:00:00");
     equal(formatDuration(3_661_000), "1:01:01");
+  });
+});
+
+suite("The landing page, which every visit lands on", () => {
+  const mount = async (raw, { session = null, today = new Date("2026-08-21T12:00:00") } = {}) => {
+    const { renderLanding } = await import("../ui/phone/landing.js");
+    const { createStore } = await import("../engine/store.js");
+    const { readPackage } = await import("../engine/package.js");
+    const puzzle = readPackage(raw);
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+    const kept = new Map();
+    const store = createStore({
+      getItem: (key) => kept.get(key) ?? null,
+      setItem: (key, value) => kept.set(key, value),
+      removeItem: (key) => kept.delete(key),
+    });
+    if (session) store.save(puzzle.id, session);
+    const went = [];
+    const view = renderLanding({ puzzle, root, store, today, go: (href) => went.push(href) });
+    return { ...view, root, puzzle, went, teardown: () => root.remove() };
+  };
+
+  /** A finished session for this package: every blank correct, and the clock frozen. */
+  const solvedSession = async (raw) => {
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const game = createGame(readPackage(raw));
+    for (const cell of game.cells()) {
+      if (game.isBlank(cell.name)) game.enter(cell.name, cell.answer);
+    }
+    // ⚠️ `finish()`, not `check()`. `check()` returns a verdict and records mistakes; **`finish()` is
+    // what stops the clock and sets `finishedAt`**, which is the only thing `isFinished()` reads. The
+    // first version of this fixture called `check()` and produced a snapshot of a solved board that
+    // was not a finished one — a fixture that looks like the state under test and is not it.
+    game.check();
+    game.finish();
+    return game.snapshot();
+  };
+
+  test("it says what this is and what it is not, and shows a board", async () => {
+    const view = await mount(packages[0].raw);
+
+    assert(view.page.querySelector(".landing-name").textContent.length > 0, "the product is not named");
+    assert(view.page.querySelector(".landing-tagline").textContent.length > 0, "no tagline");
+    // ⚠️ Its own line, and asserted separately. The first thing a visitor assumes about a baseball
+    // puzzle is that it asks what they know; every screen after this depends on them arriving without
+    // that idea, and it is the line between this and Immaculate Grid.
+    assert(view.page.querySelector(".landing-not-trivia").textContent.length > 0, "nothing says it is not trivia");
+    assert(view.page.querySelector(".landing-how"), "there is no way to the tutorial");
+
+    view.teardown();
+  });
+
+  test("⚠️ the example is drawn by the board's own renderers, not by a copy", async () => {
+    // A hand-drawn imitation would drift the first time the board changed and nothing would notice —
+    // the page advertising the product would quietly stop showing it. This asserts the real thing was
+    // used, which is what makes drift impossible rather than merely unlikely.
+    const view = await mount(packages[0].raw);
+    const example = view.page.querySelector(".landing-example");
+
+    assert(example.querySelector(".linescore table"), "the scoreboard is not the board's line score");
+    assert(example.querySelector("table.grid"), "the grid is not the board's section");
+    assert(example.querySelectorAll("td.cell.blank").length > 0, "the example has no holes in it");
+
+    view.teardown();
+  });
+
+  test("⚠️ nothing in the example is a control", async () => {
+    // The cells are drawn with `onSelect` null, which is the same rule a finished board follows: an
+    // example a screen reader offers to press is a promise this page cannot keep.
+    const view = await mount(packages[0].raw);
+    const example = view.page.querySelector(".landing-example");
+
+    equal(example.querySelectorAll('[role="button"]').length, 0, "the example offers cells as buttons");
+    equal(example.querySelectorAll("[tabindex]").length, 0, "the example is in the tab order");
+    equal(example.getAttribute("aria-hidden"), "true", "the example is read out cell by cell before the button");
+
+    view.teardown();
+  });
+
+  test("the way in carries today's date, and goes to the board", async () => {
+    const view = await mount(packages[0].raw);
+
+    assert(view.play.querySelector(".landing-date").textContent.includes("2026"), "the button has no date");
+    view.play.click();
+    equal(view.went.length, 1, "the button went nowhere");
+    assert(view.went[0].startsWith("play.html"), `the button did not go to the board: ${view.went[0]}`);
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ a finished day is offered as a boxscore to read, never as a puzzle to solve", async () => {
+    // Without this the product offers a returning player a puzzle they already solved, every day,
+    // which reads as it not knowing who they are.
+    const fresh = await mount(packages[0].raw);
+    const label = fresh.play.textContent;
+    fresh.teardown();
+
+    const done = await mount(packages[0].raw, { session: await solvedSession(packages[0].raw) });
+
+    assert(done.finished, "the landing page did not notice a finished session");
+    assert(done.play.textContent !== label, "the button says the same thing whether or not today is done");
+    assert(done.page.querySelector(".landing-done"), "a finished day shows no result");
+    assert(done.page.querySelector(".landing-done-time").textContent.includes(":"), "no time is shown");
+
+    done.teardown();
+  });
+
+  test("⚠️ whether the day is finished is asked of the engine, not read off the snapshot", async () => {
+    // A landing page that interpreted the saved shape itself would be a second copy of `isFinished()`,
+    // on the one screen where being wrong means offering a solved puzzle as new. A snapshot that is
+    // *not* finished must render as *play* even though a session exists.
+    const { createGame } = await import("../engine/game.js");
+    const { readPackage } = await import("../engine/package.js");
+    const game = createGame(readPackage(packages[0].raw));
+    const [first] = game.blanks();
+    game.enter(first, 1);
+
+    const view = await mount(packages[0].raw, { session: game.snapshot() });
+
+    assert(!view.finished, "an unfinished session was treated as a finished day");
+    assert(!view.page.querySelector(".landing-done"), "an unfinished session showed a result");
+
+    view.teardown();
+  });
+
+  test("a landing page whose storage throws still offers the puzzle (§23)", async () => {
+    const { renderLanding } = await import("../ui/phone/landing.js");
+    const { createStore } = await import("../engine/store.js");
+    const { readPackage } = await import("../engine/package.js");
+    const hostile = {
+      getItem() { throw new Error("no storage"); },
+      setItem() { throw new Error("no storage"); },
+      removeItem() { throw new Error("no storage"); },
+    };
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+
+    const view = renderLanding({ puzzle: readPackage(packages[0].raw), root, store: createStore(hostile) });
+
+    assert(view.play, "a storage failure took the way in with it");
+    root.remove();
+  });
+
+  test("⚠️ the slot the archive and the streak land in is present and empty", async () => {
+    // C8, C9, C10: the shape is present before the feature is, so adding them is an append rather than
+    // a redesign of the one page every visit passes through. Do not delete as unused.
+    const view = await mount(packages[0].raw);
+
+    assert(view.later, "the reserved slot is gone");
+    equal(view.later.childElementCount, 0, "something moved into the reserved slot without a decision");
+
+    view.teardown();
+  });
+});
+
+suite("The tutorial: five steps, skippable, and teaching on a board that adds up", () => {
+  const mount = async ({ start = 0 } = {}) => {
+    const { renderTutorial } = await import("../ui/phone/tutorial.js");
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+    const went = [];
+    const view = renderTutorial({ root, start, go: (href) => went.push(href) });
+    return { ...view, root, went, teardown: () => root.remove() };
+  };
+
+  /**
+   * Every number the tutorial has drawn, by cell name, read back out of the DOM.
+   *
+   * ⚠️ **The pitching cell is innings and is parsed as outs, with the board's own parser.** Reading it
+   * as a plain number made `2` mean two, and the global identity then failed by four — which is
+   * exactly what a player would experience, and is how the missing *an inning is three outs* sentence
+   * was found. `inningsFromDisplay` rather than a local conversion: a test that re-implements the rule
+   * it is checking agrees with itself.
+   */
+  const shown = (view) => {
+    const values = {};
+    for (const cell of view.page.querySelectorAll(".tcell")) {
+      const raw = cell.textContent;
+      if (raw === "") values[cell.dataset.cell] = null;
+      else values[cell.dataset.cell] = cell.dataset.cell === "p.outs" ? inningsFromDisplay(raw) : Number(raw);
+    }
+    return values;
+  };
+
+  test("it is five steps, it says which one, and the skip is a real control", async () => {
+    const view = await mount();
+
+    equal(view.total, 5, "the tutorial no longer has one step per relation family");
+    assert(view.page.querySelector(".tutorial-progress").textContent.length > 0, "the step is not numbered");
+    // ⚠️ Present and visible. §1b: a skip the visitor has to hunt for is a compulsory tutorial wearing
+    // a disguise, which is the rule the reversal removed.
+    assert(view.skip && !view.skip.hidden, "the skip is missing or hidden");
+    assert(view.page.querySelector(".tutorial-made-up").textContent.length > 0, "nobody says the board is invented");
+
+    view.teardown();
+  });
+
+  test("⚠️ the batting order is taught last", async () => {
+    // The other four are visible in the grid. Nothing on screen announces that turns are dealt around
+    // the lineup, so it needs the most setup and gets the player who has seen four relations work.
+    const view = await mount({ start: 4 });
+
+    equal(view.page.querySelector(".tutorial-title").textContent, "The batting order", "the order changed");
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ the made-up board satisfies all five relations, on the numbers it actually draws", async () => {
+    // **The test that matters.** A tutorial teaching arithmetic that does not hold is the worst defect
+    // available here, and no screenshot catches a subtle one — the board looks exactly as convincing
+    // either way. Read out of the DOM at the last step, where every hole has been filled.
+    const view = await mount({ start: 5 });
+    const v = shown(view);
+
+    for (const row of [0, 1, 2, 3]) {
+      equal(
+        v[`b${row}.plate_appearances`],
+        v[`b${row}.at_bats`] + v[`b${row}.walks`],
+        `row ${row + 1}: PA is not AB + BB`,
+      );
+    }
+    for (const column of ["plate_appearances", "at_bats", "walks"]) {
+      const sum = [0, 1, 2, 3].reduce((total, row) => total + v[`b${row}.${column}`], 0);
+      equal(v[`t.${column}`], sum, `the ${column} total is not the sum of the rows`);
+    }
+    equal(v["t.walks"], v["p.walks"], "the walks the batters drew are not the walks the pitcher gave");
+    equal(
+      v["t.plate_appearances"],
+      v["p.outs"] + v["p.runs"] + v.lob,
+      "PA is not outs + runs + left on base",
+    );
+    for (const row of [1, 2, 3]) {
+      assert(
+        v[`b${row}.plate_appearances`] <= v[`b${row - 1}.plate_appearances`],
+        `slot ${row + 1} batted more often than slot ${row}, which the order forbids`,
+      );
+    }
+
+    view.teardown();
+  });
+
+  test("⚠️ a cell given in one step is never a hole in a later one", async () => {
+    // The board has to stay consistent across the five or it teaches that the relations are unrelated
+    // tricks. This is the failure the second step was rewritten to avoid: the column sum was taught
+    // over PA, which shows all four plate-appearance cells as facts, and step five then turned one of
+    // them back into an unknown.
+    const givenSoFar = new Set();
+    for (let step = 0; step < 5; step += 1) {
+      const view = await mount({ start: step });
+      const values = shown(view);
+      const hole = Object.keys(values).find((name) => values[name] === null);
+
+      assert(hole !== undefined, `step ${step + 1} has no hole at all`);
+      assert(!givenSoFar.has(hole), `step ${step + 1} makes a hole of ${hole}, which an earlier step gave`);
+      for (const [name, value] of Object.entries(values)) {
+        if (value !== null) givenSoFar.add(name);
+      }
+      view.teardown();
+    }
+  });
+
+  test("the last screen hands over the reference sheet, then the puzzle", async () => {
+    const view = await mount({ start: 5 });
+
+    // So the player leaves knowing the button exists: a sheet nobody has been shown is a sheet nobody
+    // opens, and it is what made skipping this safe.
+    equal(view.page.querySelectorAll(".tutorial-reference dt").length, 5, "the five relations are not listed");
+    view.next.click();
+    equal(view.went.length, 1, "the last button went nowhere");
+    assert(view.went[0].startsWith("play.html"), `it did not lead to the board: ${view.went[0]}`);
+
+    view.teardown();
+  });
+
+  test("skip leaves for the landing page rather than the board", async () => {
+    const view = await mount();
+
+    view.skip.click();
+
+    equal(view.went.length, 1, "skip went nowhere");
+    assert(view.went[0].startsWith("index.html"), `skip did not return to the landing: ${view.went[0]}`);
+    view.teardown();
+  });
+
+  test("⚠️ Back on the first step leaves, rather than doing nothing", async () => {
+    // A disabled Back on step one is a dead control; the honest meaning of *back* there is *out*.
+    const view = await mount();
+
+    view.back.click();
+
+    equal(view.went.length, 1, "Back on the first step did nothing at all");
+    assert(view.went[0].startsWith("index.html"), `Back did not return to the landing: ${view.went[0]}`);
+    view.teardown();
+  });
+
+  test("⚠️⚠️ the tutorial persists nothing and fetches nothing", async () => {
+    // Every piece of machinery here sits on the path between a stranger and their first board.
+    // Remembering step 3 needs storage, a key, an identity to key it by and a staleness rule — all
+    // spent on a visitor who has not yet seen a puzzle. Asserted against the source, because the
+    // absence of a feature is exactly what a behavioural test cannot see.
+    const source = await (await fetch("../ui/phone/tutorial.js")).text();
+    const entry = await (await fetch("../ui/phone/tutorial-main.js")).text();
+
+    for (const forbidden of ["localStorage", "sessionStorage", "createStore", "fetch("]) {
+      assert(!source.includes(forbidden), `the tutorial reached for ${forbidden}`);
+      assert(!entry.includes(forbidden), `the tutorial's entry point reached for ${forbidden}`);
+    }
+  });
+});
+
+suite("⚠️ Every page agrees on where the other pages are", () => {
+  test("no navigation target is spelled by hand", async () => {
+    // A page that spells a sibling's filename is a link that breaks silently when the file is renamed:
+    // the browser shows a 404 and no test is watching. Three pages now link to each other.
+    const { ROUTES } = await import("../ui/phone/daily.js");
+    const known = new Set(Object.values(ROUTES));
+
+    for (const file of ["landing.js", "tutorial.js"]) {
+      const source = await (await fetch(`../ui/phone/${file}`)).text();
+      const spelled = [...source.matchAll(/["'`]([\w-]+\.html)["'`]/g)].map((match) => match[1]);
+      for (const target of spelled) {
+        assert(known.has(target), `${file} spells ${target} by hand instead of using ROUTES`);
+      }
+    }
+  });
+
+  test("the pages that ROUTES names all exist", async () => {
+    const { ROUTES } = await import("../ui/phone/daily.js");
+
+    for (const [name, file] of Object.entries(ROUTES)) {
+      const response = await fetch(`../ui/phone/${file}`);
+      assert(response.ok, `ROUTES.${name} points at ${file}, which is not served`);
+    }
   });
 });

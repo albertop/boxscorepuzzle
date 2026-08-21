@@ -1,0 +1,357 @@
+/**
+ * The tutorial. `docs/serve-flow.md` §1b. Five steps, one per relation family, and **skippable**.
+ *
+ * ⚠️⚠️ **Skippable reverses §8, and skippable is not thinner.** A compulsory tutorial is a barrier in
+ * front of someone who has not yet decided whether they are interested, and the ones who do not want it
+ * leave before seeing a board — the outcome that rule existed to prevent, one screen earlier. It also
+ * stopped being the only place the rules are stated when §3b's reference sheet shipped. None of that is
+ * a reason to teach less: the sheet reminds someone who has met the relations, and this is where they
+ * meet them.
+ *
+ * ⚠️ **The board here is NOT the board, and the player is told so.** Four batters, one pitcher, three
+ * columns; a real one is six columns and up to thirteen rows, and `renderSection` cannot draw three
+ * columns because the column set is fixed by the product (§6). This project's rule — *a sample that
+ * evaluates the board is rendered with the board's renderer* — exists so that a judgement is never made
+ * on a board that does not exist. Nothing is judged here; this illustrates a relation, and a
+ * thirteen-row board would teach the relation and the crowding at once. **The headings still come from
+ * the catalogue**, so the one thing that could silently disagree with the real board cannot.
+ *
+ * ⚠️ **No account, no progress tracking, no persistence of which step was reached.** Every piece of
+ * machinery here sits on the path between a stranger and their first board. Remembering step 3 needs
+ * storage, a key, an identity to key it by, and a rule for when it is stale — all spent on a visitor
+ * who has not yet seen a puzzle, and invisible to them as anything but delay.
+ */
+
+import { inningsToDisplay } from "../../engine/columns.js";
+import { fill, text } from "../../engine/strings.js";
+import { ROUTES, withSearch } from "./daily.js";
+
+/**
+ * The made-up game, and **it is consistent across all five relations** — the same numbers answer every
+ * step, because a board whose arithmetic only works one step at a time teaches that the relations are
+ * unrelated tricks.
+ *
+ *   #1  PA 3  AB 3  BB 0        the pitcher: 2 innings (6 outs), 1 walk, 1 run
+ *   #2  PA 2  AB 1  BB 1        left on base: 2
+ *   #3  PA 2  AB 2  BB 0
+ *   #4  PA 2  AB 2  BB 0
+ *   ——  PA 9  AB 8  BB 1
+ *
+ *   row identity   #2: 2 = 1 + 1
+ *   column         AB: 3 + 1 + 2 + 2 = 8
+ *   cross-team     the walk the batters drew is the walk the pitcher gave
+ *   global         9 = 6 outs + 1 run + 2 left on base
+ *   batting order   3, 2, 2, 2 — down the slots it never goes up
+ */
+const BATTERS = [
+  { slot: 1, plate_appearances: 3, at_bats: 3, walks: 0 },
+  { slot: 2, plate_appearances: 2, at_bats: 1, walks: 1 },
+  { slot: 3, plate_appearances: 2, at_bats: 2, walks: 0 },
+  { slot: 4, plate_appearances: 2, at_bats: 2, walks: 0 },
+];
+const TOTALS = { plate_appearances: 9, at_bats: 8, walks: 1 };
+const PITCHER = { outs: 6, walks: 1, runs: 1 };
+const LEFT_ON_BASE = 2;
+
+const BATTING_COLUMNS = ["plate_appearances", "at_bats", "walks"];
+const PITCHING_COLUMNS = ["outs", "walks", "runs"];
+
+/**
+ * The five, in the order they are taught.
+ *
+ * ⚠️ **The batting order is last and that is the whole reason for the order.** The other four are
+ * visible in the grid — a row, a column, two facing sections, the whole game — and nothing on screen
+ * announces that turns are dealt around the lineup. It needs the most setup, so it gets the player who
+ * has already watched four relations work.
+ *
+ * `hole` names the cell this step leaves blank; `lit` names the cells the relation reads to fill it.
+ * Every earlier step's hole is filled by the time a later step draws, so the board is visibly rebuilt
+ * across the five — which is the thing the product is called.
+ */
+const STEPS = [
+  { name: "reference.row_identity_name", body: "tutorial.step.row_identity",
+    rule: "reference.row_identity", hole: "b1.plate_appearances",
+    lit: ["b1.at_bats", "b1.walks"], sum: "2 = 1 + 1" },
+  // ⚠️ **The AB column, not PA, and the reason is the last step.** Teaching the column sum over PA
+  // would show all four plate-appearance cells as *given*, and step five then turns one of them back
+  // into a hole — a cell that was a fact in step two and an unknown in step five. The board has to
+  // stay consistent across the five or it teaches that the relations are unrelated tricks.
+  { name: "reference.column_sum_name", body: "tutorial.step.column_sum",
+    rule: "reference.column_sum", hole: "t.at_bats",
+    lit: ["b0.at_bats", "b1.at_bats", "b2.at_bats", "b3.at_bats"],
+    sum: "3 + 1 + 2 + 2 = 8" },
+  { name: "reference.cross_team_name", body: "tutorial.step.cross_team",
+    rule: "reference.cross_team", hole: "p.walks", lit: ["t.walks"], sum: "1 = 1" },
+  // ⚠️ **The sum crosses innings into outs out loud, because the board does not show outs.** The
+  // pitching column is `IP` and reads `2`; this step asks the player to subtract 6. A test comparing
+  // the identity against the numbers actually drawn is what found the gap — the step was arithmetically
+  // right about a quantity the screen never displayed, which is the one kind of error that reads as
+  // perfectly clear.
+  { name: "reference.global_name", body: "tutorial.step.global",
+    rule: "reference.global", hole: "lob",
+    lit: ["t.plate_appearances", "p.outs", "p.runs"], sum: "2 innings = 6 outs · 9 − 6 − 1 = 2" },
+  { name: "reference.batting_order_name", body: "tutorial.step.batting_order",
+    rule: "reference.batting_order", hole: "b2.plate_appearances",
+    lit: ["b1.plate_appearances", "b3.plate_appearances"], sum: "2 ≤ ? ≤ 2" },
+];
+
+const valueOf = {
+  lob: () => LEFT_ON_BASE,
+};
+for (const [row, batter] of BATTERS.entries()) {
+  for (const column of BATTING_COLUMNS) valueOf[`b${row}.${column}`] = () => batter[column];
+}
+for (const column of BATTING_COLUMNS) valueOf[`t.${column}`] = () => TOTALS[column];
+for (const column of PITCHING_COLUMNS) valueOf[`p.${column}`] = () => PITCHER[column];
+
+/**
+ * Outs as a boxscore prints innings pitched.
+ *
+ * ⚠️⚠️ **`inningsToDisplay`, because the hand-written version disagreed with the board.** This read
+ * `${whole}.${thirds}` and printed six outs as `2.0`; the board prints `2`, because a whole number of
+ * innings carries no fraction. A tutorial teaching a notation the real board does not use is worse
+ * than one that teaches nothing — the player learns a form and then meets a different one. Third copy
+ * of a rule in this file to be replaced by the definition, and the only one that was actually wrong.
+ */
+const printed = (name) => (name === "p.outs" ? inningsToDisplay(PITCHER.outs) : null);
+
+export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
+  let step = start;
+
+  const page = doc.createElement("div");
+  page.className = "tutorial";
+  root.replaceChildren(page);
+
+  const leave = (route) => {
+    const href = withSearch(route);
+    if (go) go(href);
+    else doc.defaultView.location.assign(href);
+  };
+
+  // ---- the bar: progress, and a skip nobody has to hunt for -------------------------------------
+  const bar = doc.createElement("div");
+  bar.className = "tutorial-bar";
+  const progress = doc.createElement("p");
+  progress.className = "tutorial-progress";
+  const skip = doc.createElement("button");
+  skip.type = "button";
+  skip.className = "tutorial-skip";
+  skip.textContent = text("tutorial.skip");
+  // ⚠️ **Visible, and that is the decision rather than the styling.** A skip the visitor has to hunt
+  // for is a compulsory tutorial wearing a disguise, which is the rule §1b reversed.
+  skip.addEventListener("click", () => leave(ROUTES.landing));
+  bar.append(progress, skip);
+
+  const title = doc.createElement("h1");
+  title.className = "tutorial-title";
+
+  const made = doc.createElement("p");
+  made.className = "tutorial-made-up";
+  // Said out loud, or the smaller board reads as a bug and the player spends the step on that.
+  made.textContent = text("tutorial.made_up");
+
+  const stage = doc.createElement("div");
+  stage.className = "tutorial-stage";
+
+  const body = doc.createElement("p");
+  body.className = "tutorial-body";
+
+  const sum = doc.createElement("p");
+  sum.className = "tutorial-sum";
+
+  const rule = doc.createElement("p");
+  rule.className = "tutorial-rule";
+
+  // ---- the two buttons --------------------------------------------------------------------------
+  const nav = doc.createElement("div");
+  nav.className = "tutorial-nav";
+  const back = doc.createElement("button");
+  back.type = "button";
+  back.className = "tutorial-back";
+  back.textContent = text("tutorial.back");
+  const next = doc.createElement("button");
+  next.type = "button";
+  next.className = "tutorial-next";
+  nav.append(back, next);
+
+  // ⚠️⚠️ **The reference list sits BELOW the buttons, and that is a measurement rather than a taste.**
+  // With it inside `stage`, the last screen ran to 897px and put *Start today's puzzle* at y=823 on an
+  // 812px viewport — the one call to action the whole tutorial exists to reach, below the fold, found
+  // by asking the browser for the button's rectangle rather than by looking at the screenshot, which
+  // showed a tidy page that simply ended. The way out goes above it; the five relations are reference
+  // material and can be scrolled to.
+  const tail = doc.createElement("div");
+  tail.className = "tutorial-tail";
+  page.append(bar, title, made, stage, body, sum, rule, nav, tail);
+
+  back.addEventListener("click", () => {
+    if (step === 0) return leave(ROUTES.landing);
+    step -= 1;
+    draw();
+  });
+  next.addEventListener("click", () => {
+    if (step >= STEPS.length) return leave(ROUTES.board);
+    step += 1;
+    draw();
+  });
+
+  /**
+   * One cell of the made-up board.
+   *
+   * ⚠️⚠️ **A cell that a later step will ask for is blank now.** The first version drew the board
+   * complete except for the current hole, which meant step one displayed the answers to steps two
+   * through five as plain given facts. The player is told *here is how you get this number* about a
+   * number the same screen has already printed four times over — and the demonstration is worthless,
+   * because nothing was ever unknown.
+   *
+   * It was found by a test asserting that no step makes a hole of a cell an earlier step gave, not by
+   * looking at the screen: every version of this board looks equally convincing, which is exactly the
+   * condition under which a rendered sample cannot be trusted.
+   *
+   * So the board opens with all five holes empty and fills one per step. That also makes the thing the
+   * product is named after literally true on screen: it is rebuilt, in front of the player, from
+   * nothing but the relations.
+   */
+  const cellNode = (name, { hole, lit, solved, pending }) => {
+    const cell = doc.createElement("td");
+    cell.className = "tcell";
+    cell.dataset.cell = name;
+    if (name === hole) {
+      cell.classList.add("hole");
+      cell.textContent = "";
+    } else if (pending.includes(name)) {
+      // A later step's subject: empty, and not marked, because nothing is claimed about it yet.
+      cell.classList.add("pending");
+      cell.textContent = "";
+    } else {
+      cell.textContent = printed(name) ?? String(valueOf[name]());
+      if (lit.includes(name)) cell.classList.add("lit");
+      if (solved.includes(name)) cell.classList.add("solved");
+    }
+    return cell;
+  };
+
+  const grid = (state) => {
+    const wrapper = doc.createElement("div");
+
+    const table = doc.createElement("table");
+    table.className = "tgrid";
+    const head = doc.createElement("tr");
+    head.append(doc.createElement("th"));
+    for (const column of BATTING_COLUMNS) {
+      const th = doc.createElement("th");
+      // The catalogue's heading, so the one thing that could disagree with the real board cannot.
+      th.textContent = text(`column.${column}`);
+      head.append(th);
+    }
+    table.append(head);
+
+    for (const [row, batter] of BATTERS.entries()) {
+      const tr = doc.createElement("tr");
+      const slot = doc.createElement("th");
+      slot.className = "tslot";
+      slot.textContent = `${text("board.slot")}${batter.slot}`;
+      tr.append(slot);
+      for (const column of BATTING_COLUMNS) tr.append(cellNode(`b${row}.${column}`, state));
+      table.append(tr);
+    }
+
+    const totals = doc.createElement("tr");
+    totals.className = "ttotals";
+    const label = doc.createElement("th");
+    label.textContent = text("board.totals");
+    totals.append(label);
+    for (const column of BATTING_COLUMNS) totals.append(cellNode(`t.${column}`, state));
+    table.append(totals);
+    wrapper.append(table);
+
+    const pitching = doc.createElement("table");
+    pitching.className = "tgrid tpitching";
+    const phead = doc.createElement("tr");
+    phead.append(doc.createElement("th"));
+    for (const column of PITCHING_COLUMNS) {
+      const th = doc.createElement("th");
+      th.textContent = text(`column.${column}`);
+      phead.append(th);
+    }
+    pitching.append(phead);
+    const prow = doc.createElement("tr");
+    const plabel = doc.createElement("th");
+    plabel.className = "tslot";
+    plabel.textContent = text("board.pitching");
+    prow.append(plabel);
+    for (const column of PITCHING_COLUMNS) prow.append(cellNode(`p.${column}`, state));
+    pitching.append(prow);
+    wrapper.append(pitching);
+
+    // The footnote line, which is where LOB lives on a real board too.
+    const line = doc.createElement("p");
+    line.className = "tfootnote";
+    const term = doc.createElement("span");
+    term.textContent = `${text("board.left_on_base")}: `;
+    line.append(term, cellNode("lob", state));
+    wrapper.append(line);
+
+    return wrapper;
+  };
+
+  function draw() {
+    const finished = step >= STEPS.length;
+    // Every earlier hole is filled by now, marked as the thing the player just worked out; every later
+    // one is still empty, because a step cannot demonstrate a number the screen has already given.
+    const solved = STEPS.slice(0, step).map((one) => one.hole);
+    const pending = STEPS.slice(step + 1).map((one) => one.hole);
+    const current = finished ? null : STEPS[step];
+
+    // ⚠️ The whole bar, not its contents. Emptying the progress line and hiding the skip left a 44px
+    // band of nothing above the last screen — a control-height gap where the eye still expects a
+    // control.
+    bar.hidden = finished;
+    progress.textContent = finished
+      ? ""
+      : fill("tutorial.progress", { step: String(step + 1), total: String(STEPS.length) });
+    skip.hidden = finished;
+    title.textContent = finished ? text("tutorial.title") : text(current.name);
+    made.hidden = finished;
+    body.textContent = finished ? text("tutorial.reference_hint") : text(current.body);
+    sum.textContent = finished ? "" : current.sum;
+    sum.hidden = finished;
+    rule.textContent = finished ? "" : text(current.rule);
+    rule.hidden = finished;
+    next.textContent = finished ? text("tutorial.finish") : text("tutorial.next");
+    next.classList.toggle("tutorial-finish", finished);
+
+    // ⚠️ **The finished board is drawn, complete.** The five steps have been rebuilding it in front of
+    // the player, and stopping one cell short would end the demonstration on the one screen where it
+    // pays off. It is also the only state in which every relation can be checked against what is
+    // actually drawn, which is what the arithmetic test reads.
+    stage.replaceChildren(
+      finished
+        ? grid({ hole: null, lit: [], solved: STEPS.map((one) => one.hole), pending: [] })
+        : grid({ hole: current.hole, lit: current.lit, solved, pending }),
+    );
+    tail.replaceChildren(...(finished ? [referenceList(doc)] : []));
+  }
+
+  draw();
+  return { page, next, back, skip, stepIndex: () => step, total: STEPS.length };
+}
+
+/**
+ * The last screen is the reference sheet's own contents.
+ *
+ * ⚠️ **So the player leaves knowing the button exists.** A sheet nobody has been shown is a sheet
+ * nobody opens, and it is the thing that made skipping this tutorial safe in the first place.
+ */
+function referenceList(doc) {
+  const list = doc.createElement("dl");
+  list.className = "tutorial-reference";
+  for (const one of STEPS) {
+    const name = doc.createElement("dt");
+    name.textContent = text(one.name);
+    const rule = doc.createElement("dd");
+    rule.textContent = text(one.rule);
+    list.append(name, rule);
+  }
+  return list;
+}

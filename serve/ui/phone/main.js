@@ -6,40 +6,15 @@
  * lives in `shell.js` and takes its boundaries as arguments, so a test can drive the real thing — see
  * the note there.
  *
- * ⚠️ **The engine does not know what day it is** (C4). This loader decides which puzzle, and for now it
- * reads the manifest and takes an id from the query string so every reference package can be looked at.
- * The real `/today` route is shell work and does not live here.
+ * ⚠️ **Which puzzle, and the caching rule that goes with it, moved to `daily.js`.** The landing page
+ * has to load the same puzzle this page loads — it decides whether to say *Play* or *See the
+ * boxscore* — and a second copy of that rule is the defect this project meets most often.
  */
 
-import { PackageError, readPackage } from "../../engine/package.js";
+import { PackageError } from "../../engine/package.js";
 import { boot } from "./shell.js";
+import { loadPuzzle } from "./daily.js";
 import { text } from "../../engine/strings.js";
-
-const DATA = "../../data/puzzles";
-
-/**
- * The manifest is a **pointer** and the packages are **immutable**, so they cache differently.
- *
- * ⚠️ **Found the moment the six were regenerated.** The generation directory changed, the manifest was
- * rewritten to name it — and the browser kept serving the old manifest, so the client loaded packages
- * from a retired generation and refused them as the wrong schema. The code was correct and the page was
- * wrong, which is the shape `docs/serve-brief.md` §6 already records once: a prototype reported as *not
- * rendering* that was the cache.
- *
- * A package at `<generation>/<id>.json` can never change — a new one gets a new generation — so it is
- * safe to cache hard. The manifest is the only thing that says which generation is current, and a stale
- * pointer is indistinguishable from a stale build. `no-store`, always.
- *
- * This is the read side of §33's rule that the calendar extends rather than rewrites, and of the
- * caching rule in CLAUDE.md: cache the day's puzzle, never the pointer to it.
- */
-async function loadPuzzle() {
-  const manifest = await (await fetch(`${DATA}/manifest.json`, { cache: "no-store" })).json();
-  const wanted = new URLSearchParams(location.search).get("p");
-  const id = manifest.puzzles.includes(wanted) ? wanted : manifest.puzzles[0];
-  const raw = await (await fetch(`${DATA}/${manifest.generation}/${id}.json`)).json();
-  return { puzzle: readPackage(raw), manifest, id };
-}
 
 try {
   const loaded = await loadPuzzle();

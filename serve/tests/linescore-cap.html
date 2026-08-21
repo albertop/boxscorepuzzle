@@ -99,10 +99,11 @@
   const draw = (innings, width, tight, caption) => {
     const device = document.createElement("div");
     device.className = `device w${width}${tight ? " tight-rhe" : ""}`;
-    const frame = document.createElement("div");
-    frame.className = "linescore";
-    const table = renderLineScore(scoreFor(innings), false);
-    frame.append(table);
+    // ⚠️ The frame comes from `renderLineScore` now. This page used to build the
+    // `.linescore` wrapper itself, which is the harness supplying a property of the thing under
+    // test — it happened to match, and a sample cannot judge what the sample provides.
+    const frame = renderLineScore(scoreFor(innings), false);
+    const table = frame.querySelector("table");
     device.append(frame);
 
     const note = document.createElement("div");

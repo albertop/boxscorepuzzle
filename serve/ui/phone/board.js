@@ -30,6 +30,16 @@ const el = (tag, className, content) => {
 
 export function renderLineScore(score, offenseIsHome, labels = null) {
   const innings = Math.max(score.offense_by_inning.length, score.defense_by_inning.length);
+  // ⚠️⚠️ **The frame is returned, not asked for.** This used to return a bare `<table>` and every
+  // caller wrapped it in `<div class="linescore">` itself — the shell, the reveal, a test and two
+  // measurement pages, five copies of one fact. The sixth caller was the landing page, which got it
+  // wrong, and the failure was silent in the worst way available: the scoreboard simply stopped being
+  // green. Nothing threw, nothing was missing, and the one element on the board that is meant to read
+  // as a physical object rendered as the first rows of a spreadsheet.
+  //
+  // A renderer that does not own its own appearance is a renderer whose appearance is a convention,
+  // and a convention is what the next caller does not know about.
+  const frame = el("div", "linescore");
   const table = el("table");
   const head = el("tr");
   head.append(el("th", "side", ""));
@@ -95,7 +105,8 @@ export function renderLineScore(score, offenseIsHome, labels = null) {
   // rows swap — the package's field order is not the printing order, and assuming it was is how the
   // board came to claim the batting team was away.
   table.append(...(offenseIsHome ? [defense(), offense()] : [offense(), defense()]));
-  return table;
+  frame.append(table);
+  return frame;
 }
 
 /* ---- the grid -------------------------------------------------------------------------------- */

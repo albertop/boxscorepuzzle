@@ -493,8 +493,10 @@ image is drawn from the board and the C7 record, both of which the shell already
 stands as written in §7 and nothing has to be emitted that was not being emitted before. The open
 question was whether a per-cell outcome had to leak out of the engine; the answer is that it does not.
 
-**Not built, and deliberately not next**: the tutorial and the landing page come first, because the
-share would otherwise be a growth channel pointed at a game a first-time visitor cannot yet read.
+**Not built, and deliberately not next**: the share waited on the tutorial and the landing page,
+because it would otherwise be a growth channel pointed at a game a first-time visitor cannot yet read.
+✅ **Those two shipped on 2026-08-20**, so the only thing still holding the share is §36's question
+about what it encodes without leaking. The precondition is met; the design is not.
 
 **⚠️ ~~The six reference packages predate the scoreboard-duplicate exclusion and still carry an erased
 `H` total.~~ Not true, and closed on 2026-08-20 by running it.**

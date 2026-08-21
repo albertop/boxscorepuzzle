@@ -3721,13 +3721,27 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
    which is not a date), C8 `canAccess`, C9 reserved ad slots, C10 the two-phase boot. **C11 is done**,
    but the catalogue holds `en` only.
 10. **Product surfaces:** the share (§7) and the landing page with its tutorial.
-    ⚠️ **Both are designed and neither is built**, and the order between them is decided: the landing
-    page and the tutorial first, the share after. `serve-flow.md` §1 and §1b carry the design — every
+    ✅ **The landing page and the tutorial are built** (2026-08-20). `serve-flow.md` §1 and §1b carry
+    the design and the pages carry it out — every
     visit lands, the button changes when today is played, five wizard steps on a made-up four-batter
     board, the batting order last because it is the only relation invisible in a real board.
     ⚠️ **The tutorial is skippable, reversing §8.** A compulsory one is a barrier in front of someone who
     has not decided yet, and the reference sheet (§3b) ended its status as the only place the rules are
     stated. The old rule is kept as superseded in `design-boxscore-puzzle.md` and in `CLAUDE.md`.
+
+    ⬜ **The share is what is left of this item**, and it is blocked on §36 rather than on effort: what
+    the grid encodes without leaking the solution or the names. The precondition it was waiting on —
+    a first-time visitor who can learn the rules — is met.
+
+    ⚠️ **Three defects the build found, kept because each is a shape rather than an incident.**
+    `renderLineScore` returned a bare table and **five call sites wrapped it in `.linescore`
+    themselves**; the sixth was the landing page, which did not, and the scoreboard silently stopped
+    being green — a renderer that does not own its own appearance has an appearance that is a
+    convention, and a convention is what the next caller does not know about. The tutorial drew every
+    step's board complete except that step's hole, so **step one displayed the answers to steps two
+    through five**; found by a test asserting no step makes a hole of a cell an earlier step gave, not
+    by looking, because every version of the board looks equally convincing. And its innings formatter
+    was a hand-written copy that printed six outs as `2.0` where the board prints `2`.
     ⚠️ **The share is designed and is deliberately not next.** §36's *what it encodes without leaking*
     closed on 2026-08-20: a **PNG of the board**, the player's own cells replaced with random digits and
     then blurred, the given cells real, carrying the time and the hints used (`serve-flow.md` §7b). The

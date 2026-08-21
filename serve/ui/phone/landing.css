@@ -1,0 +1,330 @@
+/*
+ * The landing page and the tutorial. `docs/serve-flow.md` §1 and §1b.
+ *
+ * ⚠️ Every colour here is a token from `tokens.css`. Nothing invents one, and nothing touches the
+ * Fenway green — the scoreboard on the landing page is the board's own, drawn by the board's renderer.
+ */
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--face), system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+.landing,
+.tutorial {
+  max-width: 375px;
+  margin: 0 auto;
+  padding: 20px var(--board-margin) calc(24px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
+/* ---- the landing page ------------------------------------------------------------------------ */
+
+.landing-name {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.landing-tagline {
+  margin: 6px 0 0;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+/* ⚠️ Quieter than the tagline but not grey-on-white small print: it carries the one fact that stops a
+   visitor filing this under trivia, and small print is the thing nobody reads. */
+.landing-not-trivia {
+  margin: 8px 0 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/*
+ * ⚠️⚠️ **The example is the real board, clipped.** `max-height` plus a fade, which is presentation —
+ * the DOM underneath is what `renderSection` produced, so it cannot drift from the thing it advertises.
+ * `pointer-events: none` because a static example that responds to a tap is a promise this page does
+ * not keep; the cells are already not controls (`onSelect` is null), so this is belt over a fastened
+ * buckle and costs nothing.
+ */
+.landing-example {
+  position: relative;
+  margin: 16px 0 0;
+  /* ⚠️ **Tied to the viewport, because the button below it is the point of the page.** A fixed 300px
+     put the play button's bottom edge at 580px on a 320x568 handset — the one control this page
+     exists to offer, cut off, on the smallest device the product supports. Measured in the browser by
+     asking for the button's rectangle; the screenshot showed a page that looked finished, because the
+     part that was missing was the part below the fold. */
+  max-height: min(300px, 33vh);
+  overflow: hidden;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
+}
+
+/*
+ * ⚠️ **The pinned header and totals are unpinned here, and only here.** On the board they are
+ * load-bearing: §6 keeps them in view because a deduction puzzle consults its totals constantly while
+ * scrolling. This excerpt does not scroll, so `position: sticky` has nothing to stick to and simply
+ * parks the totals row on top of whichever row the clip cut in half — which reads as a broken table
+ * rather than as *there is more below*, on the one screen whose job is to make the board look worth
+ * solving.
+ *
+ * ⚠️ **The rows are NOT sliced to make it fit, and that is the alternative that was rejected.**
+ * `renderSection` builds the totals from the game rather than from the rows it was handed, so showing
+ * three rows and the real totals would put a board on the landing page whose numbers do not add up —
+ * on the page whose entire claim is that every number can be worked out. The clip is presentation; a
+ * slice would have been a lie with a fade over it.
+ */
+.landing-example .grid thead th,
+.landing-example .grid tfoot td {
+  position: static;
+}
+
+.landing-caption {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* The way in. 44px is the touch floor everywhere else on this product; this one is the single control
+   the whole page exists to offer, so it is well above it. */
+.landing-play {
+  display: block;
+  margin: 20px 0 0;
+  padding: 15px 12px;
+  min-height: 56px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: var(--header-ground);
+  color: var(--header-ink);
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.landing-date {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--scoreboard-dim);
+}
+
+.landing-done {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 10px 2px 0;
+  font-size: 14px;
+}
+
+.landing-done-verdict { font-weight: 600; }
+.landing-done-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.landing-how {
+  display: block;
+  margin: 10px 0 0;
+  padding: 12px;
+  min-height: 44px;
+  box-sizing: border-box;
+  text-align: center;
+  font-size: 15px;
+  color: var(--entered);
+  text-decoration: underline;
+}
+
+/* ⚠️ Reserved and empty (C9, C8, C10). The archive, the streak and the subscription land here. Do not
+   remove as unused — the point is that adding them is an append rather than a redesign. */
+.landing-later:empty { display: none; }
+
+/* ---- the tutorial ----------------------------------------------------------------------------- */
+
+.tutorial-bar[hidden] { display: none; }
+.tutorial-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 44px;
+}
+
+.tutorial-progress {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ⚠️ A real button at the touch floor, not a faint word in a corner. §1b: a skip the visitor has to
+   hunt for is a compulsory tutorial wearing a disguise. */
+.tutorial-skip {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--entered);
+  text-decoration: underline;
+}
+
+.tutorial-title {
+  margin: 4px 0 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.tutorial-made-up {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tutorial-stage { margin: 14px 0 0; }
+
+.tutorial-body {
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+/* The arithmetic, on its own line and in the board's numeric face. */
+.tutorial-sum {
+  margin: 10px 0 0;
+  font-size: 19px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--entered);
+}
+
+.tutorial-rule {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tutorial-nav {
+  display: flex;
+  gap: 8px;
+  margin: 22px 0 0;
+}
+
+.tutorial-back,
+.tutorial-next {
+  flex: 1;
+  min-height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--rule-strong);
+  background: var(--key);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.tutorial-next {
+  border-color: var(--header-ground);
+  background: var(--header-ground);
+  color: var(--header-ink);
+  flex: 2;
+}
+
+.tutorial-finish { font-size: 17px; }
+
+/* ---- the made-up board ------------------------------------------------------------------------ */
+
+.tgrid {
+  border-collapse: collapse;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.tgrid th,
+.tgrid .tcell {
+  border: 1px solid var(--grid-line);
+  height: 38px;
+  text-align: center;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tgrid th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--blank);
+}
+
+.tslot {
+  width: 64px;
+  text-align: left !important;
+  padding-left: 6px;
+}
+
+.ttotals th,
+.ttotals .tcell { font-weight: 700; }
+
+.tpitching { margin-top: 12px; }
+
+/* The cell this step is about: blank, and unmistakably the subject. */
+.hole {
+  background: var(--selected);
+  box-shadow: inset 0 0 0 2px var(--selected-rule);
+}
+
+/* ⚠️ A cell a later step is about: empty, and quiet. It must not compete with the hole — the board
+   carries several blanks at once now, and exactly one of them is the subject. The board's own colour
+   for an erased cell, which is what it is. */
+.pending { background: var(--blank); }
+
+/* What the relation reads to fill it. The board's own peer colour, for the same meaning. */
+.lit { background: var(--peer); }
+
+/* Worked out in an earlier step. The ink the board uses for a value the player entered. */
+.solved { color: var(--entered); font-weight: 700; }
+
+.tfootnote {
+  margin: 10px 0 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tfootnote .tcell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  border: 1px solid var(--grid-line);
+  font-variant-numeric: tabular-nums;
+}
+
+.tutorial-tail:empty { display: none; }
+
+.tutorial-reference {
+  margin: 22px 0 0;
+  font-size: 14px;
+}
+
+.tutorial-reference dt {
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.tutorial-reference dd {
+  margin: 2px 0 0;
+  color: var(--muted);
+  line-height: 1.35;
+}

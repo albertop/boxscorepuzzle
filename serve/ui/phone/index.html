@@ -5,6 +5,11 @@
 <link rel="stylesheet" href="fonts.css">
 <!-- Tokens before the rules that spend them: the cascade needs the custom properties defined first. -->
 <link rel="stylesheet" href="tokens.css">
+<!-- ⚠️ `board.css` too, and not only `landing.css`. The example on this page is drawn with the board's
+     own renderers — the real line score and the real batting section — so it needs the board's rules.
+     A hand-drawn imitation would drift from the thing it advertises the first time the board changes,
+     and nothing would notice. -->
 <link rel="stylesheet" href="board.css">
-<div id="app"></div>
-<script type="module" src="main.js"></script>
+<link rel="stylesheet" href="landing.css">
+<div id="landing"></div>
+<script type="module" src="landing-main.js"></script>

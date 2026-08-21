@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-20  
 **Mode:** Full-source review, not a delta review  
-**Result:** One new actionable finding: `v34-P2-01`
+**Result:** One finding, `v34-P2-01`, now closed; no new findings in the correction review
 
 ## Scope
 
@@ -60,6 +60,15 @@ Chromium. Five confirmations and no control is five confirmations of nothing.
 
 **188 browser tests pass** (183 before, 5 added), 1014 Python tests, ruff clean, ratchet at zero.
 
+**Correction review, 2026-08-21:** Independently inspected the implemented lifecycle and its regression
+coverage. The fix satisfies the original finding without introducing a second modal state: `present()`
+owns insertion and the single-panel guard, `dismiss()` owns removal and restoration, every pre-existing
+application child is inert while the panel is present, both renderers leave close wiring to the shell,
+and the automatic reveal returns to the replacement **See the boxscore** control because **Check** no
+longer exists. The tests cover the reference opener, repeated activation, Close, Escape, the removed
+Check opener, and the DOM-node comparison trap in the harness. **No new issue was found.** This review
+did not rerun the suites; the execution counts above are the developer's recorded verification.
+
 **Priority:** P2  
 **Locations:** `serve/ui/phone/shell.js:172`, `serve/ui/phone/shell.js:258`, `serve/ui/phone/finish.js:92`, `serve/ui/phone/finish.js:160`, `serve/ui/phone/finish.js:392`, `serve/ui/phone/finish.js:423`
 
@@ -114,4 +123,3 @@ The single strict `xfail` records that no unique-but-underivable example has bee
 | P1 | 0 | 0 |
 | P2 | 1 | **0** |
 | P3 | 0 | 0 |
-

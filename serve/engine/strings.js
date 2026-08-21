@@ -176,6 +176,62 @@ const en = {
   "reference.bounds_name": "And nothing can break these",
   "reference.bounds": "AB \u2265 H \u00b7 ER \u2264 R \u00b7 nothing below zero",
 
+  // -------------------------------------------------------------------------------------------
+  // The landing page (`docs/serve-flow.md` §1). Every visit lands here, not only the first.
+  // -------------------------------------------------------------------------------------------
+  "landing.name": "boxscore",
+  // ⚠️ **It says what this is and what it is not, in that order.** The second sentence is not filler:
+  // the first thing a visitor gets wrong about this product is thinking it is a trivia game, and that
+  // mistake is the line separating it from Immaculate Grid (§2, anti-goals).
+  "landing.tagline": "Rebuild a real baseball boxscore using nothing but logic.",
+  "landing.not_trivia": "No trivia, no guessing. Every missing number can be worked out.",
+  "landing.example_caption": "A real game, most of it missing. You put it back.",
+  "landing.play": "Play today\u2019s puzzle",
+  "landing.how_to_play": "How to play",
+  // Shown in place of the tagline's call to action once today is done, beside the time.
+  "landing.finished": "You rebuilt it.",
+
+  // -------------------------------------------------------------------------------------------
+  // The tutorial (`docs/serve-flow.md` §1b). Five steps, one per relation family, and skippable.
+  // -------------------------------------------------------------------------------------------
+  "tutorial.title": "How to play",
+  "tutorial.progress": "Step {step} of {total}",
+  "tutorial.back": "Back",
+  "tutorial.next": "Next",
+  "tutorial.skip": "Skip",
+  // ⚠️ **Said out loud, because otherwise it reads as a bug.** The board in the tutorial is four
+  // batters, one pitcher and three columns; a real one is six columns and up to thirteen rows. A
+  // player who is not told will spend a step wondering why it looks wrong instead of watching the
+  // relation work.
+  "tutorial.made_up": "A made-up boxscore, smaller than a real one.",
+  "tutorial.blank_prompt": "One number is missing. Here is how you get it.",
+  "tutorial.step.row_identity":
+    "Every time a batter comes to the plate it counts as a plate appearance \u2014 whether he hit, "
+    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks, plus the rare ways of "
+    + "reaching that are neither.",
+  "tutorial.step.column_sum":
+    "The Totals row is the sum of the rows above it, column by column. It works downwards to find a "
+    + "total, and upwards to find the one row you are missing.",
+  "tutorial.step.cross_team":
+    "A hit by a batter is a hit allowed by the pitcher who threw it. The two halves of this board are "
+    + "the same game seen from opposite sides, so their totals have to agree \u2014 for H, BB, SO and R.",
+  "tutorial.step.global":
+    "Every plate appearance ends one of three ways: the batter is out, he scores, or he is still on "
+    + "base when the inning ends. Nothing else can happen, so the team\u2019s PA is exactly its outs "
+    + "plus its runs plus the men it left on base. "
+    // ⚠️ The board never prints outs — the pitching column is innings pitched — so the sentence that
+    // crosses the two belongs in the step that needs it, not only on the reference sheet.
+    + "The board shows innings rather than outs, and an inning is three outs.",
+  // ⚠️ Last on purpose. See `docs/serve-flow.md` §1b: the other four are visible in the grid, and
+  // nothing on screen announces that turns are dealt around the order.
+  "tutorial.step.batting_order":
+    "Turns go around the lineup in order, one after another, and never skip. So reading down the "
+    + "slots, plate appearances never go up \u2014 a batter lower in the order can never have batted "
+    + "more times than the one above him.",
+  "tutorial.reference_hint":
+    "All five stay one tap away while you play \u2014 the button marked The relations.",
+  "tutorial.finish": "Start today\u2019s puzzle",
+
   // ---- dates -----------------------------------------------------------------------------------
   // ⚠️ Month names rather than `1913-08-17`. The reveal is the one screen written for a reader rather
   // than for a parser, and an ISO date on it reads as a field that escaped. Keyed by number so the
@@ -223,6 +279,18 @@ export function fill(key, values) {
     if (!Object.hasOwn(values, name)) throw new Error(`no value for {${name}} in ${key}`);
     return values[name];
   });
+}
+
+/**
+ * `1913-08-17` as a reader reads it. The month names are the catalogue's, not any renderer's.
+ *
+ * ⚠️ **Here rather than in `finish.js`, because a second page needs it.** It was private to the reveal;
+ * the landing page prints today's date on its button, and a copy of six lines is how one screen ends up
+ * saying `August 17, 1913` while another says `17 August 1913` in the same language.
+ */
+export function longDate(iso) {
+  const [year, month, day] = iso.split("-");
+  return fill("date.long", { month: text(`month.${Number(month)}`), day: String(Number(day)), year });
 }
 
 export function keys() {

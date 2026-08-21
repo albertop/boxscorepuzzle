@@ -63,10 +63,7 @@ export function boot({
 
   let selected = null;
 
-  const score = document.createElement("div");
-  score.className = "linescore";
-  score.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
-  app.append(score);
+  app.append(renderLineScore(puzzle.puzzle.lineScore, puzzle.offenseIsHome));
 
   const scroller = document.createElement("div");
   scroller.className = "scroller";

@@ -23,7 +23,7 @@
  */
 
 import { FOOTNOTE_COLUMNS, PRINTED_BATTING, PRINTED_PITCHING } from "../../engine/columns.js";
-import { fill, text } from "../../engine/strings.js";
+import { fill, longDate, text } from "../../engine/strings.js";
 import { renderLineScore } from "./board.js";
 
 /** `mm:ss`, or `h:mm:ss` past an hour. The first thing the player sees of a clock they never saw run. */
@@ -55,16 +55,6 @@ export function checkBoard(game) {
 
 /** Innings held as outs, printed the way a boxscore prints them. */
 const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;
-
-/** `1913-08-17` as a reader reads it. The month names are the catalogue's, not this file's. */
-function longDate(iso) {
-  const [year, month, day] = iso.split("-");
-  return fill("date.long", {
-    month: text(`month.${Number(month)}`),
-    day: String(Number(day)),
-    year,
-  });
-}
 
 /**
  * The boxscore the player just reconstructed, laid out the way a newspaper printed one.
@@ -194,13 +184,11 @@ function clippingFor(puzzle, reveal) {
   date.className = "clipping-date";
   date.textContent = longDate(reveal.playedOn);
 
-  const line = document.createElement("div");
-  line.className = "linescore";
   // ⚠️ **The real renderer with the labels as a parameter, never a second line score.** A comparison
   // page written with its own grid twice showed something other than what it was evaluating. Here the
   // labels change and nothing else does: during play the rows are `AWAY` and `HOME` because the player
   // has no clubs, and here they are the clubs, because the player has just earned them.
-  line.append(renderLineScore(puzzle.solution.lineScore, puzzle.offenseIsHome, sideLabels(reveal)));
+  const line = renderLineScore(puzzle.solution.lineScore, puzzle.offenseIsHome, sideLabels(reveal));
 
   const notes = footnoteBlock(puzzle, reveal);
 

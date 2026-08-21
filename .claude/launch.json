@@ -3,7 +3,11 @@
   "configurations": [
     {
       "name": "serve",
-      "url": "http://localhost:8137"
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "tools/dev_server.py"
+      ],
+      "port": 8137
     }
   ]
 }
