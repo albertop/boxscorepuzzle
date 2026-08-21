@@ -244,6 +244,69 @@ rows are positions throughout, and the boxscore at the end is the answer to *who
 
 ---
 
+## 7b. The share is a PNG of the board — decided, not built
+
+**The board itself, as an image. The cells the player filled in are replaced with random digits and
+then blurred; the given cells show their real values.** With it go **the time and the hints used**,
+because §26's comparison rests on that pair and a result carrying one without the other cannot be
+compared to anything.
+
+### ⚠️ The blur is not what protects the puzzle — the random digits are
+
+This is the whole design and it is easy to get backwards. A blur is concealment, and concealment
+invites reversal: deblurring is a solved problem, the image is small, the glyph set is ten digits in a
+known typeface, and the grid positions are fixed. A blurred *real* board is a puzzle waiting for
+someone with a deconvolution script.
+
+**Replace the values first and the attack has nothing to reach.** Anyone who reverses the blur
+perfectly recovers **noise**, and — this is the part that matters — **has no way to tell it is noise**.
+The identities do not balance, but they do not balance in the same way a wrong guess does not balance,
+and the recipient cannot distinguish "I recovered the answer" from "I recovered garbage that looks like
+an answer". It stops being concealment and becomes publishing garbage, which is not an attack surface.
+
+⚠️ **So the blur is doing a different job: it is typography, not security.** It makes the image read as
+a finished boxscore at a glance instead of as a wall of arbitrary numbers, and it signals *these were
+mine* against *these were given*. If the blur were removed entirely the design would still be safe and
+would simply look wrong.
+
+### Why an image at all
+
+**A boxscore cannot be represented in characters the way Wordle's rows can.** Five squares in three
+colours are a shareable line of text; a grid of ten rows and six columns with a totals row, a line
+score and a footnote line is not. Any text encoding of it is either enormous or an abstraction that
+throws away the one thing worth sharing.
+
+And the abstraction loses the point. **The board should read as full and finished — the way a
+reconstructed boxscore looks — rather than as a lattice of squares.** The product's claim is *I rebuilt
+a real game from arithmetic*; the artefact has to look like the thing that was rebuilt.
+
+### What was considered and rejected, with the reason each fails
+
+Recorded so none of the three returns as an obvious improvement.
+
+| Rejected | Why |
+|---|---|
+| **Marking which cells were blank** | Tells the recipient exactly where the holes are — the shape of the erasure *is* the puzzle, and a heat map of it is a solution aid handed out for free |
+| **A text-only line** | Safe, and says nothing about what the player actually did. It carries a time and a verdict and no evidence of a board, so it markets nothing |
+| **Blur without random digits** | ⚠️ **A blurred digit keeps its shape.** `1` does not look like `8` at any radius that still reads as a boxscore, and stroke density survives blurring — so a blurred real board leaks the answer to anyone patient, and leaks it *correctly*, which is the difference between this and the accepted design |
+
+### ⚠️ What has to come before it, and this is an ordering decision rather than a preference
+
+**The tutorial and the landing page ship before the share.** Today the game drops straight onto the
+board, and §8 makes the tutorial non-skippable on first play precisely because a board that appears
+with no explanation is where §2's fragile audience leaves.
+
+**There are now five relation families, and one of them cannot be inferred from looking at the board.**
+The batting order relation is not visible in any row or column the way the column sums and the row
+identity are — a player who starts cold is being asked to deduce using a rule nobody told him about.
+The reference sheet (§3b) states it, and a sheet the player has no reason to open is not onboarding.
+
+So the share is the growth channel and it would be **sharing a game the first-time visitor cannot
+understand**. Building it first optimises the funnel's top while the step below it is missing. The
+onboarding has to work before the thing that brings people to it.
+
+---
+
 ## 8. Statistics — for the operator, not the player
 
 C7's per-game record already carries the essentials: **starts, completions, duration, errors, and the
@@ -350,8 +413,12 @@ reasoning, so a later reading does not treat them as data kept "just in case".
   (§4, §5)
 - **What gets measured, and retention metrics** — §8 and §10, though none of it is built
 
-**Still open and untouched by this document:** what time the puzzle rolls over, what the share grid
-encodes, and how candidates mode works without hover.
+- **What the share encodes** — a PNG of the board, the player's own cells replaced with random digits
+  and blurred, the given cells real, carrying the time and the hints used (§7b). ⚠️ Decided and **not
+  built**, and deliberately not built first: it ships after the tutorial and the landing page
+
+**Still open and untouched by this document:** what time the puzzle rolls over, and how candidates mode
+works without hover.
 
 ---
 

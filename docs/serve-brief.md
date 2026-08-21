@@ -482,12 +482,38 @@ active cell. That is correct and close to the limit of what separates at a glanc
 cannot answer it — the question is about a thumb's distance from a screen, not about pixels. **Check
 before adding a fourth.**
 
-**Whether the share grid is per-cell**, and therefore whether the engine must emit a derived
-first-outcome vector. Until that design exists the engine emits the C7 record and nothing else; adding
-the vector later is additive, taking a leaked value back is not. See §7.
+**~~Whether the share grid is per-cell~~ — decided on 2026-08-20, and it is not a grid.**
 
-**⚠️ The six reference packages predate the scoreboard-duplicate exclusion** and still carry an erased
-`H` total. Regenerating needs the database.
+**The share is a PNG of the board**: the player's own cells replaced with random digits and then
+blurred, the given cells real, carrying the time and the hints used. Full design and the three rejected
+alternatives in `docs/serve-flow.md` §7b.
+
+⚠️ **It needs no derived vector from the engine, which closes this as a question about the engine.** The
+image is drawn from the board and the C7 record, both of which the shell already holds — so the seam
+stands as written in §7 and nothing has to be emitted that was not being emitted before. The open
+question was whether a per-cell outcome had to leak out of the engine; the answer is that it does not.
+
+**Not built, and deliberately not next**: the tutorial and the landing page come first, because the
+share would otherwise be a growth channel pointed at a game a first-time visitor cannot yet read.
+
+**⚠️ ~~The six reference packages predate the scoreboard-duplicate exclusion and still carry an erased
+`H` total.~~ Not true, and closed on 2026-08-20 by running it.**
+
+The writer was re-run against the database and produced **the same generation id**, `d61a2e49980d` —
+which under §21 is the answer, not a non-answer: a generation is a hash of the batch's names and
+payloads, so an unchanged id means the current code produces byte-identical packages and there was
+nothing to regenerate. The packages were already rebuilt at some point after the exclusion landed and
+this note outlived that.
+
+Checked directly as well, because *the id did not move* and *the code does not look* are the same
+observation from outside: all six carry **all four** of `SCOREBOARD_DUPLICATES` given, and each one
+equals what the line score prints beside it.
+
+⚠️ **A wrong reading got as far as being reported before this, and it is worth recording how.** A check
+took `puzzle.batting[-1]` as the totals row and found `hits` erased in two packages. `batting` is the
+nine batter rows; the totals are a **separate `batting_totals` field**, so the cell being read was the
+ninth batter's hits — which is erasable and often erased. The instrument was working and pointed one
+row off, and its answer was specific, plausible and wrong.
 
 **Tablet and desktop do not exist.** Phone first was the decision and the other two are additive from
 it. Neither should start before the phone has been used on a phone.

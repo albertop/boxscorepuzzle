@@ -3721,9 +3721,14 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
    which is not a date), C8 `canAccess`, C9 reserved ad slots, C10 the two-phase boot. **C11 is done**,
    but the catalogue holds `en` only.
 10. **Product surfaces:** the share grid (§7) and the tutorial that is not skippable on first play (§8).
-    ⚠️ **The share grid blocks the reveal's primary action**: §20 makes it the main growth channel and
-    the finished screen should lead with it, but §36 has *what it encodes without leaking anything* open
-    — so the button waits on the design rather than shipping pointed at nothing.
+    ⚠️ **The share is designed and is deliberately not next.** §36's *what it encodes without leaking*
+    closed on 2026-08-20: a **PNG of the board**, the player's own cells replaced with random digits and
+    then blurred, the given cells real, carrying the time and the hints used (`serve-flow.md` §7b). The
+    random digits are the protection and the blur is typography — reversing the blur recovers noise the
+    recipient cannot distinguish from an answer.
+    ⚠️ **The tutorial and the landing page ship before it.** The game currently drops straight onto the
+    board, one of the five relation families cannot be inferred by looking at it, and a growth channel
+    pointed at a game the first-time visitor cannot read optimises the wrong step.
     **Hints are surfaced** (count beside the time). **Errors are not, deliberately**: marking makes
     probing beat deducing and a count is a binary search over the board. The mistake count stays in the
     C7 record, where it is a measurement rather than a message.
