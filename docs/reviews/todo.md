@@ -4546,11 +4546,50 @@ that whichever notation wins — an operator decision, since the two docstrings 
 arguments (column alignment against *the way a printed boxscore writes them*) — the pack's fidelity is
 re-checked rather than assumed. v36-P2-15.
 
+### ✅ v36's P2s are closed — all sixteen, 2026-08-21
+
+`P2-01` the bounding loop is bounded, with a cap measured over 10,442 real calls (worst: 5 passes on a
+143-cell board) and a `ContradictionError` on exhaustion; the seeding is **deliberately unchanged**,
+because copying the verifier's finite cap would narrow harder and silently move the pool ·
+`P2-02` the constructor holds the parser's rules for `puzzle_id` and `signature`, with the round trip
+nobody was performing now asserted · `P2-04` the hook reads the refs from stdin, so `git push origin
+main` from a feature branch no longer prints a reassuring skip · `P2-08` a given cell may not
+contradict the solution, in **both** runtimes · `P2-10` the publication gate refuses a package whose
+metadata still names the game · `P2-11` the database identifiers are bound parameters · `P2-12` the
+package records whether a board reached its target only with the batting-order clue · `P2-15` and
+`P2-16` closed with the innings work above.
+
+⚠️ **Three of them were only reachable because a test was not doing what it said.** The lineup cap's
+boundary test asserted its own restatement of the rule over two literals, so flipping `>` to `>=` in
+the implementation left all 1014 tests green — verified by doing it. The tutorial-trait gate's first
+predicate could not fail. And a scan written for C11 fired on catalogue keys until it was narrowed.
+**Each fix now has a test that fires on the defect and a test that spares the code around it.**
+
+### ⬜ Two design questions v36's fixes surfaced — operator decisions, not bugs
+
+⚠️ **1. `Fault.NO_SOLUTION` at layer 2 and `Fault.MISMATCH` at layer 4 are now unreachable through the
+type.** Both meant *the puzzle and the solution disagree*, and `P2-08` makes that unconstructible: if
+every given equals the solution and the solution passes layer 1, the solution **is** a completion, so
+"no completion exists" cannot arise; and `verify()` compares the solved board against
+`package.solution` — the package's own answer — so a mismatch cannot either.
+
+The refusal moved **earlier and into both runtimes**, which is strictly better. But it means layer 4 is
+not the end-to-end check §22 describes: *take the published puzzle, solve from scratch, compare against
+the original boxscore*. It has never taken the original boxscore; it takes the package's own. Making it
+one would mean passing the source direction into `verify()` — a signature change to the verifier and a
+real strengthening. **The branches are left in place as defence in depth pending that decision**, and
+the layer tests now record where each case actually goes.
+
+⚠️ **2. Should the batting order be a fifth `Family`?** `FAMILY_OF` maps no `Identity` to it, so
+`Solution.families_used` excludes every lineup step and package metadata cannot say a board needed it.
+`P2-12` works around this by recording `"lineup": "plain" | "fallback"` instead.
+
+**Adding a fifth family is not a local change.** §4 and §31 name four equation families as the axis
+difficulty is reported on, and every figure taken so far is against those four. The player already
+meets five relations — the reference sheet and the tutorial both teach the batting order as one — so
+the product and the measurement axis disagree about how many there are. That is worth resolving, and
+resolving it re-bases the reporting.
+
 ### Still open from v36
 
-**8 of 16 P2s and all 44 P3s.** `P2-01` `narrow()` looping on a contradictory system · `P2-02`
-construction and parsing applying different rules to the same fields · `P2-04` the pre-push hook gating
-on the checked-out branch rather than the refs being pushed · `P2-08` the package boundary never
-checking a given cell against the solution · `P2-10` leaking metadata and keys outside the signed
-surface · `P2-11` SQL assembled from database-derived values · `P2-12` a fallback board's dependence on
-the batting order recorded nowhere in the package · `P2-15` and `P2-16` above.
+**All 44 P3s.**

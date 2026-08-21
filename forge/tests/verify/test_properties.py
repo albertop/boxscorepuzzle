@@ -148,7 +148,10 @@ def _package(puzzle: Board, source: Board) -> Package:
     return Package(
         labels=("C",) * len(puzzle.batting),
         pitcher_labels=("C",) * len(puzzle.pitching),
-        puzzle_id="property",
+        # ⚠️ A real identifier. This read `property` — sixteen hex is what the parser requires and what
+        # the constructor requires now, so a fixture outside that language was building a package
+        # `from_json` would refuse. v36-P2-02.
+        puzzle_id="00000000000f0f0f",
         puzzle=puzzle,
         solution=source,
         slot_references=refs(puzzle),
@@ -239,12 +242,19 @@ class TestTheSignatureTracksTheContent:
             pitching_totals=board.pitching_totals,
             line_score=board.line_score,
         )
+        # ⚠️⚠️ **`solution=altered` too, and the reason is a stronger guarantee rather than a
+        # weaker test.** This altered the puzzle and kept the original solution — a package whose
+        # givens contradict its own answer, which the boundary refuses outright now (v36-P2-08),
+        # because such a board is unwinnable and gives the player no way to find out. The one-sided
+        # tamper is no longer expressible, so this exercises the one that still is: a coherent board
+        # that is not the board that was signed. The property under test is unchanged — content moved,
+        # signature must fail — and the case this used to cover is now caught one layer earlier.
         tampered = Package(
             labels=("C",) * len(altered.batting),
             pitcher_labels=("C",) * len(altered.pitching),
             puzzle_id=signed.puzzle_id,
             puzzle=altered,
-            solution=signed.solution,
+            solution=altered,
             metadata=signed.metadata,
             signature=signed.signature,
             slot_references=refs(altered),
@@ -271,21 +281,27 @@ class TestTheSignatureTracksTheContent:
         signed = sign(_package(board, board), SECRET)
         rows = [list(row) for row in board.batting]
         rows[0][3] = (rows[0][3] or 0) + 1
+        moved = Board(
+            batting=tuple(tuple(entry) for entry in rows),
+            batting_totals=board.batting_totals,
+            footnotes=board.footnotes,
+            footnote_totals=board.footnote_totals,
+            left_on_base=board.left_on_base,
+            pitching=board.pitching,
+            pitching_totals=board.pitching_totals,
+            line_score=board.line_score,
+        )
+        # ⚠️ The puzzle moves with it. Changing the answer under an unchanged set of givens is a
+        # package whose givens contradict its solution, and that is refused at the boundary now
+        # (v36-P2-08) rather than left for the signature to catch — which is the better place for it,
+        # since the client verifies no signature by design. What remains testable here, and is what
+        # this test is for, is that a *different* answer travelling under an old signature fails.
         altered = Package(
             labels=("C",) * len(signed.puzzle.batting),
             pitcher_labels=("C",) * len(signed.puzzle.pitching),
             puzzle_id=signed.puzzle_id,
-            puzzle=signed.puzzle,
-            solution=Board(
-                batting=tuple(tuple(entry) for entry in rows),
-                batting_totals=board.batting_totals,
-                footnotes=board.footnotes,
-                footnote_totals=board.footnote_totals,
-                left_on_base=board.left_on_base,
-                pitching=board.pitching,
-                pitching_totals=board.pitching_totals,
-                line_score=board.line_score,
-            ),
+            puzzle=moved,
+            solution=moved,
             signature=signed.signature,
             slot_references=refs(signed.puzzle),
             offense_is_home=True,

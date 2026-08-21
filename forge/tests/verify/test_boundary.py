@@ -292,6 +292,62 @@ class TestAPackageCannotContradictItself:
     keeps. The parser rejecting it on the way *in* is not the same guarantee.
     """
 
+    def test_anything_the_constructor_builds_the_parser_reads(self, board: Board) -> None:
+        """⚠️⚠️ **The round trip nobody performed, which is why nothing was red.** (v36-P2-02)
+
+        This class states the invariant — *the shared type must be unable to produce output outside the
+        language its own parser accepts* — and enforced it for `slot_references` and `schema` while
+        `puzzle_id`, `signature` and the row widths were checked **only on the way in**. Three fixtures
+        in this suite were built on the hole: two identifiers that are not sixteen hex digits and a
+        signature of eight.
+
+        The asymmetry matters because **the forge signs what the constructor built**. A producer or a
+        migration working in memory could emit an unreadable document with no `PackageError` anywhere,
+        and find out when a browser refused it.
+        """
+        built = Package(
+            solution=board,
+            puzzle=board,
+            labels=("C",) * len(board.batting),
+            pitcher_labels=("C",) * len(board.pitching),
+            puzzle_id="00000000000000ff",
+            slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+            offense_is_home=True,
+            signature="ab" * 64,
+        )
+
+        # The whole point: the document it writes is one it can read.
+        assert Package.from_json(built.as_json()) is not None
+
+    def test_an_identifier_outside_the_parsers_language_is_refused(self, board: Board) -> None:
+        # `property` and `plausibility` were both accepted here until v36-P2-02 — real fixtures, not
+        # invented ones.
+        for wrong in ("property", "plausibility", "00000000000000FF", "0" * 15, "0" * 17):
+            with pytest.raises(PackageError, match="puzzle_id"):
+                Package(
+                    solution=board,
+                    puzzle=board,
+                    labels=("C",) * len(board.batting),
+                    pitcher_labels=("C",) * len(board.pitching),
+                    puzzle_id=wrong,
+                    slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+                    offense_is_home=True,
+                )
+
+    def test_a_signature_that_is_not_ed25519_shaped_is_refused(self, board: Board) -> None:
+        # `deadbeef` was a fixture in `test_schema_document.py`: eight hex where the format is 128.
+        with pytest.raises(PackageError, match="signature"):
+            Package(
+                solution=board,
+                puzzle=board,
+                labels=("C",) * len(board.batting),
+                pitcher_labels=("C",) * len(board.pitching),
+                puzzle_id="00000000000000ff",
+                slot_references=tuple(str(index + 1) for index in range(len(board.batting))),
+                offense_is_home=True,
+                signature="deadbeef",
+            )
+
     def test_a_package_without_references_is_refused(self, board: Board) -> None:
         with pytest.raises(PackageError, match="needs one slot reference"):
             Package(

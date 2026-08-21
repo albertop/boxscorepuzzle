@@ -47,7 +47,10 @@ def package(puzzle: Board, source: Board) -> Package:
     return Package(
         labels=("C",) * len(puzzle.batting),
         pitcher_labels=("C",) * len(puzzle.pitching),
-        puzzle_id="plausibility",
+        # ⚠️ A real identifier. This read `plausibility` — sixteen hex is what the parser requires and what
+        # the constructor requires now, so a fixture outside that language was building a package
+        # `from_json` would refuse. v36-P2-02.
+        puzzle_id="00000000b1a5b111",
         puzzle=puzzle,
         solution=source,
         slot_references=refs(puzzle),

@@ -26,7 +26,7 @@ from typing import Final
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from boxscore_package.format import BATTING_COLUMNS, Package
+from boxscore_package.format import BATTING_COLUMNS, LEAKING_METADATA, Package
 from boxscore_verify.expected_id import expected_puzzle_id
 from boxscore_verify.plausibility import faults, reveal_faults
 from boxscore_verify.verify import UNSIGNED, Unsigned, Verdict, verify
@@ -294,12 +294,40 @@ def check_printed_boxscore_corresponds(
         )
     return refusals
 
+def check_no_leaking_metadata(
+    package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned
+) -> list[str]:
+    """The metadata carries nothing that gives the game away. (v36-P2-10)
+
+    ⚠️⚠️ **The gate never asked.** `published()` strips `LEAKING_METADATA` — `game_id`, `retrosheet_id`,
+    `season`, `date`, `teams` — and this registry, which the module docstring calls *the single gate a
+    puzzle passes before it may be published*, had no check that it happened. The only leak check in
+    the tree was an ad-hoc `if "game_id" in restored.metadata` inside one script, which is the shape
+    `refuse_second_direction`'s own docstring names: **a rule applied during selection is not a check
+    performed at the boundary.**
+
+    The damaging case needs no attacker. A future inventory pipeline — the calendar builder — writing
+    packages without `.published()` would ship the date and the clubs in every file, pass every check,
+    and hand the reveal to anyone with devtools open. §7's whole promise, silently void for a
+    generation of inventory, with nothing able to notice.
+
+    ⚠️ **`isdisjoint`, over the whole set, rather than the one key somebody remembered.** The ad-hoc
+    check looked for `game_id` alone; `date` and `teams` name the game just as well.
+    """
+    del evidence, secret
+    leaking = sorted(LEAKING_METADATA & package.metadata.keys())
+    if leaking:
+        return [f"the metadata still carries {', '.join(leaking)}, which names the game (§7)"]
+    return []
+
+
 CERTIFICATIONS: Final[dict[str, Callable[[Package, Evidence, Ed25519PublicKey | Unsigned], list[str]]]] = {
     "evidence_is_about_this_package": check_evidence_is_about_this_package,
     "mathematics": check_mathematics,
     "board_is_possible": check_board_is_possible,
     "reveal_is_complete": check_reveal_is_complete,
     "provenance": check_provenance,
+    "no_leaking_metadata": check_no_leaking_metadata,
     "independent_correspondence": check_independent_correspondence,
     "printed_boxscore_corresponds": check_printed_boxscore_corresponds,
 }
@@ -334,4 +362,5 @@ __all__ = [
     "Certification",
     "Evidence",
     "certify_for_publication",
+    "check_no_leaking_metadata",
 ]

@@ -394,13 +394,15 @@ class TestTheTutorialsTwoCasesSurviveToDisk:
         with pytest.raises(SystemExit, match="shared slot reference"):
             writer._traits_survived(stripped)
 
+        # ⚠️ Both halves. Zeroing only the solution builds a package whose givens contradict its own
+        # answer, which the boundary refuses since v36-P2-08 — the mutant would fail for the wrong
+        # reason and say nothing about the trait gate.
+        zeros = lambda rows: tuple(tuple(0 for _ in row) for row in rows)  # noqa: E731
         flat = [
             replace(
                 one,
-                solution=replace(
-                    one.solution,
-                    footnotes=tuple(tuple(0 for _ in row) for row in one.solution.footnotes),
-                ),
+                puzzle=replace(one.puzzle, footnotes=zeros(one.puzzle.footnotes)),
+                solution=replace(one.solution, footnotes=zeros(one.solution.footnotes)),
             )
             for one in shipped
         ]

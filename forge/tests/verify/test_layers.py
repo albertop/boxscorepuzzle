@@ -160,19 +160,44 @@ class TestLayerTwoCatchesAmbiguity:
         assert verdict.rejection.layer is Layer.UNIQUENESS
         assert verdict.rejection.fault is Fault.MULTIPLE_SOLUTIONS
 
-    def test_a_board_whose_given_cells_contradict_each_other(self, board: Board, blank: Blank) -> None:
-        # The puzzle claims forty hits in the batting total against the eight its pitchers allowed.
-        # No completion exists, which is a different failure from having too many.
-        puzzle = replacing(
-            blank(board, {"batting": [(0, 3)]}),
-            batting_totals=(36, 36, 3, 40, 0, 5),
-        )
+    def test_givens_that_contradict_the_answer_never_reach_a_layer(self, board: Board, blank: Blank) -> None:
+        """⚠️⚠️ **Refused at the format boundary, before any layer runs.** (v36-P2-08)
 
-        verdict = verify(package(puzzle, board), secret=UNSIGNED)
+        This built forty hits into the puzzle's batting total and left the original solution beside it,
+        then asserted layer 2 found no completion. A package whose givens disagree with its own answer
+        cannot be constructed now — in either runtime — because that board is unwinnable and the player
+        has no way to discover it.
+        """
+        contradicting = replacing(blank(board, {"batting": [(0, 3)]}), batting_totals=(36, 36, 3, 40, 0, 5))
+
+        with pytest.raises(PackageError, match="the solution says"):
+            package(contradicting, board)
+
+    def test_an_impossible_board_is_caught_by_layer_one_rather_than_layer_two(
+        self, board: Board, blank: Blank
+    ) -> None:
+        """⚠️ **And putting the contradiction in both halves moves it one layer earlier, not later.**
+
+        With the givens forced to match the solution, the only way to express *forty hits against eight
+        allowed* is a solution that says so — and a solution that says so fails the identities. Layer 1
+        answers it, with the columns it is off by.
+
+        ⚠️⚠️ **This is the consequence worth naming: `Fault.NO_SOLUTION` at layer 2 is now unreachable
+        through the type.** If every given equals the solution and the solution satisfies the
+        identities, the solution *is* a completion — so "no completion exists" cannot arise from a
+        well-formed package that passed layer 1. Layer 2's real work is `MULTIPLE`, which
+        `test_cells_erased_that_were_not_forced` covers. Recorded in `todo.md`; whether the
+        now-unreachable branch stays as defence in depth is an operator decision, not a test's.
+        """
+        impossible = replacing(board, batting_totals=(36, 36, 3, 40, 0, 5))
+        puzzle = blank(impossible, {"batting": [(0, 3)]})
+
+        verdict = verify(package(puzzle, impossible), secret=UNSIGNED)
 
         assert verdict.rejection is not None
-        assert verdict.rejection.layer is Layer.UNIQUENESS
-        assert verdict.rejection.fault is Fault.NO_SOLUTION
+        assert verdict.rejection.layer is Layer.IDENTITIES
+        assert verdict.rejection.fault is Fault.BAD_DATA
+        assert "hits" in verdict.rejection.detail, "the rejection does not say which column is wrong"
 
 
 class TestLayerThreeCatchesAnUnreachableBoard:
@@ -203,19 +228,29 @@ class TestLayerThreeCatchesAnUnreachableBoard:
 
 
 class TestLayerFourCatchesACorruptedArtefact:
-    def test_a_given_cell_altered_after_generation(self, board: Board) -> None:
-        # The nastiest case the first three layers cannot see. Two batters' hits are swapped in the
-        # published board: every identity still holds, the board still has exactly one completion,
-        # and that completion is a different game from the one the source says it is.
+    def test_a_given_cell_altered_after_generation_never_reaches_a_layer(self, board: Board) -> None:
+        """⚠️⚠️ **This case is refused at the format boundary now, and that is worth stating plainly.**
+
+        It used to swap two batters' hits in the published board and keep the original solution, then
+        assert layer 4 caught the mismatch. Since v36-P2-08 a package whose givens disagree with its own
+        solution cannot be constructed at all: `Package.__post_init__` refuses it, and so does the
+        client's `readPackage`. **Earlier and in both runtimes is strictly better** — the client
+        verifies no signature by design, so a boundary refusal is the only thing standing between a
+        tampered static file and a day that nobody can win.
+
+        ⚠️ **What this exposes about layer 4 is recorded in `todo.md` rather than fixed here.**
+        `verify()` compares the solved board against `package.solution` — the package's own answer, not
+        an independent source — so `Fault.MISMATCH` means *the puzzle and the solution disagree*, which
+        is the property the format check now enforces directly. Whether layer 4 should instead take the
+        source direction as an argument, and so become the end-to-end check §22 describes, is an
+        operator decision and a change to the verifier's signature.
+        """
         rows = [list(row) for row in board.batting]
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
-        puzzle = replacing(board, batting=tuple(tuple(row) for row in rows))
+        altered = replacing(board, batting=tuple(tuple(row) for row in rows))
 
-        verdict = verify(package(puzzle, board), secret=UNSIGNED)
-
-        assert verdict.rejection is not None
-        assert verdict.rejection.layer is Layer.END_TO_END
-        assert verdict.rejection.fault is Fault.MISMATCH
+        with pytest.raises(PackageError, match="the solution says"):
+            package(altered, board)
 
 
 class TestTheSignatureCatchesCorruptionInTransit:

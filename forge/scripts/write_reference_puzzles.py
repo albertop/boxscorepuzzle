@@ -125,7 +125,20 @@ def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None
     filler at all. It is worth something exactly where the board cannot get there without it.
     """
     produced, why = erase_with_lineup_fallback(loaded.direction, tuple(loaded.slots), target_stalls=target, seed=SEED)
-    del why  # The reason is for the measurement instruments; this script only needs the board.
+    # ⚠️⚠️ **Kept, and written into the package.** (v36-P2-12) This read `del why` — *the reason is for
+    # the measurement instruments; this script only needs the board* — and `lineup_fallback.py` returns
+    # it precisely because **every measurement comparing these boards needs to know which population
+    # each one is in**. The one production caller was throwing that away.
+    #
+    # Without it, a board that is unique and derivable **only because of the batting-order clue** is
+    # indistinguishable in its own metadata from a plain one. Seam C3 asks for *techniques required*;
+    # a calendar shaping the week by technique, or a client deciding what to surface, cannot see the
+    # one family that cannot be read off a boxscore — the family §8 has to teach for that very reason.
+    #
+    # ⚠️ **`families` cannot carry it and is deliberately left alone.** `FAMILY_OF` maps no `Identity`
+    # to the batting order, so `families_used` excludes every lineup step; adding a fifth `Family`
+    # would change the axis §4 and §31 report difficulty on, and every figure taken against the
+    # existing four. That is an operator decision and it is recorded in `todo.md`, not taken here.
     if produced is None:
         return None
     package = sign(
@@ -151,6 +164,10 @@ def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None
                 "chain_length": produced.solution.chain_length,
                 "blanks": len(produced.erased),
                 "families": sorted(family.value for family in produced.solution.families_used),
+                # `"plain"` or `"fallback"`: whether this board reached its target without the
+                # batting-order clue or only with it. The distinction the erasure already knows and
+                # the package could not previously state.
+                "lineup": why,
                 "batters": len(loaded.direction.batting),
                 "pitchers": len(loaded.direction.pitching),
                 "seed": SEED,

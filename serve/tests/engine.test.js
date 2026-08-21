@@ -3027,6 +3027,58 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   });
 });
 
+suite("⚠️⚠️ A given cell may not contradict the answer", () => {
+  // v36-P2-08. `isSolved()` walks every cell, givens included, so one wrong given makes it
+  // permanently false: *Check* answers "Something doesn't add up yet" for ever on a board where every
+  // blank the player owes is correct. The board gives no per-cell feedback by design, so the player
+  // cannot find it — an unwinnable day that renders perfectly.
+  //
+  // ⚠️ It is also the cheapest tamper available. The client verifies no signature by design (§23), so
+  // one edited byte in a static file bricks a day for everyone. A refusal here makes that a visible
+  // failure instead of a silent one.
+  const tampered = (raw, mutate) => {
+    const copy = structuredClone(raw);
+    mutate(copy);
+    return copy;
+  };
+
+  test("a grid cell that disagrees with the solution is refused", () => {
+    const document = tampered(packages[0].raw, (copy) => {
+      const row = copy.puzzle.batting.findIndex((cells) => cells.some((value) => value !== null));
+      const column = copy.puzzle.batting[row].findIndex((value) => value !== null);
+      copy.puzzle.batting[row][column] = copy.solution.batting[row][column] + 1;
+    });
+
+    throws(() => readPackage(document), "the solution says");
+  });
+
+  test("a totals cell that disagrees with the solution is refused", () => {
+    const document = tampered(packages[0].raw, (copy) => {
+      const column = copy.puzzle.pitching_totals.findIndex((value) => value !== null);
+      copy.puzzle.pitching_totals[column] = copy.solution.pitching_totals[column] + 1;
+    });
+
+    throws(() => readPackage(document), "the solution says");
+  });
+
+  test("left on base is never erased, so a disagreement there is malformed", () => {
+    const document = tampered(packages[0].raw, (copy) => {
+      copy.puzzle.left_on_base = copy.solution.left_on_base + 1;
+    });
+
+    throws(() => readPackage(document), "left_on_base");
+  });
+
+  test("⚠️ a blank is not a disagreement, and every real package still reads", () => {
+    // The other half: the check must not refuse the erasure it exists alongside. Every published
+    // package is full of nulls where the solution has numbers, and all of them must still open.
+    for (const { id, raw } of packages) {
+      const puzzle = readPackage(raw);
+      assert(puzzle.puzzle.batting.flat().includes(null), `${id} has no blanks, so it proves nothing`);
+    }
+  });
+});
+
 suite("⚠️⚠️ One conversion, two notations — and no file spells the arithmetic twice", () => {
   const MIRRORS = ["board.js", "finish.js", "shell.js", "landing.js", "tutorial.js", "testmode.js"];
   const ENGINE = ["game.js", "clock.js", "store.js", "package.js", "strings.js"];

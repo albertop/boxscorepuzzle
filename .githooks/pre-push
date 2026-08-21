@@ -19,16 +19,36 @@
 #
 set -e
 
-branch=$(git rev-parse --abbrev-ref HEAD)
-if [ "$branch" != "main" ]; then
-  echo "pre-push: on '$branch', not main. Skipping; CI is the check for a branch."
+# ⚠️⚠️ **The refs being pushed, read from stdin — not the branch that happens to be checked out.**
+#
+# Git hands a pre-push hook one line per ref on stdin: `<local ref> <local sha> <remote ref> <remote
+# sha>`. This hook never read it. It asked `git rev-parse --abbrev-ref HEAD` and skipped whenever that
+# was not `main`, which means it **failed open on every push to main not made from a main checkout**:
+#
+#   git push origin main          # from a feature branch
+#   git push origin HEAD:main
+#   git push origin <sha>:main    # or anything from a detached HEAD
+#
+# All three printed *"Skipping; CI is the check for a branch"* and pushed unchecked, to a remote with
+# no branch protection. Those are forgetting-class paths, which is exactly the scope this hook claims:
+# it guards against forgetting and not against intent. `--no-verify` is the documented way out and is
+# untouched; this was a different hole, and a reassuring message on top of it. v36-P2-04.
+push_to_main=0
+while read -r _local _local_sha remote _remote_sha; do
+  case "$remote" in
+    refs/heads/main) push_to_main=1 ;;
+  esac
+done
+
+if [ "$push_to_main" -eq 0 ]; then
+  echo "pre-push: nothing headed for main. Skipping; CI is the check for a branch."
   exit 0
 fi
 
 root=$(git rev-parse --show-toplevel)
 cd "$root/forge"
 
-echo "pre-push: main. Running what CI runs, because main is not protected server-side."
+echo "pre-push: a ref is headed for main. Running what CI runs, because main is not protected server-side."
 
 echo "  ruff, forge"
 uv run ruff check src scripts tests

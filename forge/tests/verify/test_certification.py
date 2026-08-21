@@ -12,7 +12,9 @@ import sys
 from dataclasses import replace
 from pathlib import Path
 
-from boxscore_package.format import BATTING_COLUMNS, Board, Package, PrintedBoxscore, Reveal
+import pytest
+
+from boxscore_package.format import BATTING_COLUMNS, LEAKING_METADATA, Board, Package, PrintedBoxscore, Reveal
 from boxscore_verify import certify as certification
 from boxscore_verify import plausibility
 from boxscore_verify.certify import (
@@ -295,6 +297,35 @@ class TestThePrintedBoxscoreIsCorroborated:
 
         assert not result.publishable
         assert len(result.refusals) >= 3, result.refusals
+
+
+class TestTheGateRefusesAPackageThatNamesTheGame:
+    """v36-P2-10. The gate is *the single gate a puzzle passes before it may be published* and it never
+    asked whether the metadata still carried the answer.
+
+    ⚠️ The damaging case needs no attacker: a pipeline that forgets `.published()` ships the date and
+    the clubs in every file, passes every check, and hands the reveal to anyone with devtools open.
+    """
+
+    @pytest.mark.parametrize("key", sorted(LEAKING_METADATA))
+    def test_every_leaking_key_is_refused_on_its_own(self, board: Board, key: str) -> None:
+        # ⚠️ One case per key rather than one case with all five. The ad-hoc check this replaces looked
+        # for `game_id` alone, and `date` or `teams` name the game just as well.
+        carrying = replace(package_for(board), metadata={key: "anything"})
+
+        verdict = certify_for_publication(carrying, evidence=good_evidence(board), secret=UNSIGNED)
+
+        assert not verdict.publishable
+        assert any(key in refusal for refusal in verdict.refusals), verdict.refusals
+
+    def test_a_published_package_passes(self, board: Board) -> None:
+        # The other half: the check must not refuse what the pipeline actually produces. `published()`
+        # is what strips them, and its output has to survive its own gate.
+        verdict = certify_for_publication(
+            package_for(board).published(), evidence=good_evidence(board), secret=UNSIGNED
+        )
+
+        assert not any("names the game" in refusal for refusal in verdict.refusals), verdict.refusals
 
 
 class TestTheDuplicatedSourceListAgrees:

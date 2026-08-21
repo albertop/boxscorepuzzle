@@ -62,7 +62,10 @@ def a_package(board: Board, *, version: int = SCHEMA_VERSION) -> Package:
             pitcher_labels=("SP",) * len(board.pitching),
         ),
         metadata={"chain_target": 9, "game_id": "ATL196808080", "season": 1968},
-        signature="deadbeef",
+        # ⚠️ 128 hex, which is what an Ed25519 signature is and what the parser demands. This read
+        # `deadbeef` — eight — so the fixture was a document the format cannot express. The
+        # constructor accepted it because only the parse path checked. v36-P2-02.
+        signature="de" * 64,
         offense_is_home=True,
     )
 

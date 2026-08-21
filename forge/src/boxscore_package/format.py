@@ -939,6 +939,19 @@ class Package:
         check_profile(self.solution, "solution", complete=True)
         _check_labels(self.labels, len(self.puzzle.batting), "labels")
         _check_labels(self.pitcher_labels, len(self.puzzle.pitching), "pitcher_labels")
+        # ⚠️⚠️ **The identifier and the signature, held to the pattern the parser applies.** (v36-P2-02)
+        #
+        # `from_json` matched both against `PUZZLE_ID` and `SIGNATURE`; the constructor matched
+        # neither, so `Package(...).as_json()` could produce a document `Package.from_json()` refuses.
+        # That is the same write/read asymmetry this file records fixing three times already — for
+        # slot references, for `schema`, for the blank profile — left open on three more fields, and
+        # `TestAPackageCannotContradictItself` states the invariant it was breaking.
+        #
+        # It matters because the forge signs what the constructor built: a producer or a migration
+        # working in memory could emit an unreadable package with no `PackageError` anywhere.
+        _matching(self.puzzle_id, PUZZLE_ID, "puzzle_id")
+        _matching(self.signature, SIGNATURE, "signature", optional=True)
+        _check_givens_agree(self.puzzle, self.solution)
         if self.schema is not None:
             _check_schema(self.schema, "a package cannot be schema")
         # ⚠️ Here rather than in `from_json`, because `from_json` calls this constructor and a check
@@ -1045,6 +1058,50 @@ class Package:
         except (KeyError, TypeError) as error:
             message = f"puzzle package is missing or malformed: {error}"
             raise PackageError(message) from error
+
+
+def _check_givens_agree(puzzle: Board, solution: Board) -> None:
+    """Every number the puzzle *gives* must be the number the solution holds. (v36-P2-08)
+
+    ⚠️⚠️ **Neither side checked this, and the consequence is an unwinnable board that renders
+    perfectly.** The client's `isSolved()` compares every cell against the answer, givens included, so
+    a single disagreeing given makes it permanently false: *Check* says "Something doesn't add up yet"
+    for ever on a board where every blank the player owes is right. The board gives no per-cell
+    feedback by design (§2), so nobody can find it.
+
+    Here as well as in `package.js` because they are one rule, and the shared vectors are what keep the
+    two answerable to the same values rather than to each other. **This side is the producer**: a
+    generator or a migration that emits such a package would otherwise sign it.
+    """
+    grids = (
+        ("batting", puzzle.batting, solution.batting),
+        ("pitching", puzzle.pitching, solution.pitching),
+        ("footnotes", puzzle.footnotes, solution.footnotes),
+    )
+    for name, given_rows, answer_rows in grids:
+        for index, row in enumerate(given_rows):
+            for column, value in enumerate(row):
+                if value is not None and value != answer_rows[index][column]:
+                    message = (
+                        f"puzzle.{name}[{index}][{column}] gives {value} "
+                        f"and the solution says {answer_rows[index][column]}"
+                    )
+                    raise PackageError(message)
+    totals = (
+        ("batting_totals", puzzle.batting_totals, solution.batting_totals),
+        ("pitching_totals", puzzle.pitching_totals, solution.pitching_totals),
+        ("footnote_totals", puzzle.footnote_totals, solution.footnote_totals),
+    )
+    for name, given_row, answer_row in totals:
+        for column, value in enumerate(given_row):
+            if value is not None and value != answer_row[column]:
+                message = f"puzzle.{name}[{column}] gives {value} and the solution says {answer_row[column]}"
+                raise PackageError(message)
+    if puzzle.left_on_base != solution.left_on_base:
+        message = (
+            f"puzzle.left_on_base is {puzzle.left_on_base} and the solution says {solution.left_on_base}"
+        )
+        raise PackageError(message)
 
 
 def _check_labels(values: object, rows: int, where: str) -> None:

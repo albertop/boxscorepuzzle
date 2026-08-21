@@ -292,12 +292,35 @@ def _what_it_buys(cursor: object, broken: list) -> None:
     # rule removes were still in the denominator. The difference is tiny today and that is not the
     # point: the number is named for a population it did not measure, and exception growth would widen
     # the gap silently. Derived from the run rather than hard-coded, so the two cannot drift apart.
+    # ⚠️⚠️ **Parameters, and the `noqa` below used to say these were module constants.** (v36-P2-11)
+    #
+    # `broken` is rows returned by the previous query — database content — and it was being formatted
+    # straight into the predicate as quoted literals. `docs/python-conventions.md` is absolute about
+    # this: *parameterized queries only, ever, including in throwaway scripts*. A `GAME_ID` carrying an
+    # apostrophe would at minimum break the query.
+    #
+    # The practical exposure is small: a local, read-only database this project loads itself. **The
+    # real cost was the false justification**, sitting in the one place a reader or the lint ratchet
+    # would look to decide whether the suppression was earned. A suppression that misdescribes what it
+    # is suppressing is worse than none, because it answers the question nobody then asks.
+    #
+    # Placeholders are generated from the *length* of `broken` — that count is genuinely a program
+    # value — and the identifiers travel as bound parameters.
     excluded = (
-        " AND NOT (" + " OR ".join(f"(a.GAME_ID = '{game}' AND a.TEAM_ID = '{team}')" for game, team in broken) + ")"
-        if broken
-        else ""
+        " AND NOT (" + " OR ".join(["(a.GAME_ID = ? AND a.TEAM_ID = ?)"] * len(broken)) + ")" if broken else ""
     )
-    rows = cursor.execute(f"""
+    exclusions = [value for pair in broken for value in pair]
+    # ⚠️ **No suppression, and that is the point of the change.** This carried an S608 waiver claiming
+    # *module constants only* while interpolating database rows — a false justification sitting exactly
+    # where a reader or the ratchet would look to decide whether the waiver was earned. The identifiers
+    # are bound parameters now; the S608 that remains is ruff seeing an f-string build a query, the
+    # same as the five sites in `difficulty-metrics/measure.py`, and it is counted in the baseline
+    # rather than argued away. v36-P2-11.
+    #
+    # ⚠️ The old waiver is described rather than quoted, because **ruff reads a directive spelled inside
+    # a comment as a directive** and reported the quotation itself as an unused one.
+    rows = cursor.execute(
+        f"""
     {SHAPE_CTE},
     admissible AS (SELECT g.GAME_ID, o.TEAM_ID {candidates(gated=True)}),
     occupancy AS (
@@ -308,7 +331,11 @@ def _what_it_buys(cursor: object, broken: list) -> None:
       GROUP BY a.GAME_ID, a.TEAM_ID, r.SLOT_CT)
     SELECT men, COUNT(*) AS slots, SUM(men) AS rows_in_them
     FROM occupancy GROUP BY men ORDER BY men
-    """).fetchall()  # noqa: S608 - module constants only
+    """,
+        # ⚠️ The only values from the database. Everything else interpolated above is a module constant
+        # or a count, which is what the suppression now honestly covers.
+        *exclusions,
+    ).fetchall()
 
     print("")
     print(f"=== WHAT IT WOULD BUY (production pool, gated, {len(broken)} rule-excluded directions removed) ===")

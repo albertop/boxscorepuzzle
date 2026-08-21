@@ -9,10 +9,12 @@ would be backtracking and is exactly what the publication rule forbids.
 import pytest
 from hypothesis import given
 
+from boxscore_forge import bounds as bounds_module
 from boxscore_forge.bounds import Bounds, narrow
 from boxscore_forge.boxscore import Direction
-from boxscore_forge.constraints import all_cells, cell_values, shape_of
+from boxscore_forge.constraints import Equation, Term, all_cells, cell_values, shape_of
 from boxscore_forge.errors import ContradictionError
+from boxscore_forge.identities import Identity
 from tests.strategies import valid_directions
 
 
@@ -156,3 +158,80 @@ class TestItNeverExcludesTheTruth:
             bounds = narrow(shape, {name: value for name, value in original.items() if name != cell})[cell]
 
             assert bounds.low <= original[cell] <= _upper(bounds)
+
+class TestAContradictionIsRaisedRatherThanRunForever:
+    """⚠️⚠️ **The loop had no bound and an inconsistent system made it run for ever.** v36-P2-01.
+
+    Every unknown starts `Bounds(0, None)` — no upper bound claimed, which is the honest state. But
+    `is_empty` needs `high is not None`, so on a contradictory cycle among cells that never gain an
+    upper bound the lower bounds climb by a positive constant every pass and **nothing ever reports
+    it**. `erase()` reaches `solve()` on directions loaded from the database *before* any layer-1
+    validation, and `erasure.py` promises a broken boxscore "fails loud" via `ContradictionError`.
+    It hung the batch instead — **worse than the crash that was promised**, because a hang carries no
+    message and no exit code.
+
+    ⚠️ **The verifier's twin was immune and that is the finding, not the consolation.** `reason.py`
+    seeds `(0, CELL_CAP)`, so it terminates. Two independent implementations of one technique
+    disagreeing about whether bad data ends — §22's independence working exactly as intended to
+    surface it, and the disagreement is the defect.
+    """
+
+    @staticmethod
+    def _impossible_pair(shape: object) -> tuple[Equation, ...]:
+        """`a = b + 1` and `b = a + 1` over two real cells: satisfiable by nothing, bounded by nothing."""
+        cells = sorted(all_cells(shape))
+        a, b = cells[0], cells[1]
+        return (
+            Equation(terms=(Term(a, 1), Term(b, -1)), constant=1, origin=Identity.ROW_PLATE_APPEARANCES),
+            Equation(terms=(Term(b, 1), Term(a, -1)), constant=1, origin=Identity.ROW_PLATE_APPEARANCES),
+        )
+
+    def test_an_unsatisfiable_system_raises_instead_of_hanging(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ **If the cap is removed this test does not fail — it hangs**, and a CI timeout is what
+        reports it. That is uncomfortable and it is the honest assertion: the property under test is
+        *termination*, and there is no way to assert termination that terminates when it is absent."""
+        shape = shape_of(cubs_at_braves_1968)
+
+        with pytest.raises(ContradictionError, match="did not settle"):
+            narrow(shape, {}, system=self._impossible_pair(shape))
+
+    def test_the_message_names_the_shape_rather_than_blaming_the_board(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        # The operator reading this is looking at a batch that stopped. "Slow" and "impossible" need
+        # different responses, and the message has to say which one this is.
+        shape = shape_of(cubs_at_braves_1968)
+
+        with pytest.raises(ContradictionError) as raised:
+            narrow(shape, {}, system=self._impossible_pair(shape))
+
+        assert "contradictory" in str(raised.value)
+        assert "passes per cell" in str(raised.value), "the message does not say what normal looks like"
+
+    def test_a_real_board_settles_far_inside_the_cap(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ **The other half, and the one that keeps the cap honest.** A bound that could reject a real
+        board would be raised until it said nothing, so this asserts the headroom is real: the whole
+        board narrows without coming near the ceiling.
+
+        Measured when the cap was set: the worst of 10,442 real calls took **5 passes** over 143 cells.
+        """
+        shape = shape_of(cubs_at_braves_1968)
+        passes = {"count": 0}
+        original = bounds_module._tighten_once
+
+        def counted(*args: object) -> bool:
+            passes["count"] += 1
+            return original(*args)
+
+        bounds_module._tighten_once = counted
+        try:
+            narrow(shape, _erase(cubs_at_braves_1968, *sorted(all_cells(shape))[:6]))
+        finally:
+            bounds_module._tighten_once = original
+
+        ceiling = max(bounds_module._MINIMUM_PASSES, bounds_module._PASSES_PER_CELL * len(all_cells(shape)))
+        assert passes["count"] < ceiling / 10, (
+            f"a real board took {passes['count']} passes against a ceiling of {ceiling}; "
+            f"the headroom this cap was set with is gone"
+        )
+

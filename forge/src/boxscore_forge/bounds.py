@@ -11,6 +11,7 @@ never excluded. That last part is what makes it safe to deduce from, and it is u
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from typing import Final
 
 from boxscore_forge.constraints import (
     BoardShape,
@@ -41,6 +42,16 @@ class Bounds:
         return self.high is not None and self.low > self.high
 
 
+_PASSES_PER_CELL: Final = 4
+"""Tightening passes allowed per cell before the system is called contradictory. **Measured.**
+
+The worst of 10,442 real calls took 5 passes over 143 cells — 0.035 per cell. This is 114x that.
+"""
+
+_MINIMUM_PASSES: Final = 64
+"""A floor, so a small shape is not held to a tighter bound than a large one. **Chosen, not measured.**"""
+
+
 def narrow(
     shape: BoardShape,
     given: Mapping[str, int],
@@ -69,9 +80,38 @@ def narrow(
     relations = equations(shape) if system is None else system
     bounds_rules = inequalities(shape)
 
-    while _tighten_once(domains, relations, bounds_rules):
-        pass
-    return domains
+    # ⚠️⚠️ **Bounded, because an inconsistent system made this loop run for ever.** (v36-P2-01)
+    #
+    # Every unknown is seeded `Bounds(0, None)` — no upper bound is claimed, which is the honest
+    # starting state. But `is_empty` needs `high is not None`, so on a contradictory cycle among cells
+    # that never acquire an upper bound the lower bounds climb by a positive constant every pass and
+    # **nothing ever reports the contradiction**. `a = b + 1` with `b = a + 1` does it.
+    #
+    # `erase()` reaches `solve()` on directions loaded from the database *before* any layer-1
+    # validation, and `erasure.py` promises a broken boxscore "fails loud" via `ContradictionError`.
+    # In this shape it hung the batch instead — **worse than the crash that was promised**, because a
+    # hang has no message and no exit code.
+    #
+    # ⚠️ **The seeding is deliberately not changed.** The verifier's twin is immune because it seeds
+    # every unknown `(0, CELL_CAP)`, and copying that here would narrow *harder* — a different answer
+    # about which boards are solvable, which would silently move the pool and invalidate every
+    # difficulty measurement taken so far. The loop is bounded; the arithmetic is untouched.
+    #
+    # **The cap is measured.** Over 10,442 real `narrow()` calls, solving `cubs_at_braves_1968` erased
+    # to every target from 1 to 12 across three seeds: **the worst call took 5 passes** on a 143-cell
+    # board, 0.035 passes per cell. Four per cell is **114 times** the observed maximum, and the floor
+    # of 64 keeps a tiny shape from being capped tighter than a large one. A bound that could reject a
+    # real board would get raised until it said nothing.
+    ceiling = max(_MINIMUM_PASSES, _PASSES_PER_CELL * len(domains))
+    for _ in range(ceiling):
+        if not _tighten_once(domains, relations, bounds_rules):
+            return domains
+    message = (
+        f"bounding did not settle in {ceiling} passes over {len(domains)} cells. "
+        f"The measured worst case is 0.035 passes per cell, so this is a contradictory system whose "
+        f"cells have no upper bound rather than a slow one."
+    )
+    raise ContradictionError(message)
 
 
 def _tighten_once(domains: dict[str, Bounds], system: Iterable[Equation], bounds_rules: Iterable[Inequality]) -> bool:

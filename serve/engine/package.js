@@ -126,6 +126,57 @@ function lineScore(raw) {
  * then returned true for a cell still drawn empty, while entering any number was necessarily wrong.
  * Reproduced before this was written: the cell read blank, counted as correct, and rejected `0`.
  */
+/**
+ * Every number the puzzle *gives* must be the number the solution holds.
+ *
+ * ⚠️⚠️ **Only the shape was compared, so a given cell could contradict the answer.** (v36-P2-08)
+ * `game.isSolved()` walks every cell, givens included, comparing what the board holds against the
+ * answer — so one wrong given makes `isSolved()` permanently false and *Check* answers "Something
+ * doesn't add up yet" for ever, on a board where every blank the player owes is correct.
+ *
+ * **The player has no way to find it.** The board gives no per-cell feedback by design (§2: marking
+ * makes probing beat deducing), so an unwinnable day is indistinguishable from a hard one. This is the
+ * class this file's own header calls *the unsolvable-board defect, reached from the schema side*.
+ *
+ * ⚠️ And it is the cheapest tamper available: the client verifies no signatures by design (§23, and
+ * a browser checking a signature from the same origin as the verifier is theatre), so one edited byte
+ * in a static file bricks a day for everyone. A refusal at the boundary turns that into a package the
+ * client declines to open, which is a visible failure rather than a silent one.
+ */
+function agreesWithTheAnswer(puzzle, solution) {
+  const grids = [
+    ["batting", puzzle.batting, solution.batting],
+    ["pitching", puzzle.pitching, solution.pitching],
+    ["footnotes", puzzle.footnotes, solution.footnotes],
+  ];
+  for (const [name, given, answer] of grids) {
+    given.forEach((row, index) =>
+      row.forEach((value, column) => {
+        if (value !== null && value !== answer[index][column]) {
+          fail(`puzzle.${name}[${index}][${column}] gives ${value} and the solution says ${answer[index][column]}`);
+        }
+      }),
+    );
+  }
+  const rows = [
+    ["batting_totals", puzzle.battingTotals, solution.battingTotals],
+    ["pitching_totals", puzzle.pitchingTotals, solution.pitchingTotals],
+    ["footnote_totals", puzzle.footnoteTotals, solution.footnoteTotals],
+  ];
+  for (const [name, given, answer] of rows) {
+    given.forEach((value, column) => {
+      if (value !== null && value !== answer[column]) {
+        fail(`puzzle.${name}[${column}] gives ${value} and the solution says ${answer[column]}`);
+      }
+    });
+  }
+  // ⚠️ Never erased (§6) and therefore always a given: a disagreement here is a malformed package
+  // rather than a blank.
+  if (puzzle.leftOnBase !== solution.leftOnBase) {
+    fail(`puzzle.left_on_base is ${puzzle.leftOnBase} and the solution says ${solution.leftOnBase}`);
+  }
+}
+
 function board(raw, where, { complete = false } = {}) {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) fail(`${where} is not an object`);
   const batting = rows(raw.batting, BATTING_COLUMNS.length, `${where}.batting`, { complete });
@@ -197,6 +248,7 @@ export function readPackage(raw) {
   if (solution.batting.length !== puzzle.batting.length || solution.pitching.length !== puzzle.pitching.length) {
     fail("the solution does not have the same shape as the puzzle");
   }
+  agreesWithTheAnswer(puzzle, solution);
   // Required and object-shaped, as the document states — not defaulted. Seam C3 makes it deliberately
   // loose in *content*; that is not the same as optional.
   if (raw.metadata === null || typeof raw.metadata !== "object" || Array.isArray(raw.metadata)) {
