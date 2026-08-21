@@ -76,10 +76,13 @@ def test_the_loader_reads_the_retrosheet_master_and_not_the_other_dataset() -> N
     """
     source = (_ROOT / "discovery" / "difficulty-metrics" / "measure.py").read_text(encoding="utf-8")
 
-    # ⚠️ **The qualified table name, not the bare word.** The first version searched for `regPeople`
-    # anywhere in the file and fired on the docstring that explains why the table was replaced — a guard
-    # that forbids describing the defect it guards against. What is forbidden is reading the table.
-    assert "dbo.regPeople" not in source, "the loader still reads a table outside the Retrosheet collection"
+    # ⚠️ **The prohibition moved and is not repeated here.** This asserted `dbo.regPeople` is absent,
+    # which forbids exactly one table out of a database full of them —
+    # `test_only_retrosheet_tables.py` now forbids the whole collection boundary, and a specific rule
+    # sitting beside a general one that contains it is two rules that can disagree.
+    #
+    # What stays is the positive half, which that guard cannot make: the *right* table, joined in both
+    # row queries. Forbidding the wrong one does not assert anyone reads the right one.
     assert source.count("dbo.retroMaster m ON m.playerID = d.PLAYER_ID") == 2, "both row queries join the master"
     assert "m.first" not in source, "the loader reads the legal given name, which is not what he was called"
 

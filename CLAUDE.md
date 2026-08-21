@@ -552,6 +552,17 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 
 ### Source rules (§32)
 
+- ⚠️⚠️ **Only `dbo.retro*`. Never a table from another collection, for any reason.** The database holds
+  several: `bdb*` is Lahman, `fg*` is FanGraphs, `mlb*` and `dgl*` are others again. They disagree with
+  Retrosheet about player identifiers, about which games exist and about what a season is — so a board
+  drawing on two of them **balances perfectly and corresponds to nothing**, which §22's four layers
+  cannot see.
+
+  **This has happened.** The loader joined `dbo.regPeople` for names and resolved 98.4% of identifiers;
+  a join that resolves most rows looks exactly like one that resolves all of them, and the 316 it missed
+  shipped under a fabricated `Unknown`. `forge/tests/test_only_retrosheet_tables.py` enforces it — every
+  `dbo.X` in a query must be `dbo.retroX`, and an unqualified `FROM someTable` is refused too, since
+  that is the same defect with the schema left off.
 - **Exclude deduced event files.** They are reconstructions from partial information and will not balance.
 - Offensive and pitching stats are well proofed by Retrosheet. Defensive stats (PO, A) are not — and are not used by the board anyway.
 - The Chadwick Bureau person register resolves player identities for the final reveal (§7).
