@@ -24,7 +24,15 @@ from boxscore_forge.constraints import (
 from boxscore_forge.erasure import erase
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import FAMILY_OF, Family
-from boxscore_forge.solver import Deduction, Solution, Technique, _bounding_moves, solve
+from boxscore_forge.solver import (
+    _ENOUGH_FOR_A_PERCENTILE,
+    Deduction,
+    Solution,
+    Technique,
+    _bounding_moves,
+    _percentile,
+    solve,
+)
 from tests.strategies import valid_directions
 
 
@@ -598,3 +606,41 @@ class TestTheTwoFamilyReportsAgree:
         counts = puzzle.solution.family_counts
 
         assert {family for family, n in counts.items() if n} == puzzle.solution.families_used
+
+
+class TestTheNinetiethPercentileIsNotTheMaximum:
+    """⚠️⚠️ **It was, on every board with fewer than ten costed steps.** (v36-P3-40)
+
+    `_percentile` read `costs[min(int(0.9 * n), n - 1)]`, and `int(0.9n) == n - 1` for every `n <= 10`
+    — so it returned the **maximum**, which is the exact degenerate value the p90 exists to avoid.
+    `CLAUDE.md` §1 states the reason in one line: *p90, never max — the max is 8 or 9 on every board*.
+
+    It was also wrong the other way for longer solves: `int(0.9 * 20)` is 18, the nineteenth of twenty
+    values, nearer the 95th percentile than the 90th.
+
+    **Measured when this was fixed:** over `cubs_at_braves_1968` erased at every target from 1 to 12
+    across five seeds, 4 of 34 boards fall below ten costed steps — **all at target 1 or 2**, two of
+    the six rungs in `STALL_TARGETS`. On those the metric that grades reported a maximum under a name
+    promising otherwise.
+    """
+
+    def test_it_takes_the_nearest_rank_rather_than_truncating(self) -> None:
+        # The old formula's answers are in the comments: it is wrong in both directions.
+        assert _percentile(list(range(1, 21))) == 18  # was 19, the 95th percentile's neighbourhood
+        assert _percentile(list(range(1, 101))) == 90  # was 91
+        assert _percentile(list(range(1, 11))) == 9  # was 10, the maximum
+
+    def test_a_short_solve_cannot_have_a_percentile_and_the_code_says_so(self) -> None:
+        """⚠️ **Not a defect being papered over.** With four costed steps there is no freak step for a
+        percentile to be robust against, so p90 and max coincide by arithmetic. What matters is that
+        the floor is stated where the number is produced, because §31 grades on it."""
+        for size in range(1, _ENOUGH_FOR_A_PERCENTILE):
+            costs = list(range(1, size + 1))
+            assert _percentile(costs) == costs[-1], f"{size} costed steps"
+        # And at the floor it stops being the maximum, which is what the constant claims.
+        at_floor = list(range(1, _ENOUGH_FOR_A_PERCENTILE + 1))
+        assert _percentile(at_floor) != at_floor[-1]
+
+    def test_nothing_costed_is_none_rather_than_zero(self) -> None:
+        # A zero would read as an easy board rather than as an unmeasured one.
+        assert _percentile([]) is None

@@ -28,6 +28,7 @@ sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 from measure import Loaded, load, slot_references  # noqa: E402
 
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 from boxscore_forge.publish import to_board  # noqa: E402
@@ -52,7 +53,18 @@ something beyond direct substitution is needed; **no band is implied** — these
 for the client to be built against, not a difficulty scale. The ladder is a separate thing and it waits
 on the new scale, because its rungs were picked on the old one.
 """
-GATE = 0.25
+# ⚠️⚠️ **The decided gate, not a stricter literal.** (v36-P3-36) This read `GATE = 0.25` with no note,
+# no measurement and no `PROVISIONAL` marker — everything `docs/python-conventions.md` requires of a
+# value that shapes the product, absent from a value that shapes which boards `serve` is built against.
+# `ZERO_DENSITY_GATE` is 0.30 and is marked *measured, decided*.
+#
+# ⚠️ **The literal-copy guard could not see it**, because 0.25 is a *different number for the same
+# knob* rather than a copy of the same one. That is the drift the guard is blind to by construction.
+#
+# ⚠️ **The six packages currently in `serve/data/puzzles/` were drawn under 0.25** and will change the
+# next time this runs. That is the point: they were drawn from a **stricter pool than the one every
+# published measurement describes**, so the client has been developed and its layout judged against
+# boards less zero-heavy than the ones that will ship. Recorded in `docs/reviews/todo.md`.
 SEED = 6
 OUT = _ROOT / "serve" / "data" / "puzzles"
 EPHEMERAL_OUT = _ROOT / "discovery" / "ephemeral-puzzles"
@@ -500,7 +512,7 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
 
 def main() -> None:
     key, out = key_and_destination()
-    sample = load(4, gated=True, gate=GATE)
+    sample = load(4, gated=True, gate=ZERO_DENSITY_GATE)
 
     with_substitution = [item for item in sample if len(set(item.slots)) < len(item.slots)]
     with_footnote = [

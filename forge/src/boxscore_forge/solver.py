@@ -357,8 +357,37 @@ def _largest[T: (int, float)](costs: list[T]) -> T | None:
     return costs[-1] if costs else None
 
 
+_PERCENTILE = 0.9
+_ENOUGH_FOR_A_PERCENTILE = 10
+"""Below this many costed steps the 90th percentile **is** the maximum, by arithmetic.
+
+⚠️ Nearest-rank puts the p90 at index `ceil(0.9n) - 1`, which is `n - 1` for every `n < 10`. That is
+not a defect to fix — with four costed steps there is no freak step for a percentile to be robust
+against — but it is a fact the reader of the number has to have, because §31 grades on it and
+`CLAUDE.md` says *p90, never max — the max is 8 or 9 on every board*.
+
+**Measured when this was written:** solving `cubs_at_braves_1968` at every target from 1 to 12 across
+five seeds, 4 of 34 boards fall below the floor — **all of them at target 1 or 2**, which are two of
+the six rungs in `STALL_TARGETS`. So the two easiest rungs report a maximum under a name promising
+otherwise, and against a metric whose maximum barely varies they look like the hard ones.
+"""
+
+
 def _percentile[T: (int, float)](costs: list[T]) -> T | None:
-    return costs[min(int(0.9 * len(costs)), len(costs) - 1)] if costs else None
+    """The 90th percentile by nearest rank, or `None` when there is nothing to take it of.
+
+    ⚠️⚠️ **This read `costs[min(int(0.9 * n), n - 1)]` and was wrong in two directions.** (v36-P3-40)
+
+    For every `n <= 10`, `int(0.9n) == n - 1`, so it returned the **maximum** — the exact degenerate
+    value the p90 exists to avoid. And for larger `n` it was off by one the other way: `int(0.9 * 20)`
+    is 18, the nineteenth of twenty values, which is nearer the 95th percentile than the 90th.
+
+    Nearest rank is `ceil(p * n) - 1`. The `min` stays as a guard, not as the rule.
+    """
+    if not costs:
+        return None
+    rank = -(-int(_PERCENTILE * 100) * len(costs) // 100)  # ceil, in integers
+    return costs[min(rank - 1, len(costs) - 1)]
 
 
 def solve(shape: BoardShape, given: Mapping[str, int]) -> Solution:
@@ -503,7 +532,13 @@ def _next_step(
             depth=1 + max(depths.values(), default=0),
             frontier=len(bounded),
             depends_on=frozenset(depths),
-            equations_live=live,
+            # ⚠️⚠️ **Measured over the phase that supplied the move, which is this module's own rule.**
+            # (v36-P3-42) `live` above is counted over `system + global_equations`, because that is
+            # what propagation last scanned — and it was being stored on this bounding deduction even
+            # when `_bounding_moves` succeeded on `system` alone with `needed_global=False`. So a step
+            # that demonstrably did not need `PA = Outs + R + LOB` reported a scan that included it,
+            # overstating what the puzzle demanded in the one field meant to say what it demanded.
+            equations_live=_scan_size(system + global_equations if needed_global else system, values)[0],
             equations_solvable=len(bounded),
             # Not applicable rather than expensive. Bounding reaches for the whole board instead of
             # one equation, so any number here would be invented, and under a metric that takes the

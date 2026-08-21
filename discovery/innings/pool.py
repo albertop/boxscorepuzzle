@@ -99,8 +99,13 @@ def report(gated: Counter[int], ungated: Counter[int]) -> None:
     print("")
     print(f"  {'innings':>8}{'gated':>12}{'share':>9}{'cumulative loss above':>24}")
     longest = max(ungated)
+    # ⚠️ **From the shortest game in the cohort, not from nine.** (v36-P3-21) The loop started at 9
+    # while the cohort holds 5-to-8-inning games — counted in every denominator and printed as no row,
+    # so the shares did not sum to 100% and the reader had no way to see why. A table that silently
+    # omits part of what it divides by is a report that has to be believed rather than read.
+    shortest = min(ungated)
     running = 0
-    for innings in range(9, longest + 1):
+    for innings in range(shortest, longest + 1):
         here = gated[innings]
         if here == 0 and innings > ALWAYS_SHOW_TO:
             continue
@@ -109,7 +114,7 @@ def report(gated: Counter[int], ungated: Counter[int]) -> None:
         running += here
         print(f"  {innings:>8}{here:>12,}{share:>8.2%}{f'{above:,} ({above / total_gated:.2%})':>24}")
     print("")
-    print(f"  the longest game in the cohort runs {longest} innings")
+    print(f"  the cohort runs from {shortest} to {longest} innings")
 
 
 def main() -> None:

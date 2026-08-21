@@ -4629,7 +4629,7 @@ resolving it re-bases the reporting.
 | **D. Reproducible from the script alone** | 02, 03, 07 | ✅ done |
 | **E. Stale docs and dead code** | 04, 06, 20, 22, 35, 44 | ✅ done |
 | **F. Tooling, CI, container** | 01, 09, 10, 11, 30, 31, 43 | ✅ done |
-| **G. Measurement correctness** | 21, 36, 40, 41, 42 | ⬜ |
+| **G. Measurement correctness** | 21, 36, 40, 41, 42 | ✅ four fixed, one recorded |
 | **H. Structure and typing** | 05, 08, 37 | ⬜ |
 | **I. Security documentation** | 29 | ⬜ |
 | **J. Page basics** | 39, 46, 47 | ⬜ |
@@ -4684,7 +4684,45 @@ refused, never substituted — decided now so it is not invented during the rout
 
 ### Still open from v36
 
-**Groups G through K: 14 items.**
+**Groups H through K: 9 items.**
+
+#### Group G — two of these were about numbers that have been published
+
+⚠️ **`P3-40`: the p90 was the maximum on any board with fewer than ten costed steps**, which is the
+exact degenerate value it exists to avoid — `CLAUDE.md` §1 says *p90, never max; the max is 8 or 9 on
+every board*. `int(0.9n) == n - 1` for every `n <= 10`. It was also off the other way on long solves:
+`int(0.9 * 20)` is 18, the nineteenth of twenty values.
+
+**Measured rather than assumed:** over `cubs_at_braves_1968` at every target from 1 to 12 across five
+seeds, **4 of 34 boards fall below the floor, all of them at target 1 or 2** — two of the six rungs in
+`STALL_TARGETS`. So the two easiest rungs reported a maximum under a name promising otherwise, against
+a metric whose maximum barely varies. Nearest rank now, with the floor named where the number is made.
+
+⚠️ **`P3-36`: `GATE = 0.25` in the reference writer overrode the decided `ZERO_DENSITY_GATE = 0.30`** —
+no note, no measurement, no `PROVISIONAL` marker, which is everything the constants convention requires
+of a value that shapes the product. **The literal-copy guard could not see it**, because 0.25 is a
+different number for the same knob rather than a copy of the same one: the drift that guard is blind to
+by construction.
+
+**⬜ Consequence, and it is not fixed by the code change.** The six packages now in
+`serve/data/puzzles/` **were drawn under 0.25** — a stricter pool than the one every published
+measurement describes — so the client has been developed and its layout judged against boards **less
+zero-heavy than the ones that will ship**. The writer uses the decided gate now, so the next batch
+differs. Whether to regenerate before more of `serve` is built against these six is an operator call;
+it needs the database and the signing key.
+
+`P3-21` printed a rung table starting at nine innings while the cohort holds five-to-eight-inning
+games — counted in every denominator, printed as no row, so the shares did not sum to 100%.
+`P3-42` stored a scan taken over `system + global_equations` on a bounding step that had succeeded
+without the global relation, overstating what the puzzle demanded in the one field meant to say it.
+
+**⬜ `P3-41` is recorded, not fixed, and the review says so itself: "nothing unilateral".** A plain
+board's difficulty is graded by a solver given no lineup slots, while the published board prints
+`9a`/`9b` and a player who knows the divide-by-nine trick can use them. Correctness and derivability
+are unaffected — only the classification the calendar will consume is optimistic-high. **The fix is a
+calibration, not an edit**: when the hand-solve pack measures stalls against felt difficulty, include
+plain boards where lineup shortcuts exist, so the grading surface and the player's surface are compared
+on the same boards.
 
 
 ---
