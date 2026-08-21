@@ -27,8 +27,10 @@ offense equal the outs recorded by the opposing pitchers.
 
 import json
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Final, Self
 
 from boxscore_domain import MAX_INNINGS
@@ -888,7 +890,23 @@ class Package:
     """`SP`, then `RP-1` onwards in order of appearance. Never a bare `P` (§5)."""
 
     reveal: Reveal | None = None
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: Mapping[str, Any] = field(default_factory=dict)
+    """Rich metadata on every puzzle (C3) — **a read-only view, on the object the signature covers.**
+
+    ⚠️⚠️ **This was the fourth field named by `v36-P3-05` and the only one left mutable.** (v37-P3-01)
+    `Solution.values`, `Puzzle.given` and `Derivation.values` were frozen; this one was not, and it is
+    the one where mutability is worst: `canonical_bytes` is `published().as_json()`, so **adding,
+    removing or replacing a metadata key after signing changes the bytes the signature covers while
+    the signature stays put.** The object goes on reporting itself as frozen and as signed, and the
+    two statements stop being about the same thing.
+
+    ⚠️ **List values become tuples here**, so `families` cannot be appended to either. `json.dumps`
+    writes a tuple as an array, so the canonical bytes are unchanged — and `from_json` goes through
+    this same constructor, so a package read from disk and one built in memory still compare equal.
+
+    ⚠️ **Not a deep freeze beyond that.** Nothing in this schema nests a mapping inside metadata, and
+    freezing a shape that does not occur would be a guard with nothing to guard.
+    """
     slot_references: tuple[str, ...] | None = None
     """One per batting row, in row order. **Required**; typed optional only so the field can carry
     a default position in the dataclass, and a package without it raises at construction.
@@ -931,6 +949,17 @@ class Package:
         Frozen dataclasses need `object.__setattr__` for defaulting; the alternative was a factory
         nobody is obliged to use.
         """
+        # ⚠️ **The metadata is detached and frozen before anything else touches it** (v37-P3-01).
+        # First, because every check below and every consumer after should see the object's own copy
+        # rather than the caller's — a package whose metadata the caller can still edit is one whose
+        # signature stops describing it the moment they do.
+        object.__setattr__(
+            self,
+            "metadata",
+            MappingProxyType(
+                {key: tuple(value) if isinstance(value, list) else value for key, value in self.metadata.items()}
+            ),
+        )
         if self.slot_references is None:
             message = "a package needs one slot reference per batting row; schema 1 is gone"
             raise PackageError(message)
@@ -1014,7 +1043,10 @@ class Package:
             "schema": self.written_as,
             "puzzle_id": self.puzzle_id,
             "puzzle": self.puzzle.as_json(),
-            "metadata": self.metadata,
+            # ⚠️ A detached copy. `self.metadata` is a read-only view (v37-P3-01) and `json.dumps`
+            # cannot serialise one — but the copy is also the point: handing out the mapping the
+            # signature covers is how it gets edited from outside.
+            "metadata": dict(self.metadata),
         }
         document["labels"] = list(self.labels)
         document["pitcher_labels"] = list(self.pitcher_labels)

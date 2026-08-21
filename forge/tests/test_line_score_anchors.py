@@ -59,28 +59,49 @@ def line_score_calls() -> list[dict[str, str]]:
 class TestNoAnchorIsDerivedFromWhatItChecks:
     def test_every_field_is_present(self) -> None:
         # A field silently dropped would pass the per-field checks below by not existing.
-        for call in line_score_calls():
-            assert set(call) == set(FIELDS)
+        # ⚠️ This one always did loop correctly — the assertion is *inside* it. Kept as written, and
+        # worth noting: two tests were written together and only one of them got the indentation
+        # right, which is why the fix below is a mutation rather than a reread (v37-P3-02).
+        for index, call in enumerate(line_score_calls()):
+            assert set(call) == set(FIELDS), f"LineScore construction #{index + 1} has the wrong fields"
 
     @pytest.mark.parametrize("field", FIELDS)
     def test_the_field_is_not_summed_from_the_board(self, field: str) -> None:
-        # ⚠️ Every call, so a second `LineScore(...)` cannot carry the defect the first one is clear of.
-        for call in line_score_calls():
-            expression = call[field]
+        """⚠️⚠️ **The assertions were outside the loop, so only the last call was ever checked.**
 
-        assert not re.search(r"\bsum\(", expression), (
-            f"{field} is summed from the rows it anchors, which is the defect this file exists for"
-        )
-        assert "batting" not in expression, f"{field} is built from the batting rows it verifies"
-        assert "pitching" not in expression, f"{field} is built from the pitching rows it verifies"
+        (v37-P3-02) `line_score_calls()` was widened from *first match* to *every match* to close
+        `v36-P3-19` — and the consumer kept a loop that only rebound `expression`, with the three
+        assertions dedented below it. **Widening the finder did nothing**, because the reader still
+        judged one call: whichever `ast.walk` reached last.
+
+        ⚠️ **The comment above it read "Every call, so a second `LineScore(...)` cannot carry the
+        defect the first one is clear of."** A statement of the property, sitting on code that did not
+        have it, is what made it invisible — the same shape as the finder it was written to consume.
+        The `enumerate` below is so a failure names *which* construction is at fault rather than
+        leaving the reader to find it.
+        """
+        for index, call in enumerate(line_score_calls()):
+            expression = call[field]
+            where = f"LineScore construction #{index + 1}: {field}"
+
+            assert not re.search(r"\bsum\(", expression), (
+                f"{where} is summed from the rows it anchors, which is the defect this file exists for"
+            )
+            assert "batting" not in expression, f"{where} is built from the batting rows it verifies"
+            assert "pitching" not in expression, f"{where} is built from the pitching rows it verifies"
 
     def test_the_inning_arrays_are_parsed_from_the_game_log(self) -> None:
-        # These two are the exception that proves the rule: they come from the game log's line-score
-        # string, which is a different file from the daily rows, so parsing is loading.
-        arguments = line_score_calls()[0]
+        """These two are the exception that proves the rule: they come from the game log's line-score
+        string, which is a different file from the daily rows, so parsing is loading.
 
-        for field in ("offense_by_inning", "defense_by_inning"):
-            assert "innings" in arguments[field]
+        ⚠️ **`[0]` here, for the same reason and found in the same pass** (v37-P3-02): it asserted the
+        invariant of the *first* construction and called it the invariant.
+        """
+        for index, arguments in enumerate(line_score_calls()):
+            for field in ("offense_by_inning", "defense_by_inning"):
+                assert "innings" in arguments[field], (
+                    f"LineScore construction #{index + 1}: {field} is not parsed from the game log"
+                )
 
     def test_the_loader_rejects_a_direction_whose_hits_disagree(self) -> None:
         # The check itself, not only its inputs. Loading the anchor and then not comparing it would

@@ -1,6 +1,85 @@
 # Review backlog
 
-## 2026-08-21 — v37, a follow-up pass: one finding, and it points at a stale reason rather than a fragile gate
+## ⚠️⚠️ 2026-08-21 — v37, and the count in this file was wrong for the third time — **mine**
+
+**v36 holds 70 findings: 1 P1, 20 P2, 49 P3.** Counted from the review file's own headings, which is
+what the two previous claims said they had done and had not.
+
+⚠️⚠️ **I wrote *"the count is stated against the review file's own headings rather than against a
+running total, because the previous closing claim was a total asserted from two summaries and it was
+wrong"* — and then took 61 from the review's own summary line.** The sentence describing the check is
+the whole of what I did instead of the check. Third instance in this file, second one written while
+correcting the first.
+
+**What was actually done is better than what I claimed:** the group table was built from the findings
+themselves and covers **P3-01 through P3-49 with no gap and nothing invented** — verified by set
+difference against the review's headings, not by reading. **The work was complete; the prose count was
+not.** The correct closing statement is 49 P3s, and for the P2s: **18 of 20 closed, `P2-18` and
+`P2-19` open**, both of which need a production deployment shape that does not exist yet.
+
+⚠️ **The lesson is not "count more carefully".** All three wrong counts were produced by summarising a
+summary, and the cure is the one this project already uses everywhere else: **an independent source.**
+The review file's headings are that source; a sentence in its introduction is not.
+
+### `v37-P3-02` — **the worst of the four, and it is a guard that could not fire**
+
+`test_line_score_anchors.py` collected every `LineScore(...)` construction and then asserted **outside
+the loop**, so only the last was ever judged. `v36-P3-19` widened the finder from *first match* to
+*every match* — and **widening it did nothing**, because the consumer still judged one call.
+
+⚠️⚠️ **The comment above it read *"Every call, so a second `LineScore(...)` cannot carry the defect the
+first one is clear of."*** A statement of the property, sitting on code that did not have it. Fixed,
+and the mutation the reviewer describes — a second, defective construction that is **not** the last —
+now fails naming `LineScore construction #1`. The companion inning-array test took `[0]` and had the
+same shape.
+
+### `v37-P3-01` — the fourth field `v36-P3-05` named, and the only one left mutable
+
+`Package.metadata` stayed a caller-owned `dict` while `Solution.values`, `Puzzle.given` and
+`Derivation.values` were frozen. **It is the one where mutability is worst**: `canonical_bytes` is
+`published().as_json()`, so editing metadata after signing **changes the bytes the signature covers**
+while the signature stays put — a valid signature over a package that is no longer what was signed.
+
+Frozen as a view over a copy, list values normalised to tuples so `families` cannot be appended to
+either, and `as_json()` hands out a detached copy. ⚠️ The round trip is asserted, because `from_json`
+builds metadata from parsed JSON where arrays are lists: without normalising both sides **a package
+read from disk would stop comparing equal to the one that wrote it**. Mutation: removing the freeze
+turns 5 of the 8 new tests red.
+
+### `v37-P3-04` — guidance in the publication path describing a repository that changed
+
+Three claims in `write_reference_puzzles.py`, all of them the opposite of what is true:
+
+- *"the two cases **the tutorial** has to teach"* — the tutorial fetches nothing at all. Fixed
+  earlier the same day, and it is what produced v37's first draft finding about a dependency that does
+  not exist.
+- *"`FAMILY_OF` maps no `Identity` to the batting order… an operator decision, not taken here"* —
+  **the decision was taken**, `Family.BATTING_ORDER` exists, and a published board lists it.
+- *"the six packages… were drawn under 0.25 and will change the next time this runs"* — **they were
+  redrawn under the decided gate**, which is what closed the consequence rather than only the cause.
+
+⚠️ **A settled decision described as open is worse than a stale figure**, because a reader has no
+number to check it against; it invites reopening something already decided. And the gate one goes
+stale again the next time the batch is redrawn — **the provenance is not in the artefact**, and
+recording the gate in package metadata is the durable answer. Recorded as an open decision.
+
+### `v37-P3-03` — **deferred, with the cost stated rather than argued away**
+
+The writer still imports `Loaded` and `load` from `discovery/`. `slot_references` and `to_board` were
+promoted because each produces a **published, schema-validated field**; the loader carries the SQL, the
+connection, the era windows and the provenance predicate, and §5 puts the pool rule in `discovery/` on
+purpose. **Moving it is building the inventory pipeline, not renaming a module.**
+
+**What the deferral costs, stated:** the publication path depends on a module outside `mypy --strict`
+and inside the ratcheted lint tree, so a cleanup in `discovery/` can break publishing.
+`test_the_writer_passes_its_own_gate.py` calls the writer's own `build()` with no database, so that
+breakage is caught by the suite rather than by a failed publish.
+
+⬜ **A third copy of the `Package` factory** now stands in the verify tests — `test_layers`,
+`test_plausibility` and the new immutability file. Same shape as `refs()` in `v36-P3-08`; noted at the
+new one rather than left to be found.
+
+
 
 **Nine of v36's P2s verified resolved by reading the code, no tests run.** One new finding, and two
 statements about state that were false when written.
@@ -4967,6 +5046,8 @@ four were untouched, in the file people read to learn what is done. That is the 
 records against its own *"`main` is protected"* paragraph: **a false claim is worst in the place the
 rules are looked up.**
 
+⚠️ **And *sixteen* was wrong too — there are 20.** `P2-01` to `P2-20`.
+
 | still open | what it is | state |
 |---|---|---|
 | `P2-17` | all three pages shipped an identical hardcoded `<title>boxscore</title>` | ✅ **closed 2026-08-21** with `P3-46/47` — `applyHead()` takes the title, description and language from the catalogue |
@@ -5119,11 +5200,16 @@ refused, never substituted — decided now so it is not invented during the rout
 
 ### Still open from v36
 
-### ✅ v36 is closed — 61 findings, and four of them were found by closing the others
+### ✅ v36 is closed — **70 findings**, and four more were found by closing them
 
-**All 44 P3s, all 16 P2s and the P1.** ⚠️ The count is stated against the review file's own headings
-rather than against a running total, because the previous closing claim in this file was a total
-asserted from two summaries and it was wrong — see the corrected entry above.
+**All 49 P3s, 18 of the 20 P2s, and the P1.** `P2-18` and `P2-19` stay open: both need a production
+deployment shape that does not exist yet.
+
+⚠️⚠️ **This said 61 — 44 P3s and 16 P2s — while claiming to have counted the review's own headings.**
+The claim was the substitute for the check; the numbers came from the review's introduction, which is
+a summary. Corrected against `grep '^### v36-P[123]-'`, and the group table below turns out to cover
+**P3-01 to P3-49 with no gap and nothing invented** — the work was complete and the prose was not.
+Third wrong count in this file, second written while correcting the previous one. See the v37 entry.
 
 **Four findings were not in the review.** The P1's blind ratchet voided five commit messages; the
 regeneration exposed one game yielding two different boards under one id; `P2-17` and `P2-20` were

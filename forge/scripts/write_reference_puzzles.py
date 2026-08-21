@@ -26,6 +26,22 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
+
+# ⚠️⚠️ **The production publication path still imports its loader from `discovery/`, and that is a
+# deferral with a reason rather than an oversight.** (v37-P3-03, reissuing v36-P3-37)
+#
+# `slot_references` and `to_board` were promoted into `boxscore_forge.publish` because each produces a
+# **published, schema-validated field** — that part reached the artefact and had to leave the research
+# tree. `Loaded` and `load` are a different thing: they carry the SQL, the connection string, the era
+# windows and the provenance predicate, and §5 puts the pool rule in `discovery/` on purpose. Moving
+# them is **building the inventory pipeline**, not renaming a module, and doing it as a side effect of
+# a review is how a boundary gets drawn by whoever happened to be editing.
+#
+# ⚠️ **What the deferral costs is real and is stated rather than argued away**: the publication path
+# depends on a module outside `mypy --strict` and inside the ratcheted lint tree, so a cleanup in
+# `discovery/` can break publishing. `forge/tests/test_the_writer_passes_its_own_gate.py` calls this
+# writer's own `build()` with no database, so that breakage is caught by the suite rather than by a
+# failed publish.
 from measure import Loaded, load  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
@@ -61,10 +77,17 @@ on the new scale, because its rungs were picked on the old one.
 # ⚠️ **The literal-copy guard could not see it**, because 0.25 is a *different number for the same
 # knob* rather than a copy of the same one. That is the drift the guard is blind to by construction.
 #
-# ⚠️ **The six packages currently in `serve/data/puzzles/` were drawn under 0.25** and will change the
-# next time this runs. That is the point: they were drawn from a **stricter pool than the one every
-# published measurement describes**, so the client has been developed and its layout judged against
-# boards less zero-heavy than the ones that will ship. Recorded in `docs/reviews/todo.md`.
+# ⚠️ **The six packages were drawn under 0.25 and were redrawn under this gate on 2026-08-21**, which
+# is what closed the consequence rather than only the cause. (v37-P3-04) The batch is materially
+# different: median zero density 21% → 29%, with five of the six above the old set's maximum, and the
+# largest roster 10 batters → 12. The client had been developed and its layout judged against boards
+# **less zero-heavy than the ones that ship**, which is why regenerating came before building more of
+# `serve` on top. Recorded in `docs/reviews/todo.md` and in `docs/serve-brief.md`.
+#
+# ⚠️⚠️ **The provenance is not in the artefact, and a comment cannot fix that.** Nothing in a published
+# package says which gate drew it, so this paragraph is the only record and it goes stale the moment
+# the batch is redrawn again — which is exactly how it came to be wrong. **Recording the gate in the
+# package metadata is the durable answer** and is recorded as an open decision, not taken here.
 SEED = 6
 OUT = _ROOT / "serve" / "data" / "puzzles"
 EPHEMERAL_OUT = _ROOT / "discovery" / "ephemeral-puzzles"
@@ -167,10 +190,16 @@ def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None
     # a calendar shaping the week by technique, or a client deciding what to surface, cannot see the
     # one family that cannot be read off a boxscore — the family §8 has to teach for that very reason.
     #
-    # ⚠️ **`families` cannot carry it and is deliberately left alone.** `FAMILY_OF` maps no `Identity`
-    # to the batting order, so `families_used` excludes every lineup step; adding a fifth `Family`
-    # would change the axis §4 and §31 report difficulty on, and every figure taken against the
-    # existing four. That is an operator decision and it is recorded in `todo.md`, not taken here.
+    # ⚠️⚠️ **`families` carries it now, and this comment said the opposite for a commit.** (v37-P3-04)
+    # It read *"`FAMILY_OF` maps no `Identity` to the batting order… that is an operator decision and
+    # it is recorded in `todo.md`, not taken here"*. **The decision was taken on 2026-08-21**:
+    # `Family.BATTING_ORDER` exists, `FAMILY_OF` maps the identity to it, and one of the six published
+    # boards lists `batting_order` among its families.
+    #
+    # ⚠️ A settled decision described as open, in the production path, is an invitation to reopen it —
+    # which is worse than a stale figure, because a reader has no number to check it against. `lineup`
+    # below is still worth recording separately: it says whether the board *needed* the clue, which is
+    # not the same question as which families its solution used.
     if produced is None:
         return None
     package = sign(
