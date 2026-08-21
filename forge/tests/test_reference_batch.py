@@ -189,27 +189,38 @@ class TestTheTrustDomainDecidesTheDestination:
     the inventory goes dark while the publisher reports a certified commit.
     """
 
-    def _resolve(self, monkeypatch: object, *, flag: bool, key: str | None) -> tuple[object, object]:
+    def _resolve(self, monkeypatch: object, tmp_path: Path, *, flag: bool, key: str | None) -> tuple[object, object]:
+        """Resolve the key with **both** sources under this test's control.
+
+        ⚠️⚠️ **`KEY_FILE` is redirected, and leaving it out made one of these tests read the operator's
+        real signing key.** (v36-P3-29) The writer reads `~/.boxscorepuzzle-signing-key` when no
+        variable is exported, so `key=None` stopped meaning *no key* on the one machine that has one —
+        `test_neither_is_an_error` found the production key and did not raise. A test that passes or
+        fails on what is in a home directory is testing the machine rather than the code.
+        """
         writer = _writer()
         monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"] if flag else ["w"])  # type: ignore[attr-defined]
+        monkeypatch.setattr(writer, "KEY_FILE", tmp_path / "no-key-here")  # type: ignore[attr-defined]
         if key is None:
             monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)  # type: ignore[attr-defined]
         else:
             monkeypatch.setenv(writer.KEY_VARIABLE, key)  # type: ignore[attr-defined]
         return writer, writer.key_and_destination()
 
-    def test_an_ephemeral_batch_cannot_reach_the_served_directory(self, monkeypatch: object) -> None:
-        writer, (_, out) = self._resolve(monkeypatch, flag=True, key=None)
+    def test_an_ephemeral_batch_cannot_reach_the_served_directory(self, monkeypatch: object, tmp_path: Path) -> None:
+        writer, (_, out) = self._resolve(monkeypatch, tmp_path, flag=True, key=None)
 
         assert out == writer.EPHEMERAL_OUT
         assert "serve" not in out.parts
 
-    def test_a_key_that_serve_does_not_pin_is_refused_before_anything_is_written(self, monkeypatch: object) -> None:
+    def test_a_key_that_serve_does_not_pin_is_refused_before_anything_is_written(
+        self, monkeypatch: object, tmp_path: Path
+    ) -> None:
         # A valid Ed25519 key that is not *the* key used to self-verify and publish, because the check
         # derived the public half from the key that had just signed. That proves internal consistency
         # and nothing about the deployed reader.
         with pytest.raises(SystemExit, match="does not match the key serve pins"):
-            self._resolve(monkeypatch, flag=False, key="11" * 32)
+            self._resolve(monkeypatch, tmp_path, flag=False, key="11" * 32)
 
     def test_the_pinned_key_publishes_to_the_served_directory(self, monkeypatch: object) -> None:
         # The other direction. A guard that refuses everything would satisfy the test above.
@@ -233,13 +244,13 @@ class TestTheTrustDomainDecidesTheDestination:
         assert pinned  # the real pin exists and was not what this test compared against
         temp.unlink()
 
-    def test_the_two_modes_are_still_exclusive(self, monkeypatch: object) -> None:
+    def test_the_two_modes_are_still_exclusive(self, monkeypatch: object, tmp_path: Path) -> None:
         with pytest.raises(SystemExit, match="Refusing to guess which trust"):
-            self._resolve(monkeypatch, flag=True, key="11" * 32)
+            self._resolve(monkeypatch, tmp_path, flag=True, key="11" * 32)
 
-    def test_neither_is_an_error(self, monkeypatch: object) -> None:
-        with pytest.raises(SystemExit, match="is unset"):
-            self._resolve(monkeypatch, flag=False, key=None)
+    def test_neither_is_an_error(self, monkeypatch: object, tmp_path: Path) -> None:
+        with pytest.raises(SystemExit, match="no signing key"):
+            self._resolve(monkeypatch, tmp_path, flag=False, key=None)
 
 
 class TestNoKeyMaterialLivesInTheScript:
@@ -335,13 +346,46 @@ class TestTheManifestIsSigned:
 
 
 class TestTheTwoKeyModesAreExclusive:
-    def test_ephemeral_with_a_configured_key_is_refused(self) -> None:
+    """⚠️⚠️ This asserted the *source text* of the writer and broke on a rename. (v36-P3-29)
+
+    It matched `"if ephemeral and material:"`, so renaming one local variable turned it red while the
+    behaviour was unchanged — and, worse, it would have stayed green if the condition had been kept and
+    the refusal removed. **A regular expression over code cannot tell a name from what a name does**;
+    this project records that as its own failure shape. The behaviour was already asserted by
+    `test_the_two_modes_are_still_exclusive` above, so what stands here is the case that test does not
+    reach: the file source, which must not make `--ephemeral` impossible.
+    """
+
+    def test_ephemeral_with_a_configured_key_is_refused(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # ⚠️ The environment key used to win whenever it was set, so --ephemeral on a machine with the
         # production key configured asked for a throwaway trust domain and got the real one.
-        source = (_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8")
+        writer = _writer()
+        monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"])
+        monkeypatch.setattr(writer, "KEY_FILE", tmp_path / "no-key-here")
+        monkeypatch.setenv(writer.KEY_VARIABLE, "11" * 32)
 
-        assert "if ephemeral and material:" in source
-        assert "Refusing to guess which trust" in source
+        with pytest.raises(SystemExit, match="Refusing to guess which trust"):
+            writer.key_and_destination()
+
+    def test_ephemeral_is_not_refused_merely_because_a_key_file_exists(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ The asymmetry the file source introduces, asserted rather than assumed.
+
+        An export is an instruction; a file in the home directory is only where the key is kept. The
+        file exists on every machine that has a key, so refusing on its presence would make
+        `--ephemeral` impossible exactly where it is used.
+        """
+        key_file = tmp_path / "key"
+        key_file.write_text("11" * 32, encoding="utf-8")
+        writer = _writer()
+        monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"])
+        monkeypatch.setattr(writer, "KEY_FILE", key_file)
+        monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)
+
+        _, out = writer.key_and_destination()
+
+        assert out == writer.EPHEMERAL_OUT
 
 
 _PUBLISHED = Path(__file__).resolve().parents[2] / "serve" / "data" / "puzzles"

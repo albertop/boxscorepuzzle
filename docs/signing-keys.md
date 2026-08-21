@@ -27,17 +27,43 @@ what the command prints.
 
 ### Setting it for a publishing run
 
-PowerShell, for the current session:
+**Nothing.** The writer reads `~/.boxscorepuzzle-signing-key` at publish time, so the key is in one
+process for the length of one publish and in no environment at all.
+
+`BOXSCORE_SIGNING_KEY` still wins if it is set, because an export is a deliberate instruction — for a
+key kept somewhere else, or a one-off run with a different pair. For the current PowerShell session:
 
 ```bash
 $env:BOXSCORE_SIGNING_KEY = (Get-Content "$HOME\.boxscorepuzzle-signing-key" -Raw).Trim()
 ```
 
-To make it permanent for the user, so a publish never fails for a forgotten shell:
+### ⚠️⚠️ Never make it permanent, and remove it if it already is
+
+This document used to recommend `[Environment]::SetEnvironmentVariable(..., "User")`, *so a publish
+never fails for a forgotten shell*. **Do not.** A User-scope variable is inherited by **every process
+the account runs** — every `npm install` postinstall, every pip build hook, every script from every
+sibling project on a machine that holds several. One compromised dependency, anywhere, reads
+`os.environ` and takes it; whoever holds it can then sign inventory `serve` accepts.
+
+**And this is the one secret here that cannot be rotated cheaply.** Rotating invalidates every
+signature ever issued, so every package and every manifest has to be reissued (below). What the
+permanent variable bought was avoiding a loud, fail-closed error that the writer raises by design —
+**a permanent exposure to buy nothing**, and now it does not even buy that.
+
+Check whether the variable is persisted, and clear it if so. PowerShell:
 
 ```bash
-[Environment]::SetEnvironmentVariable("BOXSCORE_SIGNING_KEY", (Get-Content "$HOME\.boxscorepuzzle-signing-key" -Raw).Trim(), "User")
+if ([Environment]::GetEnvironmentVariable("BOXSCORE_SIGNING_KEY","User")) { "User scope: SET" } else { "User scope: not set" }
 ```
+
+```bash
+[Environment]::SetEnvironmentVariable("BOXSCORE_SIGNING_KEY", $null, "User")
+```
+
+⚠️ **Clearing the variable does not un-expose a key that was already exposed.** If it sat in User scope
+on a machine that has run untrusted install hooks, the conservative reading is that it may have been
+read — and the answer to that is rotation, not deletion. That is a judgement about this machine's
+history, not something a document can settle.
 
 ### Deriving the public half again
 
@@ -67,6 +93,11 @@ somewhere durable.
 which key pair the inventory belongs to. *Keys never go in Git* is the kind of rule that gets
 over-applied to the half that should be there — the public half protects nothing by being secret and
 protects the pairing by being written down.
+
+**A key file is where the key is; an exported variable is an instruction.** `--ephemeral` refuses to
+run when `BOXSCORE_SIGNING_KEY` is set — the two together do not say which trust domain was meant — and
+**ignores the key file entirely**, because the file exists on every machine that has a key and weighing
+it the same way would make `--ephemeral` impossible exactly where it is used.
 
 **A missing key is an error, never a quieter mode.** The writer refuses to publish without
 `BOXSCORE_SIGNING_KEY`. `--ephemeral` generates a throwaway pair for testing the pipeline; what it

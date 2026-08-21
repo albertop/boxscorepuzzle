@@ -88,6 +88,26 @@ and is worth nothing to an attacker, because the public half that would verify i
 **refuses the batch itself**, instead of a comment asking to be believed.
 """
 
+KEY_FILE = Path.home() / ".boxscorepuzzle-signing-key"
+"""Where `docs/signing-keys.md` tells the operator to generate the private key, read at publish time.
+
+⚠️⚠️ **This exists so the key never has to sit in an environment variable.** (v36-P3-29) The document
+recommended persisting it with `SetEnvironmentVariable(..., "User")`, which hands it to **every process
+the account runs** — every `npm install` postinstall, every pip build hook, every script from every
+sibling project on a machine that holds several. One compromised dependency anywhere reads
+`os.environ` and takes it, and the holder can then sign inventory `serve` accepts.
+
+⚠️ **And this is the one secret in the project that cannot be rotated cheaply**: rotating invalidates
+every signature ever issued, so every package and every manifest has to be reissued. The convenience
+the permanent variable bought was avoiding *"publish failed, you forgot to set it"* — an error this
+script already raises loudly, by design. **A permanent exposure to buy nothing** is the trade the
+recommendation was making.
+
+Read here, at the moment of use: the key is in this process and in no other, for the length of one
+publish. The variable still wins if it is set, because a deliberate export is an instruction — but
+nothing requires one now.
+"""
+
 
 def reveal_for(loaded: Loaded) -> Reveal:
     """The answer to the mystery, which section 23 requires to be in the file."""
@@ -494,8 +514,27 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
     Ed25519 key that is not *the* key produced exactly the same outage, by accident.
     """
     ephemeral = "--ephemeral" in sys.argv
-    material = os.environ.get(KEY_VARIABLE, "")
-    if ephemeral and material:
+    exported = os.environ.get(KEY_VARIABLE, "")
+
+    # ⚠️ **The variable, then the file** (v36-P3-29). An export is a deliberate act and keeps winning;
+    # the file is where the key lives, so a publish needs no export at all and the key can stop being
+    # inherited by every process on the machine. See `KEY_FILE`.
+    #
+    # ⚠️ **`--ephemeral` weighs only the variable, and the asymmetry is the point.** The refusal below
+    # exists so the script never guesses which trust domain was meant — and an export says *publish for
+    # real* where a file in the home directory says only *this is where the key is kept*. Weighing the
+    # file too would make `--ephemeral` impossible on the one machine that has a key.
+    material = exported
+    if not material and not ephemeral and KEY_FILE.exists():
+        try:
+            material = KEY_FILE.read_text(encoding="utf-8").strip()
+        except OSError as error:
+            # Fail closed and say which file. An unreadable key file falling through to "unset" would
+            # report the wrong problem and invite exporting the secret to work around it.
+            message = f"{KEY_FILE} exists and could not be read: {error}"
+            raise SystemExit(message) from error
+
+    if ephemeral and exported:
         message = (
             f"--ephemeral was given and {KEY_VARIABLE} is set. Refusing to guess which trust "
             "domain was meant: unset the variable for a throwaway batch, or drop the flag to publish."
@@ -503,8 +542,9 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
         raise SystemExit(message)
     if not material and not ephemeral:
         message = (
-            f"{KEY_VARIABLE} is unset. Publishing needs the forge's private key, 64 hex characters. "
-            "Pass --ephemeral to write a throwaway batch outside the served directory."
+            f"no signing key: {KEY_VARIABLE} is unset and {KEY_FILE} does not exist. Publishing needs "
+            "the forge's private key, 64 hex characters. Pass --ephemeral to write a throwaway batch "
+            "outside the served directory."
         )
         raise SystemExit(message)
 

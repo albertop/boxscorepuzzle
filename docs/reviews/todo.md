@@ -3611,6 +3611,44 @@ instruments — the shape this project treats as a defect — and becomes two fi
 populations, each interpretable on its own. **Neither number is a measurement of the other's
 quantity**, and any future comparison of the two has to re-run one of them under the other's terms.
 
+#### Group I — the key that cannot be rotated was being handed to every process on the laptop
+
+`P3-29` `docs/signing-keys.md` recommended persisting `BOXSCORE_SIGNING_KEY` with
+`SetEnvironmentVariable(..., "User")`, *so a publish never fails for a forgotten shell*. A User-scope
+variable is inherited by **every process the account runs** — every `npm install` postinstall, every
+pip build hook, every script from every sibling project on a machine that holds several. One
+compromised dependency reads `os.environ` and the holder can sign inventory `serve` accepts.
+
+⚠️⚠️ **Checked rather than assumed, and it is live on this machine: User scope holds the key, 64
+characters.** Machine scope does not. So this is an exposure that exists, not a recommendation that
+might be followed.
+
+**And it is the one secret here that cannot be rotated cheaply** — rotating invalidates every
+signature ever issued, so every package and every manifest has to be reissued. What the permanent
+variable bought was avoiding a loud fail-closed error the writer raises by design: **a permanent
+exposure to buy nothing.**
+
+**The writer reads `~/.boxscorepuzzle-signing-key` at publish time now**, so no export is needed at
+all and the key is in one process for the length of one publish. An exported variable still wins,
+because that is a deliberate instruction. ⚠️ `--ephemeral` weighs **only** the variable: an export says
+*publish for real*, a file in the home directory says only *this is where the key is kept*, and
+weighing the file would make `--ephemeral` impossible on the one machine that has a key.
+
+**Verified with the variable cleared from the process**: the writer acquires the key, it matches the
+pin `serve` holds, and the destination is production. So removing the variable costs nothing.
+
+⬜ **The operator has to clear the variable; nothing here does it.** The command is in
+`docs/signing-keys.md`. ⚠️ And clearing it does not un-expose a key that was already exposed — if it
+sat in User scope on a machine that has run untrusted install hooks, the conservative reading is
+rotation rather than deletion. That is a judgement about this machine's history.
+
+⚠️ **Two existing tests were reading the laptop instead of the code, and only one of them failed.**
+`test_neither_is_an_error` passed `key=None` and, with a real key file present, found the production
+key and did not raise. Its helper now redirects `KEY_FILE`. The second, `test_ephemeral_with_a_
+configured_key_is_refused`, asserted the **source text** `"if ephemeral and material:"` — so renaming a
+local turned it red while the behaviour was unchanged, and it would have stayed green if the condition
+had been kept and the refusal deleted. Rewritten to exercise the refusal.
+
 #### Group H — the rule was written and then not applied to the place it was written from
 
 `P3-05` three frozen result containers handed out a **mutable `dict`** — `frozen=True` freezes the
@@ -4769,7 +4807,7 @@ resolving it re-bases the reporting.
 | **F. Tooling, CI, container** | 01, 09, 10, 11, 30, 31, 43 | ✅ done |
 | **G. Measurement correctness** | 21, 36, 40, 41, 42 | ✅ four fixed, one recorded |
 | **H. Structure and typing** | 05, 08, 37 | ✅ |
-| **I. Security documentation** | 29 | ⬜ |
+| **I. Security documentation** | 29 | ✅ fixed in the doc *and* in the writer |
 | **J. Page basics** | 39, 46, 47 | ⬜ |
 | **K. Decisions to record, not code** | 48, 49 | ⬜ |
 
