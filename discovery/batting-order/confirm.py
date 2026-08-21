@@ -154,6 +154,8 @@ def _evidence(loaded: Loaded, board: object) -> Evidence:
     derived.
     """
     return Evidence(
+        # The board as the loader read it from the database, which is what layer 4 solves back to.
+        source=to_board(loaded.direction, None),
         game_id=loaded.game_id,
         offense_team=loaded.offense_team,
         source_type=loaded.source_type,
@@ -209,7 +211,7 @@ def _preflight(loaded: Loaded) -> None:
     worse than one that never ran, because it produces numbers.
     """
     package = _package(loaded, None)
-    verdict = verify(package, secret=UNSIGNED)
+    verdict = verify(package, secret=UNSIGNED, source=package.solution)
     if not verdict.accepted:
         message = f"pre-flight: an unerased board fails the arithmetic layers: {verdict.rejection}"
         raise SystemExit(message)
@@ -292,7 +294,7 @@ def _measure(loaded: Loaded, seed: int) -> list[Row]:
                 )
                 continue
             package = _package(loaded, puzzle.erased)
-            verdict = verify(package, secret=UNSIGNED)
+            verdict = verify(package, secret=UNSIGNED, source=package.solution)
             # ⚠️⚠️ The gate production calls, not the arithmetic verifier alone.
             gate = certify_for_publication(package, evidence=_evidence(loaded, package.solution), secret=UNSIGNED)
             division, other_steps = _steps(puzzle.solution)

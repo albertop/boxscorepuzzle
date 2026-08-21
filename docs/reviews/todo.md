@@ -4565,7 +4565,34 @@ the implementation left all 1014 tests green — verified by doing it. The tutor
 predicate could not fail. And a scan written for C11 fired on catalogue keys until it was narrowed.
 **Each fix now has a test that fires on the defect and a test that spares the code around it.**
 
-### ⬜ Two design questions v36's fixes surfaced — operator decisions, not bugs
+### ✅ Both design questions decided — yes to both, 2026-08-21
+
+**1. Layer 4 takes the source boxscore.** `verify(package, *, secret, source)`, no default, `None`
+refused the way a missing secret is. ⚠️ **The decisive check: §22's worked example — two batters' hits
+exchanged — now fails at `END_TO_END` / `MISMATCH`** with *"solving gives a different boxscore at 2
+cells; bat[0].hits solved to 0 against 1"*. It passed before, because a corrupted artefact carries the
+swap in both halves and the layer compared one against the other. **Four layers consulting one answer
+were one layer.** The old behaviour is kept as a test — handing layer 4 the package's own copy accepts
+the corrupted board — so the regression cannot return quietly.
+
+⚠️ **What it buys, stated rather than assumed:** independence between *the file* and *the game in
+memory*. In `write_reference_puzzles.py` both descend from one `Loaded` object, so a loader defect is
+still the residual risk §22 records under the common-author heading. Closing that needs a second read
+from the database, not a signature change.
+
+**2. The batting order is the fifth `Family`.** Verified reporting: a fallback board at target 7 now
+lists `batting_order` among its families. The old figures are **marked, not re-run** — they counted a
+smaller set, the same treatment as the zero-fill correction — in `CLAUDE.md` beside the axis itself.
+
+#### What the three post-fix checks found
+
+| | |
+|---|---|
+| **The swapped-hits case** | ✅ **Caught.** The layer does what §22 says it does |
+| **Layer 4 over everything published** | 6 packages, 1 generation, **0 rejected**. ⚠️ **With a caveat that matters**: `game_id` is stripped from a published file (§7), so the direction cannot be reloaded by id and the only source available here is the package's own solution. This confirms every published puzzle solves back to the answer that ships with it; it **cannot** answer whether the generator wrote that answer wrong. Only the writer holds the source, so the strong version of this check runs at generation time from now on |
+| **Share of inventory needing the batting order** | ⚠️ **Not computable retroactively, and that is the honest answer.** The six predate both the `lineup` field and the fifth family; their metadata records the four-family axis, where `batting_order` could never appear. **The number exists from the next generation onward.** My first attempt to compute it from the files returned `[]` for all six — a broken instrument, caught before reporting: it mixed the verifier's cell namespace (`bat[0].hits`) with the forge's solver (`batting[0].hits`), which is exactly the separation §22 requires and therefore exactly the mistake that produces silence rather than an error |
+
+### ⬜ Superseded: the questions as they stood
 
 ⚠️ **1. `Fault.NO_SOLUTION` at layer 2 and `Fault.MISMATCH` at layer 4 are now unreachable through the
 type.** Both meant *the puzzle and the solution disagree*, and `P2-08` makes that unconstructible: if

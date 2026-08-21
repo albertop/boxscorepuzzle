@@ -88,7 +88,7 @@ def run(sample: list[Loaded]) -> list[Outcome]:
                 ),
                 SECRET,
             )
-            verdict = verify(package, secret=SECRET)
+            verdict = verify(package, secret=SECRET, source=source)
             # Every layer asked separately, not only the first to object. A layer that never fires
             # cannot be told apart from a layer that is never reached.
             caught = tuple(layer for layer, check in LAYERS.items() if check(package, SECRET) is not None)

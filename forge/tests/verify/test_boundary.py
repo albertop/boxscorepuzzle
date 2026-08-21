@@ -138,6 +138,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
                     offense_is_home=True,
                 ),
                 secret=None,
+                source=board,
             )
 
     def test_there_is_no_default_to_forget(self) -> None:
@@ -158,6 +159,7 @@ class TestTheSignatureCannotBeSkippedByAccident:
                 offense_is_home=True,
             ),
             secret=UNSIGNED,
+            source=board,
         ).accepted
 
 

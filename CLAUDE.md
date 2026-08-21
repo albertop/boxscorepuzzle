@@ -408,11 +408,22 @@ A puzzle ships only if the solver (propagation, then bounding) solves it **witho
 | Axis | Values |
 |---|---|
 | Technique | propagation · propagation plus bounding |
-| Equation family | column sums · row identity · cross-team · global identity |
+| Equation family | column sums · row identity · cross-team · global identity · **batting order** |
 
 *The T1–T5 ladder this section used to carry is superseded and kept only in §4, where the reasoning
 lives. The short version: the 2×2 rung cannot fire on any board of this constraint family, and with
 it gone the first two rungs are one operation and the last is one more equation inside it.*
+
+⚠️⚠️ **The batting order became the fifth family on 2026-08-21, and every figure taken before that
+date was measured against four.** The player was already being taught five — the reference sheet and
+the tutorial both present it as a relation, because it is the one family that cannot be read off a
+boxscore — while `FAMILY_OF` mapped no identity to it, so `families_used` excluded every lineup step
+and no package could say a board depended on one. **Not adding it did not avoid the mismatch; it hid
+it**, and it left no way to ask how much of the inventory leans on the rule.
+
+**The old figures are marked, not re-run.** They were not wrong; they were counting a smaller set,
+which is the same treatment and the same reason as the zero-fill correction. A figure that names the
+four-family axis stays comparable with itself.
 
 **And three numbers that describe the solution path** (§31), independent of each other and of zero
 density when measured off the compressibility ceiling:
@@ -446,6 +457,19 @@ Four layers, each able to reject on its own:
 2. Prove solution uniqueness
 3. Require the human-technique solver to finish without guessing
 4. End-to-end: take the published puzzle, solve from scratch, compare against the original boxscore
+
+⚠️⚠️ **Layer 4 compared against the package's own solution until 2026-08-21, and that made the list
+above a list of three.** The solution is written by the same producer in the same pass as the puzzle,
+so the fourth layer asked whether a file agreed with itself: **a generator writing the answer wrong got
+all four layers agreeing with it.** The worked example this section uses to justify a fourth layer —
+two batters' hits exchanged, every identity intact, unique solution, different game — travels in both
+halves of a corrupted artefact and passed.
+
+`verify()` now takes `source`, the original boxscore, and it has no default for the reason `secret` has
+none: **the absence of the comparison must not read as the comparison passing.** The swapped-hits case
+is a test again and it is caught. ⚠️ What this buys is independence between *the file* and *the game in
+memory*; a defect in the loader that produced both is the residual risk this section already records
+under the common-author heading.
 
 **The verifier must not import or reuse generator code.** If it shares functions it inherits bugs and the validation is theater. Implement independently, even at the cost of duplication.
 

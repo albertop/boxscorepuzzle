@@ -97,8 +97,29 @@ class Verdict:
         return self.rejection is None
 
 
-def verify(package: Package, *, secret: Ed25519PublicKey | Unsigned | None) -> Verdict:
+def verify(package: Package, *, secret: Ed25519PublicKey | Unsigned | None, source: Board | None) -> Verdict:
     """Run every layer in order and stop at the first that rejects.
+
+    ⚠️⚠️ **`source` is the original boxscore, and layer 4 was comparing against the package's own copy
+    of it.** §22 describes the fourth layer as *take the published puzzle, solve from scratch, compare
+    against the original boxscore*; it compared the solved board against `package.solution`, which the
+    same producer wrote in the same pass. **So the redundancy that justifies having four layers did not
+    exist: a generator writing the solution wrong got all four layers agreeing with it**, and the
+    worked example §22 uses to show layer 4 earning its place — two batters' hits swapped — passed,
+    because the swap travelled in both halves.
+
+    It has no default, for the reason `secret` has none: a publish or import path must not be able to
+    forget it, and **the absence of the comparison must not read as the comparison passing**. `None`
+    raises rather than falling back to the package's own solution.
+
+    ⚠️ **What this does and does not buy, stated rather than assumed.** It catches a package altered
+    after generation — in transit, on disk, by a migration — because the source is outside the file.
+    It does **not** catch a defect in the loader that produced both, and in
+    `write_reference_puzzles.py` the source and the package both descend from one `Loaded` object, so
+    the independence there is between *the file read back from disk* and *the game in memory*. That is
+    the corruption §22's example is about; a loader defect remains the residual risk §22 already
+    records under the common-author heading.
+
 
     Stopping early is right for a discard — the puzzle is gone either way — and the layer that caught
     it is the interesting fact. Running the rest would only say what else is wrong with something
@@ -114,14 +135,19 @@ def verify(package: Package, *, secret: Ed25519PublicKey | Unsigned | None) -> V
     if secret is None:
         message = "no signing secret: pass UNSIGNED to verify without one, deliberately"
         raise ValueError(message)
+    if source is None:
+        message = "no source boxscore: layer 4 compares against the original, not against the package"
+        raise ValueError(message)
     for check in LAYERS.values():
-        rejection = check(package, secret)
+        rejection = check(package, secret, source)
         if rejection is not None:
             return Verdict(puzzle_id=package.puzzle_id, rejection=rejection)
     return Verdict(puzzle_id=package.puzzle_id)
 
 
-def check_signature(package: Package, secret: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
+def check_signature(
+    package: Package, secret: Ed25519PublicKey | Unsigned | None, _source: Board
+) -> Rejection | None:
     """Checked first: nothing else is worth computing about a file that arrived damaged."""
     if secret is None:
         message = "no signing secret: pass UNSIGNED to skip this layer, deliberately"
@@ -135,7 +161,7 @@ def check_signature(package: Package, secret: Ed25519PublicKey | Unsigned | None
     return None
 
 
-def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
+def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None, _source: Board) -> Rejection | None:
     """Layer 1: the boxscore balances, and the puzzle is a board of the same game.
 
     The structural half is not decoration. §6 gives the line score and the footnote line complete and
@@ -181,7 +207,7 @@ def check_identities(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     return None
 
 
-def check_uniqueness(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
+def check_uniqueness(package: Package, _: Ed25519PublicKey | Unsigned | None, _source: Board) -> Rejection | None:
     """Layer 2: exactly one board completes the puzzle.
 
     None means the erasure produced a contradiction; two means cells came out that were not forced,
@@ -233,7 +259,7 @@ def slots_of(package: Package) -> tuple[int, ...]:
     return tuple(int(reference[0]) for reference in references)
 
 
-def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
+def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None, _source: Board) -> Rejection | None:
     """Layer 3: reachable without a guess.
 
     §22 calls unique-but-underivable the worst failure because it looks correct: the puzzle passes
@@ -255,13 +281,19 @@ def check_derivability(package: Package, _: Ed25519PublicKey | Unsigned | None) 
     return None
 
 
-def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None) -> Rejection | None:
-    """Layer 4: solve the published board from scratch and compare against the original.
+def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None, source: Board) -> Rejection | None:
+    """Layer 4: solve the published board from scratch and compare against **the original boxscore**.
 
     Deliberately redundant with layers 2 and 3, and deliberately not reusing their results. It is the
     only layer that compares against the *boxscore* rather than against the constraints, so it is the
     one that catches a puzzle which is perfectly consistent and about a different game — a given cell
     quietly altered after generation, for instance.
+
+    ⚠️⚠️ **It compared against `package.solution` and that made the paragraph above false.** The
+    package's solution is written by the same producer in the same pass as its puzzle, so the layer was
+    asking whether a file agreed with itself. The example §22 names — two batters' hits swapped in the
+    published board — travels in both halves and passed. **Four layers that all consult the same
+    answer are one layer.**
     """
     # Same as layer 2: a package without a solution cannot be constructed or parsed any more.
     board = package.puzzle
@@ -278,7 +310,8 @@ def check_end_to_end(package: Package, _: Ed25519PublicKey | Unsigned | None) ->
     if not found:
         return Rejection(Layer.END_TO_END, Fault.NO_SOLUTION, "the published board cannot be completed")
 
-    original = values_of(package.solution)
+    # ⚠️ The source, never `package.solution`. That substitution is the whole finding.
+    original = values_of(source)
     solved = found[0]
     differing = sorted(cell for cell in original if solved.get(cell) != original[cell])
     if differing:
@@ -355,7 +388,7 @@ def derivable_in_view(package: Package) -> bool:
         return False
 
 
-LAYERS: dict[Layer, Callable[[Package, Ed25519PublicKey | Unsigned | None], Rejection | None]] = {
+LAYERS: dict[Layer, Callable[[Package, Ed25519PublicKey | Unsigned | None, Board], Rejection | None]] = {
     Layer.SIGNATURE: check_signature,
     Layer.IDENTITIES: check_identities,
     Layer.UNIQUENESS: check_uniqueness,

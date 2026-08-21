@@ -185,6 +185,12 @@ class TestAFallbackBoardActuallyPublishes:
 
         board = package.solution
         return Evidence(
+            # ⚠️ `package.solution` here, and that is worth naming rather than hiding: this fixture's
+            # evidence is derived from the package it certifies, so layer 4 compares the file against
+            # itself exactly as it used to. It is a fixture for the *adoption* question, not for
+            # end-to-end correspondence, and `TestLayerFourComparesAgainstTheSource` is where the real
+            # property is asserted.
+            source=board,
             game_id=GAME,
             offense_team=OFFENSE,
             source_type="EVN",
@@ -270,7 +276,7 @@ class TestAFallbackBoardActuallyPublishes:
         )
 
         # Per-layer attribution first, because "the gate refused it" does not say which layer.
-        verdict = verify(package, secret=UNSIGNED)
+        verdict = verify(package, secret=UNSIGNED, source=to_board(direction, None))
         assert verdict.accepted, f"the arithmetic layers refused a fallback board: {verdict.rejection}"
 
         # ⚠⚠ And then the boundary production calls. Passing the layers is not publishing.

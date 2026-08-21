@@ -194,6 +194,10 @@ def evidence_for(loaded: Loaded) -> Evidence:
     deduced record filed under an accepted source type would have passed §32's exclusion.
     """
     return Evidence(
+        # ⚠️ **The board as the database has it**, which is what layer 4 must solve back to. The
+        # package under certification here is the one read back from disk, so the comparison is
+        # between the file and the game rather than between the file and itself.
+        source=to_board(loaded.direction, None),
         game_id=loaded.game_id,
         offense_team=loaded.offense_team,
         source_type=loaded.source_type,

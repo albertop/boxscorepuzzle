@@ -26,7 +26,7 @@ from typing import Final
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
-from boxscore_package.format import BATTING_COLUMNS, LEAKING_METADATA, Package
+from boxscore_package.format import BATTING_COLUMNS, LEAKING_METADATA, Board, Package
 from boxscore_verify.expected_id import expected_puzzle_id
 from boxscore_verify.plausibility import faults, reveal_faults
 from boxscore_verify.verify import UNSIGNED, Unsigned, Verdict, verify
@@ -82,6 +82,21 @@ class Evidence:
     official_defense_errors: int
     official_at_bats: int | None
     official_left_on_base: int | None
+    source: Board
+    """The original boxscore, loaded outside this package. **Layer 4's comparand.**
+
+    ⚠️⚠️ **Layer 4 was comparing the solved board against `package.solution`** — the answer the same
+    producer wrote in the same pass — while §22 describes it as *solve from scratch and compare against
+    the original boxscore*. Four layers all consulting one answer are one layer, and the worked example
+    §22 uses to justify the fourth (two batters' hits swapped) travels in both halves and passed.
+
+    It is here because this is already where what-the-producer-knows crosses the boundary: the
+    provenance row, and the game-log totals that make the only strict correspondence check the gate
+    has. ⚠️ **And the same caveat this class already states applies**: independence is a property of
+    where the value came from, not of the field existing. A source built from the same in-memory
+    object as the package makes layer 4 a check on the file rather than on the game — real, and not
+    the whole of what §22 asks for.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,8 +111,9 @@ class Certification:
 
 def check_mathematics(package: Package, evidence: Evidence, secret: Ed25519PublicKey | Unsigned) -> list[str]:
     """§22's four layers plus the signature. Necessary, and on its own not sufficient."""
-    del evidence
-    verdict: Verdict = verify(package, secret=secret)
+    # ⚠️ `evidence` is used now: layer 4 needs the source boxscore, which is the whole of v36-P2-12's
+    # sibling finding. It used to be deleted here as unused.
+    verdict: Verdict = verify(package, secret=secret, source=evidence.source)
     if verdict.rejection is None:
         return []
     return [f"{verdict.rejection.layer}: {verdict.rejection.detail}"]

@@ -153,7 +153,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
                 puzzle=board,
                 solution=source,
             )
-            if not verify(package, secret=UNSIGNED).accepted:
+            if not verify(package, secret=UNSIGNED, source=source).accepted:
                 continue
             found.append(
                 Candidate(

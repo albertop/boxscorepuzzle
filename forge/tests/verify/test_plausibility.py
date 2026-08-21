@@ -108,7 +108,7 @@ class TestTheDefectItself:
         """
         broken = with_phantom_row(board, replace)
 
-        verdict = verify(sign(package(broken, broken), SECRET), secret=PUBLIC)
+        verdict = verify(sign(package(broken, broken), SECRET), secret=PUBLIC, source=broken)
 
         assert not verdict.accepted, "the batting order stopped catching the phantom row"
         assert verdict.rejection is not None

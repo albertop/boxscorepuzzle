@@ -157,7 +157,7 @@ def to_candidate(found: Reached) -> Candidate | None:
         puzzle=board,
         solution=source,
     )
-    if not verify(package, secret=UNSIGNED).accepted:
+    if not verify(package, secret=UNSIGNED, source=source).accepted:
         return None
     notes = loaded.direction.batter_footnotes
     return Candidate(

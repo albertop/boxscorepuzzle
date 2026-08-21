@@ -54,12 +54,29 @@ CROSS_TEAM_COLUMNS: Final[tuple[str, ...]] = ("hits", "runs", "walks", "strikeou
 
 
 class Family(StrEnum):
-    """The four kinds of reasoning the board offers, which is the second axis of difficulty."""
+    """The five kinds of reasoning the board offers, which is the second axis of difficulty.
+
+    ⚠️⚠️ **This was four, and the player was already being taught five.** The reference sheet and the
+    tutorial both present the batting order as a relation family — it is the one family that cannot be
+    read off a boxscore, which is exactly why §8 has to teach it — while `FAMILY_OF` mapped no identity
+    to it, so `families_used` silently excluded every lineup step and package metadata could not say a
+    board needed one.
+
+    **Not adding it did not avoid the mismatch; it hid it.** And it had a practical cost: with no
+    family for it there was no way to ask how many published boards depend on the batting order, or to
+    exclude them if that ever became necessary.
+
+    ⚠️ **Every figure taken before 2026-08-21 was measured against four families.** They are not wrong
+    — they were counting a smaller set — and they are marked rather than re-run, the same treatment the
+    zero-fill correction received. A figure that names the four-family axis stays comparable with
+    itself; one that mixes the two axes is not comparable with anything.
+    """
 
     COLUMN_SUM = "column_sum"
     ROW_IDENTITY = "row_identity"
     CROSS_TEAM = "cross_team"
     GLOBAL_IDENTITY = "global_identity"
+    BATTING_ORDER = "batting_order"
 
 
 class Identity(StrEnum):
@@ -101,6 +118,9 @@ FAMILY_OF: Final[dict[Identity, Family]] = {
     Identity.ROW_PLATE_APPEARANCES: Family.ROW_IDENTITY,
     Identity.CROSS_TEAM_TOTAL: Family.CROSS_TEAM,
     Identity.GLOBAL_PLATE_APPEARANCES: Family.GLOBAL_IDENTITY,
+    # ⚠️ Added 2026-08-21. Its absence is why `families_used` could not report a board that leaned on
+    # the lineup, and why the package recorded `"lineup": "plain" | "fallback"` as a workaround.
+    Identity.BATTING_ORDER: Family.BATTING_ORDER,
 }
 
 

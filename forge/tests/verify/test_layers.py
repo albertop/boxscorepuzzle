@@ -85,14 +85,14 @@ class TestItAcceptsACorrectPuzzle:
             },
         )
 
-        verdict = verify(package(puzzle, board), secret=UNSIGNED)
+        verdict = verify(package(puzzle, board), secret=UNSIGNED, source=board)
 
         assert verdict.accepted, verdict.rejection
 
     def test_a_board_with_nothing_erased_is_still_a_valid_package(self, board: Board) -> None:
         # Degenerate but it must pass: every layer's question has a trivial answer, and a verifier
         # that trips over the easy case cannot be trusted on the hard one.
-        assert verify(package(board, board), secret=UNSIGNED).accepted
+        assert verify(package(board, board), secret=UNSIGNED, source=board).accepted
 
 
 class TestLayerOneCatchesBadData:
@@ -103,7 +103,7 @@ class TestLayerOneCatchesBadData:
         rows[3] = (4, 4, 0, 2, 0, 1)
         source = replacing(board, batting=tuple(rows))
 
-        verdict = verify(package(source, source), secret=UNSIGNED)
+        verdict = verify(package(source, source), secret=UNSIGNED, source=source)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -125,7 +125,7 @@ class TestLayerOneCatchesBadData:
             ),
         )
 
-        verdict = verify(package(source, source), secret=UNSIGNED)
+        verdict = verify(package(source, source), secret=UNSIGNED, source=source)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -154,7 +154,7 @@ class TestLayerTwoCatchesAmbiguity:
         # board has several completions and no right answer for the player to find.
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        verdict = verify(package(puzzle, board), secret=UNSIGNED)
+        verdict = verify(package(puzzle, board), secret=UNSIGNED, source=board)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.UNIQUENESS
@@ -192,7 +192,7 @@ class TestLayerTwoCatchesAmbiguity:
         impossible = replacing(board, batting_totals=(36, 36, 3, 40, 0, 5))
         puzzle = blank(impossible, {"batting": [(0, 3)]})
 
-        verdict = verify(package(puzzle, impossible), secret=UNSIGNED)
+        verdict = verify(package(puzzle, impossible), secret=UNSIGNED, source=impossible)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.IDENTITIES
@@ -207,7 +207,7 @@ class TestLayerThreeCatchesAnUnreachableBoard:
         # directly is what shows layer 3 answering its own question.
         puzzle = blank(board, {"batting": [(0, 3), (1, 3)]})
 
-        rejection = check_derivability(package(puzzle, board), UNSIGNED)
+        rejection = check_derivability(package(puzzle, board), UNSIGNED, board)
 
         assert rejection is not None
         assert rejection.layer is Layer.DERIVABILITY
@@ -228,22 +228,64 @@ class TestLayerThreeCatchesAnUnreachableBoard:
 
 
 class TestLayerFourCatchesACorruptedArtefact:
-    def test_a_given_cell_altered_after_generation_never_reaches_a_layer(self, board: Board) -> None:
-        """⚠️⚠️ **This case is refused at the format boundary now, and that is worth stating plainly.**
+    def test_two_batters_hits_swapped_after_generation(self, board: Board) -> None:
+        """⚠️⚠️ **§22's worked example, and until this landed it passed.**
 
-        It used to swap two batters' hits in the published board and keep the original solution, then
-        assert layer 4 caught the mismatch. Since v36-P2-08 a package whose givens disagree with its own
-        solution cannot be constructed at all: `Package.__post_init__` refuses it, and so does the
-        client's `readPackage`. **Earlier and in both runtimes is strictly better** — the client
-        verifies no signature by design, so a boundary refusal is the only thing standing between a
-        tampered static file and a day that nobody can win.
+        Two batters' hits are swapped in the published artefact. Every identity still holds, the board
+        still has exactly one completion, and that completion is **a different game from the one the
+        source says it is** — which is precisely the case §22 names to justify a fourth layer existing
+        at all.
 
-        ⚠️ **What this exposes about layer 4 is recorded in `todo.md` rather than fixed here.**
-        `verify()` compares the solved board against `package.solution` — the package's own answer, not
-        an independent source — so `Fault.MISMATCH` means *the puzzle and the solution disagree*, which
-        is the property the format check now enforces directly. Whether layer 4 should instead take the
-        source direction as an argument, and so become the end-to-end check §22 describes, is an
-        operator decision and a change to the verifier's signature.
+        It passed because `check_end_to_end` compared the solved board against `package.solution`: the
+        answer the same producer wrote in the same pass. A corrupted artefact carries the swap in both
+        halves, so the file agreed with itself and all four layers agreed with the file. **Four layers
+        that consult one answer are one layer.**
+
+        Now the source is the original boxscore and comes in from outside the package.
+        """
+        rows = [list(row) for row in board.batting]
+        rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
+        corrupted = replacing(board, batting=tuple(tuple(row) for row in rows))
+
+        # Both halves swapped, which is what an altered artefact looks like: the puzzle gives what the
+        # solution claims, so nothing before layer 4 has anything to object to.
+        verdict = verify(package(corrupted, corrupted), secret=UNSIGNED, source=board)
+
+        assert verdict.rejection is not None, "the swapped board passed every layer"
+        assert verdict.rejection.layer is Layer.END_TO_END
+        assert verdict.rejection.fault is Fault.MISMATCH
+        # The detail names the cell and both values, because an operator reading a discard needs to
+        # know which board is wrong rather than that one of them is.
+        assert "bat[0].hits" in verdict.rejection.detail, verdict.rejection.detail
+        assert "2 cells" in verdict.rejection.detail, "a swap moves two cells and the count should say so"
+
+    def test_the_same_swap_passes_when_the_source_is_the_packages_own_copy(self, board: Board) -> None:
+        """⚠️⚠️ **The old behaviour, kept as a test so the regression cannot return quietly.**
+
+        Handing layer 4 the package's own solution is exactly what it used to do, and this asserts that
+        doing so accepts the corrupted artefact above. It is the difference the change bought, stated as
+        a fact rather than as a claim in a docstring — and it is why `source` has no default.
+        """
+        rows = [list(row) for row in board.batting]
+        rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
+        corrupted = replacing(board, batting=tuple(tuple(row) for row in rows))
+
+        verdict = verify(package(corrupted, corrupted), secret=UNSIGNED, source=corrupted)
+
+        assert verdict.accepted, "the corrupted board no longer passes even against its own copy"
+
+    def test_a_missing_source_raises_rather_than_falling_back(self, board: Board) -> None:
+        """⚠️ **The absence of the comparison must not read as the comparison passing.** The same rule
+        `secret` follows: `None` is in the signature so that it can be refused, not defaulted."""
+        with pytest.raises(ValueError, match="no source boxscore"):
+            verify(package(board, board), secret=UNSIGNED, source=None)
+
+    def test_a_given_cell_that_contradicts_the_solution_never_reaches_a_layer(self, board: Board) -> None:
+        """The other half of the same corruption: swapped in the puzzle only.
+
+        ⚠️ Refused at the format boundary since v36-P2-08, before any layer runs, and **in both
+        runtimes** — the client verifies no signature by design, so that refusal is the only thing
+        between a tampered static file and a day nobody can win.
         """
         rows = [list(row) for row in board.batting]
         rows[0][3], rows[8][3] = rows[8][3], rows[0][3]
@@ -268,17 +310,17 @@ class TestTheSignatureCatchesCorruptionInTransit:
             offense_is_home=True,
         )
 
-        verdict = verify(tampered, secret=PUBLIC)
+        verdict = verify(tampered, secret=PUBLIC, source=board)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE
         assert verdict.rejection.fault is Fault.CORRUPTED
 
     def test_an_unsigned_package_is_refused_when_a_secret_is_expected(self, board: Board) -> None:
-        verdict = verify(package(board, board), secret=PUBLIC)
+        verdict = verify(package(board, board), secret=PUBLIC, source=board)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE
 
     def test_a_signed_package_passes(self, board: Board) -> None:
-        assert verify(sign(package(board, board), SECRET), secret=PUBLIC).accepted
+        assert verify(sign(package(board, board), SECRET), secret=PUBLIC, source=board).accepted

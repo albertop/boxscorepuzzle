@@ -162,7 +162,7 @@ def _package(puzzle: Board, source: Board) -> Package:
 class TestABoardBuiltFromTheIdentitiesSatisfiesThem:
     @given(board=boards())
     def test_it_passes_every_layer(self, board: Board) -> None:
-        verdict = verify(_package(board, board), secret=UNSIGNED)
+        verdict = verify(_package(board, board), secret=UNSIGNED, source=board)
 
         assert verdict.accepted, verdict.rejection
 
@@ -314,7 +314,7 @@ class TestTheSignatureTracksTheContent:
 class TestRejectionsAreAttributed:
     @given(board=boards())
     def test_an_unsigned_package_is_a_signature_failure_not_a_puzzle_failure(self, board: Board) -> None:
-        verdict = verify(_package(board, board), secret=PUBLIC)
+        verdict = verify(_package(board, board), secret=PUBLIC, source=board)
 
         assert verdict.rejection is not None
         assert verdict.rejection.layer is Layer.SIGNATURE

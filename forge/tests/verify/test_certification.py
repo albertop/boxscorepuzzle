@@ -52,6 +52,8 @@ def refs(board: object) -> tuple[str, ...]:
 def good_evidence(board: Board) -> Evidence:
     """Evidence that describes this board and this game, with every field it can be checked on."""
     return Evidence(
+        # The board this evidence is about, which is what layer 4 solves back to.
+        source=board,
         game_id=GAME,
         offense_team=OFFENSE,
         source_type="EVN",
@@ -180,7 +182,7 @@ class TestItFailsClosed:
         # not publish. What changed is that it is now refused twice, by two independent readings.
         # ⚠️ Asserting only "not publishable" would pass even if the gate stopped running and verify
         # did all the work, so both are named.
-        assert not verify(package_for(broken), secret=UNSIGNED).accepted
+        assert not verify(package_for(broken), secret=UNSIGNED, source=broken).accepted
         assert not certify_for_publication(
             package_for(broken), evidence=good_evidence(broken), secret=UNSIGNED
         ).publishable

@@ -191,6 +191,7 @@ class TestItSaysWhenItCannotAnswer:
                 offense_is_home=True,
             ),
             secret=UNSIGNED,
+            source=board,
         )
 
         assert verdict.rejection is not None
@@ -292,6 +293,7 @@ class TestMalformedPackages:
                 offense_is_home=True,
             ),
             secret=UNSIGNED,
+            source=board,
         )
 
         assert verdict.rejection is not None
@@ -358,6 +360,7 @@ class TestMalformedPackages:
                 offense_is_home=True,
             ),
             secret=UNSIGNED,
+            source=board,
         )
 
         assert verdict.rejection is not None
@@ -397,6 +400,7 @@ class TestMalformedPackages:
                 offense_is_home=True,
             ),
             secret=UNSIGNED,
+            source=board,
         )
 
         assert verdict.rejection is not None
@@ -420,6 +424,7 @@ class TestTheTally:
                     offense_is_home=True,
                 ),
                 secret=UNSIGNED,
+                source=board,
             ),
             verify(
                 Package(
@@ -432,6 +437,7 @@ class TestTheTally:
                     offense_is_home=True,
                 ),
                 secret=UNSIGNED,
+                source=board,
             ),
             # ⚠️ **The malformed one, and it has now been rewritten twice.** It was first malformed by
             # having no solution, then by having a holed one — and each became unconstructible in turn
@@ -461,6 +467,7 @@ class TestTheTally:
                     offense_is_home=True,
                 ),
                 secret=UNSIGNED,
+                source=board,
             ),
         ]
 
