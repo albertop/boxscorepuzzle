@@ -97,7 +97,9 @@ const en = {
   "done.incomplete": "Still a few cells to go.",
 
   // ---- the reveal ------------------------------------------------------------------------------
-  "reveal.title": "Solved",
+  // The heading, and the panel's accessible name. It says what the player did rather than what the
+  // board is: the payoff is the object in front of them, not a verdict on their performance.
+  "reveal.title": "You rebuilt it.",
   "reveal.time": "Your time",
   // ⚠️ The clock is invisible during play (§26) and appears here for the first time. The label says
   // whose time it is, because the comparison against other players is the paid feature and this is
