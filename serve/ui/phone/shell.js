@@ -39,6 +39,7 @@ export function boot({
   clock = createClock(),
   store = createStore(browserStorage()),
   doc = document,
+  fresh = false,
 }) {
   const app = root;
   app.replaceChildren();
@@ -48,7 +49,12 @@ export function boot({
   // ⚠️ A refused session is discarded rather than left to be re-read on every visit. Nothing here waits
   // on it: `restore` returns false and the player gets today's board, empty, which is the outcome §23
   // asks for when anything about persistence goes wrong.
-  if (!game.restore(store.load(puzzle.id))) store.forget(puzzle.id);
+  // ⚠️ **`fresh` forgets the session instead of restoring it**, which is how the development test mode
+  // starts from an unplayed board without a reload. It is one branch here rather than a second notion
+  // of *unplayed* somewhere else: what comes back is a board booted the ordinary way that simply had
+  // nothing to restore.
+  if (fresh) store.forget(puzzle.id);
+  else if (!game.restore(store.load(puzzle.id))) store.forget(puzzle.id);
 
   // ⚠️ **Saved on every change, not on a timer and not on unload.** `beforeunload` does not fire
   // reliably on a phone — a swiped-away tab is killed, not closed — so anything waiting for it is a
@@ -144,10 +150,16 @@ export function boot({
     for (const node of scroller.querySelectorAll(".cell")) paint(node, game);
     const footnotes = scroller.querySelector(".footnotes");
     footnotes.replaceWith(renderFootnotes(puzzle, game));
+    // ⚠️⚠️ **The keypad's state is derived here too, with the cells.** It used to be refreshed only in
+    // the key handler, so anything that changed the board another way left the pad describing a board
+    // that no longer existed — the development `fill` produced a full board with a dead *Check*, which
+    // is precisely the state that makes `fill` useless for testing the ending.
+    //
+    // Both are the same kind of fact: what the pad offers is a function of the board, exactly as what
+    // a cell shows is. One place derives both, so a second caller cannot forget half of it.
+    keypad?.allowCheck(game.blanks().every((name) => game.value(name) !== null));
+    keypad?.showHints(game.hintsLeft());
   };
-
-  // Every blank filled. Recomputed after each entry, because that is the only thing that changes it.
-  const boardIsFull = () => game.blanks().every((name) => game.value(name) !== null);
 
   // ⚠⚠ **One class for the finished state, applied wherever the game can become finished.** The
   // stylesheet had `.app-finished td.cell { cursor: default }` and **nothing ever added that class** —
@@ -184,8 +196,6 @@ export function boot({
         applyKey(game, selected, key);
         repaint();
         remember();
-        keypad.allowCheck(boardIsFull());
-        keypad.showHints(game.hintsLeft());
       },
       () => check(),
     );
@@ -281,29 +291,18 @@ export function boot({
   const attention = followAttention({ clock, save: remember, doc, target: app });
   // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is
   // discarded. Cheap insurance over the save that already happened on the last entry.
-  const onHide = () => attention.away();
-  doc.defaultView?.addEventListener("pagehide", onHide);
-
-  /**
-   * Stop watching, and stop saving. **Every path that can write a session, closed together.**
-   *
-   * ⚠️⚠️ **Written because forgetting a session and then navigating puts it straight back.** The
-   * development `reset` cleared the store and called `location.replace`, and the outgoing page's
-   * `pagehide` fired `away()` → `remember()` on the way out — so the board came back exactly as it
-   * had been, finished. Found by running it in a browser; the unit test passed, because a fake
-   * `location` fires no unload.
-   *
-   * The two listeners have to go together: `attention.stop()` alone leaves `pagehide` attached, which
-   * is the one that fires last and therefore the one that wins.
-   */
-  const detach = () => {
-    attention.stop();
-    doc.defaultView?.removeEventListener("pagehide", onHide);
-  };
+  // ⚠️⚠️ **This listener fires last, and it once undid a deletion.** The development `reset` used to
+  // forget the session and navigate; `pagehide` then fired `away()` → `remember()` on the way out and
+  // wrote the board straight back, so it returned exactly as it had been. Found by running it in a
+  // browser — the unit test passed, because a fake `location` fires no unload.
+  //
+  // `reset` no longer navigates (it boots `fresh` instead), so nothing needs to detach and the
+  // function that did was deleted rather than kept. **The note stays**: anything that deletes a
+  // session and then leaves the page has to reckon with this line.
+  doc.defaultView?.addEventListener("pagehide", () => attention.away());
 
   draw();
-  keypad?.allowCheck(boardIsFull());
-  keypad?.showHints(game.hintsLeft());
+  repaint();
   // ⚠️ Returned rather than only stashed on `globalThis`. The globals stay because the browser
   // console is how this board gets poked at during development; a caller that has the handle does not
   // have to reach through a global to use it.
@@ -322,7 +321,6 @@ export function boot({
     showReveal,
     repaint,
     remember,
-    detach,
     location: doc.defaultView?.location,
   };
 }

@@ -22,10 +22,13 @@ boundary is what the directory means, not what the file is called.
 import socket
 import sys
 from functools import partial
+from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import quote
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "serve"
+BOARD = "/ui/phone/index.html"
 PORT = 8137
 
 
@@ -44,6 +47,31 @@ class NoCache(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self) -> None:
+        # ⚠⚠ **Short addresses, because typing a URL on a phone is the actual cost.** The board lives at
+        # `/ui/phone/index.html` and the development modes hang off `?test=`, which is fine to type on a
+        # laptop and miserable on a handset — and the whole point of the test mode is checking a change
+        # on the device it was designed for.
+        #
+        # `/` opens the board. `/t/<mode>` opens it with that mode.
+        #
+        # ⚠️ **One rule rather than a list of modes.** `serve/ui/phone/testmode.js` owns which modes
+        # exist; this forwards whatever it is given, and an unknown one lands on a page that ignores it.
+        # A list here would be a second copy of that decision, and the two would drift.
+        #
+        # ⚠️ **And this can never reach a player.** It is `tools/`, which deployment does not ship — the
+        # same boundary that keeps this whole server out of production.
+        if self.path == "/":
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", BOARD)
+            self.end_headers()
+            return
+        if self.path.startswith("/t/"):
+            mode = self.path[len("/t/"):].strip("/")
+            self.send_response(HTTPStatus.FOUND)
+            self.send_header("Location", f"{BOARD}?test={quote(mode, safe='')}")
+            self.end_headers()
+            return
+
         # ⚠️ **The validators are dropped before the parent sees them.** `no-store` tells the browser
         # not to keep a copy; it does not stop one it already has from being revalidated, and a 304
         # answered against a stale copy is how the old module survived a reload. Removing the
@@ -74,7 +102,7 @@ def _reachable_at(port: int) -> list[str]:
     obtain, so it says that instead of inventing one. **The same shape as the text dump that supplied
     its own padding: an instrument reporting on its own environment rather than the one that matters.**
     """
-    addresses = [f"http://localhost:{port}/ui/phone/index.html"]
+    addresses = [f"http://localhost:{port}/"]
     if Path("/.dockerenv").exists():
         addresses.append(
             "from a phone: the host's own address on the network, at the port compose publishes "
@@ -86,7 +114,7 @@ def _reachable_at(port: int) -> list[str]:
         # interface, which is the one a phone on the same network would reach. No packet is sent.
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
             probe.connect(("10.255.255.255", 1))
-            addresses.append(f"http://{probe.getsockname()[0]}:{port}/ui/phone/index.html   <- from a phone")
+            addresses.append(f"http://{probe.getsockname()[0]}:{port}/   <- from a phone; /t/fill, /t/solved, /t/reset")
     except OSError:
         addresses.append("(no network address found: this laptop is not on a network)")
     return addresses

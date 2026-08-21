@@ -1830,7 +1830,7 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
 });
 
 suite("⚠️⚠️ The development test mode, and the four things that keep it away from a player", () => {
-  const bootShell = async ({ session = null } = {}) => {
+  const bootShell = async ({ session = null, fresh = false } = {}) => {
     const { boot } = await import("../ui/phone/shell.js");
     const { createStore } = await import("../engine/store.js");
     const { readPackage } = await import("../engine/package.js");
@@ -1844,12 +1844,20 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
       removeItem: (k) => kept.delete(k),
     });
     if (session) store.save(puzzle.id, session);
-    // A location nothing navigates: `reset` calls `replace`, and a test that actually reloaded the
-    // suite would take the harness with it.
-    const went = [];
-    const shell = boot({ puzzle, root, store });
-    shell.location = { href: "http://x/ui/phone/index.html?p=1&test=reset", replace: (u) => went.push(u) };
-    return { ...shell, puzzle, root, went, kept, teardown: () => root.remove() };
+    // ⚠️ A `history` nothing navigates with. The mode drops the parameter from the address bar, and a
+    // test that let it touch the real one would rewrite the suite's own URL.
+    const wrote = [];
+    const shell = boot({ puzzle, root, store, fresh });
+    return {
+      ...shell,
+      puzzle,
+      root,
+      wrote,
+      kept,
+      location: { href: "http://x/ui/phone/index.html?p=1&test=reset" },
+      history: { replaceState: (state, title, url) => wrote.push(url) },
+      teardown: () => root.remove(),
+    };
   };
 
   test("⚠️⚠️ an unrecognised mode does nothing at all", async () => {
@@ -1865,7 +1873,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
 
     equal(shell.game.blanks().map((n) => shell.game.value(n)).join(","), before, "an unknown mode wrote to the board");
     equal(shell.game.record().assisted, false, "an unknown mode marked the game");
-    equal(shell.went.length, 0, "an unknown mode navigated");
+    equal(shell.wrote.length, 0, "an unknown mode touched the address bar");
     shell.teardown();
   });
 
@@ -1889,8 +1897,20 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     const source = await (await fetch("../ui/phone/main.js", { cache: "no-store" })).text();
 
     assert(!/^\s*import\b[^\n]*testmode/m.test(source), "main.js imports the test mode at the top level");
-    const dynamic = source.match(/if \(mode\)[^\n]*import\("\.\/testmode\.js"\)/);
-    assert(dynamic, "main.js does not reach the test mode inside the parameter's branch");
+    // ⚠️ The essential property, not one exact spelling: every *import* of the module is guarded by
+    // `mode`. Two earlier versions of this assertion were wrong in opposite directions — one pinned to
+    // a single line and failed on a refactor that kept the property, the other scanned every line
+    // naming the file and failed on the comment explaining the rule. Code lines that import it, and
+    // nothing else.
+    const imports = source
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("//"))
+      .filter((line) => /import\s*\(/.test(line) && /testmode/.test(line));
+    equal(imports.length, 1, `expected one guarded import of the test mode, found ${imports.length}`);
+    assert(
+      /\bmode\b\s*\?/.test(imports[0]) || /if \(mode\)/.test(imports[0]),
+      `the import is not behind the parameter: ${imports[0].trim()}`,
+    );
     // And the parameter is read from the query string rather than from anything a page can set.
     assert(/URLSearchParams\(location\.search\)\.get\("test"\)/.test(source), "the switch is not the query parameter");
   });
@@ -1952,25 +1972,55 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     shell.teardown();
   });
 
-  test("⚠️ reset forgets the session and reloads without the parameter", async () => {
-    // It does not empty the board by hand: what comes back has to be a board booted the ordinary way,
-    // or *unplayed* would have two definitions.
+  test("⚠️⚠️ a saved session does not survive a fresh boot, which is what every mode gets", async () => {
+    // **The forgetting is `boot({ fresh })`, not something the mode does by hand.** What comes back has
+    // to be a board booted the ordinary way that simply had nothing to restore, or *unplayed* would
+    // have two definitions.
+    //
+    // ⚠️ The earlier design forgot the session and then navigated, and the outgoing page's `pagehide`
+    // wrote it straight back. Nothing navigates now, which removes the race rather than working around
+    // it — see the note on that listener in `shell.js`.
+    const first = await bootShell();
+    const name = first.game.blanks()[0];
+    first.game.enter(name, first.game.cells().find((c) => c.name === name).answer);
+    first.remember();
+    const saved = first.store.load(first.puzzle.id);
+    assert(saved, "nothing was saved to forget");
+    first.teardown();
+
+    const second = await bootShell({ session: saved, fresh: true });
+
+    equal(second.store.load(second.puzzle.id), null, "a fresh boot left the session behind");
+    assert(second.game.blanks().every((n) => second.game.value(n) === null), "a fresh boot restored entries");
+    equal(second.game.record().assisted, false);
+    second.teardown();
+  });
+
+  test("⚠️ every mode drops the parameter from the address bar without navigating", async () => {
+    // A refresh should give a playable board, not the same test action again — and `reset` in
+    // particular would otherwise wipe whatever had just been typed, on every pull-to-refresh.
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell();
-    applyTestMode("fill", shell);
-    assert(shell.store.load(shell.puzzle.id), "nothing was saved to forget");
 
-    applyTestMode("reset", shell);
-    // ⚠️⚠️ **The unload, which is what actually broke this.** `reset` forgot the session and the
-    // outgoing page's `pagehide` wrote it back, so the board came back finished. The first version of
-    // this test asserted the store immediately and passed against code that did not work in a browser
-    // — an instrument that could not reach the moment the defect happens.
-    globalThis.dispatchEvent(new Event("pagehide"));
+    for (const mode of ["reset", "fill", "solved"]) {
+      const shell = await bootShell({ fresh: true });
+      applyTestMode(mode, shell);
 
-    equal(shell.store.load(shell.puzzle.id), null, "reset left the session behind");
-    equal(shell.went.length, 1, "reset did not reload");
-    assert(!shell.went[0].includes("test="), `reset reloaded with the parameter still on: ${shell.went[0]}`);
-    assert(shell.went[0].includes("p=1"), "reset dropped the puzzle it was resetting");
+      equal(shell.wrote.length, 1, `${mode} did not clean the address bar`);
+      assert(!shell.wrote[0].includes("test="), `${mode} left the parameter on: ${shell.wrote[0]}`);
+      assert(shell.wrote[0].includes("p=1"), `${mode} dropped the puzzle: ${shell.wrote[0]}`);
+      shell.teardown();
+    }
+  });
+
+  test("reset leaves an unplayed board and does nothing else", async () => {
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell({ fresh: true });
+
+    equal(applyTestMode("reset", shell), "reset");
+
+    assert(shell.game.blanks().every((n) => shell.game.value(n) === null), "reset wrote to the board");
+    equal(shell.game.record().assisted, false, "reset marked a board it did not fill");
+    assert(shell.root.querySelector(".keypad"), "reset left no keypad");
     shell.teardown();
   });
 });
