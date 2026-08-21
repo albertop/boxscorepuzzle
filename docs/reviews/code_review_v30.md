@@ -17,6 +17,65 @@ publication proof, and felt difficulty remains subject to the hand-solve launch 
 constraint is best described as a reasoning tool or as permission for additional erasure is a useful
 research question, but not a code-review P1 and not required work. No source change is owed.
 
+##### ⚠️⚠️ And the evidence was checked anyway — the 47 is neither of the two possibilities
+
+The operator asked the sharper version of this finding: **was the 47 measured by attribution or by
+subtraction?** Because if by subtraction it is the same defect twice and the adoption rests on two
+numbers that measure the wrong thing. Read from the code and recomputed from `arms.json`, which is
+committed.
+
+**By attribution.** `arms.py::_pa_techniques` classifies **each step by its own technique**, restricted
+to steps that resolved an *erased PA cell*: `lineup` for `LINEUP_ARITHMETIC`, `bounding` for
+`BOUNDING`, `propagation` for the rest of that column. That is not `len(deductions) - division` over a
+whole solve. Its docstring even records the version that *did* have the inversion — anything not
+`BOUNDING` counted as propagation, filing the cyclic step as reasoning — and that it was fixed.
+
+**But no bucket is a causal one, and the instrument never claimed otherwise.** Its own comment on
+`bounding` reads *"the reasoning the constraint **may** buy"*. **`causal` was a word applied in prose to
+a technique count**, which is a third thing: not the 346's subtraction, and not attribution of
+causality either.
+
+**And 47 does not reproduce.** Over the gained cohort at target 8 — eleven directions, one row each,
+the treated arm:
+
+| bucket | total |
+|---|---|
+| `lineup` (division filler) | **20** |
+| `propagation` | **39** |
+| `bounding` | **23** |
+
+No combination is 47. Nor any combination over any arm, any target, either cohort definition, or three
+per-direction selection rules — a sweep that turned up seven accidental 47s, all at other targets or
+mixing a blank count with a technique count. **The figure has no derivation anyone can reproduce**,
+which is the shape of the unsourced `22% → 33%` already recorded in `todo.md`.
+
+**A second figure fell out of the same check: the nine-of-eleven is eight.** The table it comes from
+lists `0 0 0 0 0 0 0 0 2 9 9` — eight zeros. The recomputation agrees. Prose and table disagreed by one
+inside a single document and the table was right.
+
+**Does the adoption stand? Yes, and not because of these numbers.** It was decided by a person: the
+operator solved the five hand-solve boards with the constraint active and found them harder to hold in
+the head, and `batting-order-reversal.md` records that as the deciding evidence, explicitly *not* the
+tables. Both figures were supporting, and both are now known not to say what they said.
+
+**What is still open is the finding's own question**, and it is recorded as an investigation with a
+design rather than as a defect — `todo.md`, *is the batting order a reasoning tool or an erasure
+permit?*. The counterfactual is small because the verifier already takes `slots` or not, so the same
+erased board is solved twice with only the relation set changing.
+
+**The guard is written.** `forge/tests/test_pa_technique_buckets.py`. ⚠️ Its shape is the point: an
+all-propagation solution reporting zero lineup steps **is passed by a subtraction too**, so the case
+that decides is a solution *containing* a lineup step reporting it in `lineup` and nowhere else.
+Reintroducing the recorded inversion turns exactly that test red.
+
+**Corrected in place, not deleted:** `batting-order-reversal.md` (both figures, with a section at the
+end showing the recomputation), `batting-order-plan.md` (criterion 3's wording), `confirm.py`'s header.
+
+⚠️ **The pattern is worth more than either number.** Three times now a figure here has been a label
+applied in prose to something narrower — `causal` for a subtraction, `causal` for a technique count,
+`coverage at 8 stalls` for a figure with no run. **The instrument was sound in two of the three.** What
+failed was the sentence, and nothing checks a sentence.
+
 #### v30-P1-02 — RETRACTED: the verifier does not owe row-level certification of the unplayed half
 
 **Retraction:** this finding conflated puzzle certification with historical-display fidelity. The

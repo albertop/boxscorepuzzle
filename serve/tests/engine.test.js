@@ -315,7 +315,15 @@ suite("The game: state, entries and the C7 record", () => {
     t.value = 4000;
 
     const record = game.record();
-    equal(Object.keys(record).sort(), ["duration_ms", "errors", "highest_technique", "hints", "puzzle_id", "solved"]);
+    // ⚠️ **The exact field set, and `assisted` earned its place by breaking this test.** C7 is
+    // irreversible: a field that appears only sometimes is a field consumers forget to check for, and
+    // a board a development affordance filled in would otherwise be recorded as a perfect instant
+    // solve. Always present, `false` on every real game.
+    equal(
+      Object.keys(record).sort(),
+      ["assisted", "duration_ms", "errors", "highest_technique", "hints", "puzzle_id", "solved"],
+    );
+    equal(record.assisted, false, "an ordinary game reported itself as assisted");
     equal(record.duration_ms, 3000, "duration is not measured from the injected clock");
     equal(record.puzzle_id, puzzle.id);
   });
@@ -1818,6 +1826,152 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
     equal(shell.game.record().hints, 0, "opening the reference cost a hint");
     equal(shell.game.blanks().map((n) => shell.game.value(n)).join(","), before, "it changed the board");
     root.remove();
+  });
+});
+
+suite("⚠️⚠️ The development test mode, and the four things that keep it away from a player", () => {
+  const bootShell = async ({ session = null } = {}) => {
+    const { boot } = await import("../ui/phone/shell.js");
+    const { createStore } = await import("../engine/store.js");
+    const { readPackage } = await import("../engine/package.js");
+    const puzzle = readPackage(packages[0].raw);
+    const root = document.createElement("div");
+    document.getElementById("board").append(root);
+    const kept = new Map();
+    const store = createStore({
+      getItem: (k) => kept.get(k) ?? null,
+      setItem: (k, v) => kept.set(k, v),
+      removeItem: (k) => kept.delete(k),
+    });
+    if (session) store.save(puzzle.id, session);
+    // A location nothing navigates: `reset` calls `replace`, and a test that actually reloaded the
+    // suite would take the harness with it.
+    const went = [];
+    const shell = boot({ puzzle, root, store });
+    shell.location = { href: "http://x/ui/phone/index.html?p=1&test=reset", replace: (u) => went.push(u) };
+    return { ...shell, puzzle, root, went, kept, teardown: () => root.remove() };
+  };
+
+  test("⚠️⚠️ an unrecognised mode does nothing at all", async () => {
+    // **An acceptance list, never an exclusion.** The rule this project wrote down after a filter that
+    // passed on absence: an unknown value must do nothing rather than fall into a default branch.
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell();
+    const before = shell.game.blanks().map((n) => shell.game.value(n)).join(",");
+
+    for (const mode of [null, undefined, "", "Fill", "solved ", "reset;fill", "__proto__", "true", "1"]) {
+      equal(applyTestMode(mode, shell), null, `${JSON.stringify(mode)} was accepted as a mode`);
+    }
+
+    equal(shell.game.blanks().map((n) => shell.game.value(n)).join(","), before, "an unknown mode wrote to the board");
+    equal(shell.game.record().assisted, false, "an unknown mode marked the game");
+    equal(shell.went.length, 0, "an unknown mode navigated");
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ nothing in the interface reaches it", async () => {
+    // The mode has no control, no binding and no affordance. A board rendered normally must contain no
+    // route to it — not a button, not a link, not a data attribute somebody could click.
+    const shell = await bootShell();
+
+    const suspicious = [...shell.root.querySelectorAll("*")].filter((node) =>
+      /test|reset|fill|solved/i.test(node.className || "") || /\?test=/.test(node.getAttribute?.("href") ?? ""),
+    );
+
+    equal(suspicious.length, 0, `the board renders a route to the test mode: ${suspicious.map((n) => n.className)}`);
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ the entry point reaches it only inside the parameter's branch, and only dynamically", async () => {
+    // ⚠️ **Read from the source, because this is a claim about reachability rather than behaviour.** A
+    // top-level `import` would put the module in every page load, which is what the dynamic import
+    // exists to prevent — and no assertion about a running page can see the difference.
+    const source = await (await fetch("../ui/phone/main.js", { cache: "no-store" })).text();
+
+    assert(!/^\s*import\b[^\n]*testmode/m.test(source), "main.js imports the test mode at the top level");
+    const dynamic = source.match(/if \(mode\)[^\n]*import\("\.\/testmode\.js"\)/);
+    assert(dynamic, "main.js does not reach the test mode inside the parameter's branch");
+    // And the parameter is read from the query string rather than from anything a page can set.
+    assert(/URLSearchParams\(location\.search\)\.get\("test"\)/.test(source), "the switch is not the query parameter");
+  });
+
+  test("⚠️ fill writes through the keypad's own path, so it tests the real one", async () => {
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell();
+
+    equal(applyTestMode("fill", shell), "fill");
+
+    equal(shell.game.blanks().filter((n) => shell.game.value(n) === null).length, 0, "the board is not full");
+    equal(shell.game.isSolved(), true);
+    // ⚠️ Stopped short of finishing on purpose: the completion path is the thing most often being
+    // tested, and a mode that pressed Check would remove it from reach.
+    equal(shell.game.isFinished(), false, "fill finished the game");
+    assert(shell.root.querySelector(".keypad"), "fill removed the keypad");
+    assert(!shell.root.querySelector(".reveal"), "fill opened the reveal");
+    equal(shell.game.record().errors, 0, "filling recorded mistakes");
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ anything it fills is marked, so the C7 record cannot claim a solve nobody did", async () => {
+    // **The constraint that matters if this ever runs anywhere real.** A board filled from the
+    // solution is, to the rest of the engine, a perfect instant solve.
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell();
+
+    applyTestMode("solved", shell);
+
+    equal(shell.game.record().assisted, true, "a pre-filled board reported itself as an ordinary solve");
+    equal(shell.game.record().solved, true);
+    shell.teardown();
+  });
+
+  test("⚠️ the mark survives the reload, so a reopen cannot launder the board", async () => {
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const first = await bootShell();
+    applyTestMode("fill", first);
+    const saved = first.store.load(first.puzzle.id);
+    first.teardown();
+
+    const second = await bootShell({ session: saved });
+
+    equal(second.game.record().assisted, true, "the reopen laundered a pre-filled board");
+    second.teardown();
+  });
+
+  test("⚠️ solved reaches the finished state through the shell's own Check handler", async () => {
+    // Not `game.finish()`: the point is the finished *screen*, and that is everything the handler does.
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell();
+
+    applyTestMode("solved", shell);
+
+    assert(shell.root.querySelector(".reveal"), "solved did not open the boxscore");
+    assert(!shell.root.querySelector(".keypad"), "solved left the keypad in place");
+    assert(shell.root.querySelector(".again"), "solved left no way back to the boxscore");
+    equal(shell.game.isFinished(), true);
+    shell.teardown();
+  });
+
+  test("⚠️ reset forgets the session and reloads without the parameter", async () => {
+    // It does not empty the board by hand: what comes back has to be a board booted the ordinary way,
+    // or *unplayed* would have two definitions.
+    const { applyTestMode } = await import("../ui/phone/testmode.js");
+    const shell = await bootShell();
+    applyTestMode("fill", shell);
+    assert(shell.store.load(shell.puzzle.id), "nothing was saved to forget");
+
+    applyTestMode("reset", shell);
+    // ⚠️⚠️ **The unload, which is what actually broke this.** `reset` forgot the session and the
+    // outgoing page's `pagehide` wrote it back, so the board came back finished. The first version of
+    // this test asserted the store immediately and passed against code that did not work in a browser
+    // — an instrument that could not reach the moment the defect happens.
+    globalThis.dispatchEvent(new Event("pagehide"));
+
+    equal(shell.store.load(shell.puzzle.id), null, "reset left the session behind");
+    equal(shell.went.length, 1, "reset did not reload");
+    assert(!shell.went[0].includes("test="), `reset reloaded with the parameter still on: ${shell.went[0]}`);
+    assert(shell.went[0].includes("p=1"), "reset dropped the puzzle it was resetting");
+    shell.teardown();
   });
 });
 

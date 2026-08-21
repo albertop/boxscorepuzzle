@@ -281,7 +281,25 @@ export function boot({
   const attention = followAttention({ clock, save: remember, doc, target: app });
   // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is
   // discarded. Cheap insurance over the save that already happened on the last entry.
-  doc.defaultView?.addEventListener("pagehide", attention.away);
+  const onHide = () => attention.away();
+  doc.defaultView?.addEventListener("pagehide", onHide);
+
+  /**
+   * Stop watching, and stop saving. **Every path that can write a session, closed together.**
+   *
+   * ⚠️⚠️ **Written because forgetting a session and then navigating puts it straight back.** The
+   * development `reset` cleared the store and called `location.replace`, and the outgoing page's
+   * `pagehide` fired `away()` → `remember()` on the way out — so the board came back exactly as it
+   * had been, finished. Found by running it in a browser; the unit test passed, because a fake
+   * `location` fires no unload.
+   *
+   * The two listeners have to go together: `attention.stop()` alone leaves `pagehide` attached, which
+   * is the one that fires last and therefore the one that wins.
+   */
+  const detach = () => {
+    attention.stop();
+    doc.defaultView?.removeEventListener("pagehide", onHide);
+  };
 
   draw();
   keypad?.allowCheck(boardIsFull());
@@ -292,5 +310,19 @@ export function boot({
   globalThis.__game = game;
   globalThis.__puzzle = puzzle;
   globalThis.__store = store;
-  return { game, clock, store, app, check, showReveal };
+  // ⚠️ `repaint`, `remember` and `location` are here for the development test mode, which drives the
+  // shell through this handle rather than reaching around it. `location` is passed rather than read
+  // from the global so a test can hand in a fake and nothing navigates.
+  return {
+    game,
+    clock,
+    store,
+    app,
+    check,
+    showReveal,
+    repaint,
+    remember,
+    detach,
+    location: doc.defaultView?.location,
+  };
 }

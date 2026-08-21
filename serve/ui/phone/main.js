@@ -42,7 +42,14 @@ async function loadPuzzle() {
 }
 
 try {
-  boot(await loadPuzzle());
+  const shell = boot(await loadPuzzle());
+  // ⚠️⚠️ **The only route to the development test mode, and it is a dynamic import inside the branch.**
+  // A normal load never fetches `testmode.js` at all — the file is not part of the page unless the
+  // parameter is there, which is a stronger property than a module that loads and declines to act.
+  // `serve/tests/engine.test.js` asserts this shape by reading this file; changing it to a top-level
+  // import turns that test red.
+  const mode = new URLSearchParams(location.search).get("test");
+  if (mode) (await import("./testmode.js")).applyTestMode(mode, shell);
 } catch (error) {
   const app = document.getElementById("app");
   app.replaceChildren();

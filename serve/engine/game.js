@@ -84,7 +84,7 @@ export function describeCells(puzzle) {
 export function isSession(saved) {
   if (saved === null || typeof saved !== "object" || Array.isArray(saved)) return false;
 
-  const { entries, hinted, firstWrong, elapsed, finishedAt } = saved;
+  const { entries, hinted, firstWrong, elapsed, finishedAt, assisted } = saved;
   if (entries !== undefined) {
     if (entries === null || typeof entries !== "object" || Array.isArray(entries)) return false;
     // The same rule `enter()` applies. A cell holds a whole number or it holds nothing.
@@ -103,6 +103,7 @@ export function isSession(saved) {
   if (finishedAt !== undefined && finishedAt !== null && (!Number.isFinite(finishedAt) || finishedAt < 0)) {
     return false;
   }
+  if (assisted !== undefined && typeof assisted !== "boolean") return false;
   return true;
 }
 
@@ -144,6 +145,8 @@ export function createGame(puzzle, clock = createClock()) {
   const hinted = new Set();
   /** Frozen at the moment the board was finished, so a record taken later reports the same duration. */
   let finishedAt = null;
+  /** Whether anything other than the player put answers on this board. See `markAssisted`. */
+  let assisted = false;
 
   const require = (name) => cells.get(name) ?? raise(name);
   const raise = (name) => {
@@ -259,6 +262,24 @@ export function createGame(puzzle, clock = createClock()) {
     /** Whether this cell was given away rather than deduced. Read by `paint()`; see the colour note. */
     isHinted: (name) => hinted.has(name),
 
+    /**
+     * Mark this game as one a person did not solve unaided. **One-way, and it reaches the C7 record.**
+     *
+     * ⚠️⚠️ **The development pre-fill writes through `enter()` like the keypad, which is exactly what
+     * makes it worth having and exactly what makes this necessary.** A board filled from the solution
+     * is, to every other part of the engine, a board someone solved perfectly and instantly: solved,
+     * no errors, no hints. Without a mark, that record is indistinguishable from a real one, and if the
+     * mode ever ran anywhere real it would put fabricated results into the history C7 exists to keep —
+     * which cannot be reconstructed afterwards.
+     *
+     * ⚠️ **It lives in the engine even though only a development affordance sets it.** The engine owns
+     * the record, so the record owns its own honesty; a flag the shell remembered to attach is a flag
+     * the next shell forgets. And it survives the session, or a reload would launder the board clean.
+     */
+    markAssisted() {
+      assisted = true;
+    },
+
     isCorrect: (name) => valueOf(name) === require(name).answer,
 
     /** Every blank filled with its answer. There is no other ending. */
@@ -323,6 +344,9 @@ export function createGame(puzzle, clock = createClock()) {
         // in the record that nobody can defend. The seam exists; the measurement does not yet.
         highest_technique: null,
         solved: this.isSolved(),
+        // ⚠️ Always present, `false` on every real game. A field that appears only when it is true is a
+        // field consumers forget to check for.
+        assisted,
       };
     },
 
@@ -334,6 +358,7 @@ export function createGame(puzzle, clock = createClock()) {
       entries: Object.fromEntries(entries),
       hinted: [...hinted],
       firstWrong: [...firstWrong],
+      assisted,
       // ⚠️ **The frozen duration, not a flag.** A boolean would say the board was finished and leave
       // the shell to ask the clock how long it took — and the clock has kept running since. The
       // number is the thing that has to survive, so the number is what is stored; `null` is a board
@@ -367,6 +392,9 @@ export function createGame(puzzle, clock = createClock()) {
       for (const name of (saved.hinted ?? []).slice(0, HINTS_PER_GAME)) if (cells.has(name)) hinted.add(name);
       for (const name of saved.firstWrong ?? []) if (cells.has(name)) firstWrong.add(name);
       finishedAt = saved.finishedAt ?? null;
+      // ⚠️ **Restored, and only ever upwards.** A saved session that was assisted stays assisted; a
+      // reload must not be a way to launder a pre-filled board into a clean record.
+      assisted = assisted || saved.assisted === true;
       // ⚠️ The duration is part of the session, not a separate thing the shell remembers to carry.
       // Left out, a reload gave the board back with the clock at zero.
       if (saved.elapsed !== undefined) clock.restore(saved.elapsed);
