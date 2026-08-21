@@ -328,13 +328,15 @@ def _traits_survived(published: list[Package]) -> None:
     batch with neither trait leaves both paths unexercised against real data. That is a rendering
     coverage requirement, not an editorial one.
 
-    ⚠️ **One of each is the floor, not a target.** Today the batch carries **three** boards with a
-    shared slot and **five** with a live footnote; a previous batch carried exactly one of the first,
-    which is what made this worth asserting. Raising the floor to two was proposed and is **not**
-    taken here: it makes the writer refuse *more* often rather than less, and it would be a third
-    quota over six boards that already carry one-direction-per-game and distinct stall targets.
-    `CLAUDE.md` records a weighted sample producing zero boards at a rung under exactly that pressure.
-    Recorded in `docs/reviews/todo.md` as an operator decision.
+    ⚠️⚠️ **One of each is the floor, and it stays at one — decided by the operator on 2026-08-21.**
+    Today the batch carries **three** boards with a shared slot and **five** with a live footnote; a
+    previous batch carried exactly one of the first, which is what made this worth asserting at all.
+
+    Raising it to two was proposed by `v37-P3-01` and **rejected**, for the reason the proposal works
+    against: a higher floor makes the writer **refuse more often**, and the concern behind the proposal
+    was fragility. It would also be a third quota over six boards that already carry
+    one-direction-per-game and distinct stall targets — and `CLAUDE.md` records a weighted sample
+    producing **zero** boards at a rung under exactly that pressure.
 
     Raised before `_publish`, so a batch missing either trait leaves the published set untouched —
     **loudly, and with the previous generation still serving.** A collapse here is a refusal to

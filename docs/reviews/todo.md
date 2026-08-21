@@ -33,10 +33,11 @@ so now.
 of the six* was true of the batch drawn under the old gate and went stale the moment it was redrawn — a
 count in a comment cannot survive a regeneration, and it is gone.
 
-⬜ **Raising the floor from one to two is an operator decision and is not taken.** It makes the writer
-refuse *more* often, which works against the stated concern, and it would be a third quota over six
-boards that already carry one-direction-per-game and distinct stall targets. `CLAUDE.md` records a
-weighted sample producing **zero** boards at a rung under exactly that pressure.
+✅ **Decided 2026-08-21: the floor stays at one.** Raising it to two was proposed by `v37-P3-01` and
+rejected, **for the reason the proposal works against**: a higher floor makes the writer *refuse more
+often*, and fragility was the concern behind it. It would also be a third quota over six boards that
+already carry one-direction-per-game and distinct stall targets — and `CLAUDE.md` records a weighted
+sample producing **zero** boards at a rung under exactly that pressure.
 
 ### ⚠️ v37's *Pendientes* section is false, and the source of it is inside v36's own file
 
