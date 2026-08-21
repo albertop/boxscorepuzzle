@@ -1,9 +1,15 @@
 """Boards built here rather than borrowed from the generator.
 
-⚠️ Nothing in the verifier's tests imports `boxscore_forge`. A fixture produced by the thing under
-judgement would agree with it by construction, which is the shape of failure §22 exists to prevent.
-Boards are assembled from the identities as the design document states them, so a board that is valid
-here is valid because the *document* says so.
+⚠️ **No verifier *fixture* is built by the generator.** A board produced by the thing under judgement
+would agree with it by construction, which is the shape of failure §22 exists to prevent. Boards are
+assembled from the identities as the design document states them, so a board that is valid here is
+valid because the *document* says so.
+
+⚠️⚠️ **This said "nothing in the verifier's tests imports `boxscore_forge`", and that is not true.**
+(v36-P3-20) `test_boundary.py` and `test_expected_id.py` import it deliberately, to check that the two
+sides agree — which is the one use of the generator these tests are *supposed* to make. The rule is
+about where a fixture comes from, not about the import list, and stating it as the second made it
+false in a place people read to learn what the boundary is.
 """
 
 from collections.abc import Callable

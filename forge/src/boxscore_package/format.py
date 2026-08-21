@@ -890,12 +890,17 @@ class Package:
     reveal: Reveal | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
     slot_references: tuple[str, ...] | None = None
-    """Required. Typed optional only so the field can carry a default position in the dataclass; a
-    package without it raises at construction."""
-    """One per batting row, in row order. Required from schema 2; absent in version 1 packages.
+    """One per batting row, in row order. **Required**; typed optional only so the field can carry
+    a default position in the dataclass, and a package without it raises at construction.
 
     **Pitching rows carry none, deliberately.** Those are the *opposing* team's pitchers and have no
     place in this batting order, so a slot there would name a row that does not exist.
+
+    ⚠️ **This was two consecutive string literals and only the first was the docstring.** (v36-P3-06)
+    The second was invisible to every tool that reads `__doc__` while looking exactly like
+    documentation to a person — and it was stale, saying the field is *absent in version 1 packages*
+    when schema 1 has been gone for versions. A sentence nothing renders and nobody maintains is the
+    cheapest possible way to be wrong in the file that defines the format.
     """
 
     offense_is_home: bool | None = None

@@ -151,12 +151,11 @@ class TestAnInequalityBoundsOneSideOnly:
 
     def test_a_lower_bound_does_not_become_an_exact_value(self) -> None:
         # `H - AB <= 0` is `AB >= H`. With H = 0 every non-negative AB satisfies it, so AB is unknown.
-        from boxscore_verify.rules import Family, Relation  # noqa: PLC0415
+        from boxscore_verify.rules import Relation  # noqa: PLC0415
 
         relation = Relation(
             terms=(("h", 1), ("ab", -1)),
             constant=0,
-            family=Family.ROW_IDENTITY,
             origin="H - AB <= 0",
             equality=False,
         )
@@ -174,13 +173,12 @@ class TestAnInequalityBoundsOneSideOnly:
         ⚠️ Without this, returning `False` from every inequality would pass the test above and quietly
         remove layer 3b's only reasoning move — a fix that works by deleting the feature.
         """
-        from boxscore_verify.rules import Family, Relation  # noqa: PLC0415
+        from boxscore_verify.rules import Relation  # noqa: PLC0415
 
         # `AB + BB <= 0` with BB known to be 0 forces AB = 0 from above, and zero is the floor.
         relation = Relation(
             terms=(("ab", 1), ("bb", 1)),
             constant=0,
-            family=Family.ROW_IDENTITY,
             origin="AB + BB <= 0",
             equality=False,
         )

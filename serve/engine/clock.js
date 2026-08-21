@@ -152,10 +152,13 @@ export function createClock({ now = () => Date.now(), elapsed = 0, running = fal
       if (since !== null) since = now();
     },
 
-    /** A restored session may bring back a clock that was already stopped for good. */
-    reseal() {
-      sealed = false;
-    },
+    // ⚠️⚠️ **`reseal()` is deleted, and it was worse than dead.** (v36-P3-22) Its comment said *a
+    // restored session may bring back a clock that was already stopped for good* and its body set
+    // `sealed = false` — **un-sealing**. Nothing in `serve/` called it and no test touched it; the
+    // restore path correctly calls `seal()`. The next shell author reading that comment and calling it
+    // while restoring a finished session would have reopened the sealed clock and recreated v30-P1-03,
+    // which is the invariant this module exists for. A dead function is harmless; a dead function whose
+    // name and comment invite the one call that breaks the module is not.
 
     /**
      * What gets written down: a duration, and nothing else.

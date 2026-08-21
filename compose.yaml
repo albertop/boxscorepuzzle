@@ -27,8 +27,14 @@ services:
 
     # ⚠️ **`0.0.0.0` on the host side, which is what puts the board on the phone.** Docker Desktop
     # publishes to every interface on the laptop, so the address to type into a phone is the laptop's
-    # own address on the wireless network — not localhost. 8137 is also what the browser tooling uses,
-    # so there is one address and one server rather than two that can drift.
+    # own address on the wireless network — not localhost.
+    #
+    # ⚠️⚠️ **This claimed 8137 is also what the browser tooling uses, "so there is one address and one
+    # server rather than two that can drift". It is the opposite.** (v36-P3-44)
+    # `tools/run_browser_tests.py` picks a *free* port deliberately, and its docstring says why: sharing
+    # 8137 would let the suite silently test the **container's mounted copy** instead of the working
+    # tree. Two files asserting opposite facts about one decision, and someone "restoring" the sharing
+    # on the strength of this comment would reintroduce the exact hazard the tool exists to avoid.
     ports:
       - "0.0.0.0:8137:8080"
 

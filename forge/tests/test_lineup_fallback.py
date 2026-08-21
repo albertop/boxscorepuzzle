@@ -1,8 +1,14 @@
 """The conditional retry: try without the batting order, fall back to it only when the target is missed.
 
-⚠️ **Experimental, not adopted.** `docs/reviews/batting-order-reversal.md` carries what is and is not
-established. `test_lineup_fallback_cannot_publish.py` is the guard that these boards cannot ship;
-this file is about whether the retry does what it says.
+⚠️⚠️ **This said "Experimental, not adopted" and cited a guard that no longer exists.** (v36-P3-20)
+The module under test opens with *✅ ADOPTED. This is the production erasure path*, and
+`test_lineup_fallback_cannot_publish.py` was deleted and replaced by
+`test_lineup_fallback_is_adopted.py` — the file asserting the opposite conclusion. A contract statement
+left saying the reverse of the settled state is v29-P3-01's shape, and this is the second instance.
+
+**Adopted.** `docs/reviews/batting-order-plan.md` carries the decision and
+`docs/reviews/batting-order-reversal.md` keeps the reasoning that preceded it. This file is about
+whether the retry does what it says.
 
 The reason the retry is conditional and not a switch: on boards that already reach the target, turning
 the constraint on changes almost nothing and converts a median of eight steps into division filler —

@@ -50,7 +50,16 @@ class Relation:
 
     terms: tuple[tuple[str, int], ...]
     constant: int
-    family: Family
+    # ⚠️⚠️ **`family` is gone: seventeen assignments and zero readers.** (v36-P3-06) Nothing in
+    # `forge/src` ever read it, so it was a classification no consumer could disagree with — and it
+    # *did* disagree: the batting order was tagged `ROW_IDENTITY` while the forge keeps it as its
+    # own family, and `ER <= R` was tagged `COLUMN_SUM` while the forge holds every inequality off
+    # the family axis entirely (`UNMAPPED`). A taxonomy nothing consumes is a check that can never
+    # fire, and the first consumer would have activated the disagreement silently.
+    #
+    # ⚠️ If the verifier ever needs to report families, it gets its own tagging **deliberately**,
+    # with a test asserting it agrees with `FAMILY_OF` — the pattern `ACCEPTED_SOURCES` already
+    # follows for the one other rule that exists on both sides of §22's independence boundary.
     origin: str
     equality: bool = True
 
@@ -118,7 +127,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
             Relation(
                 terms=(*((batting(row, column), 1) for row in range(batters)), (batting_total(column), -1)),
                 constant=0,
-                family=Family.COLUMN_SUM,
                 origin=f"batting column {column}",
             )
         )
@@ -127,7 +135,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
             Relation(
                 terms=(*((footnote(row, column), 1) for row in range(batters)), (footnote_total(column), -1)),
                 constant=0,
-                family=Family.COLUMN_SUM,
                 origin=f"footnote column {column}",
             )
         )
@@ -136,7 +143,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
             Relation(
                 terms=(*((pitching(row, column), 1) for row in range(pitchers)), (pitching_total(column), -1)),
                 constant=0,
-                family=Family.COLUMN_SUM,
                 origin=f"pitching column {column}",
             )
         )
@@ -145,7 +151,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
         Relation(
             terms=((batting_total("runs"), 1),),
             constant=board.line_score.offense_runs,
-            family=Family.COLUMN_SUM,
             origin="line score runs",
         )
     )
@@ -153,7 +158,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
         Relation(
             terms=((batting_total("hits"), 1),),
             constant=board.line_score.offense_hits,
-            family=Family.COLUMN_SUM,
             origin="line score hits",
         )
     )
@@ -171,7 +175,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
                     *((footnote(row, column), 1) for column in FOOTNOTE_COLUMNS),
                 ),
                 constant=0,
-                family=Family.ROW_IDENTITY,
                 origin=f"row identity, batter {row}",
             )
         )
@@ -184,7 +187,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
                 *((footnote_total(column), 1) for column in FOOTNOTE_COLUMNS),
             ),
             constant=0,
-            family=Family.ROW_IDENTITY,
             origin="row identity, totals",
         )
     )
@@ -197,7 +199,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
             Relation(
                 terms=((batting_total(column), 1), (pitching_total(column), -1)),
                 constant=0,
-                family=Family.CROSS_TEAM,
                 origin=f"cross-team {column}",
             )
         )
@@ -216,7 +217,6 @@ def relations(board: Board, slots: tuple[int, ...] = ()) -> tuple[Relation, ...]
                 (LOB, -1),
             ),
             constant=0,
-            family=Family.GLOBAL_IDENTITY,
             origin="PA = Outs + R + LOB",
         )
     )
@@ -267,7 +267,6 @@ def _batting_order(slots: tuple[int, ...], batters: int) -> list[Relation]:
                     *((batting(row, "plate_appearances"), -1) for row in rows_in[earlier]),
                 ),
                 constant=0,
-                family=Family.ROW_IDENTITY,
                 origin=f"PA(slot {later}) <= PA(slot {earlier})",
                 equality=False,
             )
@@ -283,7 +282,6 @@ def _batting_order(slots: tuple[int, ...], batters: int) -> list[Relation]:
                 *((batting(row, "plate_appearances"), -1) for row in rows_in[order[-1]]),
             ),
             constant=1,
-            family=Family.ROW_IDENTITY,
             origin=f"PA(slot {order[0]}) - PA(slot {order[-1]}) <= 1",
             equality=False,
         )
@@ -306,7 +304,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
             Relation(
                 terms=((batting(row, "hits"), 1), (batting(row, "at_bats"), -1)),
                 constant=0,
-                family=Family.ROW_IDENTITY,
                 origin=f"AB >= H, batter {row}",
                 equality=False,
             )
@@ -319,7 +316,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
                     (batting(row, "plate_appearances"), -1),
                 ),
                 constant=0,
-                family=Family.ROW_IDENTITY,
                 origin=f"PA >= AB + BB, batter {row}",
                 equality=False,
             )
@@ -328,7 +324,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
         Relation(
             terms=((batting_total("hits"), 1), (batting_total("at_bats"), -1)),
             constant=0,
-            family=Family.ROW_IDENTITY,
             origin="AB >= H, totals",
             equality=False,
         )
@@ -341,7 +336,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
                 (batting_total("plate_appearances"), -1),
             ),
             constant=0,
-            family=Family.ROW_IDENTITY,
             origin="PA >= AB + BB, totals",
             equality=False,
         )
@@ -351,7 +345,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
             Relation(
                 terms=((pitching(row, "earned_runs"), 1), (pitching(row, "runs"), -1)),
                 constant=0,
-                family=Family.COLUMN_SUM,
                 origin=f"ER <= R, pitcher {row}",
                 equality=False,
             )
@@ -360,7 +353,6 @@ def _inequalities(batters: int, pitchers: int) -> list[Relation]:
         Relation(
             terms=((pitching_total("earned_runs"), 1), (pitching_total("runs"), -1)),
             constant=0,
-            family=Family.COLUMN_SUM,
             origin="ER <= R, totals",
             equality=False,
         )
