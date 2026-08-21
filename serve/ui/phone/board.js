@@ -429,14 +429,14 @@ export function renderKeypad(onKey, onCheck) {
   // is not available at any price. The bottom row was full — thirds, thirds, `Clear` across two, and
   // `Check` — and one of those five slots had to pay for the hint key. `Clear` is the only one that was
   // wide for looks rather than for need: five characters fit a single column with room over.
-  const clear = el("button", null, text("keypad.clear"));
+  const clear = el("button", "word", text("keypad.clear"));
   clear.addEventListener("click", () => onKey({ clear: true }));
   pad.append(clear);
 
   // ⚠️ **The hint acts on the selected cell**, so it belongs among the keys that act on the selected
   // cell. The reference sheet does not and is not here — it is permanent context rather than input,
   // and it lives in the board's own chrome.
-  const hint = el("button", "hint", text("keypad.hint"));
+  const hint = el("button", "word hint", text("keypad.hint"));
   hint.addEventListener("click", () => onKey({ hint: true }));
   pad.append(hint);
 
@@ -450,7 +450,7 @@ export function renderKeypad(onKey, onCheck) {
   // unwanted press on a complete-but-wrong board says the board does not balance and records the cells
   // that were wrong — exactly what a deliberate press would have done a second later. The clock does
   // not stop and attempts are unlimited.
-  const check = el("button", "check", text("done.check"));
+  const check = el("button", "word check", text("done.check"));
   check.addEventListener("click", () => onCheck());
   pad.append(check);
   pad.allowThirds = (allowed) => {

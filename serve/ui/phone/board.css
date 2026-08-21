@@ -386,7 +386,13 @@ td.label.substitute { padding-left: 14px; }
 
    This block held cells for a week. They are gone with the decision that opened them: the terms are
    given, so the line is text and one row of it. */
-.footnotes { padding: 8px 0 14px; font-size: 13px; line-height: 1.6; }
+/* ⚠️ **15px, up from 13.** §6 requires live footnotes to be visually prominent, and the reason is the
+   distribution rather than taste: nine rows in ten have every term at zero, so a player learns to stop
+   looking — and the row where one finally appears is exactly the row whose arithmetic fails without it.
+   The line is the smallest type on the board and it carries the terms that break a row identity.
+   It wraps rather than clips, so a longer line costs height and never a hidden term; measured at 375
+   and at 320 with the widest footnote in the reference set. */
+.footnotes { padding: 8px 0 14px; font-size: 15px; line-height: 1.6; }
 .footnotes .term { margin-right: 14px; white-space: nowrap; }
 .footnotes .term.lob { font-weight: 700; }
 .footnotes .term.live { color: var(--ink); font-weight: 700; }
@@ -414,7 +420,15 @@ td.label.substitute { padding-left: 14px; }
   font-variant-numeric: tabular-nums;
 }
 .keypad button:active { background: var(--selected); }
-.keypad button.wide { grid-column: span 2; font-size: 14px; }
+.keypad button.wide { grid-column: span 2; }
+/* ⚠️ **The three word keys are one rule.** `Clear`, `Hint` and `Check` had three different treatments
+   — 18px regular, 14px regular and 14px semibold — sitting side by side in one row, which reads as
+   three kinds of control rather than as three keys. They are the same kind of thing: a word that does
+   something to the board. One declaration, so they cannot drift apart again. */
+.keypad button.word {
+  font: 600 14px/1 var(--face), system-ui, sans-serif;
+  letter-spacing: 0.02em;
+}
 /* ⚠️ **The fraction is built from Plex's own digits, not from a `⅓` glyph.**
    Plex draws `U+2153` with the numerator crushed onto the slash — unreadable at key size. Borrowing the
    two glyphs from Roboto by `unicode-range` was tried and removed: the subset Google returns for a
@@ -437,10 +451,38 @@ td.label.substitute { padding-left: 14px; }
    Dimmer than a live key on purpose and by a wide margin: a disabled control that reads as available
    is worse than one that reads as missing. WCAG exempts disabled controls from the contrast minimum
    for this reason, so `--muted` is the right token and the low ratio is the message. */
+/* ⚠️⚠️ **A line through the key, because dimmer ink was not enough.** Muted text on a key that keeps
+   its own ground reads as *quiet*, not as *unavailable* — and the two states it has to separate are a
+   live `Check` and a dead one, at the exact moment the player is looking for it.
+
+   ⚠️ **Drawn as an overlay, not as `text-decoration`.** The thirds keys are a composed fraction —
+   three spans — and striking that through cuts the numerator from the bar. An overlay works the same
+   for a word and for a glyph, and it takes part in no layout, so nothing moves as a key changes state.
+
+   Corner to corner would look like a rendering fault on a key this wide; the line is inset so it reads
+   as a mark on the key rather than as the key being crossed out of existence. */
 .keypad button:disabled {
   color: var(--muted);
+  position: relative;
 }
 .keypad button:disabled .frac { color: var(--muted); }
+.keypad button:disabled::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 8px;
+  /* ⚠️⚠️ **Hatched, chosen from six treatments rendered side by side in both schemes.** The picture is
+     what decided it, and it decided differently in each: *outlined* was cleanest on paper and nearly
+     invisible on the dark ground, *no ground* vanished into the pad — the hole this project already
+     rejected once today — and a single diagonal collided with the composed fraction on the thirds keys
+     and read as scribble. **Hatching is the only one that reads in both**, which is the whole test,
+     because the board that gets played is the dark one. */
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent 0 5px,
+    color-mix(in srgb, var(--muted) 38%, transparent) 5px 7px
+  );
+}
 
 /* ---- the ending: check, and what the player gets for being right ------------------------------ */
 
@@ -485,9 +527,8 @@ td.label.substitute { padding-left: 14px; }
   font-weight: 600;
 }
 
-/* The hint key. One word, like `Clear` beside it; the count is not shown and the key goes dead at
-   zero, which is the same answer the thirds keys give for *not applicable here*. */
-.keypad button.hint { font-size: 14px; }
+/* The hint key carries no count: it goes dead at zero, which is the same answer the thirds keys give
+   for *not applicable here*. Its type comes from `.word` with `Clear` and `Check`. */
 
 /* ⚠️ The reference key, in the chrome rather than in the pad. Quiet: it is always there and it is not
    what the player came for, so it reads as a label until it is wanted. */
@@ -516,8 +557,6 @@ td.label.substitute { padding-left: 14px; }
 .keypad button.check {
   background: var(--header-ground);
   color: var(--header-ink);
-  font: 600 14px/1 var(--face), system-ui, sans-serif;
-  letter-spacing: 0.02em;
 }
 .keypad button.check:disabled {
   /* Back to an ordinary key: the ground its neighbours have and the ink they get when disabled. The
