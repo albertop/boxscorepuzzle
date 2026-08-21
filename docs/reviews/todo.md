@@ -4620,3 +4620,64 @@ resolving it re-bases the reporting.
 ### Still open from v36
 
 **All 44 P3s.**
+
+
+---
+
+## ⬜ Open question: the ghost runner and the global identity
+
+**Not a task. A question with its reasoning, written down so it is neither lost nor re-derived.**
+
+### What it is
+
+From 2020 onward, an extra inning starts with **a runner already on second who did not get there by
+batting**. No plate appearance put him on base.
+
+The global identity is `PA = Outs + Runs + LOB`. If the ghost runner scores, there is a **run no plate
+appearance explains**. If he is stranded, there is a **left-on-base with no PA behind it**. Either way
+the right-hand side is larger than the left, and the identity would not close.
+
+### ⚠️ What it is not — and this is the part that is already settled
+
+**It is not the pinch runner**, which is the case `plausibility._batting_row_faults` deliberately does
+not test, and which `v36-P3-16` was nearly "fixed" into asserting.
+
+The distinction is exact: **the pinch runner's chain contains a plate appearance.** The original batter
+spent his PA and reached base; the runner only changes who occupies it and who eventually scores. The
+identity never notices, because nothing was added to the right-hand side that the left-hand side did
+not already account for.
+
+**The ghost runner has no plate appearance anywhere in the chain.** That is why he is a different
+question rather than the same one again.
+
+### What is unknown
+
+**Whether Retrosheet records the placement in a way that closes the identity anyway.** They may log it
+as an event that accounts for the runner, or count LOB differently in that inning. **Nobody has
+looked.** The answer is a property of the data, not of the rule.
+
+### What would settle it
+
+Games from **2020 onward that went to extra innings**: does the global identity close?
+
+- **If it closes** — nothing to do, and the reason is recorded here so the question does not come back.
+- **If it does not** — those games leave the pool. Every extra-inning game from 2020 on, which under
+  `MAX_INNINGS = 12` is a narrow band and a real one.
+
+⚠️ **Check the batting order in the same run.** The ghost runner is the player who made the previous
+inning's last out, so he consumes no turn and the cyclic distribution should be unaffected — **that is
+a prediction, not a measurement**, and the instrument to test it already segments extra innings as an
+arm (`discovery/batting-order/measure.py`).
+
+### Why it waits
+
+It costs a database run and the P3 batch is in progress.
+
+**And it is not urgent, for a reason worth stating rather than assuming: if the identity does not
+close, those boards are already failing layer 1.** The pool is not silently shipping broken puzzles
+either way. What the measurement would change is whether **a band of modern games is being quietly
+discarded by a check nobody knew was doing it** — which is a question about inventory and about the
+eras the product can reach, not about correctness.
+
+⚠️ The pool's window is `(1910, 2029)`, so those seasons are in scope today. This is not a question
+about a future the pool cannot reach yet.
