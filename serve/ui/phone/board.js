@@ -14,7 +14,11 @@ import {
   battingTotalCell,
   footnoteCell,
   footnoteTotalCell,
+  INNINGS,
   inningsToDisplay,
+  withThirds,
+  withWholeInnings,
+  wholeInningsOf,
   pitchingTotalCell,
 } from "../../engine/columns.js";
 import { text } from "../../engine/strings.js";
@@ -247,7 +251,7 @@ export function paint(node, game) {
   // outlive the fact it describes. Same redraw, same source: the game.
   node.classList.toggle("hinted", blank && game.isHinted(name));
   const isInnings = name.startsWith("pitching") && name.endsWith(".outs");
-  const shown = value === null ? "" : isInnings ? inningsToDisplay(value) : String(value);
+  const shown = value === null ? "" : isInnings ? inningsToDisplay(value, INNINGS.BOARD) : String(value);
   node.textContent = shown;
   // ⚠️ **The accessible name is redrawn here or it is not redrawn at all.** An explicit `aria-label`
   // *replaces* the element's text as its name, so a label written once at render described the cell
@@ -389,13 +393,13 @@ export function applyKey(game, name, key) {
     // adjust the current entry rather than appending a digit, because `6` then `⅓` is `6.1` and not
     // sixty-one.
     const current = game.value(name) ?? 0;
-    game.enter(name, Math.floor(current / 3) * 3 + key.thirds);
+    game.enter(name, withThirds(current, key.thirds));
     return;
   }
   if (innings) {
     // The whole innings grow; the thirds are held above. This had no cap while the grid path had one.
     const current = game.value(name) ?? 0;
-    game.enter(name, grow(Math.floor(current / 3), key.digit) * 3 + (current % 3));
+    game.enter(name, withWholeInnings(current, grow(wholeInningsOf(current), key.digit)));
     return;
   }
   game.enter(name, grow(game.value(name), key.digit));

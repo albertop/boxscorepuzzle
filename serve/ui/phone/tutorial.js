@@ -22,7 +22,7 @@
  * who has not yet seen a puzzle, and invisible to them as anything but delay.
  */
 
-import { inningsToDisplay } from "../../engine/columns.js";
+import { INNINGS, inningsToDisplay } from "../../engine/columns.js";
 import { fill, text } from "../../engine/strings.js";
 import { ROUTES, withSearch } from "./daily.js";
 
@@ -115,7 +115,7 @@ for (const column of PITCHING_COLUMNS) valueOf[`p.${column}`] = () => PITCHER[co
  * than one that teaches nothing — the player learns a form and then meets a different one. Third copy
  * of a rule in this file to be replaced by the definition, and the only one that was actually wrong.
  */
-const printed = (name) => (name === "p.outs" ? inningsToDisplay(PITCHER.outs) : null);
+const printed = (name) => (name === "p.outs" ? inningsToDisplay(PITCHER.outs, INNINGS.BOARD) : null);
 
 export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
   let step = start;

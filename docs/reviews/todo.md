@@ -4487,7 +4487,52 @@ commit message.
 **So no discovery run and no forge measurement needs repeating.** What does need repeating is the
 *lint* claim, which has been repeated correctly.
 
-### ⬜ Recorded, not fixed: the hand-solve pack prints innings the board does not
+### ✅ One conversion, two notations — done 2026-08-21
+
+The formula lived in five copies outside tests and had already drifted in front of the player: `4` on
+the board, `9.0` on the reveal. **The fix is one function with the notation as a parameter, not one
+notation everywhere** — both are correct about their own surface.
+
+`Innings.PRINTED` writes `9.0`: the reveal is a printed boxscore and a newspaper writes it that way,
+and in a column where some rows read `4.1` the trailing digit is what makes the column line up.
+`Innings.BOARD` writes `9`: the keypad offers `.1` and `.2`, so padding a whole inning would show the
+player a form they cannot type. **The two docstrings that used to defend opposite rules say this where
+they live**, so the next reader does not try to reconcile them.
+
+Every caller now asks: the board, the reveal, the tutorial, the board prototype and the sample
+renderer. ⚠️ **The keypad's inverse arithmetic moved too** — `Math.floor(current / 3) * 3 + thirds`
+spells the same representation backwards, and *nobody hunting for copies of a formatter finds the
+parser*, which is how it survived four reviews.
+
+⚠️ **Both parsers accept both notations now.** The client's refused `.0` — the exact string the
+format's own Python reference implementation emits — so a notation choice had become a data question.
+
+**Two guards, because the copies drifted on their own and remembering was already shown not to work.**
+`forge/tests/test_one_innings_conversion.py` walks the AST for the *shape* — a division by three and its
+remainder or multiple on the same subject in one statement — rather than for a spelling, so a rewrite
+that keeps the defect is still caught. `serve/tests/engine.test.js` carries the mirror, because §33
+keeps the two trees sharing no code. **Each has its own test proving it fires on a re-introduced copy,
+and its own test proving it spares ordinary arithmetic**; both were verified by putting a real copy back
+into a real file. Each guard names the other, since neither can see the other's tree.
+
+### ⬜ Still to do: re-check the hand-solve pack's fidelity once it is free
+
+⚠️ **The pack was deliberately not touched** — it cannot move while it is being solved. It calls
+`to_display(outs)` with no notation, and the parameter's default is `PRINTED`, **so its boards are byte
+identical**. `test_one_innings_conversion.py` asserts both halves of that: the default still yields
+`9.0`, and `build_pack.py` still takes the default. If either changes, the pack's boards change
+underneath a printed answer key.
+
+**What remains open is a judgement, not a bug.** The pack prints `9.0` and the board prints `9`. The
+pack is §22's launch gate and its boards are supposed to feel like the product, so **if the two end up
+on different notations that is a real difference between what is being judged and what will ship** —
+and the fifty-board hand-solve is the only verification of human derivability that exists.
+
+Re-check it once the pack is finished, rather than assuming it: either the pack moves to
+`Innings.BOARD`, or the difference is recorded as accepted with the reason. **Not before** — a board
+that changes mid-solve invalidates the sheet already filled in against it.
+
+### Superseded: the old note under this heading
 
 ⚠️ `innings.py` prints twelve outs as `4.0`; `columns.js` prints `4`; `finish.js` has a third
 hand-written copy printing `9.0` on the reveal. **Five copies of the formula exist outside tests.** The

@@ -22,7 +22,13 @@
  * lose. It is still in the C7 event record, where it is a measurement rather than a message.
  */
 
-import { FOOTNOTE_COLUMNS, PRINTED_BATTING, PRINTED_PITCHING } from "../../engine/columns.js";
+import {
+  FOOTNOTE_COLUMNS,
+  INNINGS,
+  PRINTED_BATTING,
+  PRINTED_PITCHING,
+  inningsToDisplay,
+} from "../../engine/columns.js";
 import { fill, longDate, text } from "../../engine/strings.js";
 import { renderLineScore } from "./board.js";
 
@@ -53,8 +59,7 @@ export function checkBoard(game) {
   return { state, message: "" };
 }
 
-/** Innings held as outs, printed the way a boxscore prints them. */
-const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;
+
 
 /**
  * The boxscore the player just reconstructed, laid out the way a newspaper printed one.
@@ -300,7 +305,10 @@ function playerRow(row, columns, { innings = false } = {}) {
   line.append(who);
   for (const column of columns) {
     const cell = document.createElement("td");
-    cell.textContent = innings && column === "outs" ? inningsOf(row[column]) : String(row[column]);
+    // ⚠️ The shared conversion, asking for the printed notation. This was a third hand-written copy
+    // of the formula, and the drift it caused was visible: `4` on the board, `9.0` here.
+    cell.textContent =
+      innings && column === "outs" ? inningsToDisplay(row[column], INNINGS.PRINTED) : String(row[column]);
     line.append(cell);
   }
   return line;

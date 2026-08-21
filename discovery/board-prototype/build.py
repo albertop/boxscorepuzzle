@@ -27,6 +27,7 @@ from pathlib import Path
 from measure import Loaded, load
 
 from boxscore_forge.identities import find_violations
+from boxscore_package.innings import Innings, to_display
 
 BATTING = (
     ("plate_appearances", "PA"),
@@ -73,11 +74,21 @@ def to_json(loaded: Loaded, note: str) -> dict[str, object]:
         "batting": [[getattr(line, field) for field, _ in BATTING] for line in direction.batting],
         "battingTotals": [getattr(direction.batting_totals, field) for field, _ in BATTING],
         "pitching": [
-            [f"{line.outs // 3}.{line.outs % 3}", line.hits, line.runs, line.earned_runs, line.walks, line.strikeouts]
+            # ⚠️ The shared conversion, in the board's notation, because this page is a prototype
+            # OF THE BOARD. Its own copy of the formula printed `4.0` where the board prints `4`,
+            # so the prototype was judged on a notation the product does not use.
+            [
+                to_display(line.outs, Innings.BOARD),
+                line.hits,
+                line.runs,
+                line.earned_runs,
+                line.walks,
+                line.strikeouts,
+            ]
             for line in direction.pitching
         ],
         "pitchingTotals": [
-            f"{direction.pitching_totals.outs // 3}.{direction.pitching_totals.outs % 3}",
+            to_display(direction.pitching_totals.outs, Innings.BOARD),
             direction.pitching_totals.hits,
             direction.pitching_totals.runs,
             direction.pitching_totals.earned_runs,

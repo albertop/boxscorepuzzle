@@ -10,6 +10,7 @@ import {
   BATTING_COLUMNS,
   FOOTNOTE_COLUMNS,
   PITCHING_COLUMNS,
+  INNINGS,
   inningsFromDisplay,
   inningsToDisplay,
   sectionOf,
@@ -364,15 +365,47 @@ suite("The game: state, entries and the C7 record", () => {
   });
 });
 
-suite("Innings are thirds, and the two directions are inverses", () => {
-  test("outs render the way a printed boxscore writes them", () => {
-    equal([0, 1, 2, 3, 19, 20].map(inningsToDisplay), ["0", "0.1", "0.2", "1", "6.1", "6.2"]);
+suite("Innings are thirds, one conversion writes two notations, and the directions are inverses", () => {
+  test("the board's notation and the printed one differ only where a whole inning is", () => {
+    const outs = [0, 1, 2, 3, 12, 19, 20, 27];
+
+    equal(
+      outs.map((one) => inningsToDisplay(one, INNINGS.BOARD)),
+      ["0", "0.1", "0.2", "1", "4", "6.1", "6.2", "9"],
+      "the board's notation changed",
+    );
+    // ⚠️ The reveal is a printed boxscore and a newspaper writes `9.0`. Both notations are correct
+    // about their own surface; what was wrong was two formulas producing them.
+    equal(
+      outs.map((one) => inningsToDisplay(one, INNINGS.PRINTED)),
+      ["0.0", "0.1", "0.2", "1.0", "4.0", "6.1", "6.2", "9.0"],
+      "the printed notation changed",
+    );
   });
 
-  test("every outs value the board can hold survives a round trip", () => {
-    for (let outs = 0; outs <= 60; outs += 1) {
-      equal(inningsFromDisplay(inningsToDisplay(outs)), outs, `outs ${outs}`);
+  test("⚠️ the notation is required, because inheriting one is how the copies drifted", () => {
+    // The function had no parameter, so every caller got the board's answer and the reveal grew a
+    // hand-written copy to get the other one. That is how `4` and `9.0` came to be in one product.
+    for (const missing of [undefined, null, "", true, "Printed"]) {
+      throws(() => inningsToDisplay(12, missing), "notation", `${JSON.stringify(missing)} was accepted`);
     }
+  });
+
+  test("every outs value the board can hold survives a round trip, in both notations", () => {
+    for (let outs = 0; outs <= 60; outs += 1) {
+      for (const notation of [INNINGS.BOARD, INNINGS.PRINTED]) {
+        equal(inningsFromDisplay(inningsToDisplay(outs, notation)), outs, `outs ${outs} as ${notation}`);
+      }
+    }
+  });
+
+  test("⚠️ the parser accepts the other side's output", () => {
+    // It refused `.0` — the exact string the format's own Python reference implementation emits, in a
+    // module claiming to be the one place that converts. A notation choice must not become a data
+    // question.
+    equal(inningsFromDisplay("4.0"), 12, "the printed form was rejected");
+    equal(inningsFromDisplay("4"), 12, "the board's form was rejected");
+    equal(inningsFromDisplay("0.0"), 0, "zero printed was rejected");
   });
 
   test("a fraction baseball does not write is refused", () => {
@@ -381,12 +414,31 @@ suite("Innings are thirds, and the two directions are inverses", () => {
     }
   });
 
-  test("the real packages' pitching totals are whole innings", () => {
-    // Three outs per inning times the innings pitched by the whole staff has to be a whole number of
-    // outs; a staff total ending in a third means somebody's row is wrong.
+  test("⚠️⚠️ a staff's outs are bounded by the innings, not required to divide by three", () => {
+    // **This asserted `outs % 3 === 0` over the reference packages and the rule is false.** When the
+    // offense is the home club and wins on a walkoff, the defending staff records 0-2 outs in the
+    // final inning: 25 or 26 outs, `8.1` IP. Ordinary baseball, and the forge supports it — the
+    // certifier bounds staff outs by `3*(innings-1) <= outs <= 3*innings` *because* the last
+    // half-inning is not always completed, and nothing in the pool filter excludes walkoffs.
+    //
+    // It passed only because none of these six happens to be one. The first regenerated set that
+    // includes a walkoff would have failed CI **on correct data**, and sent the reader hunting for a
+    // defect that does not exist. v36-P2-16.
     for (const { id, raw } of packages) {
-      const outs = readPackage(raw).solution.pitchingTotals[0];
-      equal(outs % 3, 0, `${id} staff pitched ${inningsToDisplay(outs)} innings`);
+      const puzzle = readPackage(raw);
+      const outs = puzzle.solution.pitchingTotals[0];
+      // The innings the DEFENCE batted, which is what the offence's staff had to record outs for --
+      // and the same quantity `check_independent_correspondence` bounds in the certifier.
+      const innings = puzzle.puzzle.lineScore.defense_by_inning.length;
+
+      // >= at the bottom, not >. A home side that wins without batting in the ninth leaves the
+      // visiting staff on exactly 3*(innings-1): 24 outs in a 9-inning game, which is the very first
+      // reference package. The first version of this assertion said `>` and failed on it -- the same
+      // off-by-one, in the test written to replace an assertion that stated a false rule.
+      assert(
+        outs >= 3 * (innings - 1) && outs <= 3 * innings,
+        `${id}: staff pitched ${inningsToDisplay(outs, INNINGS.PRINTED)} across ${innings} innings batted`,
+      );
     }
   });
 });
@@ -2580,7 +2632,10 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
     const { visitor } = sides(puzzle);
     const outs = visitor.pitching[0].outs;
 
-    equal(first.textContent, `${Math.floor(outs / 3)}.${outs % 3}`);
+    // ⚠️ Against the shared conversion, not against a third copy of the formula. This re-implemented
+    // it, so it agreed with `finish.js`'s hand-written version rather than with the definition — the
+    // harness supplying the property under test, in miniature.
+    equal(first.textContent, inningsToDisplay(outs, INNINGS.PRINTED));
   });
 
   test("⚠️ each row carries the name the player earned and the position they solved against", async () => {
@@ -2970,6 +3025,81 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
       assert(!entry.includes(forbidden), `the tutorial's entry point reached for ${forbidden}`);
     }
   });
+});
+
+suite("⚠️⚠️ One conversion, two notations — and no file spells the arithmetic twice", () => {
+  const MIRRORS = ["board.js", "finish.js", "shell.js", "landing.js", "tutorial.js", "testmode.js"];
+  const ENGINE = ["game.js", "clock.js", "store.js", "package.js", "strings.js"];
+
+  /**
+   * Statements that turn outs into innings, or innings back into outs, themselves.
+   *
+   * ⚠️ **The shape, not a spelling.** What the five copies had in common was dividing something by
+   * three *and* taking its remainder by three — `f"{outs // 3}.{outs % 3}"` in four of them and
+   * `` `${Math.floor(outs / 3)}.${outs % 3}` `` in the fifth. A scan for one literal template would
+   * have missed a rewrite that kept the defect. A lone `% 3` is ordinary arithmetic and is spared.
+   *
+   * ⚠️ **`* 3` counts as the division's partner**, because the keypad's inverse spells the same
+   * representation the other way round: `Math.floor(current / 3) * 3 + key.thirds`. Nobody hunting for
+   * copies of a formatter finds the parser, which is how that one survived four reviews.
+   */
+  const convertsItself = (line) => {
+    if (line.trim().startsWith("//") || line.trim().startsWith("*")) return false;
+    const divides = /\/\s*3\b/.test(line);
+    const partners = /%\s*3\b/.test(line) || /\*\s*3\b/.test(line);
+    return divides && partners;
+  };
+
+  test("the arithmetic lives in columns.js and nowhere else", async () => {
+    // ⚠️ The mirror of `forge/tests/test_one_innings_conversion.py`, which cannot see this tree: §33
+    // keeps `serve/` and `forge/` sharing no code, so the conversion exists twice by necessity and is
+    // held to the same values by `package-vectors.json`. Two guards, named in each other's docstrings.
+    const offenders = [];
+    for (const file of MIRRORS) {
+      const source = await (await fetch(`../ui/phone/${file}`)).text();
+      source.split("\n").forEach((line, index) => {
+        if (convertsItself(line)) offenders.push(`ui/phone/${file}:${index + 1}  ${line.trim()}`);
+      });
+    }
+    for (const file of ENGINE) {
+      const source = await (await fetch(`../engine/${file}`)).text();
+      source.split("\n").forEach((line, index) => {
+        if (convertsItself(line)) offenders.push(`engine/${file}:${index + 1}  ${line.trim()}`);
+      });
+    }
+
+    assert(
+      offenders.length === 0,
+      "the outs-to-innings arithmetic is spelled outside columns.js again:\n  " + offenders.join("\n  "),
+    );
+  });
+
+  test("⚠️ the scan catches the copies that existed, and spares what it must", () => {
+    // Both halves. The first three are the real lines that were in the tree; the rest are ordinary
+    // code that a wider scan would have condemned, and a guard that cries wolf gets switched off.
+    for (const copy of [
+      "const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;",
+      "    game.enter(name, Math.floor(current / 3) * 3 + key.thirds);",
+      "    game.enter(name, grow(Math.floor(current / 3), key.digit) * 3 + (current % 3));",
+    ]) {
+      assert(convertsItself(copy), `the scan would not have caught: ${copy}`);
+    }
+
+    for (const innocent of [
+      "      equal(outs % 3, 0, `${id} staff pitched`);",
+      "  const whole = Math.floor(outs / 3);",
+      "  const share = division / total;",
+      "  const rung = value * 3;",
+      "  // const inningsOf = (outs) => `${Math.floor(outs / 3)}.${outs % 3}`;",
+    ]) {
+      assert(!convertsItself(innocent), `false positive on: ${innocent}`);
+    }
+  });
+
+  // ⚠️ **What the player meets is asserted in the two places that can reach it**, rather than a third
+  // time here: the reveal's own test compares its cell against `inningsToDisplay(outs, PRINTED)`, and
+  // the innings suite pins both notations across the range. A copy here would have needed this suite
+  // to borrow another one's fixtures, which is how a test ends up agreeing with a helper.
 });
 
 suite("⚠️⚠️ C11 over what the player actually reads, not over what the catalogue holds", () => {

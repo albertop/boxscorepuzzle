@@ -63,20 +63,71 @@ export const pitchingTotalCell = (column) => `pitching_totals.${column}`;
 export const sectionOf = (name) => name.split(/[[.]/)[0].replace("_totals", "");
 
 /**
- * Innings held as outs, rendered as a printed boxscore renders them.
+ * Which notation a surface writes. **Named at the call site, never inferred.**
  *
- * `to` and `from` are inverses over every value the board can hold, which the tests assert rather than
- * assume — `6.1` and `6.2` are the only fractions baseball writes, and a naive `outs / 3` produces
- * `6.333`.
+ * ⚠️⚠️ **Two notations, one conversion, and they are not a contradiction.** Both are correct about
+ * their own surface, and each used to have a comment defending it as though the other were a mistake:
+ *
+ *   `PRINTED` — the reveal. A newspaper boxscore writes `9.0`, and the reveal exists to be that
+ *   object. In a column where some rows read `4.1`, the trailing digit is what makes the column line up.
+ *
+ *   `BOARD` — the grid the player types into. The keypad offers `.1` and `.2`, so a whole inning is
+ *   entered as `4`; padding it to `4.0` would show a form the keypad never produces.
+ *
+ * A string rather than a boolean, because `inningsToDisplay(outs, true)` sends the next reader here to
+ * find out what `true` means about a boxscore.
  */
-export const inningsToDisplay = (outs) => {
+export const INNINGS = { PRINTED: "printed", BOARD: "board" };
+
+/**
+ * Innings held as outs, written the way the asked-for surface writes them.
+ *
+ * ⚠️ **The notation is required.** It had none, so every caller inherited the board's and the reveal
+ * quietly grew a hand-written copy to get the other one — which is how `4` and `9.0` came to be on
+ * screen in the same product. Stating it costs one word and removes the question.
+ *
+ * ⚠️ **Mirrors `forge/src/boxscore_package/innings.py`**, which cannot be imported here (§33) and
+ * carries the same two notations. `serve/tests/package-vectors.json` is what keeps the two answerable
+ * to the same values rather than to each other.
+ *
+ * `to` and `from` are inverses over every value the board can hold, in both notations, which the tests
+ * assert rather than assume — `6.1` and `6.2` are the only fractions baseball writes, and a naive
+ * `outs / 3` produces `6.333`.
+ */
+/**
+ * The two halves of an innings value, and how to replace one of them.
+ *
+ * ⚠️ **Here rather than in the keypad handler, because three is the representation.** `board.js` did
+ * `Math.floor(current / 3) * 3 + key.thirds` and `grow(...) * 3 + (current % 3)` inline — the same
+ * `3` that `inningsToDisplay` spends, in a file that is about which key was pressed. It is the
+ * *inverse* of the conversion rather than a copy of it, which is exactly the relationship that makes a
+ * number end up in two places: nobody looking for copies of a formatter finds the parser.
+ *
+ * If the representation ever changes, it changes in one file.
+ */
+export const withThirds = (outs, thirds) => Math.floor(outs / 3) * 3 + thirds;
+export const withWholeInnings = (outs, whole) => whole * 3 + (outs % 3);
+export const wholeInningsOf = (outs) => Math.floor(outs / 3);
+
+export const inningsToDisplay = (outs, notation) => {
+  if (notation !== INNINGS.PRINTED && notation !== INNINGS.BOARD) {
+    throw new Error(`inningsToDisplay needs a notation from INNINGS, got ${JSON.stringify(notation)}`);
+  }
   const whole = Math.floor(outs / 3);
   const thirds = outs % 3;
-  return thirds === 0 ? String(whole) : `${whole}.${thirds}`;
+  return thirds === 0 && notation === INNINGS.BOARD ? String(whole) : `${whole}.${thirds}`;
 };
 
+/**
+ * ⚠️ **Both notations parse.** This accepted `.1` and `.2` and refused `.0` — so it rejected the exact
+ * string the format's own Python reference implementation emits, while the module it lives in claimed
+ * to be the one place that converts. `4` and `4.0` are the same twelve outs written for two surfaces.
+ *
+ * `.3` through `.9` are still refused: three outs is a whole inning, and silently reinterpreting `4.3`
+ * would put a number on the board that nobody typed.
+ */
 export const inningsFromDisplay = (text) => {
-  const match = /^(\d+)(?:\.([12]))?$/.exec(text.trim());
+  const match = /^(\d+)(?:\.([012]))?$/.exec(text.trim());
   if (match === null) return null;
   return Number(match[1]) * 3 + Number(match[2] ?? 0);
 };

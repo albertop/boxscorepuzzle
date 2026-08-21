@@ -12,12 +12,40 @@ stops adding up to the defensive innings.
 
 This module belongs to the format rather than to the generator or the verifier: the conversion is
 part of what the file means, and both sides plus every renderer need the same answer.
+
+⚠️⚠️ **One conversion, two notations, and they are not a contradiction.** `PRINTED` writes `9.0` and
+`BOARD` writes `9`; both are correct about their own surface and each had a docstring defending it as
+though the other were a mistake.
+
+  **PRINTED** — the reveal and the hand-solve pack. A newspaper boxscore writes `9.0`, and the reveal
+  exists to be that object. The trailing digit is also what carries the information in a column where
+  some rows read `4.1`: a mixture of `4.1` and `4` does not line up.
+
+  **BOARD** — the grid the player types into. The thirds keys offer `.1` and `.2`, so a whole inning is
+  entered as `4` and reads back as `4`; padding it to `4.0` would show the player a form the keypad
+  never produces.
+
+**The formula is here and nowhere else.** It existed in five copies outside tests and they had already
+drifted in front of the player — the board printing `4` while the reveal printed `9.0` for the same
+kind of value. `forge/tests/test_one_innings_conversion.py` refuses a re-introduced copy.
 """
 
 import re
+from enum import Enum
 from typing import Final
 
 OUTS_PER_INNING: Final = 3
+
+
+class Innings(Enum):
+    """Which notation a surface writes. **Named at the call site, never inferred.**
+
+    A boolean would read `to_display(outs, True)`, and the next reader would have to come here to learn
+    what `True` means about a boxscore.
+    """
+
+    PRINTED = "printed"
+    BOARD = "board"
 _PATTERN: Final = re.compile(r"^(\d+)(?:\.([0-9]))?$")
 
 
@@ -25,16 +53,20 @@ class InningsError(ValueError):
     """The text is not innings pitched, or names a fraction of an inning that cannot exist."""
 
 
-def to_display(outs: int) -> str:
-    """Outs as the board prints them: 13 → `4.1`.
+def to_display(outs: int, notation: Innings = Innings.PRINTED) -> str:
+    """Outs as a surface writes them: 13 → `4.1` either way, 12 → `4.0` printed and `4` on the board.
 
-    Whole innings keep their `.0` — a column where some rows read `4.1` and others read `4` does not
-    line up, and the trailing digit is the part carrying the information.
+    ⚠️ **The default is `PRINTED` because the hand-solve pack takes it**, and the pack is §22's launch
+    gate — it must not change while it is being solved, so the notation it already receives is the one
+    that costs nothing to keep. Every other caller names its notation.
     """
     if outs < 0:
         message = f"innings pitched cannot be negative, got {outs} outs"
         raise InningsError(message)
-    return f"{outs // OUTS_PER_INNING}.{outs % OUTS_PER_INNING}"
+    whole, thirds = divmod(outs, OUTS_PER_INNING)
+    if notation is Innings.BOARD and thirds == 0:
+        return str(whole)
+    return f"{whole}.{thirds}"
 
 
 def from_display(text: str) -> int:
@@ -44,6 +76,9 @@ def from_display(text: str) -> int:
     enter them through the keypad §9 describes, but a value arriving from anywhere else must be
     rejected rather than quietly reinterpreted — silently turning `4.3` into `4.1` would put a number
     on the board that nobody typed.
+
+    ⚠️ **Both notations parse.** `4` and `4.0` are the same twelve outs written for two surfaces, and a
+    parser that accepted only one would make the notation choice a data question.
     """
     match = _PATTERN.match(text.strip())
     if match is None:

@@ -32,6 +32,7 @@ from boxscore_forge.erasure import erasable
 from boxscore_forge.errors import ContradictionError
 from boxscore_forge.identities import find_violations
 from boxscore_forge.solver import Solution, Technique, solve
+from boxscore_package.innings import Innings, to_display
 
 BATTING_HEADERS = (
     ("plate_appearances", "PA"),
@@ -67,7 +68,10 @@ GATE = 0.30
 
 
 def _innings(outs: int) -> str:
-    return f"{outs // 3}.{outs % 3}"
+    """⚠️ The shared conversion in the board's notation. This was a fifth copy of the formula, and it
+    printed `4.0` where the board prints `4` — a sample of the board written in a notation the board
+    does not use."""
+    return to_display(outs, Innings.BOARD)
 
 
 def _cell(values: dict[str, int], key: str, *, as_innings: bool = False) -> str:
