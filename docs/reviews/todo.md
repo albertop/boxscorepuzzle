@@ -4336,8 +4336,16 @@ What is *not* bought is the `source_type` clause. That one is redundant twice ov
 
 ### The operational half — what happens on the next Retrosheet load
 
-**Today the table and `retroGamesReg` agree exactly: 0 games without a provenance row.** Nothing checks
-that, and two ways of breaking it are silent:
+**Today the table and `retroGamesReg` agree exactly: 0 games without a provenance row.**
+
+⚠️ **Correction to the first version of this entry, which said nothing checks that.** The loader's final
+block computes `games_with_no_provenance` and prints it as its last line. It is a **report, not a gate**:
+it runs *after* the transactional swap has committed, so a non-zero answer arrives when the table is
+already in place, and nothing acts on it. This project's rule is that anything acting as a gate is
+asserted rather than printed — the number exists and the assertion does not, which is a smaller gap than
+the one first recorded here and a different one to close.
+
+Two ways of breaking the agreement are silent:
 
 1. **New data loaded, provenance not rebuilt.** The new games have no provenance row, `CROSS APPLY`
    drops them, and the season is simply invisible to the pool. Fail-closed in direction — and **silent**,
@@ -4346,12 +4354,18 @@ that, and two ways of breaking it are silent:
    The stale table still calls it deduced and it is excluded for ever. The reverse also holds: a game
    whose provenance stays put but whose boxscore is corrected.
 
-The loader's own guards do not cover this. `$staged -ne $origin.Count` and the shrink check and *"every
-staged game is deduced"* all describe **one load**; none can see the table not being reloaded at all.
-Staleness has no signature in them.
+The loader's own guards do not cover this. `$staged -ne $origin.Count`, the shrink check
+(`ShrinkTolerance`, default **0.02**) and *"every staged game is deduced"* all describe **one load**; none
+can see the table not being reloaded at all. Staleness has no signature in them, and the shrink check is
+one-directional by design — a rebuild that *adds* a season is exactly what it must let through.
 
-**Proposed, not built:** a correspondence assertion — every game in `retroGamesReg` has a provenance row,
-run wherever the pool is loaded, failing loudly with the count and the seasons affected. That is
-*correspondence, not consistency*: the table and the game table agreeing with each other rather than each
-being internally sound. The operator decides whether it lives in the loader, in the publication gate, or
-in both.
+**Proposed, not built:** promote that last printed line to an assertion, and put the same one wherever the
+pool is loaded. In the loader it has to move **inside the transaction, before the swap**, or it can only
+ever report a table that is already canonical. Failing loudly with the count and the seasons affected.
+
+⚠️ **The zips are the coupling, not the tables.** The script reads `-ZipDirectory` and never queries
+`dbo.retro*` at all, so running it before or after the tables load makes no difference — what matters is
+that both are built from the *same* download. A stale zip directory produces a provenance table that is
+internally perfect and describes a different dataset, which is this project's usual shape.
+
+The operator decides whether the assertion lives in the loader, in the publication gate, or in both.
