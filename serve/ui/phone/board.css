@@ -658,31 +658,25 @@ td.label.substitute { padding-left: 14px; }
 
 /* ⚠️ The clock, seen for the first time. Invisible during play (§26), so this is the first and only
    place a number of seconds appears — which is why it is the largest thing on the panel. */
-.reveal-time {
+/* ⚠️⚠️ **One rule for both rows of the result, because they are two halves of one thing.** The time
+   was dim grey and the hint count was ink, which read as a headline with a footnote attached — and the
+   two are the shared result: a time without its hint count is a time presented as if it were clean.
+   That is the whole argument for allowing hints at all.
+
+   ⚠️ They had drifted apart before this: the hint row was 13px of dim grey under a 30px clock, and a
+   player who spent two hints could not see that he had. Declaring them together is what stops the
+   pair separating again — the same move the three word keys on the pad just needed. */
+.reveal-time,
+.reveal-hints {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 12px;
   margin: 0;
   font-size: 12px;
-  color: var(--scoreboard-dim, #667);
-}
-/* ⚠️⚠️ **Under the clock and legible, and the first version was neither.** It was 13px of dim grey
-   against a 30px clock, and a player who spent two hints could not see that he had — which defeats the
-   only argument for allowing hints at all: a shared result carries the time *and* the count, and a
-   count nobody reads is a time presented as if it were clean.
-
-   The label takes the page's ink rather than the clock's grey, and the figure is 20px: clearly the
-   second number and clearly a number. */
-.reveal-hints {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  margin: 4px 0 0;
-  font-size: 12px;
   color: var(--ink);
 }
+.reveal-hints { margin-top: 4px; }
 .reveal-hints-figure {
   font-size: 18px;
   font-weight: 700;
