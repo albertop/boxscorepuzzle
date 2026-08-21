@@ -471,7 +471,32 @@ is a test again and it is caught. ⚠️ What this buys is independence between 
 memory*; a defect in the loader that produced both is the residual risk this section already records
 under the common-author heading.
 
+⚠️⚠️ **The strong form of layer 4 can only run at generation, and that is by construction.** §7 strips
+`game_id` from a published package, so nothing holding a published file can reload the direction it
+came from — **the only source available to a check run over `serve/data/puzzles/` is the package's own
+solution.** Running layer 4 there is the self-referential comparison again.
+
+**Say what such a run establishes and what it does not**: it confirms every published puzzle solves back
+to the answer travelling with it. **It cannot say whether the generator wrote that answer correctly.**
+A future reader who sees that check pass and takes it for the end-to-end one has been misled by a true
+result, which is the most durable way to be misled. The end-to-end check runs where the source is —
+inside the writer, against the direction it loaded — and nowhere else.
+
 **The verifier must not import or reuse generator code.** If it shares functions it inherits bugs and the validation is theater. Implement independently, even at the cost of duplication.
+
+⚠️⚠️ **The two sides name cells differently, and mixing them fails as SILENCE rather than as an error.**
+The verifier says `bat[0].hits`; the forge says `batting[0].hits`. An instrument that reads a package
+with one side's helper and reasons with the other's gets **no exception and no missing key** — it gets
+a dictionary whose keys match nothing, so the solver deduces nothing and returns an **empty result**.
+
+**An empty result reads as a real zero.** A measurement built that way answered *no published board
+uses the batting order, 0 of 6* — a plausible number, correctly formatted, about nothing. It was caught
+because the family list was empty for **every** board, which is the tell this project already records:
+a metric that cannot vary is broken rather than informative.
+
+The independence that makes §22 worth having is exactly what produces the silence: there is no shared
+symbol to raise on, because sharing one is the thing being prevented. **Anyone writing an instrument
+that touches both sides asserts it deduced something before believing what it deduced.**
 
 A puzzle that fails any layer is **discarded silently, never repaired.** With thousands of candidates, throwing away 30% costs nothing.
 
