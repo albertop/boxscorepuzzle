@@ -4369,3 +4369,54 @@ that both are built from the *same* download. A stale zip directory produces a p
 internally perfect and describes a different dataset, which is this project's usual shape.
 
 The operator decides whether the assertion lives in the loader, in the publication gate, or in both.
+
+
+---
+
+## ⚠️ `era-after-gate.md` is measured at a cap that was replaced
+
+Found while analysing the postseason (`discovery/retrosheet-coverage/postseason.md`), not while looking
+for it.
+
+That document's whole funnel is computed at **≤2 pitchers**. The decided cap is **≤6**. Re-running the
+same predicates:
+
+| | at ≤2 (the document) | at ≤6 (decided) |
+|---|---:|---:|
+| Admissible directions | 12,218 | **102,228** |
+| 2010s | 50 | **11,287** |
+| 2020s | 12 | **7,780** |
+
+**A 225× change in the decade the document calls starved**, because ≤2 selects complete games and modern
+baseball hardly produces them. The pool is now *heaviest* after 1970: the 1990s, 2000s and 2010s are the
+three largest decades at 11.2%, 12.2% and 11.0%, against the 1910s at 6.9%.
+
+⚠️ **Everything the document decides is therefore costed against a starvation that no longer exists.**
+Its three levers — stratify the calendar by era, raise the gate to 35%, loosen the pitcher cap towards 3
+— were priced to buy back a modern era that the pitcher cap already bought. The third one is the same
+lever, already pulled, further than proposed.
+
+**Not corrected in place**, because it is a measurement document and rewriting one in passing is how a
+correction gets lost. It needs a re-run and a dated note saying which numbers were superseded and why,
+in the file that carries them.
+
+⚠️ Note the shape: **the instrument was never broken.** The funnel was correct at ≤2 and it is still
+correct at ≤2. What expired was the parameter, and nothing in the document can notice that — the same
+failure as the three figures corrected on 2026-08-20, where the measurement was sound and the sentence
+around it was not.
+
+## The postseason, a season cut, and the zip dependency — analysed, not decided
+
+Full analysis in `discovery/retrosheet-coverage/postseason.md`. The short form, so it is findable:
+
+- **The postseason is worth 0.73%** — 751 admissible directions against 102,228 — and its boards survive
+  the project's own gate **worse** than regular boards of the same decade (14.1% against 23.2% in the
+  2010s). The modern skew in its era profile is the supply of playoff games, not the boards.
+- **The only argument that survives is the reveal**: 319 of the 751 are World Series games, and §7 now
+  prints the real boxscore. That is a product decision worth taking on its own terms.
+- **A season cut could delete the provenance table and the zip dependency entirely** — but at **1969+**,
+  not 1952. Negro League games run to **1961** and deduced games to **1968**. 1969+ leaves 63,691
+  directions, 94.5 years of calendar, against a requirement of five months.
+- ⚠️ **The cut is a weaker guarantee than the table**, and the difference should be stated when it is
+  decided: the table asserts *this game came from a scored file*; a cut asserts *no game in this era came
+  from a deduced file*, which is a claim about Retrosheet's future behaviour.
