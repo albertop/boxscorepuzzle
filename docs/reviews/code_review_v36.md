@@ -1508,3 +1508,54 @@ v36-P2-10 (the leak check belongs in the gate before any inventory pipeline exis
 v36-P2-08 (the one client-side gap that can brick a day), and v36-P2-15/16 (both are decisions
 about which of two written rules is the real one, and both get cheaper the earlier they are
 made).
+
+
+---
+
+## Disposition — first pass, 2026-08-21
+
+⚠️⚠️ **The P1 was true of this session's own reports, which is the first thing to say.** Every
+*"ratchet at zero"* written into a commit message today was produced by running
+`python tools/lint_discovery.py` with the system interpreter, **which has no ruff** — exit 1, empty
+stdout, zero findings, "these rules improved", exit 0. The tool reported green because it could not
+report at all, and it was believed five times. Run with the interpreter that has ruff, the ratchet was
+**red**: four rules had grown, all four from this session's own work.
+
+### Closed
+
+| | |
+|---|---|
+| **P1-01** | Ratchet fails closed now: ruff must answer `--version`, and exit 1 with empty stdout is fatal rather than a clean tree. The `or "[]"` is gone. `--update` needs no separate guard — `measure()` raises before `main()` is given a count. Verified by running it against an interpreter where ruff raises on import |
+| **P2-03** | `discovery/batting-order/measure.py` imports `PROVENANCE_LITERAL`. It died on `ImportError` before printing anything, so **the guard inside it that exists to catch "the provenance rule moved" never got the chance to run** — and the pool rule was decided from this instrument. Both halves verified: it renders the arm, and the guard fires when the anchor is wrong |
+| **P2-06** | The tutorial's two traits are asserted over the **written** batch before `_publish`, not over the candidate list. ⚠️ The first predicate could not fail — it asked whether `slot_references` was present, which `Package.__post_init__` already requires of every package. The real trait is a **suffixed** reference (`5a`/`5b`), and **exactly one of the six** carries it: the promise was one discard from being false |
+| **P2-07** | The boundary test now runs the implementation. It asserted `(share <= CAP) is kept` over two literals, so `lineup_fallback.py`'s comparison never executed — **flipping `>` to `>=` left all 1014 tests green**, verified by doing it. The rewrite fails on exactly that mutation |
+| **P2-09** | The five worked sums are catalogue keys. **And the C11 blind spot is closed with them**: a new guard refuses any literal with letters reaching `textContent` across all ten UI modules, with both halves asserted — it catches `2 innings = 6 outs` and spares `column === "outs"`, which is a column key in a comparison and made the first version cry wolf |
+| **P2-13** | The dark palette moved from `board.css` to `tokens.css`. Dark mode read landing (dark) → *How to play* (**a full-brightness white page**) → board (dark), because the tutorial deliberately does not link `board.css` and that decision silently took the palette with it. Verified: the tutorial now computes `rgb(20, 22, 26)` |
+| **P2-14** | `.reference-key` measures 44px. Verified in the browser |
+| **P2-05** | `core.hooksPath` is set to `.githooks` on this machine |
+
+**Also fixed, and found only because the ratchet could speak again:** `PLR1704` — the `season: Season`
+parameter added by the postseason work was **shadowed by a loop variable holding a year**. It broke
+nothing today only because every query is built before that loop, so `season.daily` had already been
+interpolated; the next line to reach for it after the loop would have found an integer.
+
+The baseline moves **199 → 198**: `E501` and `I001` fall (fixed), `PLR0913` and `S608` rise by one each
+— `eligibility()` gained an argument and `shape_cte()` builds SQL from a module constant, both
+consequences of the postseason feature and both intended. ⚠️ `ruff --select I001 --fix` was run on two
+files and the `noqa` count checked before and after, because this project has already lost a day to
+`--fix` stripping legitimate directives under a narrowed rule set.
+
+### Open, and not started
+
+**P1: none. P2: 8 of 16.** `P2-01` (`narrow()` looping on a contradictory system), `P2-02` (construction
+and parsing applying different rules), `P2-04` (the hook gates on the checked-out branch rather than the
+refs being pushed), `P2-08` (the package boundary never checks a given cell against the solution),
+`P2-10` (leaking metadata and keys outside the signed surface), `P2-11` (SQL from database-derived
+values under a misdescribing `noqa`), `P2-12` (a fallback board's dependence on the batting order
+recorded nowhere in the package), `P2-15` and `P2-16` (innings notation in three copies asserting two
+rules; a client test encoding a false baseball rule).
+
+**P3: 44, none started.**
+
+1016 Python tests, 210 browser tests, ruff clean over `forge/`, mypy strict clean, ratchet **actually
+running** at 198.

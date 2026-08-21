@@ -65,13 +65,15 @@ const PITCHING_COLUMNS = ["outs", "walks", "runs"];
  * has already watched four relations work.
  *
  * `hole` names the cell this step leaves blank; `lit` names the cells the relation reads to fill it.
+ * `name`, `body`, `rule` and `sum` are all **catalogue keys** — `sum` was a literal until v36-P2-09,
+ * which is 19px of player-visible copy, one of them carrying the English words *innings* and *outs*.
  * Every earlier step's hole is filled by the time a later step draws, so the board is visibly rebuilt
  * across the five — which is the thing the product is called.
  */
 const STEPS = [
   { name: "reference.row_identity_name", body: "tutorial.step.row_identity",
     rule: "reference.row_identity", hole: "b1.plate_appearances",
-    lit: ["b1.at_bats", "b1.walks"], sum: "2 = 1 + 1" },
+    lit: ["b1.at_bats", "b1.walks"], sum: "tutorial.sum.row_identity" },
   // ⚠️ **The AB column, not PA, and the reason is the last step.** Teaching the column sum over PA
   // would show all four plate-appearance cells as *given*, and step five then turns one of them back
   // into a hole — a cell that was a fact in step two and an unknown in step five. The board has to
@@ -79,9 +81,9 @@ const STEPS = [
   { name: "reference.column_sum_name", body: "tutorial.step.column_sum",
     rule: "reference.column_sum", hole: "t.at_bats",
     lit: ["b0.at_bats", "b1.at_bats", "b2.at_bats", "b3.at_bats"],
-    sum: "3 + 1 + 2 + 2 = 8" },
+    sum: "tutorial.sum.column_sum" },
   { name: "reference.cross_team_name", body: "tutorial.step.cross_team",
-    rule: "reference.cross_team", hole: "p.walks", lit: ["t.walks"], sum: "1 = 1" },
+    rule: "reference.cross_team", hole: "p.walks", lit: ["t.walks"], sum: "tutorial.sum.cross_team" },
   // ⚠️ **The sum crosses innings into outs out loud, because the board does not show outs.** The
   // pitching column is `IP` and reads `2`; this step asks the player to subtract 6. A test comparing
   // the identity against the numbers actually drawn is what found the gap — the step was arithmetically
@@ -89,10 +91,10 @@ const STEPS = [
   // perfectly clear.
   { name: "reference.global_name", body: "tutorial.step.global",
     rule: "reference.global", hole: "lob",
-    lit: ["t.plate_appearances", "p.outs", "p.runs"], sum: "2 innings = 6 outs · 9 − 6 − 1 = 2" },
+    lit: ["t.plate_appearances", "p.outs", "p.runs"], sum: "tutorial.sum.global" },
   { name: "reference.batting_order_name", body: "tutorial.step.batting_order",
     rule: "reference.batting_order", hole: "b2.plate_appearances",
-    lit: ["b1.plate_appearances", "b3.plate_appearances"], sum: "2 ≤ ? ≤ 2" },
+    lit: ["b1.plate_appearances", "b3.plate_appearances"], sum: "tutorial.sum.batting_order" },
 ];
 
 const valueOf = {
@@ -314,7 +316,7 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     title.textContent = finished ? text("tutorial.title") : text(current.name);
     made.hidden = finished;
     body.textContent = finished ? text("tutorial.reference_hint") : text(current.body);
-    sum.textContent = finished ? "" : current.sum;
+    sum.textContent = finished ? "" : text(current.sum);
     sum.hidden = finished;
     rule.textContent = finished ? "" : text(current.rule);
     rule.hidden = finished;

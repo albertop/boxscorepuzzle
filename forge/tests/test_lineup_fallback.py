@@ -125,18 +125,35 @@ class TestTheFillerCapDiscardsRatherThanRepairs:
         assert puzzle is not None
 
     @pytest.mark.parametrize(
-        ("division", "total", "kept"),
-        [(0, 20, True), (4, 20, True), (5, 20, False), (10, 20, False)],
+        ("share", "kept"),
+        [(0.0, True), (LINEUP_DIVISION_SHARE_CAP, True), (LINEUP_DIVISION_SHARE_CAP + 1e-9, False), (1.0, False)],
     )
-    def test_the_cap_is_a_strict_ceiling_at_the_boundary(self, division: int, total: int, *, kept: bool) -> None:
-        """⚠️ The boundary itself, because `>` against `>=` is the classic off-by-one in a filter.
+    def test_the_cap_is_a_strict_ceiling_at_the_boundary(
+        self, cubs_at_braves_1968: Direction, monkeypatch: pytest.MonkeyPatch, share: float, *, kept: bool
+    ) -> None:
+        """⚠️⚠️ **This test used to assert its own restatement of the rule and never reach the code.**
 
-        At the cap of 0.20, four steps in twenty is exactly 20% and is kept; five is 25% and is not.
-        Written as a table so the boundary case is a row rather than a thing someone reasoned about.
+        It computed `share = division / total` and asserted `(share <= CAP) is kept` — an arithmetic
+        identity about two literals. `lineup_fallback.py`'s comparison never executed, so the `>` against
+        `>=` its own docstring named as the thing under test was **completely unguarded**: flipping the
+        operator in the implementation left all 1014 tests green. Verified by doing it. v36-P2-07.
+
+        This is the shape `CLAUDE.md` records as *a test that assigns both sides from one expression*,
+        and the cure it prescribes: **check the guard by asking what change it would let through**, not
+        by rereading what it asserts.
+
+        The share is forced rather than hunted for. Which side of the boundary moves is irrelevant to
+        the branch, and searching the pool for a board sitting on exactly 20% would make the boundary
+        case depend on the pool — the same reasoning the over-cap test above already applies to the cap.
         """
-        share = division / total
+        monkeypatch.setattr(
+            "boxscore_forge.lineup_fallback.division_against_chain",
+            lambda _puzzle: share,
+        )
+        puzzle, reason = erase_with_lineup_fallback(cubs_at_braves_1968, LINEUP, target_stalls=4, seed=1)
 
-        assert (share <= LINEUP_DIVISION_SHARE_CAP) is kept
+        assert (puzzle is not None) is kept, f"a share of {share} against a cap of {LINEUP_DIVISION_SHARE_CAP}"
+        assert reason == ("fallback" if kept else "discarded_filler"), "the boundary reported the wrong reason"
 
     def test_a_board_with_nothing_to_deduce_has_a_share_of_zero(self, cubs_at_braves_1968: Direction) -> None:
         """⚠️ Not a stub: a board with every cell given is a real board, and it deduces nothing.

@@ -142,3 +142,49 @@
    cannot read one. It is documented here, where presentation constants live, and spelled once in
    `board.css`. §33 keeps it out of `forge/` entirely: the inning cap it supports is a domain fact and
    lives in `boxscore_domain`, but a viewport width is presentation and the forge must not know it. */
+
+/* ⚠️⚠️ **The dark palette lives here, and it used to live in `board.css`.** (v36-P2-13)
+   `tokens.css` defined light values only, so in dark mode the flow read landing (dark) → *How to
+   play* (**a full-brightness white page**) → board (dark). The tutorial deliberately does not link
+   `board.css` — its board is a made-up illustration and borrowing the real board's rules would mean
+   fighting them — and that decision silently took the palette with it, which is written down nowhere.
+
+   It is also what both files' own charters already said: this is the constants file, and an entire
+   palette of decided values was sitting outside it. Every page links `tokens.css`. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #e6e8ec;
+    --paper: #14161a;
+    --rule: #2c3038;
+    --rule-strong: #565d69;
+    /* ⚠️ **Lighter than `--rule`, and that is the whole reason the token is separate.** On paper the
+       two are the same value; on a dark board `#2c3038` against a `#14161a` ground is a line you have
+       to look for, and the grid is precisely the element that stops a dark board becoming a wall.
+
+       ⚠⚠ **Set by parity with the light mode, not by a contrast threshold — and reaching for the
+       threshold first was the mistake.** A grid rule is structure between two data cells, not the
+       boundary of a control, and the light board proves the point: `#d3d7de` on white is **1.44:1**
+       and reads perfectly. Sizing the dark line to 3:1 would have made it heavier than the version
+       that already works. This value is **1.61:1 against the given ground and 1.49:1 against the
+       editable one**, both a little stronger than light, which is the right place for a mode where the
+       line does more of the separating. Measured, then looked at in both. */
+    --grid-line: #363b45;
+    --given: #e6e8ec;
+    --entered: #7fa8ff;
+    /* Lightened for the dark ground like `--entered`, and kept the same distance from it: the two have
+       to be told apart at a glance on a finished board, which is the only place they sit side by side. */
+    --hinted: #c4a2f5;
+    --unknown: #7fa8ff;
+    --blank: #1b1e24;
+    --selected: #4a3c12;
+    --selected-rule: #d8ab26;
+    --peer: #2a2418;
+    --muted: #9aa1ad;
+    --keypad: #16181c;
+    --key: #1b1e24;
+    --key-ink: #e6e8ec;
+    /* The scoreboard keeps its colour in the dark: it is a physical object, and a physical object does
+       not change paint when the room does. Only the surround moves. */
+    --header-ground: #16281f;
+  }
+}

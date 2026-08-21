@@ -23,12 +23,18 @@ import statistics
 import sys
 from collections import Counter
 from collections.abc import Sequence
-from string import ascii_lowercase
 from dataclasses import dataclass
+from string import ascii_lowercase
 from typing import Final
 
 sys.path.insert(0, str(__file__).rsplit("discovery", 1)[0] + "forge/src")
 
+from boxscore_domain import (  # noqa: E402
+    BATTER_CAP,
+    PITCHER_CAP,
+    POSTSEASON_SEASON_FLOOR,
+    ZERO_DENSITY_GATE,
+)
 from boxscore_forge.boxscore import (  # noqa: E402
     BatterFootnotes,
     BattingLine,
@@ -47,12 +53,6 @@ from boxscore_forge.identities import (  # noqa: E402
     BATTING_COLUMNS,
     PITCHING_COLUMNS,
     find_violations,
-)
-from boxscore_domain import (  # noqa: E402
-    BATTER_CAP,
-    PITCHER_CAP,
-    POSTSEASON_SEASON_FLOOR,
-    ZERO_DENSITY_GATE,
 )
 from boxscore_forge.solver import Solution, solve  # noqa: E402
 from boxscore_package.format import (  # noqa: E402
@@ -687,6 +687,15 @@ def load(
     import pyodbc  # noqa: PLC0415
 
     gate_clause = zero_density_clause(gate)
+    # Bound before the query so the f-string stays inside the line budget, and so the two queries below
+    # cannot drift: `named_query` is built from `query`, and both take this one cohort.
+    cohort = eligibility(
+        max_batters=max_batters,
+        min_pitchers=min_pitchers,
+        max_pitchers=max_pitchers,
+        gate_clause=gate_clause,
+        season=season,
+    )
     query = f"""
     {shape_cte(season)}
     SELECT TOP (?) g.GAME_ID, g.SEASON, o.TEAM_ID, d.TEAM_ID,
@@ -725,7 +734,7 @@ def load(
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_at_bats,
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
-    {eligibility(max_batters=max_batters, min_pitchers=min_pitchers, max_pitchers=max_pitchers, gate_clause=gate_clause, season=season)}
+    {cohort}
     ORDER BY ABS(CHECKSUM(g.GAME_ID, o.TEAM_ID))
     """
     # The same SELECT with the sampling replaced by a name list. Built from the query above rather
@@ -825,9 +834,16 @@ def load(
             candidates += [
                 row for row in cursor.execute(named_query, *also).fetchall() if (row[0], row[2]) not in drawn
             ]
+        # ⚠️ `year`, not `season`. This unpacked into `season` and shadowed the `season: Season`
+        # parameter that chooses the source tables — two different things under one name inside one
+        # function. It broke nothing today only because every query is built before this loop runs, so
+        # `season.daily` had already been interpolated; the next line that reached for it after the
+        # loop would have found an integer. `g.SEASON` is a calendar year, and calling it that is both
+        # the fix and the more accurate name. Found by the discovery ratchet once the ratchet could
+        # report at all (v36-P1-01, PLR1704).
         for (
             game_id,
-            season,
+            year,
             offense,
             defense,
             is_home,
@@ -854,8 +870,8 @@ def load(
             # ids swapped, so *who batted* and *where he played* keep one definition across both clubs.
             defense_batting_rows = _rows(connection, rows_query, game_id, defense)
             offense_pitching_rows = _rows(connection, pitch_query, game_id, offense)
-            offense_name = team_name(connection, team_names, offense, season)
-            defense_name = team_name(connection, team_names, defense, season)
+            offense_name = team_name(connection, team_names, offense, year)
+            defense_name = team_name(connection, team_names, defense, year)
             if not defense_batting_rows or not offense_pitching_rows:
                 rejected["the other direction has no rows to print"] += 1
                 continue
@@ -919,7 +935,7 @@ def load(
             loaded.append(
                 Loaded(
                     game_id,
-                    season,
+                    year,
                     direction,
                     _batting_labels([_position(r[11], r[16], r[17], r[19]) for r in batting_rows]),
                     bool(is_home),

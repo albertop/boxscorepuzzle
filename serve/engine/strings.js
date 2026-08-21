@@ -228,6 +228,17 @@ const en = {
     "Turns go around the lineup in order, one after another, and never skip. So reading down the "
     + "slots, plate appearances never go up \u2014 a batter lower in the order can never have batted "
     + "more times than the one above him.",
+  // ⚠️⚠️ **The worked arithmetic is copy, and it was spelled in code.** (v36-P2-09) Four of these are
+  // pure arithmetic and one reads "2 innings = 6 outs" — English words, 19px bold, on screen, in a
+  // project whose C11 seam is mandatory from day one. All five are here rather than only the offender:
+  // a rule that holds for one member of a set and not the others is a rule nobody can apply, and a
+  // language that writes the bound the other way round needs the whole line, not a word of it.
+  "tutorial.sum.row_identity": "2 = 1 + 1",
+  "tutorial.sum.column_sum": "3 + 1 + 2 + 2 = 8",
+  "tutorial.sum.cross_team": "1 = 1",
+  "tutorial.sum.global": "2 innings = 6 outs \u00b7 9 \u2212 6 \u2212 1 = 2",
+  "tutorial.sum.batting_order": "2 \u2264 ? \u2264 2",
+
   "tutorial.reference_hint":
     "All five stay one tap away while you play \u2014 the button marked The relations.",
   "tutorial.finish": "Start today\u2019s puzzle",

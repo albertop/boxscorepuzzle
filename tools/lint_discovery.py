@@ -48,8 +48,41 @@ BASELINE = ROOT / "tools" / "discovery-lint-baseline.json"
 TARGETS = ("discovery", "tools")
 
 
+def _ruff_runs() -> None:
+    """⚠️⚠️ **Prove ruff is there before believing anything it did not say.** (v36-P1-01)
+
+    `python -m ruff` with ruff missing or broken exits **1** — the same code ruff uses for *findings
+    found* — with the error on stderr and **nothing on stdout**. The guard below accepts 1, and
+    `json.loads(stdout or "[]")` turned that empty output into **zero findings**. Zero beats every
+    baseline, so the ratchet printed *these rules improved* and returned 0; with `--update` it wrote an
+    all-zero baseline and destroyed its own reference point.
+
+    A venv rebuilt without the dev group is enough to do it. **This is the absence of a check reading
+    as the presence of a passing one, inside the tool built to catch that shape** — and the docstring
+    below already guards the same hole one step later, for a missing baseline.
+
+    ⚠️ Two independent conditions, because either alone can be satisfied by a broken tool: ruff must
+    answer `--version` at all, and a lint run that reports findings must actually produce JSON.
+    """
+    version = subprocess.run(
+        [sys.executable, "-m", "ruff", "--version"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    if version.returncode != 0:
+        print(version.stderr or version.stdout)
+        message = (
+            f"`{sys.executable} -m ruff --version` exited {version.returncode}: ruff is not runnable "
+            "here, so this ratchet cannot report anything. It is not passing; it is blind."
+        )
+        raise SystemExit(message)
+
+
 def measure() -> tuple[Counter[str], str]:
     """Ruff's findings for the targets, as counts per rule and as the report a person reads."""
+    _ruff_runs()
     # ⚠️ Run from `forge/`, because that is where the ruff configuration lives and ruff resolves
     # `line-length`, the rule selection and the per-file ignores from the nearest config to the
     # *invocation*. Pointed at these paths from anywhere else it applies defaults, and the numbers
@@ -67,6 +100,13 @@ def measure() -> tuple[Counter[str], str]:
         print(findings.stderr)
         message = f"ruff exited {findings.returncode}"
         raise SystemExit(message)
+    # ⚠️ **Exit 1 with nothing on stdout is never a lint result.** Ruff reporting findings always emits
+    # a JSON array; an empty stdout beside a failure code means the invocation itself failed, and the
+    # `or "[]"` below used to read that as a clean tree. v36-P1-01.
+    if findings.returncode == 1 and not findings.stdout.strip():
+        print(findings.stderr)
+        message = "ruff exited 1 with no JSON on stdout - the invocation failed, and no findings is not the answer"
+        raise SystemExit(message)
     readable = subprocess.run(  # noqa: S603
         common,
         capture_output=True,
@@ -75,7 +115,9 @@ def measure() -> tuple[Counter[str], str]:
         cwd=ROOT / "forge",
         check=False,
     )
-    return Counter(row["code"] for row in json.loads(findings.stdout or "[]")), readable.stdout
+    # ⚠️ No `or "[]"`. A fallback here is a decision to treat unreadable output as a clean tree, and
+    # the two guards above exist because that decision was being taken silently.
+    return Counter(row["code"] for row in json.loads(findings.stdout)), readable.stdout
 
 
 def main() -> int:
@@ -83,6 +125,8 @@ def main() -> int:
     print(report)
     print(f"{sum(counts.values())} findings across {', '.join(TARGETS)}/\n")
 
+    # ⚠️ `--update` needs no guard of its own: `measure()` raises before `main()` is ever given a
+    # count, so the state that used to let this write an all-zero baseline cannot reach here.
     if "--update" in sys.argv:
         BASELINE.write_text(json.dumps(dict(sorted(counts.items())), indent=2) + "\n", encoding="utf-8")
         print(f"baseline written: {sum(counts.values())} findings")

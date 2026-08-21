@@ -46,9 +46,9 @@ sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
 from measure import (  # noqa: E402
-    ACCEPTED_LITERAL,
     CONNECTION,
     CONTRIBUTED,
+    PROVENANCE_LITERAL,
     SEASON_WINDOW,
     SHAPE_CTE,
     ZERO_DENSITY_GATE,
@@ -77,7 +77,17 @@ def candidates(*, gated: bool, provenance: str = "") -> str:
         gate_clause=zero_density_clause(ZERO_DENSITY_GATE) if gated else "",
     )
     if provenance:
-        original = f"AND p.is_deduced = 0 AND p.source_type IN ({ACCEPTED_LITERAL})"
+        # ⚠️⚠️ **`PROVENANCE_LITERAL`, and the rename is the point rather than a detail.** The postseason
+        # work split one list in two: `PROVENANCE_SOURCES` is what a `dbo.retroGameProvenance` row may
+        # say and is what `eligibility()` interpolates; `ACCEPTED_SOURCES` is the wider set the
+        # publication gate accepts, because the postseason has no provenance row and is admitted by a
+        # season floor instead. The anchor below has to be built from what the SQL actually contains.
+        #
+        # ⚠️ This file imported the old name and **died with `ImportError` before printing anything** —
+        # so the guard immediately below, which exists to catch exactly "the provenance rule moved",
+        # never got the chance to fire. A check that cannot be reached is not a weaker check; it is
+        # absent, and the pool rule was decided from this instrument. v36-P2-03.
+        original = f"AND p.is_deduced = 0 AND p.source_type IN ({PROVENANCE_LITERAL})"
         # Not an `assert`: `python -O` removes assertions, and the failure this guards is an arm that
         # silently measures the pool while claiming to measure an excluded population.
         if original not in built:

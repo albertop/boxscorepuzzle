@@ -127,7 +127,10 @@ def _reachable_at(port: int) -> list[str]:
         # interface, which is the one a phone on the same network would reach. No packet is sent.
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
             probe.connect(("10.255.255.255", 1))
-            addresses.append(f"http://{probe.getsockname()[0]}:{port}/   <- from a phone; /p for the board, /t/fill, /t/solved, /t/reset")
+            addresses.append(
+                f"http://{probe.getsockname()[0]}:{port}/   <- from a phone; "
+                "/p for the board, /t/fill, /t/solved, /t/reset"
+            )
     except OSError:
         addresses.append("(no network address found: this laptop is not on a network)")
     return addresses

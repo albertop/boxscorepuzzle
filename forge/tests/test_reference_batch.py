@@ -7,10 +7,13 @@ and was read as files, and per-file atomic renames were described as making the 
 import importlib.util
 import json
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+from boxscore_package.format import read
 
 _KEY = Ed25519PrivateKey.generate()
 """The manifest is signed now, so publishing needs a key. Generated per run: a test key in the
@@ -339,3 +342,67 @@ class TestTheTwoKeyModesAreExclusive:
 
         assert "if ephemeral and material:" in source
         assert "Refusing to guess which trust" in source
+
+_PUBLISHED = Path(__file__).resolve().parents[2] / "serve" / "data" / "puzzles"
+
+
+def _shipped() -> list[object]:
+    """The packages actually on disk in the current generation — what a player receives."""
+    manifest = json.loads((_PUBLISHED / "manifest.json").read_text(encoding="utf-8"))
+    return [read(_PUBLISHED / manifest["generation"] / f"{name}.json") for name in manifest["puzzles"]]
+
+
+class TestTheTutorialsTwoCasesSurviveToDisk:
+    """⚠️⚠️ **`_choose` promises them among the candidates; this checks the batch that shipped.**
+
+    v36-P2-06. The writer selects one board with a suffixed label and one with a live footnote, then
+    the write loop discards any candidate that reaches no target — with a `print` — and the module's
+    own docstring records that **two of six candidates produced nothing at any target from 12 down**.
+    The guarantee therefore held over twelve candidates and nothing held it over the six files, while
+    `serve`'s tutorial is built against those files.
+
+    **Anything acting as a launch gate is asserted, not printed**, and a selection that is printed and
+    believed is that shape exactly.
+    """
+
+    def test_the_published_batch_carries_both(self) -> None:
+        """The real question, asked of the real files rather than of the selection that produced them."""
+        shipped = _shipped()
+
+        assert shipped, "no published packages to check, so this proves nothing"
+        _writer()._traits_survived(shipped)
+
+    def test_a_batch_missing_a_trait_is_refused(self) -> None:
+        """⚠️ **The failing cases, because a gate that never fires cannot be told from a broken one.**
+
+        Both halves separately, and the messages are asserted apart: two refusals that read the same
+        would tell the operator *something is missing* about six files and nothing more.
+        """
+        writer = _writer()
+        shipped = _shipped()
+
+        # ⚠️⚠️ **The board is dropped, not doctored, and two attempts at doctoring say why.**
+        # `Package.__post_init__` refuses a package with no slot references *and* one whose references
+        # repeat — so neither `slot_references=None` nor flattening `5a`/`5b` back to `5`,`5` can be
+        # built. That is the boundary doing its job, and it also means the gate's first predicate
+        # ("references present and non-empty") could not fail on any package that exists.
+        #
+        # **Dropping the board is the real failure anyway**: the write loop discards candidates that
+        # reach no target, and exactly one of the six carries a suffix today.
+        stripped = [one for one in shipped if all(ref.isdigit() for ref in one.slot_references or ())]
+        assert len(stripped) < len(shipped), "no shipped board carries a suffixed slot, so this proves nothing"
+        with pytest.raises(SystemExit, match="shared slot reference"):
+            writer._traits_survived(stripped)
+
+        flat = [
+            replace(
+                one,
+                solution=replace(
+                    one.solution,
+                    footnotes=tuple(tuple(0 for _ in row) for row in one.solution.footnotes),
+                ),
+            )
+            for one in shipped
+        ]
+        with pytest.raises(SystemExit, match="live footnote"):
+            writer._traits_survived(flat)

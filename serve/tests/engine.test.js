@@ -1325,7 +1325,10 @@ suite("⚠️⚠️ The stylesheet's rules survive being parsed, not merely bein
   // rule exists for. Reading the source and believing it is what failed, so this asks the parser.
   const REQUIRED = [
     ["board.css", "(max-width: 359px)", "the line score's narrow-device size (§6, MAX_INNINGS)"],
-    ["board.css", "(prefers-color-scheme: dark)", "the dark theme"],
+    // ⚠️ `tokens.css`, not `board.css`. The palette moved there so the tutorial page — which links
+    // the tokens and not the board — stops rendering white while the two pages either side of it
+    // are dark. v36-P2-13.
+    ["tokens.css", "(prefers-color-scheme: dark)", "the dark theme, on every page rather than one"],
   ];
 
   test("every media rule the board depends on is present after parsing", async () => {
@@ -2965,6 +2968,109 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     for (const forbidden of ["localStorage", "sessionStorage", "createStore", "fetch("]) {
       assert(!source.includes(forbidden), `the tutorial reached for ${forbidden}`);
       assert(!entry.includes(forbidden), `the tutorial's entry point reached for ${forbidden}`);
+    }
+  });
+});
+
+suite("⚠️⚠️ C11 over what the player actually reads, not over what the catalogue holds", () => {
+  const UI = ["board.js", "finish.js", "shell.js", "landing.js", "tutorial.js", "main.js",
+              "landing-main.js", "tutorial-main.js", "testmode.js", "daily.js"];
+
+  /**
+   * The words a line writes onto the screen without going through the catalogue.
+   *
+   * ⚠️ **Catalogue calls are removed first, then what is left is examined.** The first version scanned
+   * the raw right-hand side and reported every key — `text("landing.name")` looks exactly like copy to
+   * a regular expression, because the key *is* letters in quotes. A guard that fires on the correct
+   * case as loudly as on the defect is one that gets switched off.
+   *
+   * ⚠️ **One definition, used by the scan and by the test of the scan.** The check below asserts this
+   * function catches the real defect and spares the real code; written twice, the two would drift and
+   * the confirmation would be about a function nobody runs.
+   */
+  const spelledOut = (line) => {
+    if (line.trim().startsWith("//") || line.trim().startsWith("*")) return [];
+    const assignment = /\.textContent\s*=\s*(.+)$/.exec(line);
+    if (assignment === null) return [];
+    const rhs = assignment[1]
+      // ⚠️ Interpolated expressions are code, not copy. `${batter.slot}` inside a template is an
+      // identifier, and leaving them in made every template in the tree look like English.
+      .replace(/\$\{[^}]*\}/g, "")
+      // A catalogue key is letters in quotes and looks exactly like copy to a regular expression.
+      .replace(/\b(?:text|fill)\(\s*(?:"[^"]*"|'[^']*'|`[^`]*`)/g, "KEY(");
+
+    const quoted = [...rhs.matchAll(/"([^"]*)"|'([^']*)'|`([^`]*)`/g)]
+      .flatMap(([, a, b, c]) => [a, b, c])
+      .filter((one) => one !== undefined && /[A-Za-z]/.test(one));
+
+    // ⚠️⚠️ **Two shapes, and the narrowing is a decision that has to be stated rather than tuned in.**
+    // A bare word in quotes is usually a domain identifier being compared — `column === "outs"` is the
+    // real line that made the first version cry wolf, and `outs` there is a column key, not copy. What
+    // is copy is either a **phrase** (letters with a space between them) or a literal that **is** the
+    // whole right-hand side, which is a sentence being assigned however short it is.
+    //
+    // ⚠️ This is a heuristic and is written down as one. It would miss a single bare word smuggled
+    // through a ternary — `x ? "Close" : y`. The alternative was a scan that fires on every comparison
+    // in the file, and **a check that fires when nothing is wrong gets switched off**, which is worse
+    // than a narrow one that holds. The catalogue tests cover the other direction.
+    const whole = rhs.trim().replace(/;$/, "");
+    return quoted.filter(
+      (one) => /[A-Za-z]\s+\S/.test(one) || whole === `"${one}"` || whole === `'${one}'` || whole === `\`${one}\``,
+    );
+  };
+
+  test("no string with letters in it is written straight onto the screen", async () => {
+    // ⚠️⚠️ **The existing C11 tests check the catalogue; this checks the code.** They assert every
+    // column has a heading and that a replacement catalogue changes what renders — both true while a
+    // renderer spells its own copy beside them. v36-P2-09 was exactly that: the tutorial's worked
+    // arithmetic went on screen at 19px bold and one line read `2 innings = 6 outs` in a source file,
+    // in a project where C11 is mandatory from day one and Spanish is the reason it exists.
+    //
+    // The rule matches the seam's own words — **if a player can read it, it is in the catalogue** — so
+    // what is forbidden is a literal with letters reaching `textContent`. A literal with none (`""`,
+    // `":"`, `"#"`) is punctuation rather than language and has nothing to translate.
+    const offenders = [];
+    for (const file of UI) {
+      const source = await (await fetch(`../ui/phone/${file}`)).text();
+      source.split("\n").forEach((line, index) => {
+        for (const word of spelledOut(line)) offenders.push(`${file}:${index + 1}  ${word}`);
+      });
+    }
+
+    assert(
+      offenders.length === 0,
+      `player-visible words spelled in code instead of the catalogue:\n  ${offenders.join("\n  ")}`,
+    );
+  });
+
+  test("⚠️ the scan catches the defect it was written for, and spares the code around it", async () => {
+    // A guard that finds nothing looks exactly like a broken one, and this one is a regular expression
+    // over source — the instrument this project has been burned by twice, both times for matching the
+    // wrong thing. Both halves are asserted, and the second is the one that matters: every version of
+    // this scan that was wrong was wrong by matching too much.
+    equal(
+      spelledOut('    sum.textContent = finished ? "" : "2 innings = 6 outs";').join("|"),
+      "2 innings = 6 outs",
+      "the scan would not have caught the string it was written for",
+    );
+    equal(
+      spelledOut('    close.textContent = "Close";').join("|"),
+      "Close",
+      "a whole-right-hand-side sentence escaped the scan",
+    );
+
+    for (const innocent of [
+      '    cell.textContent = "";',
+      // The line that made the first version cry wolf: a column key in a comparison, not copy.
+      '    cell.textContent = innings && column === "outs" ? inningsOf(row[column]) : String(row[column]);',
+      '    name.textContent = text("landing.name");',
+      '    cell.textContent = text(`printed.${column}`);',
+      "    slot.textContent = `${text(\"board.slot\")}${batter.slot}`;",
+      '    next.textContent = finished ? text("tutorial.finish") : text("tutorial.next");',
+      '    cell.textContent = printed(name) ?? String(valueOf[name]());',
+      '    // message.textContent = "a commented-out literal";',
+    ]) {
+      equal(spelledOut(innocent).length, 0, `false positive on: ${innocent}`);
     }
   });
 });

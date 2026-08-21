@@ -4,7 +4,7 @@ Date: 2026-08-21
 
 ## Result
 
-Two new actionable findings were identified: one P1 and one P2.
+Correction review complete. Both original findings are closed, and no new actionable findings were identified in their fixes.
 
 This was a static review of the current tree under `code_review_contract.md`, with particular attention to the new landing and tutorial flow, route wiring, line-score renderer changes, development server and Docker configuration, and the newly added forge diagnostic. Existing product decisions, research questions, and already-recorded work were not reopened.
 
@@ -12,7 +12,7 @@ No tests or validation commands were run as part of this pass.
 
 ## Findings
 
-### v35-P1-01: A pytest-discovered diagnostic fails the forge suite unconditionally
+### v35-P1-01: A pytest-discovered diagnostic fails the forge suite unconditionally [CLOSED]
 
 Status: ⚠️ **Confirmed and NOT acted on — the file is not repository content.** The behaviour is exactly
 as described: `assert False, "probe"` at the end of a discovered test, so `pytest` over `forge/` cannot
@@ -56,7 +56,11 @@ Acceptance criteria:
 - The diagnostic, if retained, runs only when explicitly requested.
 - Any replacement test asserts a stable product behavior rather than using `assert False`.
 
-### v35-P2-01: The landing entry point bypasses the safe storage acquisition path
+Correction review:
+
+`forge/tests/test_zz_probe.py` was removed. The unconditional diagnostic is no longer present under pytest discovery, which resolves the finding without adding unnecessary test machinery.
+
+### v35-P2-01: The landing entry point bypasses the safe storage acquisition path [CLOSED]
 
 Status: ✅ **Closed 2026-08-21. Accepted, and it was worse than filed.**
 
@@ -105,6 +109,12 @@ Acceptance criteria:
 - The landing entry point does not read the global `localStorage` object directly.
 - The landing page renders when storage acquisition is denied.
 - The existing method-level hostile-storage behavior remains covered.
+
+Correction review:
+
+`landing-main.js` now imports `browserStorage` and constructs its store with `createStore(browserStorage())` before entering the package-loading `try` block. This uses the established safe acquisition path and also avoids misreporting a storage exception as a package failure.
+
+The correction adds a source-level guard covering every entry point and a landing render test using the forgetful storage shape returned by the denied-storage fallback. Together with the existing hostile-method coverage, these tests are proportional to the regression. No new issue was found in the correction.
 
 ## Reviewed without findings
 

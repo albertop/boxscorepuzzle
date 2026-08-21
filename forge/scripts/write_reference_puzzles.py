@@ -210,6 +210,51 @@ def claim(wanted: list[Loaded], seen: set[str], item: Loaded) -> bool:
     return True
 
 
+def _traits_survived(published: list[Package]) -> None:
+    """⚠️⚠️ **The two cases the tutorial has to teach, asserted over what shipped.** (v36-P2-06)
+
+    `_choose` puts a board with a suffixed label and a board with a live footnote into the *candidate*
+    list, and this module's docstring promises the published six carry both. The write loop then
+    discards any candidate that reaches no target — with a `print` — and that docstring itself records
+    that **two of six candidates produced no puzzle at any target from 12 down**. So the promise held
+    over twelve candidates and nothing held it over the six files.
+
+    If the substitution board or the footnote board is among the discards, six boards publish with the
+    guarantee silently broken, and `serve`'s tutorial ends up referring to a case its own data does not
+    contain. This project's rule: **anything acting as a launch gate is asserted, not printed** — and
+    `_choose`'s selection is exactly a promise printed and believed.
+
+    Raised before `_publish`, so a batch missing either trait leaves the published set untouched.
+    """
+    # ⚠️⚠️ **A *suffixed* reference, and the first version of this check could not fail.** It asked
+    # whether `slot_references` was present and non-empty — but `Package.__post_init__` already refuses
+    # a package without one per batting row, so that was true of every board ever written. A gate that
+    # fires on nothing is the same defect as one that fires on everything, and it was written into the
+    # gate closing a finding about promises nobody verifies.
+    #
+    # The trait is a lineup slot shared by two rows, which the reference marks by suffixing: `5a`, `5b`
+    # against a plain `5`. Exactly **one of the six** published boards carries it today, which is what
+    # makes this worth asserting — the promise is one discard away from being false.
+    with_slot = [one for one in published if any(not ref.isdigit() for ref in one.slot_references or ())]
+    with_footnote = [
+        one
+        for one in published
+        if any(value for row in one.solution.footnotes for value in row if value is not None)
+    ]
+    missing = []
+    if not with_slot:
+        missing.append("no board carries a shared slot reference (the suffixed-label case)")
+    if not with_footnote:
+        missing.append("no board carries a live footnote term")
+    if missing:
+        message = (
+            f"the written batch of {len(published)} does not teach what the tutorial needs: "
+            + "; ".join(missing)
+            + " - published set left as it was"
+        )
+        raise SystemExit(message)
+
+
 def _choose(sample: list[Loaded], with_substitution: list[Loaded], with_footnote: list[Loaded]) -> list[Loaded]:
     """One direction per game, with both required traits present.
 
@@ -450,6 +495,9 @@ def main() -> None:
     written = 0
     taken: set[int] = set()
     games: dict[str, str] = {}
+    # ⚠️ The packages that reached disk, kept so the batch can be checked rather than assumed. See the
+    # assertion after this loop: `wanted` is the candidate list and is not what ships.
+    published: list[Package] = []
     for loaded in wanted:
         if written == REFERENCE_BOARDS:
             break
@@ -483,6 +531,7 @@ def main() -> None:
 
         refuse_second_direction(games, loaded.game_id, path.name)
 
+        published.append(restored)
         written += 1
         print(
             f"  {path.name}  {restored.metadata['stalls']:>2} stalls "
@@ -495,6 +544,8 @@ def main() -> None:
         # produced, and the published set is untouched.
         message = f"wrote {written} puzzles, wanted {REFERENCE_BOARDS} — published set left as it was"
         raise SystemExit(message)
+
+    _traits_survived(published)
 
     # ⚠️ `written` counts successful builds and `_publish` counts files. They used to be the same
     # number by assumption, and the assumption is exactly what a collision breaks: two builds, one
