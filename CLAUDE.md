@@ -627,7 +627,16 @@ a date not changing once played. This is about two dates never drawing on one ga
 
 - **No names during play (§7).** Rows are labelled by position throughout — `CF`, `SS`, `LF-1`, `LF-2` — and **the real boxscore is drawn complete at the end**, with names, teams and date. *Progressive reveal was dropped: knowing a name mid-solve helps nobody deduce anything and costs width.* Row-level validation stops being mandatory with it, since it existed only to know when to reveal.
 - **The share grid must never leak the solution or player names.**
-- **Tutorial is not skippable on first play (§8).** It teaches the identities, not baseball vocabulary.
+- **⚠️ Tutorial: five steps, one per relation family, and *skippable* — this reverses §8**
+  (`docs/serve-flow.md` §1b). It teaches the identities, not baseball vocabulary, and it is reachable
+  from the landing page at any time. **A compulsory tutorial is a barrier in front of someone who has
+  not decided whether they are interested**, and the visitors who do not want it leave before seeing a
+  board — the outcome the rule existed to prevent, one screen earlier. It stopped being load-bearing
+  when the reference sheet (§3b) put all five relations one button away *during* play; when §8 was
+  written the tutorial was the only place the rules were ever stated.
+- **Every visit lands on the landing page, not only the first** (`docs/serve-flow.md` §1). The archive,
+  the streak and the subscription live there when they exist, so a player routed past it would never
+  meet them.
 - **Everyone gets the same puzzle on the same date.** Never derive the day's puzzle from device-local state.
 - **Timer runs for everyone, silently (§26).** Comparison and percentiles are the paid feature, not the timing itself.
 - **No comments or forums (§28).**

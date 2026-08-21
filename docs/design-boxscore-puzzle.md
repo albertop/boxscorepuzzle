@@ -1280,7 +1280,8 @@ to be.
 
 ⚠️ **That does not disqualify it, and the precedent is P5.** `PA = Outs + R + LOB` is not visible on
 a boxscore either, and it went in without this argument. The tutorial is mandatory on first play and
-not skippable, so the rule is taught there like the other five. What follows is not an exemption but a
+taught there like the other five, and — since the tutorial became skippable — restated on §3b's
+reference sheet, which is what a player who skipped has. What follows is not an exemption but a
 weighting: **this step carries more of the tutorial's job than any other**, because it is the only one
 a player cannot arrive at by looking.
 
@@ -1300,9 +1301,31 @@ deliberately rather than being puzzled by it mid-solve. The convention is self-e
 so it is not an edge case worth discovering by accident. Nothing needs explaining beyond the label
 itself; the identities are unchanged.
 
-### Mandatory on first play
+### ⚠️ Mandatory on first play — SUPERSEDED 2026-08-20
 
-**The tutorial is not skippable on the first game.** It's short, and it's the only guarantee that nobody reaches the real puzzle without understanding the mechanics. Permanent access to replay it, alongside the reference sheet.
+**The tutorial is skippable.** The design and the reasoning are in `docs/serve-flow.md` §1b; the rule as
+it stood is kept below rather than deleted, because it was right about the risk and wrong about the
+remedy.
+
+> **Mandatory on first play.** The tutorial is not skippable on the first game. It's short, and it's the
+> only guarantee that nobody reaches the real puzzle without understanding the mechanics. Permanent
+> access to replay it, alongside the reference sheet.
+
+**What changed is the last clause of that paragraph.** *The only guarantee* was true when it was
+written: the tutorial was the sole place the five relations were ever stated. The reference sheet now
+carries all five and the bounds, on a button, during play — so a player who skips has the rules a tap
+away, and compulsion is buying something that is already owned.
+
+**And what it cost was aimed at the wrong person.** A required tutorial is spent on a visitor who has
+not yet decided whether they are interested; the ones who do not want it leave before reaching a board,
+which is the outcome this rule existed to prevent, arriving one screen earlier.
+
+⚠️ **Skippable is not thinner.** Five steps, one per relation family, a made-up four-batter board, one
+hole per step, the batting order last because it is the only relation invisible in a real board. Nothing
+about the reversal is a reason to teach less.
+
+**Permanent access to replay it** — unchanged, and more important now than when it was a footnote to a
+compulsory flow.
 
 ### Policy for players who don't know baseball
 
@@ -2979,7 +3002,8 @@ one column now. Full reasoning in `docs/serve-flow.md`.
 - [x] ~~Seasonality~~ — **resolved:** §25
 - [x] ~~Puzzle only, or content too?~~ — **resolved:** §29
 - [x] ~~Is there community?~~ — **resolved:** §28
-- [x] ~~What about players who don't know baseball?~~ — **resolved:** §8
+- [x] ~~What about players who don't know baseball?~~ — **resolved:** §8, ⚠️ with its *mandatory on
+  first play* clause superseded 2026-08-20 (`docs/serve-flow.md` §1b)
 - [x] ~~The one-line pitch~~ — **resolved:** §1
 - [x] ~~The anti-goals~~ — **resolved:** §1
 - [x] ~~What the product is in a year~~ — **resolved:** §30

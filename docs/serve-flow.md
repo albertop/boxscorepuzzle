@@ -19,15 +19,114 @@ and this project has a record of what happens when one decision lives in two pla
 
 ## 1. The landing page
 
-**The player does not land on the puzzle.**
+**The player does not land on the puzzle. ⚠️ And not only the first time — every visit lands here.**
 
-A landing page carrying, at minimum, the tutorial and a button for today's game. §8 makes the tutorial
-non-skippable on first play, and a board that appears with no explanation is where §2's fragile
-audience — the baseball fan who is not a puzzle person — leaves.
+That is the decision, and it is worth stating as one because *land the newcomer, then send returning
+players straight to the board* is the obvious alternative and it is wrong. **The archive, the streak and
+the subscription all live on this page when they exist**, and a player routed past it would never meet
+any of them. A landing page only the newcomer sees is a landing page for a product with no second week.
 
-**It later carries social login and the subscription**, which buy the archive and the global ranking. The
-page has to be laid out so those arrive without rebuilding it. That is the same discipline as seams C8,
-C9 and C10: the shape is present before the feature is.
+### What it carries
+
+- **The name, and one line saying what this is.** Something like *"Rebuild a real baseball boxscore
+  using nothing but logic."* ⚠️ **It has to say what it is *and what it is not*** — not trivia, not
+  guessing. That is the line separating this from Immaculate Grid and it is the first thing a visitor
+  gets wrong about it.
+- **A small static example board.** The green scoreboard and a grid with holes. **Explaining a visual
+  puzzle in words is worse than showing it**, and this project has spent a day proving the same thing
+  in the other direction: no description of a board substitutes for a picture of one.
+- **A large button for today's puzzle, with the date.**
+- **A secondary link, *how to play*, opening the tutorial.**
+
+### ⚠️ The button changes when today is already played
+
+*See the boxscore* rather than *Play* — or the time achieved. Otherwise a returning player is offered a
+puzzle he has already solved, **every day**, which reads as the product not knowing who he is. The state
+is already there: §6 persists the finished session and §7 reopens it read-only, so this is a label
+reading state that exists rather than new machinery.
+
+### Nothing else yet
+
+Archive, subscription and streak arrive here when they exist. **The page is laid out so they can be
+added without rebuilding it** — the same discipline as seams C8, C9 and C10: the shape is present before
+the feature is.
+
+---
+
+## 1b. The tutorial — five steps, and ⚠️ **it is not mandatory**
+
+### The reversal, and the reasoning rather than only the decision
+
+**⚠️⚠️ This reverses §8, which made the tutorial non-skippable on first play.** The old rule is kept
+below as superseded rather than deleted, because it was right about the risk and wrong about the remedy.
+
+**A compulsory tutorial is a barrier placed in front of someone who does not yet know whether they are
+interested.** It is spent on the visitor who has not decided, and the ones who do not want it leave
+before seeing a board — which is the same outcome the rule existed to prevent, arriving one screen
+earlier. **If someone is brave enough to try without it, let them.**
+
+**And the game no longer depends on it to be solvable.** §3b put the reference sheet one button away
+during play, and it carries all five relations and the bounds. Anyone who dives in and gets stuck has
+the formulas there. When §8 was written that button did not exist and the tutorial was the *only* place
+the rules were ever stated — the rule was load-bearing then and is not now.
+
+⚠️ **Note what did not change: the tutorial still has to be good.** Making it skippable is not a reason
+to make it thinner, and *"they can always open the reference sheet"* is not a design for onboarding. The
+sheet is a reminder for someone who has met the rules; the tutorial is where they meet them.
+
+#### The superseded rule, kept
+
+> **Mandatory on first play.** The tutorial is not skippable on the first game. It's short, and it's the
+> only guarantee that nobody reaches the real puzzle without understanding the mechanics.
+
+It stopped being the only guarantee on 2026-08-20, when the reference sheet shipped.
+
+### The shape: a five-step wizard
+
+**One step per relation family.** Next and previous, and **a visible skip** — visible, because a skip
+the visitor has to hunt for is a mandatory tutorial wearing a disguise.
+
+- **Progress shown** — *step 3 of 5*. Five is a number someone will finish; an unbounded sequence is one
+  they abandon.
+- **A small invented boxscore, not a real one.** Four batters, one pitcher, three columns. ⚠️ **Say that
+  it is invented** — *"a made-up boxscore, smaller than the real ones"* — so nobody spends a step
+  wondering why it looks wrong. A real board here would be six columns and thirteen rows and would
+  teach the relation and the crowding at the same time.
+- **One hole per step**, so the player watches the relation *fill a cell* rather than reading it as an
+  equation. The relation is a thing that does something; an equation on a slide is a thing to nod at.
+
+### The order, and why the last one is last
+
+1. **Row identity** — `PA = AB + BB + HBP + SF + SH + CI`, one row, self-contained
+2. **Column totals**
+3. **The cross between batting and pitching**
+4. **The global identity**
+5. **The batting order**
+
+⚠️ **The batting order is last because it is the only one that cannot be inferred from looking at a
+board.** The other four are visible in the grid: a row, a column, two facing sections, the line score.
+Nothing on screen announces that the plate appearances divide nine ways around the lineup. It needs the
+most setup and it gets the player who has already seen four relations work.
+
+### At the end
+
+**The reference sheet**, so the player leaves knowing the button exists during play — a sheet nobody
+knows about is a sheet nobody opens. **Then the way to today's puzzle.**
+
+### Repeatable
+
+**Reachable from the landing page at any time.** Someone who plays once a month will have forgotten, and
+a tutorial that can only ever be seen once is built for a player who does not exist.
+
+### ⚠️ What is deliberately not built into it
+
+**No account. No tracking of tutorial progress. No persistence of which step someone reached.** It is a
+page with five steps and two buttons.
+
+Every piece of machinery added here is machinery **on the path between a stranger and their first
+board**. Remembering that someone reached step 3 requires storage, a key, an identity to key it by, and
+a decision about what happens when it is stale — all of it spent on a visitor who has not yet seen a
+puzzle, and none of it visible to them as anything but delay.
 
 ---
 
@@ -136,9 +235,13 @@ that on the day it was adopted.
 
 - **Contents: the five relations and the bounds** — the set the printed strip on the hand-solve pack
   carries, plus the batting order, which that strip predates.
-- **It costs no hint and is not one.** A hint hands over an answer; this hands over the rules, which §8
-  teaches on first play. The difference is that §8 teaches them once and this is there when they are
-  wanted.
+- **It costs no hint and is not one.** A hint hands over an answer; this hands over the rules, which
+  the tutorial teaches. The difference is that the tutorial teaches them once and this is there when
+  they are wanted.
+  ⚠️ **This read "which §8 teaches on first play", and the load has since reversed.** The sheet was
+  justified by the tutorial having already taught the rules; now the tutorial is skippable (§1b) *because
+  this sheet exists*. Whichever way the sentence is written, exactly one of the two may be optional —
+  and the sheet is the one that cannot be, since a player who skipped the tutorial has nothing else.
 - **A button rather than permanent**, because on 375px there is no room for a permanent strip. On paper
   there is, and that is exactly what the pack does.
 - **In the board's chrome, not in the keypad.** Both were rendered: *The relations* wraps onto two lines
@@ -293,8 +396,12 @@ Recorded so none of the three returns as an obvious improvement.
 ### ⚠️ What has to come before it, and this is an ordering decision rather than a preference
 
 **The tutorial and the landing page ship before the share.** Today the game drops straight onto the
-board, and §8 makes the tutorial non-skippable on first play precisely because a board that appears
-with no explanation is where §2's fragile audience leaves.
+board, and a board that appears with no explanation is where §2's fragile audience leaves.
+
+⚠️ This argument used to rest on §8 making the tutorial compulsory. It does not any more (§1b) and the
+ordering is unchanged — **skippable is not the same as absent.** A share that lands a stranger on a
+board with no way to learn the rules is the problem, and whether the newcomer is *forced* through the
+door has nothing to do with whether the door is built.
 
 **There are now five relation families, and one of them cannot be inferred from looking at the board.**
 The batting order relation is not visible in any row or column the way the column sums and the row
@@ -408,6 +515,10 @@ reasoning, so a later reading does not treat them as data kept "just in case".
   ⚠️ This read *"there are none, and §22's guarantee is why"* until 2026-08-20; the guarantee is intact
   and was never the question a hint answers
 - **The reference sheet** — the five relations on a button, costing no hint (§3b)
+- **The landing page and the tutorial** — every visit lands, the tutorial is five steps and **skippable**
+  (§1, §1b). ⚠️ The skippability reverses §8, on the reasoning that a compulsory tutorial is a barrier in
+  front of someone who has not decided yet, and that the reference sheet removed the tutorial's status as
+  the only place the rules are stated
 - **Saving, pausing and resuming** — the mechanics, where §27 had only the promise (§6)
 - **What the clock counts** — visibility plus a generous inactivity timeout, invisible until the end
   (§4, §5)

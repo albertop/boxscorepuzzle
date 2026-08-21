@@ -3720,7 +3720,14 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
    it is `?p=`), C4 a loader that decides the day (there is no calendar; it takes `manifest.puzzles[0]`,
    which is not a date), C8 `canAccess`, C9 reserved ad slots, C10 the two-phase boot. **C11 is done**,
    but the catalogue holds `en` only.
-10. **Product surfaces:** the share grid (§7) and the tutorial that is not skippable on first play (§8).
+10. **Product surfaces:** the share (§7) and the landing page with its tutorial.
+    ⚠️ **Both are designed and neither is built**, and the order between them is decided: the landing
+    page and the tutorial first, the share after. `serve-flow.md` §1 and §1b carry the design — every
+    visit lands, the button changes when today is played, five wizard steps on a made-up four-batter
+    board, the batting order last because it is the only relation invisible in a real board.
+    ⚠️ **The tutorial is skippable, reversing §8.** A compulsory one is a barrier in front of someone who
+    has not decided yet, and the reference sheet (§3b) ended its status as the only place the rules are
+    stated. The old rule is kept as superseded in `design-boxscore-puzzle.md` and in `CLAUDE.md`.
     ⚠️ **The share is designed and is deliberately not next.** §36's *what it encodes without leaking*
     closed on 2026-08-20: a **PNG of the board**, the player's own cells replaced with random digits and
     then blurred, the given cells real, carrying the time and the hints used (`serve-flow.md` §7b). The
