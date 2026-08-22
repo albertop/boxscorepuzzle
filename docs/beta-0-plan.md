@@ -169,6 +169,19 @@ whatever is obvious today will not be obvious then.
   and how much runway is left right now.
 - **A5.2 The commands, in order**, with **what each one prints when it is working.** A step whose success
   looks like silence is a step nobody can tell failed.
+
+  ⚠️ **Three instances of exactly that, all from the first measurement run, all before it produced a
+  number.** They belong in the runbook because each one cost minutes of not knowing whether anything was
+  happening:
+
+  1. **Python buffers stdout when it is not a terminal**, so the run printed nothing for eight minutes
+     while working. Every line flushes now.
+  2. **`load(n)` is `n` per decade**, over twelve decades — `--directions 12` asked for about 144
+     directions. The option is `--per-decade` now. ⚠️ *A name that misdescribes a scale factor of twelve
+     is the same defect as `gated: bool = False`: read far more often than it is passed.*
+  3. **Piping a live run through `tail` withholds all of it until the process exits.** An instrumentation
+     mistake rather than a script one, and the runbook has to say *do not pipe this* or the operator will
+     conclude the command hangs.
 - **A5.3 What to check before publishing**: the survival rate, the era share, the weekday spread, and
   ⚠️ **the one-game-one-puzzle guard's report** — the check no package can perform on itself.
 - **A5.4 What to do when the yield is short.** The likely outcome, not the exceptional one: the gate keeps
