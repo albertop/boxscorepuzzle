@@ -481,7 +481,35 @@ reads is a liability with no upside.
 **In the VPS's database** (§33). User data is written only by the serving tier; the laptop never sees it,
 and the forge never learns that users exist.
 
-### The database is SQLite — decided, with the reasoning and not only the choice
+### ⚠️⚠️ Superseded 2026-08-22: it is Postgres, behind an interface, in its own service
+
+**`docs/data-layer.md` is the standing decision and this section is the record of the one before it.**
+The user data now lives behind a third service beside `serve` in the same Docker network, and `serve`
+never learns which engine is underneath.
+
+**What changed is not an argument below — it is a fact none of them had.** The operator already runs and
+maintains a Postgres instance on the VPS. Every reason SQLite won was some form of *one fewer piece to
+administer*, and that reason evaluates to nothing when the other piece is already there and already
+being administered. **Postgres stopped being a piece to stand up and became a piece to use.**
+
+⚠️ **So the two invalidating conditions below are not what invalidated it**, and that is the part worth
+keeping. They were the right conditions — more than one server, genuinely concurrent writes — and
+neither has happened. The decision was overturned by a **third** thing the list did not contain, which is
+the ordinary way a well-reasoned decision dies: not by one of its stated conditions firing, but by a
+premise quietly ceasing to hold. A conditions list is not a tripwire around every way of being wrong.
+
+⚠️ **`Do not stand up Postgres now "just in case"` was right when it was written and is not being
+reversed as an error.** Nothing is being stood up. The instance exists.
+
+**SQLite is not gone**: it stays for local development and tests, which is where its simplicity was always
+the strongest part of the case. ⚠️ That leaves two engines behind one interface — two places that should
+say the same thing — and `data-layer.md` §2 carries the obligation that follows, plus the open question of
+whether SQLite is *supported* or only *convenient*.
+
+**Everything below this heading is the superseded reasoning, kept because it was not silly and because
+the WAL and backup notes still apply to the development database.**
+
+---
 
 **The real load is tiny.** Puzzles are static files served by nginx, so the database only sees token
 refresh, device registration and event upload. At nine thousand accounts that is tens of thousands of
