@@ -1,0 +1,104 @@
+# The Python side: lint, types, and the suite. **Why this is split in two and what it costs is
+# `docs/ci.md`** — it is one explanation and it lives in one place.
+name: forge
+
+# ⚠️ **`paths-ignore` lists what cannot affect this job, and that direction is the point.** A `paths`
+# list naming what *does* affect it forgets the next directory somebody adds, and forgets it silently:
+# the new code never runs. This way an unlisted path runs the job by default, so the failure mode is a
+# wasted run rather than an unchecked one.
+#
+# `serve/**` is here because nothing under it is imported by `forge/` — CLAUDE.md forbids the
+# cross-import, and `forge/tests/test_no_cross_imports.py` is what makes that a fact rather than a
+# hope. If that ever stops being true this list is wrong, which is why the reason is written down
+# beside it.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "serve/**"
+      - "docs/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "serve/**"
+      - "docs/**"
+      - "**/*.md"
+
+concurrency:
+  group: forge-${{ github.ref }}
+  cancel-in-progress: true
+
+# ⚠️ **Actions pinned by commit, not by tag.** (v36-P3-30) `@v4` and `@v5` are mutable references: the
+# code they resolve to can change without this file changing. `permissions: contents: read` is already
+# minimal and no secrets are referenced, so the entire supply-chain risk here is **exfiltration of the
+# checked-out `forge/`** — which is the one asset that keeps this repository private permanently (§16).
+permissions:
+  contents: read
+
+jobs:
+  forge:
+    # ⚠️⚠️ **Ubuntu only since 2026-08-22, and this ran on both.** Operator's decision, unconditional:
+    # **this is never deployed on Windows.** Measured before cutting — over six days the Windows job was
+    # 302 of 778 billed minutes, **39%**.
+    #
+    # ⚠️ **39%, not the two thirds the doubled rate suggests.** Windows minutes bill at 2×, so the
+    # arithmetic only reaches two thirds if the suite takes the same wall time on both. It does not:
+    # this job ran **3.5 minutes on Windows against 9.5 on Linux**, because Linux also ran the coverage
+    # pass. The multiplier was working against a much shorter job.
+    #
+    # ⚠️⚠️ **What the old note said Windows was for, and why removing it is not the loss it reads as.**
+    # It said: *the laptop is Windows, a redirected stream there is cp1252, and this project has already
+    # lost three hours of compute to a report dying on a character it printed.* All true, and that class
+    # of defect appeared **twice more on 2026-08-22** — and **both were caught without this job**.
+    # `forge/tests/test_reports_survive_a_redirected_stream.py` is a static check over every `print`
+    # argument and runs on any platform. And the laptop *is* the Windows machine: the pre-push hook runs
+    # the whole suite there before every push, so the platform that needed covering is the one the
+    # developer already uses.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      # pyodbc builds against unixODBC. Nothing in the test suite opens a connection — `load()` imports
+      # pyodbc lazily and only the discovery scripts call it — but the package still has to install.
+      - name: ODBC headers
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
+        working-directory: .
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: true
+
+      # ⚠️ `--frozen`, so the lockfile is the thing being tested. `uv.lock` is committed as the
+      # reproducibility guarantee; a CI run that silently resolved something newer would be testing a
+      # dependency set that exists nowhere else. **This is the property the laptop cannot check** — its
+      # virtualenv is warm and was built over months — and it is the reason this workflow still runs
+      # every push while coverage moved to a schedule.
+      - name: Install
+        run: uv sync --frozen --group dev
+
+      - name: Lint the forge
+        run: uv run ruff check src scripts tests
+
+      # ⚠️ Mandated by docs/python-conventions.md and run nowhere until v36-P3-01. A documented check
+      # that does not exist is the shape the CI section of CLAUDE.md was rewritten to close.
+      - name: Format the forge
+        run: uv run ruff format --check src scripts tests
+
+      - name: Lint discovery and tools, against the baseline
+        run: uv run python ../tools/lint_discovery.py
+
+      - name: Types
+        run: uv run mypy src
+
+      # ⚠️⚠️ **No `--cov` here, and that is a decision with a cost.** Coverage is roughly half this
+      # job's wall time and it moved to `weekly.yml`. The floor is `fail_under = 95` in pyproject.toml,
+      # the pre-push hook runs it with coverage on every push to `main`, and the weekly run is the
+      # independent confirmation. **What this gives up is a coverage number on a pull request**, which
+      # matters the day there are pull requests. `docs/ci.md` records what would reverse it.
+      - name: Tests
+        run: uv run pytest

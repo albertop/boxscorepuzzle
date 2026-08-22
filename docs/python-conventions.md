@@ -448,11 +448,13 @@ repository public`.
 A normative document prescribing a state the operator cannot reach hides **which check is actually
 load-bearing**, which is worse than describing a weaker arrangement honestly. What is true:
 
-- **CI runs on every push and is a report, not a gate.** `.github/workflows/ci.yml`: ruff over `forge/`
-  blocking, the `discovery/` ratchet, mypy strict, the suite with the coverage floor, and the browser
-  suite headless, on Ubuntu and Windows. **Nothing stops a red commit reaching `main`.**
-- **`.githooks/pre-push` is the local substitute and is not enabled by default.** Turn it on with
-  `git config core.hooksPath .githooks`. It runs what CI runs before a push to `main`.
+- **CI runs on pushes and pull requests to `main`, and is a report, not a gate.** Three workflows on
+  Ubuntu: `ci-forge.yml` (ruff, ruff format, the `discovery/` ratchet, mypy strict, the suite),
+  `ci-browser.yml` (the browser suite, headless) and `weekly.yml` (all of it, with the coverage floor).
+  **Nothing stops a red commit reaching `main`.** `docs/ci.md` explains the split and what it cost.
+- **`.githooks/pre-push` is the primary runner, and it is not enabled by default.** Turn it on with
+  `git config core.hooksPath .githooks`. It runs everything CI runs, **with coverage**, before a push
+  to `main` — which is why the push workflows no longer measure coverage themselves (`docs/ci.md`).
 - **`git push --no-verify` skips it**, and that is an acknowledged escape hatch rather than a hole to
   be closed: on one laptop with one developer the hook guards against forgetting, not against intent.
   **It is not branch protection and must not be described as any.**

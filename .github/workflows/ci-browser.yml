@@ -1,0 +1,62 @@
+# The client side: the engine's tests in a real browser. **Why this is split off `forge` and what it
+# costs is `docs/ci.md`.**
+name: browser
+
+# ⚠️ `paths-ignore` lists what cannot affect this job — see the same note in `ci-forge.yml` for why the
+# list runs that direction. `forge/**` is here because the browser suite loads `serve/` and never
+# imports the forge; `discovery/**` because nothing under it ships or is loaded by a page.
+#
+# ⚠️ **`forge/pyproject.toml` and `forge/uv.lock` are inside an ignored path, and this job installs
+# from them.** A lockfile change alone will not run this suite. That is the accepted cost of the split:
+# the weekly run installs and drives the browser from a clean checkout, which is where a broken
+# playwright pin would surface.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "discovery/**"
+      - "docs/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "discovery/**"
+      - "docs/**"
+      - "**/*.md"
+
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    # The engine's tests assert computed styles, element geometry and the cascade, so they need a real
+    # browser. `tools/run_browser_tests.py` drives the same page a person opens and fails closed on
+    # every way of not finishing.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: ODBC headers
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --frozen --group dev
+        working-directory: forge
+
+      - name: Chromium
+        run: uv run playwright install --with-deps chromium
+        working-directory: forge
+
+      - name: Browser suite
+        run: uv run python ../tools/run_browser_tests.py
+        working-directory: forge

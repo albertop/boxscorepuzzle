@@ -1,0 +1,132 @@
+# What CI runs, where, and what it costs
+
+*Written 2026-08-22, when the repository was running at roughly twice its free allowance and the
+account had moved to the Free plan.*
+
+This is the one place the CI decisions live. `CLAUDE.md` states the rule that `main` is not protected
+and cannot be; this says what runs instead, why each piece is where it is, and what would reverse it.
+
+---
+
+## The three files
+
+| File | Trigger | Skips when the push touches only | Runs |
+|---|---|---|---|
+| `.github/workflows/ci-forge.yml` | push and PR to `main` | `serve/`, `docs/`, any `.md` | ruff check, ruff format, the discovery ratchet, mypy, **pytest without coverage** |
+| `.github/workflows/ci-browser.yml` | push and PR to `main` | `forge/`, `discovery/`, `docs/`, any `.md` | the browser suite in headless Chromium |
+| `.github/workflows/weekly.yml` | Monday 06:00 UTC, and by hand | — | **all of the above, plus the coverage floor** |
+
+`.githooks/pre-push` runs everything, with coverage, on the laptop, before any push to `main`. Enable
+it with `git config core.hooksPath .githooks`.
+
+---
+
+## The order these four things run in, which is the part that matters
+
+**The pre-push hook is the primary runner. CI is the safety net.** That is the reversal of the usual
+arrangement and it is deliberate.
+
+There is **one developer and one machine**. The hook runs the complete suite, with coverage, before a
+push reaches `main` — so by the time CI starts, everything it is about to check has already passed on
+the machine that wrote it. Under those conditions a full CI run on every push is a second execution
+of a result already in hand, and it was costing about twice the free allowance to produce it.
+
+⚠️ **An earlier version of this argument was wrong and is recorded because the shape recurs.** It ran:
+*CI must be primary, because `--no-verify` skips the hook and somebody could push unchecked.* True in
+a team. Here the "somebody" is the operator, and a developer who deliberately bypasses his own hook is
+not a case a duplicate run protects against — he can ignore a red CI badge just as easily, since
+nothing gates on it. That is `CLAUDE.md`'s *a justification is scoped, and it does not travel*: a
+reason true where it was learned, silently false where it was reused.
+
+**What CI still buys, and it is not nothing:**
+
+- **A clean checkout.** `uv sync --frozen` installs from `uv.lock` into an empty environment. The
+  laptop's virtualenv is warm and months old, so it cannot fail the way a fresh install can — a
+  dependency that resolves only because something is already present is invisible there and red here.
+- **Pull requests.** There are none today. When there are, the checks run on the branch.
+- **A record.** A run history that is not one person's word for it.
+- **The weekly run**, which is the answer to *has the hook been disabled, skipped, or quietly diverging
+  for a month?* — the one question the hook cannot answer about itself.
+
+---
+
+## The rules, and what would reverse each one
+
+**`paths-ignore` lists what cannot affect the job, never `paths` listing what does.** A `paths` list
+forgets the next directory somebody adds, and forgets it *silently* — the new code simply never runs.
+This direction fails the other way: an unlisted path runs the job, so the cost of forgetting is a
+wasted run rather than an unchecked one.
+
+**The two push workflows are split so that a `serve/` change does not pay for the Python suite.** This
+is why they are two files rather than two jobs: `paths-ignore` is a property of a workflow, not of a
+job, so a single file can only skip when *every* changed path is ignorable. That is the whole cut —
+32% of measured pushes touched only `serve/` and were paying 9.5 minutes for a suite that could not
+have been affected.
+
+⚠️ **The split has an accepted cost, stated so it is not discovered as a surprise.** `forge/uv.lock`
+and `forge/pyproject.toml` sit inside `ci-browser.yml`'s ignored path, and the browser job installs
+from them. **A lockfile change alone will not run the browser suite.** The weekly run is where a broken
+`playwright` pin surfaces. *Reverse this if a dependency break ever reaches `main` this way.*
+
+**Coverage runs on the hook and weekly, not on every push.** It was about half the Python job's wall
+time. The floor is `fail_under = 95` in `forge/pyproject.toml` and is spelled nowhere else.
+
+⚠️ **What this gives up: a coverage number on a pull request.** *Reverse it the day there are pull
+requests from anyone*, or the day the hook stops being run.
+
+**Ubuntu only.** Nothing here is ever deployed on Windows. The reason the Windows job existed — a
+redirected stream on the laptop is cp1252 — is now covered by
+`forge/tests/test_reports_survive_a_redirected_stream.py`, a static check over every `print` argument
+that runs on any platform, and by the fact that **the laptop is the Windows machine**: the hook runs
+the whole suite there before every push. That class of defect appeared twice more on 2026-08-22 and
+both were caught without the job. *Reverse it if anything ships to Windows.*
+
+**The weekly run is a safety net and must never be described as a gate.** Neither is CI. `main` cannot
+be protected server-side: GitHub gates branch protection *and* rulesets behind a paid plan for private
+repositories, and this repository is private permanently (§16, `forge/` is trade secret). Both API
+calls return `403 Upgrade to GitHub Pro or make this repository public`.
+
+---
+
+## The bill
+
+GitHub Free gives a private repository **2,000 Actions minutes a month**. Nothing else in this
+repository is near a limit: it is about 7 MB, uses no LFS, and stores no artifacts. Linux bills at 1×,
+Windows at 2×.
+
+Measured over six days of real pushes — 44 runs, 778 billed minutes — then simulated over the same
+history:
+
+| | minutes/month |
+|---|---|
+| as it was (both platforms, every push) | 3,852 |
+| Windows out | 2,337 |
+| + `paths-ignore` on the single workflow | 2,018 |
+| + the split into two workflows | 1,348 |
+| + coverage off the push runs, weekly instead | **~658** |
+
+The first three rows are simulations over the real push history. **The last two are projections**, and
+they rest on that history's shape: 32% of pushes touched only `serve/`, 14% touched only documents.
+
+⚠️ **`paths-ignore` on one workflow saved far less than it looked like it would.** The first estimate
+of that row was 1,365 and the real figure is 2,018. A workflow is skipped only when *every* changed
+path is ignorable, so the 32% of pushes touching only `serve/` still paid for the Python job. The
+error was assuming a per-job property from a per-workflow one — and it is the reason the split exists.
+
+**Owed: the real minutes, before and after, once a full month has run.** These are projections until
+then. The account's per-product billing breakdown needs `gh auth refresh -h github.com -s user`, which
+only the operator can run; until it has been read, *Actions is the whole bill* is inference from the
+repository's shape rather than a measurement.
+
+---
+
+## The guard
+
+`forge/tests/test_the_hook_runs_what_ci_runs.py` asserts that the hook and the push workflows check
+the same set of tools, and that the weekly run is the complete one. It reads **the whole workflow
+directory**, so a new workflow cannot introduce a check the hook does not run, and it compares **tool
+names, not command lines**, so it does not go red on a reordered flag.
+
+⚠️ **It is blind to flags by construction, which is exactly where the current divergence lives.**
+`pytest` and `pytest --cov` are one entry, so this test cannot see coverage leaving the hook. That is
+named here and in the test's own docstring rather than left to be discovered.

@@ -131,13 +131,32 @@ coverage under 95%. Commit `uv.lock` — it is the reproducibility guarantee, no
 
 ### ⚠️⚠️ CI runs. `main` is **not** protected, and this paragraph used to say it was.
 
-**CI exists now** — `.github/workflows/ci.yml`, on every push: ruff over `forge/` blocking, the
-`discovery/` ratchet, mypy strict, the suite with the 95% coverage floor, and the browser suite
-headless. **On Ubuntu only since 2026-08-22** — Windows was 39% of the Actions bill and the platform
-it covered is the laptop, which runs the whole suite through the hook before every push. The
-cp1252 class it existed for is guarded by `test_reports_survive_a_redirected_stream.py`, a static check
-over every `print` argument that runs anywhere, and that is what caught the two instances of it that
-appeared the same day.
+**CI exists now, in three workflows, and `docs/ci.md` is where the whole arrangement is explained** —
+what runs where, what each decision cost, and what would reverse it. Do not re-derive it here or
+anywhere else. The short version:
+
+| `.github/workflows/` | when | what |
+|---|---|---|
+| `ci-forge.yml` | push and PR to `main`, unless only `serve/` or documents changed | ruff, ruff format, the `discovery/` ratchet, mypy strict, the suite **without coverage** |
+| `ci-browser.yml` | push and PR to `main`, unless only `forge/`, `discovery/` or documents changed | the browser suite, headless |
+| `weekly.yml` | Monday 06:00 UTC, and by hand | all of it, **with the 95% coverage floor** |
+
+**Ubuntu only since 2026-08-22** — Windows was 39% of the Actions bill and the platform it covered is
+the laptop, which runs the whole suite through the hook before every push. The cp1252 class it existed
+for is guarded by `test_reports_survive_a_redirected_stream.py`, a static check over every `print`
+argument that runs anywhere, and that is what caught the two instances of it that appeared the same
+day.
+
+⚠️⚠️ **The hook is the primary runner and CI is the safety net — the reversal is deliberate.** One
+developer, one machine: the hook runs everything with coverage before a push reaches `main`, so a full
+CI run per push was re-executing a result already in hand, at roughly twice the free allowance. What CI
+still buys is the thing the laptop cannot test — **a `--frozen` install from nothing**, where the warm
+venv of months cannot fail — plus pull requests, a record, and the weekly run, which answers the one
+question the hook cannot ask about itself.
+
+⚠️ **The argument that CI must be primary because `--no-verify` exists was mine and it was wrong.** It
+assumed a team. Here the "somebody" who bypasses the hook is the operator, and he can ignore a red badge
+just as easily since nothing gates on it — *a justification is scoped, and it does not travel*.
 
 **Branch protection does not and cannot exist on this repository.** GitHub gates branch protection
 *and* rulesets behind a paid plan for **private** repositories, and this repository is private

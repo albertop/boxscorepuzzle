@@ -1,0 +1,65 @@
+# Everything, once a week, from a clean checkout — including the coverage floor the push runs no longer
+# carry. **The whole argument is `docs/ci.md`**; the short version is that the pre-push hook is the
+# primary runner on the one machine that exists, and this is the independent confirmation that it has
+# not been skipped, disabled, or quietly diverging.
+name: weekly
+
+# ⚠️ **Monday 06:00 UTC, and `workflow_dispatch` beside it.** A schedule nobody can trigger by hand is
+# a check that cannot be re-run after a fix, so the failure gets ignored until next week.
+#
+# ⚠️ GitHub drops scheduled runs on a repository with no activity for 60 days, and delays them under
+# load. This is a safety net and neither matters; **it is not a gate and must never be described as
+# one** — `main` cannot be protected server-side (CLAUDE.md, §16).
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  everything:
+    # ⚠️ **One job, not two, unlike the push workflows.** The split exists to stop a `serve/` change
+    # paying for the Python suite; a weekly run has nothing to skip, and one job installs once.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: forge
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - name: ODBC headers
+        run: sudo apt-get update && sudo apt-get install -y unixodbc-dev
+        working-directory: .
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync --frozen --group dev
+
+      - name: Lint the forge
+        run: uv run ruff check src scripts tests
+
+      - name: Format the forge
+        run: uv run ruff format --check src scripts tests
+
+      - name: Lint discovery and tools, against the baseline
+        run: uv run python ../tools/lint_discovery.py
+
+      - name: Types
+        run: uv run mypy src
+
+      # ⚠️ **The coverage floor lives here now.** It is `fail_under = 95` in pyproject.toml and is not
+      # repeated in this file: a threshold spelled in two places is two thresholds.
+      - name: Tests and coverage
+        run: uv run pytest --cov --cov-report=term-missing
+
+      - name: Chromium
+        run: uv run playwright install --with-deps chromium
+
+      - name: Browser suite
+        run: uv run python ../tools/run_browser_tests.py
