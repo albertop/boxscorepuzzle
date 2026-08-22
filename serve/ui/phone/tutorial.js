@@ -341,7 +341,25 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
   };
 
   function draw() {
+    // ⚠️⚠️ **`step === STEPS.length` is step 6's second beat, not a seventh screen.** It used to be its
+    // own screen, arriving after the player believed he had finished: a `How to play` heading with no
+    // step number, a reference list, and a button called *Start today's puzzle*. Six steps then a
+    // stranger.
+    //
+    // Now the last step **completes what the player was doing** — the board fills in, the relations
+    // are handed over, and the button says where it goes. Two presses, one screen: the first closes
+    // the demonstration and the second takes him to play.
+    //
+    // ⚠️ **It is not deleted, and that was proposed.** This is the only state in which the board is
+    // drawn complete — the six steps have been rebuilding it in front of the player and stopping one
+    // cell short ends the demonstration exactly where it pays — and **the only state in which the
+    // arithmetic test can read all five relations over the numbers actually drawn**. A tutorial
+    // teaching arithmetic that does not close is the worst defect available here, and that test is
+    // what prevents it.
     const finished = step >= STEPS.length;
+    // The step whose screen this is. On the second beat it is still the sixth: same heading, same
+    // counter, because the player has not gone anywhere.
+    const showing = STEPS[Math.min(step, STEPS.length - 1)];
     // Every earlier hole is filled by now, marked as the thing the player just worked out; every later
     // one is still empty, because a step cannot demonstrate a number the screen has already given.
     // ⚠️ `filter(Boolean)`: the first step has no hole, so both lists would carry a `null` that matches
@@ -351,15 +369,16 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     const pending = STEPS.slice(step + 1).map((one) => one.hole).filter(Boolean);
     const current = finished ? null : STEPS[step];
 
-    // ⚠️ The whole bar, not its contents. Emptying the progress line and hiding the skip left a 44px
-    // band of nothing above the last screen — a control-height gap where the eye still expects a
-    // control.
-    bar.hidden = finished;
-    progress.textContent = finished
-      ? ""
-      : fill("tutorial.progress", { step: String(step + 1), total: String(STEPS.length) });
-    skip.hidden = finished;
-    title.textContent = finished ? text("tutorial.title") : text(current.name);
+    // ⚠️ The bar stays on both beats now. It used to be hidden on the seventh screen, and emptying the
+    // progress line while hiding the skip left a 44px band of nothing where the eye expects a control.
+    // The counter reads `Step 6 of 6` on both, because it is one step.
+    bar.hidden = false;
+    progress.textContent = fill("tutorial.progress", {
+      step: String(Math.min(step + 1, STEPS.length)),
+      total: String(STEPS.length),
+    });
+    skip.hidden = false;
+    title.textContent = text(showing.name);
     // ⚠️ **Split on a blank line, so a step may carry more than one paragraph.** The alternative was
     // one `textContent` and a seven-line block on the screen a stranger decides from. Every other step
     // holds a single paragraph and comes out as one child, unchanged.
@@ -377,6 +396,9 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     sum.hidden = finished || !current.sum;
     rule.textContent = finished || !current.rule ? "" : text(current.rule);
     rule.hidden = finished || !current.rule;
+    // ⚠️ **The label tells the truth about the destination now.** On the old seventh screen this said
+    // *Start today's puzzle* and did go to the board — but the button before it said *Next* and went to
+    // one more screen, which is the objection the merge answers.
     next.textContent = finished ? text("tutorial.finish") : text("tutorial.next");
     next.classList.toggle("tutorial-finish", finished);
 

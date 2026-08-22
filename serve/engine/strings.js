@@ -341,7 +341,8 @@ const en = {
 
   "tutorial.reference_hint":
     "All five stay one tap away while you play: the button marked The relations.",
-  "tutorial.finish": "Start today\u2019s puzzle",
+  // The same words the landing page's button uses, because it is the same act and the same destination.
+  "tutorial.finish": "Play today\u2019s puzzle",
 
   // ---- dates -----------------------------------------------------------------------------------
   // ⚠️ Month names rather than `1913-08-17`. The reveal is the one screen written for a reader rather
