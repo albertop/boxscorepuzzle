@@ -1459,7 +1459,47 @@ Structure:
 
 **Rare advantage to exploit:** the NYT archive took thirty years to exist. Here it's possible to **launch with an archive** — hundreds or thousands of verified puzzles from day one, because Retrosheet already has them and the generator produces them in batch. The asset that in this category is a longevity prize is available before opening.
 
-### Merchant of record
+### ⚠️⚠️ Payments: Stripe — decided 2026-08-22, reversing the merchant of record
+
+**Operator's decision. Stripe, and the operator is the seller.**
+
+**What changed is the audience, not the arithmetic below.** The merchant-of-record case was overwhelmingly
+a *tax* case: VAT and sales tax across 200+ jurisdictions, collected and remitted by somebody else. That is
+worth two points of revenue when the tax surface is global. **The audience for a boxscore puzzle is US
+baseball fans**, and against a US-only tax surface the obligation is state sales tax, which **Stripe Tax
+computes automatically**. Two points of revenue for a problem that mostly is not there.
+
+⚠️ **The old reasoning was not wrong; it was priced against a market this product does not have.** Same
+shape as the SQLite decision in `serve-flow.md` §9 — not a stated condition firing, but a premise quietly
+ceasing to hold.
+
+**⚠️ What this hands back to the operator, stated rather than discovered later.** Everything in the list
+below that the merchant of record was doing is now either Stripe's, the operator's, or nobody's:
+
+- **Kept, and Stripe does it well:** processing, subscriptions and proration, failed-payment recovery,
+  hosted checkout, invoices and receipts, 3D Secure. **PCI stays out of scope** — with hosted checkout or
+  tokenised Elements the card never touches our servers.
+- **Now the operator's:** being the legal seller, **chargeback liability**, and **billing support**. That
+  last one was called *decisive* below and the point still stands — most tickets in a subscription
+  business are billing. It is now a solo-support cost rather than a delegated one.
+- **Now conditional: EU VAT.** ⚠️ This is the live edge of the decision. Stripe Tax *computes*; it does
+  not become the seller. **If EU sales ever reach a real volume, the registration and remittance
+  obligation is the operator's**, and that is exactly what the 2% was buying. The premise this rests on
+  is *no meaningful European market* — so **EU revenue share is the number that would reopen it**.
+
+⚠️ **And a related sentence in §16 stays true and is not part of this change:** *with users in Spain and
+the EU, GDPR applies.* GDPR follows the users, not the seller of record, so it was never something the
+merchant of record removed. **Do not "tidy" it away as a leftover of Paddle.**
+
+⚠️ **One tension worth naming rather than smoothing.** The superseded preference below justified itself by
+*selling to the Dominican Republic, Venezuela, and Spain* — and two of those are baseball countries, which
+is a wider audience than *US baseball fans*. The tax argument survives it: what a merchant of record
+uniquely bought was **EU VAT**, and only Spain is in that set. But the audience premise is the operator's
+and is broader than the tax premise, and they are not the same claim.
+
+---
+
+**Everything below this line is the superseded reasoning, kept.**
 
 **Paddle or Lemon Squeezy** rather than raw Stripe. What it covers beyond payment — they become the **legal seller of record**, the customer buys from them:
 
@@ -1477,7 +1517,10 @@ Structure:
 
 **Cost:** Paddle and Lemon Squeezy both charge 5% + $0.50 per transaction, against ~2.9% + 30¢ for raw Stripe. Two points more for everything above.
 
-**Tentative preference: Paddle.** Lemon Squeezy adds 1.5% on international payments while Paddle includes everything in its rate — relevant when selling to the Dominican Republic, Venezuela, and Spain. Also, Lemon Squeezy was acquired by Stripe in 2024 and its direction now depends on that strategy. *Verify pricing and features when deciding.*
+**Tentative preference: Paddle.** ⚠️ *Superseded — see the heading above. This line is kept because it
+names the reason (international rate, and Lemon Squeezy's acquisition), and a preference recorded with
+its reason is evidence; deleting it would leave the question looking unexamined the next time somebody
+asks it.* Lemon Squeezy adds 1.5% on international payments while Paddle includes everything in its rate — relevant when selling to the Dominican Republic, Venezuela, and Spain. Also, Lemon Squeezy was acquired by Stripe in 2024 and its direction now depends on that strategy. *Verify pricing and features when deciding.*
 
 ### Operational consequences of charging from day 0
 
@@ -1942,7 +1985,7 @@ And it's possible because it's already designed that way: the puzzle is static, 
 
 - **Your own deployments.** Most outages are self-inflicted. Don't deploy near the puzzle rollover; have instant rollback.
 - **The daily rollover** — the only moment something must fire on time. Publish ahead; don't generate at midnight.
-- **Third parties** — a Google OAuth or Paddle outage is inherited.
+- **Third parties** — a Google OAuth or Stripe outage is inherited.
 - **Expired certificates and domains.** Silly, and among the most common causes of total outage.
 
 **The system must degrade on its own, not wait for human reaction.** If something breaks at 3am, the month's budget is spent.
@@ -2922,7 +2965,7 @@ Since the site launches charging from day 0 (§10), these are not optional:
 
 - **Terms of service.** The essential content is already decided and scattered through this document: access while the service operates (§10), personal and household use (§11), free cancellation. Drafting remains.
 - **Privacy policy.** Mandatory as soon as there are accounts. **With users in Spain and the EU, GDPR applies**, even with operations in Miami.
-- **Refund policy.** Paddle requires it, and §18 already decided on no-questions refunds below a threshold.
+- **Refund policy.** ⚠️ **Nobody now requires it and it matters more, not less.** Paddle required one as a condition of selling; with Stripe the operator is the seller and **carries chargeback liability**, and a published refund policy is the primary defence against a dispute. §18 already decided on no-questions refunds below a threshold.
 - **Retrosheet notice**, visible and prominent.
 - **LLC formed** (§17).
 
@@ -2958,11 +3001,15 @@ Since the site launches charging from day 0 (§10), these are not optional:
 
 **Subscription**
 
-- Paddle customer identifier
+- Stripe customer identifier
 - Status
 - Expiry date
 
-**No card or billing data** — that lives at Paddle, which is the entire point of a merchant of record (§10).
+**No card or billing data** — ⚠️ **and the reason changed with the processor, so do not carry the old one
+across.** Under a merchant of record it lived at Paddle because Paddle was the seller. Under Stripe it
+lives at Stripe because **the card never reaches our servers**: hosted checkout or tokenised Elements keep
+this system out of PCI scope entirely. Same field list, different guarantee — and the new one only holds
+as long as nothing ever posts a card number to us "just for a moment".
 
 **Devices** (§11)
 

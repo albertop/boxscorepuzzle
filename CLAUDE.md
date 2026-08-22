@@ -745,7 +745,7 @@ a date not changing once played. This is about two dates never drawing on one ga
 
 ## User data: minimum to operate (§35)
 
-Store: internal ID, email, OAuth provider link, created/last-seen; Paddle customer ID, status, expiry; device UUID + last seen + label; per-game event records; language and accessibility preferences.
+Store: internal ID, email, OAuth provider link, created/last-seen; Stripe customer ID, status, expiry; device UUID + last seen + label; per-game event records; language and accessibility preferences.
 
 Do **not** store: real name, photo, date of birth, IP address, geolocation, in-site browsing history, filled puzzle cells, or card/billing data.
 

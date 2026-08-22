@@ -4549,7 +4549,7 @@ never stated. Found by disbelieving a number that came out of an unrelated corre
     half-built production config that nobody runs drifts; what it established is two sentences at the
     end of this file.
 
-    The backend is absent too (accounts, OAuth, Paddle, devices, percentiles), though §23 guarantees
+    The backend is absent too (accounts, OAuth, payments, devices, percentiles), though §23 guarantees
     play does not depend on it.
 
 ### Built but not finished, in the forge

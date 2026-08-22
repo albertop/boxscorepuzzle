@@ -132,6 +132,23 @@ rotated.
 **Two things that follow and are easy to get wrong:** the comparison is constant-time, and the token
 never reaches a log, a URL, or an error message. A secret in a query string is in the access log forever.
 
+### ⚠️⚠️ The payment webhook: `serve` receives it, verifies the signature, then forwards
+
+**Decided.** Stripe posts to `serve`. `serve` verifies the signature **before anything else happens to the
+request**, and only then forwards to the data layer over the shared token.
+
+**Unverified webhooks are the highest-value attack in this system** — a forged notification grants a free
+subscription. `CLAUDE.md` already says verification fails closed: a missing or unconfigured secret is an
+error, never a pass.
+
+**The alternative was publishing a data-layer port so Stripe could reach it directly, and it loses.** The
+counter-argument against this shape is real — it puts the payment secret in `serve` rather than in the
+service that owns subscriptions — but **a secret inside a container is a secret; an open port is surface.**
+Verifying at the edge also means the data layer only ever sees traffic already authenticated by §4.
+
+⚠️ **Verify first, parse second.** The signature covers the raw body, so anything that re-serialises the
+request before checking it is checking a different document than the one Stripe signed.
+
 ---
 
 ## 5. Health endpoints, for Uptime Kuma
@@ -192,7 +209,62 @@ is operator information and belongs in an authenticated view or a log, not on an
 
 ---
 
-## 6. Later, and worth designing for now
+## 6. The event record: claimable, and kept
+
+### ⚠️⚠️ An event's subject is reassignable — decided, and it cannot be retrofitted
+
+**Every event carries the device UUID, always. It carries the account identifier when one exists.** On
+registration, that device's existing events are **attributed to the account without dropping the UUID**,
+because the same device goes on being used signed out.
+
+**Why it has to be designed in rather than added:** if events are not claimable, **the streak somebody
+built before registering is lost at exactly the moment they become a customer** — and C7 is irreversible,
+so it is lost permanently rather than recoverable from an aggregate. The one moment the product most needs
+to reward is the one that would silently throw work away.
+
+⚠️ **This is a schema property, not a feature.** An event whose subject is a single fixed column cannot
+become claimable later without rewriting history, and rewriting history is the thing C7 exists to prevent.
+Both identifiers, from the first row written.
+
+⚠️ **And it does not weaken §35.** The unlinkable identifier requirement is unchanged: a GDPR deletion
+breaks the link to the account while the aggregate survives. Claiming is about attaching a subject, not
+about making one more identifiable.
+
+### Events are kept indefinitely — ⬜ open, not designed
+
+**Nothing deletes an event today**, because percentiles need history and the volume at this scale is
+nothing.
+
+⚠️ **But *grows without limit by design* and *nobody has decided yet* are different things, and this is
+the second.** Recorded as an open decision so that the absence of a retention policy is not later read as
+a decision to have none — the same defect as the absence of a check reading as a passing one.
+
+**What would force one:** the table growing enough to affect query time, or a legal obligation appearing.
+Neither is close.
+
+---
+
+## 7. Schema migrations: manual, and startup refuses a mismatch
+
+**The data layer does not migrate on boot.** A deploy that migrates by itself can alter the database at
+three in the morning with nobody having decided to — and a bad migration is the one failure on this list
+that a rollback does not undo.
+
+**But it must refuse to start against a schema it does not expect.** A version check at startup, failing
+closed, exactly like the shared token in §4: the container does not come up, rather than serving against a
+schema it half-understands.
+
+⚠️ **That pair is the whole design and neither half works alone.** Manual migrations without the check
+give silent drift between what the code expects and what exists. The check without manual migrations gives
+a deploy the power to alter data. Together: nothing changes the database unless a person decided it, and
+nothing runs against a database it did not expect.
+
+**And it fits the health check.** `SELECT 1 FROM <a known table> LIMIT 1` (§5) proves the migrations ran —
+the startup check proves the *version* is the expected one, the query proves the schema is really there.
+
+---
+
+## 8. Later, and worth designing for now
 
 The data layer will grow endpoints for metrics: a cron pulling usage, retention and streaks
 (`serve-flow.md` §8).
@@ -221,6 +293,11 @@ link is a report that has to be written differently.
   obligations on the contract suite.
 - ⬜ **Where the cross-engine contract suite runs**, given the push workflows no longer carry the full run
   (`docs/ci.md`). One that only runs weekly is a real gap.
+- ⬜ **Event retention** (§6). Kept indefinitely because nobody has decided otherwise, which is not the
+  same as by design.
+- ⬜ **EU VAT, if European sales ever reach a real volume.** Payments moved from a merchant of record to
+  Stripe on 2026-08-22 (§10 of the design document) on the premise that the audience is US baseball fans.
+  Stripe Tax computes; it does not become the seller. **EU revenue share is the number that reopens it.**
 - ⬜ **The API surface itself.** Nothing here says what the endpoints are. That is the next document, or
   the first commit, and it should not be invented in passing.
 
