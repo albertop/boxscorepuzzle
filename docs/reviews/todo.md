@@ -133,6 +133,82 @@ above.
 
 ---
 
+## 2026-08-21 — the hand-solve pack: two parts, and layer 3b's question closes itself
+
+### ⚠️ The two axes were being compared as one, and that is what the split fixes
+
+**The ceiling measurement is the best of nine seeds per board** — what a board can be pushed to. **The
+pack is what a single ordinary attempt produces.** Reading a 5-to-17 ceiling range as the range the
+pack targets compares two different axes, and it is the operator's correction rather than a finding
+against the instrument: both numbers were right about their own question.
+
+**On the pack's own axis, 8 is already the 87th percentile and 12 is close to the reachable maximum.**
+
+### Pack A — decided: rungs **5, 8, 11, 12**, four boards each
+
+⚠️ **Only about 20% of boards reach 12**, so that rung is the one that may not fill. **If 12 does not
+yield four boards, that is the finding** — reported as such, never quietly substituted with a lower
+target. A pack that silently drops a rung is the shape `CLAUDE.md` records from the weighted draw that
+produced zero boards at the easiest rung and reported quotas it had not met.
+
+### ⬜ Pack B — only if A comes back soft, and only after a cheap run first
+
+**Rung 17 may not exist at all.** Measuring whether 14 and 17 can be filled costs one short run;
+generating twenty boards and discovering it halfway through costs the pack. The order is the point.
+
+### The rest, as established
+
+Stall count **off the page and in the sealed key** · formula strip carrying **all five** relations ·
+survey box with the anchored 1–6 scale, the *how many times did you stop* line, and **separate**
+columns for **had to guess**, **tedious** and **boring** · randomised order **asserted by `audit()`**,
+not printed and believed · one board per game · footnote line given.
+
+**And a final ranking sheet**: every board ordered easiest to hardest once all the sheets are filled.
+⚠️ **That is the strongest reading available and it costs one page** — the comparison against the
+ranking by stall count is the only thing that tests whether the stall scale corresponds to felt
+difficulty, which is the question every difficulty figure in this file ultimately rests on.
+
+### ⚠️ Not built at the end of a long run — a standing rule, not a preference
+
+**The pack is the one measurement whose instrument is a person**, and the only artefact here that
+cannot be re-run cheaply after a mistake: a board printed wrong is an afternoon of somebody's
+attention spent on the wrong thing, and the key is sealed so the error is invisible until it is too
+late. It gets a fresh session.
+
+### ⚠️⚠️ Layer 3b: the question is closed — **operator decision, and a measurement that disagrees**
+
+**Decided: 3b does not become a gate.** The operator's basis: with the gate actually applying and the
+fifth family adopted, **every publishable board certifies under the weak solver** — so the question is
+not *should we gate on this* but *there is nothing left for it to reject*. **The population that made
+the question meaningful no longer exists**, which is a result rather than a scheduling problem. Two
+changes closed a gap three separate measurements had been trying to size: **the gate actually
+applying, and the fifth family**.
+
+⚠️⚠️ **And one measurement disagrees, recorded here rather than left out.** Run against the six
+published packages — drawn at the decided gate, with the batting-order constraint available —
+`derivable_in_view` returns **3 certified of 6**:
+
+| board | stalls | 3b |
+|---|---|---|
+| `0ed0aad8886544ca` | 7 | certified |
+| `1dc57470b44caded` | 2 | certified |
+| `fc453fed9409d918` | 5 | certified |
+| `4f0744440236caef` | 12 | **uncertified** |
+| `540c14cba5fb0d37` | 10 | **uncertified** |
+| `734c7c793eed359b` | 3 | **uncertified** |
+
+**Not monotonic** — it fails at 3 and at 12 and passes at 5 and 7 — which matches what this file
+already recorded about the five-board pack.
+
+⚠️ **The two are about different populations and that is the likely reconciliation**: these six are
+**reference data**, chosen by a writer that targets one board per distinct stall count, not a
+representative draw from the pool. A claim about *every publishable board* is a claim about the pool.
+**It is written down because a decision recorded without the datum that contradicts it is how a
+figure becomes unchallengeable**, and because anything derived from *3b rejects nothing* should be
+checked against these six first.
+
+---
+
 ## ⚠️⚠️ READ FIRST — which pool every discovery figure describes
 
 **2026-08-21.** Two separate defects touched the pool every instrument samples. Neither made a *number*

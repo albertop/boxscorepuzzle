@@ -1845,9 +1845,20 @@ the publishable range the uncertifiable share is **9%, not 29%**.
 leave 91% of thirty-plus years of calendar, which is far more than will ever be used. The expensive
 option became cheap, so the argument against gating is no longer pool.
 
-**The decision stays open until the fifty come back**, and it is deliberately not pre-empted here.
-But the value of that afternoon has shifted: it was going to decide 3b, and it is now mostly the
-answer to two other questions — **are these boards interesting, and is the difficulty curve right.**
+~~**The decision stays open until the fifty come back**~~ — **closed on 2026-08-21, and it closed
+itself.** 3b does not become a gate: with §5's gate actually applying and the batting order adopted as
+the fifth family, the measurement finds every publishable board certifying under the weak solver.
+**Not "we chose not to gate" — there is nothing left for it to reject**, so the population that made
+the question meaningful no longer exists.
+
+⚠️ One measurement disagrees — 3 of the 6 published reference packages do not certify, non-monotonically
+— and is recorded in `docs/reviews/todo.md` rather than dropped. Those six are chosen one per stall
+count rather than drawn from the pool, which is the likely reconciliation.
+
+**The afternoon keeps its value and gains focus.** It was going to decide 3b; it is now entirely the
+answer to the two questions that matter more — **are these boards interesting, and is the difficulty
+curve right** — plus the one thing only a person can supply: whether the stall scale corresponds to
+felt difficulty at all.
 Those are answered by the *tedious* and *boring* ticks on the survey sheet, not by *had to guess*.
 
 #### Layer 3b: a lower bound on humanness, measured

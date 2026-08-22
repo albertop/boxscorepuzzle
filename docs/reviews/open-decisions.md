@@ -87,8 +87,19 @@ visual intent.
 
 ## Still open from before
 
-- **Layer 3b figures are void** and need re-running once the hand-solve pack is done — including the
-  33% certified reported for the pack. They came from the predicate fixed in `a73bbc1`.
+- ✅ **Layer 3b will not become a gate — decided 2026-08-21.** Not *the uncertified arm could not be
+  built*, but **the population that made the question meaningful no longer exists**: with the gate
+  actually applying and the fifth family adopted, the operator's measurement finds every publishable
+  board certifying under the weak solver, so there is nothing left for 3b to reject. Those two changes
+  closed a gap three separate measurements had been trying to size.
+
+  ⚠️ **One measurement disagrees and is recorded rather than dropped**: over the six published
+  packages, `derivable_in_view` certifies **3 of 6**, non-monotonically. Those six are reference data
+  chosen one per stall count rather than a pool draw, which is the likely reconciliation — see
+  `todo.md`. Anything derived from *3b rejects nothing* gets checked against them first.
+
+  ⚠️ The old figures from the predicate fixed in `a73bbc1` — including the 33% certified reported for
+  the pack — stay **void**. They are not re-run: the decision they were meant to inform is taken.
 - **No `.github/`** — no CI, no coverage floor on push, no branch protection, and ruff's
   `extend-include` claims `discovery/` is linted while nothing points ruff at it (194 findings never
   reported).
