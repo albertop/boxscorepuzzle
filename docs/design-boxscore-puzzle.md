@@ -1491,11 +1491,40 @@ below that the merchant of record was doing is now either Stripe's, the operator
 the EU, GDPR applies.* GDPR follows the users, not the seller of record, so it was never something the
 merchant of record removed. **Do not "tidy" it away as a leftover of Paddle.**
 
-⚠️ **One tension worth naming rather than smoothing.** The superseded preference below justified itself by
-*selling to the Dominican Republic, Venezuela, and Spain* — and two of those are baseball countries, which
-is a wider audience than *US baseball fans*. The tax argument survives it: what a merchant of record
-uniquely bought was **EU VAT**, and only Spain is in that set. But the audience premise is the operator's
-and is broader than the tax premise, and they are not the same claim.
+⚠️⚠️ **The audience premise in the old section was wrong too, and that is the stronger finding.** The
+superseded preference justified itself by *selling to the Dominican Republic, Venezuela, and Spain*. That
+list does not describe this market:
+
+- **Spain is not a baseball country**, and there is no reason to expect Spanish players. It was the only
+  member of the set that generated the EU VAT obligation the merchant of record was being paid to absorb —
+  **the tax argument's whole weight rested on the one entry with no reason to be there.**
+- **The Dominican Republic and Venezuela are baseball countries and are still not the target market.** §2
+  and §13 both say the target market is the United States, and §13 is explicit that Latin America is *not*
+  a target market and that treating it as one would need a design review rather than an extension. Nothing
+  about that changed.
+
+**So it was not one premise that stopped holding; it was two, and the second was never true.** The tax
+premise expired with the market it was priced for. The audience premise was built on a list that does not
+describe the audience.
+
+### ⚠️ One processor, and PayPal is not rejected — it is undecided pending evidence
+
+**Do not add a second processor.** The integration is not the cost. The cost is:
+
+- **Two sources of truth about who has paid.** Every state change — renewal, cancellation, failed charge —
+  arrives by two paths in two formats, and reconciling them is permanent work.
+- **Two webhooks to verify, each with its own signature.** §35 calls the unverified webhook the
+  highest-value attack in this system: a forged notification grants a free subscription. Doubling that
+  surface buys a second way to get it wrong.
+
+**And it would not solve what it is being considered for.** PayPal has serious restrictions in Venezuela,
+and in the Dominican Republic somebody with PayPal generally has a card.
+
+⚠️ **Record this as undecided, not as rejected**, because those are different states and only one of them
+can be reopened cheaply. **Launch with Stripe. A second processor waits for evidence of a blocked
+customer.** What that evidence looks like: someone who wants to pay, tries, and cannot — arriving as a
+support message, a failed-checkout pattern in Stripe, or a country whose cards are declining. Adding a
+processor before there is one subscriber is complexity bought against a customer who may never arrive.
 
 ---
 
@@ -1593,6 +1622,15 @@ These must exist in v1 even if no paid feature is used.
 The target market is the United States. Spanish adds convenience for Latin American baseball fans —
 who can play because they read a boxscore the same way — but it is not required for launch and can
 slip without affecting the product.
+
+⚠️ **The payment decision rests on this same premise, and the two must not drift** (§10, 2026-08-22).
+Dropping the merchant of record for Stripe was justified by *the audience is US baseball fans*, and the
+superseded preference it replaced had argued the opposite from a list — Dominican Republic, Venezuela,
+Spain — that does not describe this market. **The Caribbean-audience reasoning that would have raised
+Spanish to a must-have is the same reasoning that was found not to hold there.** This section is
+unchanged by that: it already said the United States, and it already said Latin America is not a target
+market. What is new is that **a second decision now depends on it**, so a future argument for a Caribbean
+market has to move both or neither.
 
 **What stays mandatory regardless: seam C11 — zero user-facing strings in code.** All copy goes
 through the string catalog from day one, including generated reveal text and metadata. That costs

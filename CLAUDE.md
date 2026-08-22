@@ -34,7 +34,9 @@ code. Where a domain term needs care, use the English baseball term — the voca
 English.
 
 The UI ships in English. **Spanish is a nice-to-have, not a must-have** (§13) — it can slip without
-affecting launch. But **seam C11 is mandatory regardless: zero user-facing strings in code.** All copy
+affecting launch. ⚠️ **The payments decision now rests on the same premise** (§10, 2026-08-22: Stripe
+rather than a merchant of record, because the audience is US baseball fans). An argument for a Caribbean
+market would have to move both or neither; they are not independent any more. But **seam C11 is mandatory regardless: zero user-facing strings in code.** All copy
 goes through the string catalog from day one, including generated reveal text and metadata. Cheap now,
 expensive to retrofit.
 

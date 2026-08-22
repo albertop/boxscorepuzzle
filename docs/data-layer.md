@@ -298,6 +298,10 @@ link is a report that has to be written differently.
 - ⬜ **EU VAT, if European sales ever reach a real volume.** Payments moved from a merchant of record to
   Stripe on 2026-08-22 (§10 of the design document) on the premise that the audience is US baseball fans.
   Stripe Tax computes; it does not become the seller. **EU revenue share is the number that reopens it.**
+- ⬜ **A second payment processor — undecided, not rejected** (§10). One processor means one source of
+  truth about who has paid and one webhook signature to verify, and §35 calls that webhook the
+  highest-value attack here. **The evidence that would reopen it is a blocked customer**: someone who
+  tries to pay and cannot, seen in support or in a failed-checkout pattern.
 - ⬜ **The API surface itself.** Nothing here says what the endpoints are. That is the next document, or
   the first commit, and it should not be invented in passing.
 
