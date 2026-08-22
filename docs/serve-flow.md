@@ -436,6 +436,23 @@ So the share is the growth channel and it would be **sharing a game the first-ti
 understand**. Building it first optimises the funnel's top while the step below it is missing. The
 onboarding has to work before the thing that brings people to it.
 
+### ⚠️ The button exists and does nothing — deliberately, since 2026-08-22
+
+The reveal carries a *Share* button beside *Back to the board*, `disabled`, with the three-node web
+share mark. Operator's instruction: **place it in the UX now, before it works.**
+
+**The reason it is worth drawing early** is that the reveal is where the decision to show anyone gets
+made, so where the button sits changes what the rest of that screen can be. Discovering that after the
+grid is built moves every other control on the screen.
+
+⚠️ **`disabled`, not merely unwired.** A button that looks pressable and does nothing makes the player
+doubt whether the result was recorded — which is the one thing the reveal exists to tell them. Disabled
+says *not yet* in the language every platform already speaks.
+
+**Nothing above this heading is relaxed by it.** The ordering still holds: the grid does not get built
+before the onboarding, and the grid must still never leak the solution or a player's name (§7). What
+exists today is a shape on a screen.
+
 ---
 
 ## 8. Statistics — for the operator, not the player

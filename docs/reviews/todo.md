@@ -335,8 +335,89 @@ unchecked commit nobody can discover.
 
 ⬜ **A step-level `if` would not help and is the obvious wrong turn**: the runner starts, checks out and
 installs before reaching the condition, so a skipped step bills like a run one. Only a skipped job or
-workflow saves. Splitting `forge` and `browser` into jobs with their own `paths` would save more, and
-is a restructure left undone deliberately.
+workflow saves.
+
+---
+
+## 2026-08-22 — the restructure: three workflows, and the argument that was wrong
+
+**Done.** `ci.yml` is now `ci-forge.yml`, `ci-browser.yml` and `weekly.yml`. **`docs/ci.md` is the one
+place this is explained** — what runs where, what each decision cost, what would reverse it. It exists
+because the reasoning was about to be spread across `CLAUDE.md`, `python-conventions.md` and three YAML
+headers, which is the shape this project keeps being bitten by.
+
+**Two files rather than two jobs, and that is forced.** `paths-ignore` is a property of a workflow, not
+of a job: a single file skips only when *every* changed path is ignorable, so the 32% of pushes touching
+only `serve/` were still paying 9.5 minutes for a Python suite that could not have been affected. That
+is also the correction to my own estimate — I said the first `paths-ignore` cut would land at 1,365 and
+it lands at **2,018**, from exactly this misreading of per-job as per-workflow.
+
+**Coverage left the push runs** and now runs on the hook and weekly. The floor is still `fail_under = 95`
+in one place.
+
+### ⚠️⚠️ The argument for keeping CI primary was mine, and it was imported
+
+I argued CI must stay the primary runner because `git push --no-verify` skips the hook and *somebody*
+could push unchecked. The operator's answer: **there is one "somebody" and it is me.** A developer who
+deliberately bypasses his own hook is not a case a duplicate CI run protects against — he can ignore a
+red badge just as easily, since nothing gates on it.
+
+That is `CLAUDE.md`'s *a justification is scoped, and it does not travel*, in its exact shape: a reason
+that is true in a team, reused in a one-machine project where the premise it rests on does not exist.
+Recorded here rather than only fixed, because nothing about the sentence looked wrong.
+
+### What CI still buys, which is why it did not go entirely
+
+- **A `--frozen` install from nothing.** The laptop's virtualenv is months old and cannot fail the way a
+  clean resolve can. This is the one property the hook structurally cannot check.
+- Pull requests, when there are any. A run history. And the weekly run, which answers the one question
+  the hook cannot ask about itself: *has it been skipped or disabled for a month?*
+
+### ⚠️ The accepted cost, written down so it is not discovered
+
+`forge/uv.lock` and `forge/pyproject.toml` are inside `ci-browser.yml`'s ignored path and that job
+installs from them, so **a lockfile change alone will not run the browser suite** until Monday. Reverse
+the ignore if a dependency break ever reaches `main` this way.
+
+⬜ **Owed, unchanged: minutes per workflow once a month has run**, before and after. The 658/month figure
+is a projection over the old push history, not a measurement.
+
+---
+
+## 2026-08-22 — ⬜ four copies of one button, made knowingly
+
+`.reveal-close` was restyled to match the rest of the app — it was the only full-width white-paper
+outline button in the product, on the one screen a player reaches by earning it. It is now the same
+dark-ground / outline pair the tutorial's footer uses.
+
+**Which makes it a fourth copy of that look.** `.landing-play`, `.tutorial-back` and `.tutorial-next`
+each spell it out in `landing.css`; `.reveal-close` and `.reveal-share` now spell it again in
+`board.css`, because `play.html` does not load `landing.css`. Four places saying one thing with nothing
+checking they agree is this project's most-recorded defect.
+
+⬜ **The fix is a shared button rule the three pages can reach**, which means either a fourth stylesheet
+on every page or component rules in `tokens.css` — and that file is currently variables only, which is a
+property worth keeping. Not decided; not urgent; recorded before continuing rather than after a review
+finds it.
+
+⚠️ **The 1:2 split the tutorial uses does not survive here**, and it was tried: at 375px it leaves the
+way back 121px and `Back to the board` breaks onto two lines beside a single-line neighbour. Equal
+halves. **Found in a picture** — every computed style said 50px and agreed with itself.
+
+---
+
+## 2026-08-22 — ⬜ the share button is drawn and does nothing
+
+The reveal now carries a *Share* button beside *Back to the board*, `disabled`, with the three-node web
+share mark. Operator's instruction: put it in the UX now even though it has no use yet.
+
+**Disabled rather than merely unwired**, because a button that looks pressable and does nothing makes
+the player doubt whether their result was recorded — which is the one thing the reveal exists to tell
+them.
+
+⬜ **What it needs to become real:** the share grid, which §7 says must never leak the solution or a
+player's name, and §26 which says comparison is the paid feature. Neither is built. `docs/serve-flow.md`
+is where the grid's content gets decided.
 
 ---
 
