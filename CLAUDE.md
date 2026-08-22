@@ -17,6 +17,13 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 
 ⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
 
+**First milestone: `docs/beta-0.md`. Read it to know what counts as done.** The free daily game,
+complete, on the VPS, given to friends and family — landing, tutorial, board, check, reveal, share,
+persistence, event upload, and **a calendar with real inventory**. No accounts, no Stripe, no archive, no
+streaks, no `canAccess()`. ⚠️ **The large piece is the one that has never been run: generation at volume,
+calendar construction, signed packaging in bulk.** The calendar also inherits *one game, one puzzle* over
+everything ever published, which no package and no validation layer can enforce.
+
 Status: design complete at the "what and why" level. Implementation starting.
 
 ---
