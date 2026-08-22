@@ -248,13 +248,49 @@ statement about the generator** — that it does not produce underivable boards 
 question about the whole inventory, not a per-rung one. Substituting sixteen because sixteen is what
 exists would be the shape `CLAUDE.md` records under *a pack that claims to satisfy quotas and does not*.
 
-⬜ **What has to be decided: the gate's size and its axis**, on the current stall scale. §7 says a value
-that shapes the product is not invented in passing, so it is not being invented here.
+**Decided 2026-08-22: the gate is Pack A's sixteen *plus* a derivability-only sample drawn across the
+shipping inventory** — no survey, no ranking sheet, just *did it solve without guessing*. Those sheets are
+far cheaper per board than a calibration sheet, which is what makes a larger N affordable. **The two
+questions are separate and only one of them is a gate.**
 
-**Recommendation, for the operator to take or reject:** Pack A's sixteen **plus** a derivability-only
-sample drawn across the shipping inventory — no survey, no ranking sheet, just *did it solve without
-guessing*. Those are cheaper per board than a calibration sheet, which is what makes a larger N
-affordable. **The two questions are separate and only one of them is a gate.**
+#### ⚠️⚠️ The derivability sample is a falsification test, not a rate estimate — and that sets its shape
+
+Writing it down changed what it is. The obvious reading is *sample n boards, estimate what fraction are
+underivable*. **That is the wrong instrument**, and reaching for it would produce a number that licenses
+shipping known-bad boards.
+
+**What the gate actually tests is an assumption**: that layer 3 finishing without backtracking implies a
+person can derive the board. `CLAUDE.md` states plainly that it does not follow — layer 3 propagates
+intervals across forty simultaneous relations, which is stronger than any person.
+
+**So one failure is a finding, not a data point.** A board that passes all four layers and defeats a
+competent solver by hand **falsifies the assumption the entire publication rule rests on**, and the
+response is to stop and understand it — not to divide it by n and call it 4%.
+
+**And that sets the sample's shape: spread, not count.** A falsification test is sized by *giving the
+assumption a real chance to fail*, so the sample is **stratified over the things that could break it**:
+
+- **Stall rungs** across the range, weighted toward the hard end — that is where the assumption is
+  weakest.
+- **Era**, since §6 allows pre-1950 boards up to 5% of what a player sees and those have different roster
+  shapes.
+- **Roster shape**, batter-heavy against pitcher-heavy. ⚠️ The pitcher cap went 2 → 4 → 6 and that
+  **changed which boards enter the pool at all**; the pitching section now contributes 45% of stalls
+  against 34% at four. Boards that only became eligible under the new cap are the least-examined
+  population there is.
+- **Equation families**, and specifically **boards depending on the batting order** — it became the fifth
+  family on 2026-08-21, it is the one relation that cannot be read off a boxscore, and no figure taken
+  before that date counted it.
+
+⚠️ **If the operator does want a rate as well, the arithmetic is standard and should be stated rather than
+guessed:** n boards all passing puts the underlying rate below roughly `3/n` at 95% confidence — 30 boards
+gives under 10%, 100 gives under 3%. **At 150 puzzles in five months, 3% is still four or five ruined
+days**, which is the number that shows why the falsification reading is the right one: no tolerable rate
+exists, so the gate is pass-or-stop.
+
+⬜ **The exact N and the stratum quotas stay open**, and `audit()` must assert them after selection rather
+than print them — the rule `CLAUDE.md` records from the weighted draw that produced zero boards at the
+easiest rung and reported quotas it had not met.
 
 `CLAUDE.md` is unambiguous that it is a **launch gate, not a review step**: layer 3 propagates intervals
 across forty-odd simultaneous relations, which is stronger than any person, so **a board can pass all four
@@ -305,18 +341,20 @@ itself.
 **This has to be decided rather than inherited**, because if it is public **the operator no longer
 controls who sees the first version** — and a first version is seen once.
 
-⬜ **Open.** What it turns on is not security; nothing here is secret and the puzzles are meant to be
-played. It is that a beta which anybody can find stops being a beta: a stranger who meets a rough edge
-forms an opinion the operator never gets to answer, and there is deliberately no feedback channel to hear
-it through (above).
+**Decided 2026-08-22: public, and accepted.** No gate.
 
-**What is available, cheapest first:** `noindex` plus an unlisted path, which keeps it out of search
-without gating anyone; HTTP basic auth at nginx, which is a real gate and is one line, ⚠️ **but sits in
-front of the puzzle and so has to be reasoned against §23**; or public and accepted.
+**The reason is that any gate is a gate on the thing being measured.** §23 already requires the daily to
+be served without authentication, and the share — which is what this milestone exists to test — **spreads
+the URL by design**. Basic auth would control who sees the first version at the price of making the share
+untestable: whoever receives the image could not play.
 
-⚠️ **Note that `noindex` and an unlisted path are not access control** — they are obscurity, and the URL
-travels in every share. **Which is exactly the mechanism this milestone is testing.** A share that works
-is a link spreading beyond friends and family by design.
+**What is accepted along with it:** a stranger who meets a rough edge forms an opinion the operator never
+gets to answer, and there is deliberately no feedback channel to hear it through (above).
+
+⚠️ **The rejected middle is worth naming, because it looks like a compromise and is not one.** `noindex`
+plus an unlisted path is **obscurity, not access control** — and the URL travels in every share, so it
+reduces accidental traffic and not directed traffic. It would have bought the appearance of a private beta
+while leaving the actual exposure unchanged.
 
 ---
 
