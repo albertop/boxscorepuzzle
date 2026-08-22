@@ -255,14 +255,6 @@ const en = {
   // batters, one pitcher and three columns; a real one is six columns and up to thirteen rows. A
   // player who is not told will spend a step wondering why it looks wrong instead of watching the
   // relation work.
-  // ⚠️⚠️ **"This one", and the two words are the whole fix.** This read "A made-up boxscore, smaller
-  // than a real one" directly above a paragraph opening "A real boxscore with most of its numbers
-  // taken out" — **both true about different things**, the tutorial's board being invented and the
-  // game's being real, with nothing on screen saying which is which. On the first screen a stranger
-  // sees, that is a contradiction rather than a caveat.
-  //
-  // The paragraph describes the game; this says the board under it is the exception.
-  "tutorial.made_up": "This one is made up and smaller than a real board.",
 
   // ⚠️⚠️ **The first screen, and it teaches no relation at all.** The wizard taught five relations and
   // never said what the player was trying to do: somebody arriving cold met a grid and could not tell

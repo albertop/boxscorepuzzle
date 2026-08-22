@@ -2978,25 +2978,22 @@ suite("The tutorial: six steps, skippable, and teaching on a board that adds up"
     // ⚠️ Present and visible. §1b: a skip the visitor has to hunt for is a compulsory tutorial wearing
     // a disguise, which is the rule the reversal removed.
     assert(view.skip && !view.skip.hidden, "the skip is missing or hidden");
-    assert(view.page.querySelector(".tutorial-made-up").textContent.length > 0, "nobody says the board is invented");
-    assert(!view.page.querySelector(".tutorial-made-up").hidden, "the first step does not say the board is invented");
-
     view.teardown();
   });
 
-  test("⚠️ the board is called made-up once, not on all five steps", async () => {
-    // It is a caveat about the board rather than part of any relation, and five repetitions teach the
-    // eye to skip the line above the board — which is where each step's own sentence lives.
+  test("⚠️ nothing on any screen calls the board made up", async () => {
+    // **Removed 2026-08-22, and the reasoning it overrides is worth keeping.** The line read "This one
+    // is made up and smaller than a real board", and before that it stood on all five relation
+    // screens. Its own note argued it could not go: *a four-batter, three-column board is visibly not
+    // a boxscore, and a player who is not told spends a step deciding whether the tutorial is broken.*
     //
-    // ⚠️ **Both halves.** Removing it outright is the other reading and it is wrong while no first
-    // screen exists to carry it: a four-batter, three-column board is visibly not a boxscore, and a
-    // player who is not told spends a step deciding whether the tutorial is broken.
-    for (const step of [1, 2, 3, 4, 5]) {
+    // ⚠️ The operator saw the screen with the line on it and took it off. What replaces it is the
+    // opening paragraph, which says what a real board is — *a real boxscore with most of its numbers
+    // taken out* — so the difference is stated as the subject rather than as a caveat about the
+    // illustration. This test exists so the element does not return without that being a decision.
+    for (let step = 0; step <= 6; step += 1) {
       const view = await mount({ start: step });
-      assert(
-        view.page.querySelector(".tutorial-made-up").hidden,
-        `step ${step + 1} repeats the made-up caveat`,
-      );
+      assert(!view.page.querySelector(".tutorial-made-up"), `screen ${step + 1} carries the caveat again`);
       view.teardown();
     }
   });

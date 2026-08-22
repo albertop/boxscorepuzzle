@@ -180,11 +180,6 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
   const title = doc.createElement("h1");
   title.className = "tutorial-title";
 
-  const made = doc.createElement("p");
-  made.className = "tutorial-made-up";
-  // Said out loud, or the smaller board reads as a bug and the player spends the step on that.
-  made.textContent = text("tutorial.made_up");
-
   const stage = doc.createElement("div");
   stage.className = "tutorial-stage";
 
@@ -219,7 +214,7 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
   // material and can be scrolled to.
   const tail = doc.createElement("div");
   tail.className = "tutorial-tail";
-  page.append(bar, title, made, stage, body, sum, rule, nav, tail);
+  page.append(bar, title, stage, body, sum, rule, nav, tail);
 
   back.addEventListener("click", () => {
     if (step === 0) return leave(ROUTES.landing);
@@ -365,17 +360,6 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
       : fill("tutorial.progress", { step: String(step + 1), total: String(STEPS.length) });
     skip.hidden = finished;
     title.textContent = finished ? text("tutorial.title") : text(current.name);
-    // ⚠️⚠️ **The first step only. It used to appear on all five.**
-    //
-    // It is a caveat about the board, not part of any relation, and repeating it five times taught the
-    // eye to skip the line above the board — which is where the step's own sentence lives. Saying it
-    // once is enough.
-    //
-    // ⚠️ **Once, not never.** Removing it outright was the other reading and it is wrong until a first
-    // screen exists to carry it: a four-batter, three-column board is visibly not a boxscore, and a
-    // player who is not told spends a step deciding whether the tutorial is broken instead of watching
-    // the relation work. It moves to that screen when there is one.
-    made.hidden = finished || step > 0;
     // ⚠️ **Split on a blank line, so a step may carry more than one paragraph.** The alternative was
     // one `textContent` and a seven-line block on the screen a stranger decides from. Every other step
     // holds a single paragraph and comes out as one child, unchanged.

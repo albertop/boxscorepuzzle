@@ -209,12 +209,6 @@ body {
   font-weight: 700;
 }
 
-.tutorial-made-up {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-
 .tutorial-stage { margin: 14px 0 0; }
 
 .tutorial-body {
