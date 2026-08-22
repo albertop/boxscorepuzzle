@@ -188,7 +188,9 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
   const stage = doc.createElement("div");
   stage.className = "tutorial-stage";
 
-  const body = doc.createElement("p");
+  // ⚠️ A `div`, not a `p`: the first screen's text is three paragraphs and a `<p>` inside a `<p>` is
+  // not a thing the parser will build. Every other step is a single paragraph and reads identically.
+  const body = doc.createElement("div");
   body.className = "tutorial-body";
 
   const sum = doc.createElement("p");
@@ -374,7 +376,16 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     // player who is not told spends a step deciding whether the tutorial is broken instead of watching
     // the relation work. It moves to that screen when there is one.
     made.hidden = finished || step > 0;
-    body.textContent = finished ? text("tutorial.reference_hint") : text(current.body);
+    // ⚠️ **Split on a blank line, so a step may carry more than one paragraph.** The alternative was
+    // one `textContent` and a seven-line block on the screen a stranger decides from. Every other step
+    // holds a single paragraph and comes out as one child, unchanged.
+    body.replaceChildren(
+      ...(finished ? text("tutorial.reference_hint") : text(current.body)).split("\n\n").map((part) => {
+        const paragraph = doc.createElement("p");
+        paragraph.textContent = part;
+        return paragraph;
+      }),
+    );
     // ⚠️ **Hidden when the step has none, not merely empty.** The finish screen already emptied these
     // and hid them together; the first step is the second case, and an empty-but-present line leaves a
     // gap where the eye expects the worked example every other screen has.

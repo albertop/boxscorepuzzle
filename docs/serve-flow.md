@@ -350,9 +350,33 @@ rows are positions throughout, and the boxscore at the end is the answer to *who
 ## 7b. The share is a PNG of the board — decided, not built
 
 **The board itself, as an image. The cells the player filled in are replaced with random digits and
-then blurred; the given cells show their real values.** With it go **the time and the hints used**,
-because §26's comparison rests on that pair and a result carrying one without the other cannot be
+then blurred; the given cells show their real values.** With it go **the time, the hints used and the
+tries**, because §26's comparison rests on them and a result carrying one without the others cannot be
 compared to anything.
+
+⚠️⚠️ **Tries is shared, and that is a decision rather than a consequence.** It appears on the reveal,
+the share carries what the reveal shows, so it would have arrived in the image whether or not anybody
+chose it. **Said here so it is chosen.**
+
+The argument is the one that admitted hints: *a hint does not corrupt a shared result if it is shared
+alongside the time*. **A time reached on the first attempt and the same time reached after fifteen is
+two different results**, and every reader takes them as two — so hiding the count would make the time
+mean less, not more.
+
+⚠️ **What it counts and what it is called are different on purpose.** The C7 record stores
+`failed_checks`: presses of *Check* on a **completely filled** board that did not balance. An
+incomplete board is never counted — that is a mistake about the state rather than an attempt at the
+answer. The reveal shows **Tries**, which is that plus the one that worked, so a clean solve reads
+`1` rather than `0`.
+
+⚠️ **The label is not "failed checks", and §27 is the reason.** The game cannot be lost; a tally of a
+player's failures on the screen celebrating their finish argues the other way. What the number
+measures is attempts, and it says attempts.
+
+**What it is for**: pseudo brute force. A player who fills the board, checks, fails and checks again
+without changing much is probing; one who fails, reviews and corrects is not. `errors` cannot see the
+difference — it is a **set** of first-wrong cells, so twenty presses look identical to one. **Two or
+three tries says nothing; twenty does**, and the separation is at the tail.
 
 ### ⚠️ The blur is not what protects the puzzle — the random digits are
 

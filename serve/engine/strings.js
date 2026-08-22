@@ -107,6 +107,10 @@ const en = {
   "reveal.close": "Back to the board",
   // ⚠️ Beside the time, because a shared result has to carry both. One minute with three hints and one
   // minute with none are two different results, and that is the whole reason hints are allowed at all.
+  // ⚠️ **"Tries", never "Failed checks".** §27: the game cannot be lost, and a tally of failures on the
+  // screen celebrating a finish argues the other way. What is measured is attempts at a completed
+  // board — the engine records how many failed and this line adds the one that worked.
+  "reveal.tries": "Tries",
   "reveal.hints": "Hints used",
   "reveal.no_hints": "None",
   // ⚠️ The way back to the clipping from a finished board. It replaces the keypad, because a board that
@@ -242,16 +246,23 @@ const en = {
   "tutorial.progress": "Step {step} of {total}",
   "tutorial.back": "Back",
   "tutorial.next": "Next",
-  // ⚠️ **The word is "Cancel"; the key still says `skip` because the *action* still is one.** The
-  // control leaves the tutorial without finishing it — `docs/serve-flow.md` §1b's skippability, which
-  // is the reversal of §8 and the reason this screen is not a barrier. A key renamed to follow a label
-  // would leave the document and the catalogue describing the same control with different words.
-  "tutorial.skip": "Cancel",
+  // ⚠️ **"Skip", and it went to "Cancel" for one commit before coming back.** *Cancel* sounds like
+  // undoing an operation and *Exit* like leaving a place; what the player is doing is **skipping an
+  // optional explanation**, which is what §1b calls it and what `docs/serve-flow.md` is written
+  // around. The key never moved, because the action never did.
+  "tutorial.skip": "Skip",
   // ⚠️ **Said out loud, because otherwise it reads as a bug.** The board in the tutorial is four
   // batters, one pitcher and three columns; a real one is six columns and up to thirteen rows. A
   // player who is not told will spend a step wondering why it looks wrong instead of watching the
   // relation work.
-  "tutorial.made_up": "A made-up boxscore, smaller than a real one.",
+  // ⚠️⚠️ **"This one", and the two words are the whole fix.** This read "A made-up boxscore, smaller
+  // than a real one" directly above a paragraph opening "A real boxscore with most of its numbers
+  // taken out" — **both true about different things**, the tutorial's board being invented and the
+  // game's being real, with nothing on screen saying which is which. On the first screen a stranger
+  // sees, that is a contradiction rather than a caveat.
+  //
+  // The paragraph describes the game; this says the board under it is the exception.
+  "tutorial.made_up": "This one is made up and smaller than a real board.",
 
   // ⚠️⚠️ **The first screen, and it teaches no relation at all.** The wizard taught five relations and
   // never said what the player was trying to do: somebody arriving cold met a grid and could not tell
@@ -269,12 +280,16 @@ const en = {
   // ⚠️ **The reveal is promised up front**, because it is what separates this from a number puzzle
   // (§7). A player who does not know there is a game behind the grid is solving sudoku.
   "tutorial.step.what_this_is_name": "How this works",
+  // ⚠️ **Three paragraphs, separated by a blank line, and the split is not decoration.** As one block
+  // it ran seven lines on a phone — the least readable thing in the tutorial, on the screen where a
+  // stranger decides whether to continue. The content was right and the shape was not: what you are
+  // doing, then that it is deducible, then what you get for finishing.
   "tutorial.step.what_this_is":
-    "A real boxscore with most of its numbers taken out. You put them back, and nothing is guessed: "
-    + "every missing number follows from the ones still on the board. No trivia, and no baseball "
-    + "knowledge beyond the five relations coming up. The scoreboard, the footnote line and the cells "
-    + "already filled never change; everything else you work out. Finish it and you find out which "
-    + "game it was: the teams, the date, the players.",
+    "A real boxscore with most of its numbers taken out. You put them back.\n\n"
+    + "Nothing is guessed: every missing number follows from the ones still on the board. No trivia, "
+    + "and no baseball knowledge beyond the five relations coming up. The scoreboard, the footnote "
+    + "line and the cells already filled never change.\n\n"
+    + "Finish it and you find out which game it was: the teams, the date, the players.",
   "tutorial.blank_prompt": "One number is missing. Here is how you get it.",
   // ⚠⚠ **The footnote line is named, and the warning is the point.** §6: nine rows in ten carry
   // every footnote term at zero, so players learn to stop looking — and the row where one appears is

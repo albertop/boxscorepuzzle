@@ -222,6 +222,10 @@ body {
   font-size: 16px;
   line-height: 1.4;
 }
+/* One paragraph on five of the six screens, three on the first. The gap between them is what makes
+   the opening readable rather than a wall; the single-paragraph case is unchanged. */
+.tutorial-body p { margin: 0; }
+.tutorial-body p + p { margin-top: 10px; }
 
 /* The arithmetic, on its own line and in the board's numeric face. */
 .tutorial-sum {

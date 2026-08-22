@@ -104,6 +104,12 @@ export function isSession(saved) {
     return false;
   }
   if (assisted !== undefined && typeof assisted !== "boolean") return false;
+  // The same whole-number rule the entries follow. A session is player-writable storage, so the shape
+  // is checked here and the value is trusted afterwards — as `elapsed` is, and with the same residual.
+  const { failedChecks } = saved;
+  if (failedChecks !== undefined) {
+    if (!Number.isInteger(failedChecks) || typeof failedChecks === "boolean" || failedChecks < 0) return false;
+  }
   return true;
 }
 
@@ -142,6 +148,9 @@ export function createGame(puzzle, clock = createClock()) {
   /** Cells whose first entry was wrong. A set, not a counter: entering the same wrong value twice is
    * one mistake made once, and a counter would make hesitation look like ignorance. */
   const firstWrong = new Set();
+  // ⚠️ A counter and not a set, which is the opposite of `firstWrong` above and deliberately so. The
+  // same cell wrong twice is one mistake; the same board submitted twice is two attempts.
+  let failedChecks = 0;
   const hinted = new Set();
   /** Frozen at the moment the board was finished, so a record taken later reports the same duration. */
   let finishedAt = null;
@@ -324,7 +333,18 @@ export function createGame(puzzle, clock = createClock()) {
       for (const cell of blanks) {
         if (valueOf(cell.name) !== cell.answer) firstWrong.add(cell.name);
       }
-      return { state: this.isSolved() ? "solved" : "wrong" };
+      const solved = this.isSolved();
+      // ⚠️⚠️ **A full board that did not balance, counted per press.** Not cells and not errors:
+      // `firstWrong` is a *set* of cells, so a player who fixes one number and re-checks adds nothing
+      // to it, and twenty presses of Check look identical to one. **This is the signal that set cannot
+      // carry** — somebody who fills the board, checks, fails, and checks again without changing much
+      // is probing; somebody who fails, reviews and corrects is not, and at the tail the two are
+      // different games.
+      //
+      // ⚠️ An incomplete board returns above and is never counted. Pressing Check on a half-filled
+      // board is a mistake about the state rather than an attempt at the answer.
+      if (!solved) failedChecks += 1;
+      return { state: solved ? "solved" : "wrong" };
     },
 
     /** Whether this board has been finished. Restored with the session, so a reopen knows. */
@@ -358,6 +378,11 @@ export function createGame(puzzle, clock = createClock()) {
         duration_ms: finishedAt ?? clock.elapsed(),
         hints: hinted.size,
         errors: firstWrong.size,
+        // ⚠️ **The event, not the presentation.** C7 stores what happened — presses of Check that
+        // failed on a full board — and the reveal shows *Tries*, which is this plus the one that
+        // succeeded. Storing the displayed number instead would put a derived figure in the record and
+        // lose the ability to ask how many attempts failed, which is the question the field exists for.
+        failed_checks: failedChecks,
         // ⚠️ Present and null on purpose. What a *player* used is not observable from entries alone —
         // the engine can see the board, not the reasoning — and inventing a value would put a number
         // in the record that nobody can defend. The seam exists; the measurement does not yet.
@@ -377,6 +402,7 @@ export function createGame(puzzle, clock = createClock()) {
       entries: Object.fromEntries(entries),
       hinted: [...hinted],
       firstWrong: [...firstWrong],
+      failedChecks,
       assisted,
       // ⚠️ **The frozen duration, not a flag.** A boolean would say the board was finished and leave
       // the shell to ask the clock how long it took — and the clock has kept running since. The
@@ -416,6 +442,7 @@ export function createGame(puzzle, clock = createClock()) {
       // refused session costs nothing, and a truncated hint list costs less than an uncapped one.
       for (const name of (saved.hinted ?? []).slice(0, HINTS_PER_GAME)) if (cells.has(name)) hinted.add(name);
       for (const name of saved.firstWrong ?? []) if (cells.has(name)) firstWrong.add(name);
+      failedChecks = saved.failedChecks ?? 0;
       finishedAt = saved.finishedAt ?? null;
       // ⚠️ **Restored, and only ever upwards.** A saved session that was assisted stays assisted; a
       // reload must not be a way to launder a pre-filled board into a clean record.

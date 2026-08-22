@@ -647,7 +647,8 @@ td.label.substitute { padding-left: 14px; }
    player who spent two hints could not see that he had. Declaring them together is what stops the
    pair separating again — the same move the three word keys on the pad just needed. */
 .reveal-time,
-.reveal-hints {
+.reveal-hints,
+.reveal-tries {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -656,7 +657,8 @@ td.label.substitute { padding-left: 14px; }
   font-size: 12px;
   color: var(--ink);
 }
-.reveal-hints { margin-top: 4px; }
+.reveal-hints,
+.reveal-tries { margin-top: 4px; }
 .reveal-hints-figure {
   font-size: 18px;
   font-weight: 700;
@@ -666,6 +668,20 @@ td.label.substitute { padding-left: 14px; }
 /* ⚠️ A clean solve says so quietly. `None` in the hint colour would shout an absence, and the whole
    point of printing the line unconditionally is that its presence is not the news. */
 .reveal-hints[data-state="none"] .reveal-hints-figure {
+  font-size: 15px;
+  color: var(--muted);
+}
+
+/* ⚠️ The same weight as the hints figure but not the same colour: `--hinted` marks a cell the game
+   gave away, and an attempt is not that. `--ink` says the number is a fact about the solve rather than
+   a debt against it — §27, the game cannot be lost. */
+.reveal-tries-figure {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+/* Solved first time, said quietly for the reason the clean-hints row is: its presence is not the news. */
+.reveal-tries[data-state="none"] .reveal-tries-figure {
   font-size: 15px;
   color: var(--muted);
 }

@@ -322,11 +322,54 @@ suite("The game: state, entries and the C7 record", () => {
     // solve. Always present, `false` on every real game.
     equal(
       Object.keys(record).sort(),
-      ["assisted", "duration_ms", "errors", "highest_technique", "hints", "puzzle_id", "solved"],
+      ["assisted", "duration_ms", "errors", "failed_checks", "highest_technique", "hints", "puzzle_id", "solved"],
     );
     equal(record.assisted, false, "an ordinary game reported itself as assisted");
+    equal(record.failed_checks, 0, "a game nobody checked reports a failed attempt");
     equal(record.duration_ms, 3000, "duration is not measured from the injected clock");
     equal(record.puzzle_id, puzzle.id);
+  });
+
+  test("⚠️⚠️ a full board that does not balance is one try, and an incomplete one is none", () => {
+    // **The signal `errors` cannot carry.** `firstWrong` is a set of cells, so a player who fixes one
+    // number and re-checks adds nothing to it — twenty presses of Check look identical to one. This
+    // counts the presses, which is what separates somebody probing from somebody correcting.
+    const game = createGame(puzzle);
+
+    // ⚠️ An incomplete board first, and it must count nothing: pressing Check on a half-filled board is
+    // a mistake about the state, not an attempt at the answer.
+    equal(game.check().state, "incomplete");
+    equal(game.record().failed_checks, 0, "an incomplete board counted as a try");
+
+    // Every blank filled wrongly, then checked twice with nothing changed in between.
+    for (const name of game.blanks()) game.enter(name, 9);
+    equal(game.check().state, "wrong", "a board of nines balanced");
+    equal(game.check().state, "wrong");
+
+    equal(game.record().failed_checks, 2, "the same board submitted twice counted as one attempt");
+  });
+
+  test("⚠️ a solved board is not a failed check", () => {
+    // The other half. A counter that never stopped counting would make every finish read as one more
+    // attempt than the player made, and the reveal adds the successful one back.
+    const game = createGame(puzzle);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+
+    equal(game.check().state, "solved");
+    equal(game.record().failed_checks, 0, "the check that worked was counted as a failure");
+  });
+
+  test("⚠️ the count survives a reload, because a shared result must not improve on refresh", () => {
+    const game = createGame(puzzle);
+    for (const name of game.blanks()) game.enter(name, 9);
+    game.check();
+    game.check();
+
+    const restored = createGame(puzzle);
+    assert(restored.restore(game.snapshot()), "the session was refused");
+
+    equal(restored.record().failed_checks, 2, "a reload reset the attempts to zero");
   });
 
   test("⚠️ the traversal reaches no footnote cell, because none is blank", () => {

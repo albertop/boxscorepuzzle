@@ -141,6 +141,31 @@ export function renderReveal(puzzle, record) {
   hints.append(hintLabel, hintFigure);
   result.append(hints);
 
+  // ⚠️⚠️ **Tries, and the number shown is the record's failed checks plus one.** The engine counts
+  // presses of Check that failed on a full board; the player made one more attempt than that, and it
+  // is the one that worked. **Both numbers are true and neither is the other**: C7 stores the event —
+  // how many attempts failed — and this states what the player did, which is why a clean solve reads
+  // `1` rather than `0`. Showing the stored figure under this label would tell a first-time solver
+  // they never tried.
+  //
+  // ⚠️ **`Tries`, not `Failed checks`.** §27 says the game cannot be lost, and a line that counts a
+  // player's failures on the screen celebrating their finish argues the other way. This measures
+  // attempts; the label says attempts. Same reasoning as the hints line beside it: it is context for a
+  // shared time rather than a verdict on it.
+  const tries = document.createElement("p");
+  tries.className = "reveal-tries";
+  const triesLabel = document.createElement("span");
+  triesLabel.className = "reveal-tries-label";
+  triesLabel.textContent = text("reveal.tries");
+  const triesFigure = document.createElement("span");
+  triesFigure.className = "reveal-tries-figure";
+  const attempts = (record.failed_checks ?? 0) + 1;
+  triesFigure.textContent = String(attempts);
+  // First time is the quiet state, as no hints is on the row above.
+  if (attempts === 1) tries.dataset.state = "none";
+  tries.append(triesLabel, triesFigure);
+  result.append(tries);
+
   const clipping = document.createElement("div");
   clipping.className = "clipping";
   sheet.append(clipping);
