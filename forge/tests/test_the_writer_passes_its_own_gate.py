@@ -44,7 +44,8 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 import write_reference_puzzles as writer  # noqa: E402
-from measure import Loaded  # noqa: E402
+
+from boxscore_forge.pool import Loaded  # noqa: E402
 
 GAME, OFFENSE, DEFENSE = "SLN19680808", "CHN", "SLN"
 """The game the shared fixture is. The gate checks the identifier against the evidence, so both have

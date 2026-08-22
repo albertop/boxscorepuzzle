@@ -108,3 +108,15 @@ strict = true
 warn_return_any = true
 warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+# ⚠️ **pyodbc publishes no type stubs**, and that is a fact about the library rather than about the two
+# lines that import it. Declared once here instead of as an inline ignore at each call site, which is
+# the same rule the rest of this project applies to constants: the thing that is true in one place is
+# stated in one place.
+#
+# ⚠️ It suppresses *the missing stub*, not the use. `_rows` and `load` still type-check against
+# `Any`-typed cursors, which is why both return an explicitly annotated `list[Any]` rather than letting
+# `Any` leak into a signature — `warn_return_any` is on and catches that.
+[[tool.mypy.overrides]]
+module = "pyodbc"
+ignore_missing_imports = true

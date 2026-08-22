@@ -8,7 +8,6 @@ registry, and the list still says everything is covered. This walks the modules 
 
 import dataclasses
 import inspect
-import sys
 from dataclasses import replace
 from pathlib import Path
 
@@ -348,8 +347,7 @@ class TestTheDuplicatedSourceListAgrees:
         # working the moment the list was derived from another constant — a guard that fails because
         # the *spelling* changed while the rule held is the failure mode this project has recorded
         # twice, and the fix both times was to compare what the code produces.
-        sys.path.insert(0, str(LOADER.parent))
-        import measure  # noqa: PLC0415
+        from boxscore_forge import pool as measure  # noqa: PLC0415
 
         assert measure.ACCEPTED_SOURCES == certification.ACCEPTED_SOURCES
 
@@ -362,8 +360,7 @@ class TestTheDuplicatedSourceListAgrees:
         invisible in the data — no provenance row carries `EVE`, so nothing would have failed. *Harmless
         in fact* is not the test; the rule was that the pool does not change.
         """
-        sys.path.insert(0, str(LOADER.parent))
-        import measure  # noqa: PLC0415
+        from boxscore_forge import pool as measure  # noqa: PLC0415
 
         assert "EVE" not in measure.PROVENANCE_SOURCES, "the postseason source reached the regular season's SQL"
         assert "EVE" not in measure.PROVENANCE_LITERAL, "the rendered SQL list carries the postseason source"

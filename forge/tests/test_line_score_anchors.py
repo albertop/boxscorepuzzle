@@ -18,7 +18,11 @@ from pathlib import Path
 
 import pytest
 
-LOADER = Path(__file__).resolve().parents[2] / "discovery" / "difficulty-metrics" / "measure.py"
+# ⚠️ **Repointed 2026-08-22 when the loader moved out of `discovery/`** (`docs/beta-0-plan.md`, A1).
+# This test failing on the move is the guard working: it reads the loader's *source*, so it goes red
+# when the source it reads stops being the loader — which is a better failure than passing against a
+# file that no longer builds a `LineScore`. The assertion it raised said exactly that.
+LOADER = Path(__file__).resolve().parents[2] / "forge" / "src" / "boxscore_forge" / "pool.py"
 
 FIELDS = (
     "offense_by_inning",

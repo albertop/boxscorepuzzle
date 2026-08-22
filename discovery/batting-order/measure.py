@@ -45,16 +45,21 @@ _ROOT = _HERE.parents[1]
 sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
+# ⚠️ `ZERO_DENSITY_GATE` comes from `boxscore_domain`, which is where it is decided — it used to be
+# imported from `measure`, which only had it because `measure` imported it too. A domain constant
+# reached through a research module is a third place for a value §5 defines once, and it broke the day
+# `measure` stopped needing it for itself (2026-08-22, the pool moving to `boxscore_forge.pool`).
 from measure import (  # noqa: E402
     CONNECTION,
     CONTRIBUTED,
     PROVENANCE_LITERAL,
     SEASON_WINDOW,
     SHAPE_CTE,
-    ZERO_DENSITY_GATE,
     eligibility,
     zero_density_clause,
 )
+
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 
 
 def candidates(*, gated: bool, provenance: str = "") -> str:

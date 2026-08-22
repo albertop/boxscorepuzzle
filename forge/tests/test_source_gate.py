@@ -27,12 +27,26 @@ from pathlib import Path
 
 import pytest
 
-LOADER = Path(__file__).resolve().parents[2] / "discovery" / "difficulty-metrics" / "measure.py"
-sys.path.insert(0, str(LOADER.parent))
+# ⚠️ **Repointed 2026-08-22: the loader moved to `boxscore_forge.pool`** (`docs/beta-0-plan.md`, A1).
+# `measure.py` is a re-export now, so a source scan aimed at it reads the shim and passes on an
+# empty file. These tests read source deliberately — that is what makes them catch a rule stated
+# in SQL — so they have to follow the source.
+LOADER = Path(__file__).resolve().parents[2] / "forge" / "src" / "boxscore_forge" / "pool.py"
+# ⚠️⚠️ **This imports the pool directly now, and the reason is a bug I made repointing it.** The line
+# here used to be `sys.path.insert(0, str(LOADER.parent))` — one variable doing two jobs, *the source
+# file to scan* and *the directory to import from*. Repointing `LOADER` at `pool.py` silently moved the
+# import path to `boxscore_forge/`, and `measure` stopped resolving. It passed in the full suite,
+# because another test module had already put `discovery/` on the path, and failed only when run alone.
+#
+# **A mechanism read by two consumers, broken by a change that considered one** — the exact shape
+# `CLAUDE.md` records from the row-label suffix. The fix is not a second variable: it is importing the
+# module these tests are actually about instead of reaching through a re-export.
+#
 # ⚠️ Safe to import, and the note that said otherwise is retired: `pyodbc` and `connect()` are both
 # inside functions, so nothing here opens a database. Checked by parsing before relying on it.
-import measure  # noqa: E402
-from measure import POSTSEASON, REGULAR, Season, eligibility, shape_cte  # noqa: E402
+sys.path.insert(0, str(LOADER.parents[2]))
+from boxscore_forge import pool  # noqa: E402
+from boxscore_forge.pool import POSTSEASON, REGULAR, Season, eligibility, shape_cte  # noqa: E402
 
 SQL_SCRIPTS = sorted((Path(__file__).resolve().parents[2] / "discovery").rglob("*.ps1"))
 
@@ -53,7 +67,7 @@ def accepted_sources() -> tuple[str, ...]:
     The note it used to carry — that importing the loader would need a DSN — is retired and was already
     retired above: `pyodbc` and `connect()` are both inside functions.
     """
-    return tuple(measure.ACCEPTED_SOURCES)
+    return tuple(pool.ACCEPTED_SOURCES)
 
 
 def provenance_sources() -> tuple[str, ...]:
@@ -63,7 +77,7 @@ def provenance_sources() -> tuple[str, ...]:
     row; putting it in the predicate that admits the existing pool widens that predicate, which is a
     change to what the pool contains whether or not today's data notices.
     """
-    return tuple(measure.PROVENANCE_SOURCES)
+    return tuple(pool.PROVENANCE_SOURCES)
 
 
 class TestTheGateIsAnAcceptanceList:
@@ -211,6 +225,6 @@ class TestTheSeasonsFailTheSameWay:
     def test_the_seasons_are_the_only_two(self) -> None:
         # A third season type (All-Star) exists in the database and is deliberately not admitted: 95
         # games, 2 admissible directions, and an exhibition where the rosters are not a club's.
-        declared = [value for value in vars(sys.modules["measure"]).values() if isinstance(value, Season)]
+        declared = [value for value in vars(pool).values() if isinstance(value, Season)]
 
         assert len(declared) == 2, f"{len(declared)} seasons are declared; each one needs its own admission rule"

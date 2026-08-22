@@ -36,7 +36,7 @@ def _loader() -> object:
         if str(extra) not in sys.path:
             sys.path.insert(0, str(extra))
     spec = importlib.util.spec_from_file_location(
-        "reveal_names_loader", _ROOT / "discovery" / "difficulty-metrics" / "measure.py"
+        "reveal_names_loader", _ROOT / "forge" / "src" / "boxscore_forge" / "pool.py"
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -74,7 +74,7 @@ def test_the_loader_reads_the_retrosheet_master_and_not_the_other_dataset() -> N
     A join that resolves most identifiers looks exactly like a join that resolves all of them, and the
     316 it missed were published as a fabricated name rather than rejected.
     """
-    source = (_ROOT / "discovery" / "difficulty-metrics" / "measure.py").read_text(encoding="utf-8")
+    source = (_ROOT / "forge" / "src" / "boxscore_forge" / "pool.py").read_text(encoding="utf-8")
 
     # ⚠️ **The prohibition moved and is not repeated here.** This asserted `dbo.regPeople` is absent,
     # which forbids exactly one table out of a database full of them —

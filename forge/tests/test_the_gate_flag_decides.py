@@ -26,9 +26,8 @@ _METRICS = _ROOT / "discovery" / "difficulty-metrics"
 if str(_METRICS) not in sys.path:
     sys.path.insert(0, str(_METRICS))
 
-from measure import eligibility, zero_density_clause  # noqa: E402
-
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
+from boxscore_forge.pool import eligibility, zero_density_clause  # noqa: E402
 
 _MARKER = "batting_zeros"
 """A fragment that appears only in the gate's predicate, so its presence is the gate's presence."""
@@ -59,7 +58,11 @@ class TestLoadReadsTheFlag:
 
     @staticmethod
     def _source() -> str:
-        return (_METRICS / "measure.py").read_text(encoding="utf-8")
+        # ⚠️ **Repointed 2026-08-22: the loader moved to `boxscore_forge.pool`** (`docs/beta-0-plan.md`, A1).
+        # `measure.py` is a re-export now, so a source scan aimed at it reads the shim and passes on an
+        # empty file. These tests read source deliberately — that is what makes them catch a rule stated
+        # in SQL — so they have to follow the source.
+        return (_ROOT / "forge" / "src" / "boxscore_forge" / "pool.py").read_text(encoding="utf-8")
 
     def test_the_gate_clause_is_conditional_on_the_flag(self) -> None:
         source = self._source()

@@ -29,12 +29,15 @@ from boxscore_forge.boxscore import (
 from boxscore_forge.identities import Identity, find_violations
 from boxscore_forge.publish import slot_references
 
-_LOADER = Path(__file__).resolve().parents[2] / "discovery" / "difficulty-metrics"
+# ⚠️ **The loader moved to `boxscore_forge.pool` on 2026-08-22** (`docs/beta-0-plan.md`, A1). Loaded by
+# path rather than imported, because these tests exercise the private label rules — `_position`,
+# `_batting_labels`, `_pitcher_labels` — which are not part of anybody's public surface.
+_LOADER = Path(__file__).resolve().parents[2] / "forge" / "src" / "boxscore_forge"
 
 
 def _loader() -> object:
     sys.path.insert(0, str(_LOADER))
-    spec = importlib.util.spec_from_file_location("loader_measure", _LOADER / "measure.py")
+    spec = importlib.util.spec_from_file_location("loader_pool", _LOADER / "pool.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

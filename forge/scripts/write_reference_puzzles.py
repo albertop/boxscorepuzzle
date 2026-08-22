@@ -21,32 +21,28 @@ import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
+# ⚠️⚠️ **`discovery/` is off this path as of 2026-08-22, and that is the point of the change.** Two
+# inserts used to be here: `difficulty-metrics` for the loader, now `boxscore_forge.pool`, and
+# `verifier`, which **nothing in this file has ever imported** — a dead insert that made the boundary
+# look crossed when it was not, and would have quietly re-enabled the crossing for whoever added the
+# next import. The publication path reaches nothing outside `forge/src` now.
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
-sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
-sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
-
-# ⚠️⚠️ **The production publication path still imports its loader from `discovery/`, and that is a
-# deferral with a reason rather than an oversight.** (v37-P3-03, reissuing v36-P3-37)
-#
-# `slot_references` and `to_board` were promoted into `boxscore_forge.publish` because each produces a
-# **published, schema-validated field** — that part reached the artefact and had to leave the research
-# tree. `Loaded` and `load` are a different thing: they carry the SQL, the connection string, the era
-# windows and the provenance predicate, and §5 puts the pool rule in `discovery/` on purpose. Moving
-# them is **building the inventory pipeline**, not renaming a module, and doing it as a side effect of
-# a review is how a boundary gets drawn by whoever happened to be editing.
-#
-# ⚠️ **What the deferral costs is real and is stated rather than argued away**: the publication path
-# depends on a module outside `mypy --strict` and inside the ratcheted lint tree, so a cleanup in
-# `discovery/` can break publishing. `forge/tests/test_the_writer_passes_its_own_gate.py` calls this
-# writer's own `build()` with no database, so that breakage is caught by the suite rather than by a
-# failed publish.
-from measure import Loaded, load  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
 from boxscore_forge.identity import puzzle_id  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
+
+# ⚠️ **The loader lives in `boxscore_forge.pool` since 2026-08-22** (`docs/beta-0-plan.md`, A1). It used
+# to be `from measure import Loaded, load`, reaching into `discovery/difficulty-metrics` — so the path
+# that writes signed packages ran through a research script, outside `mypy --strict` and inside the
+# ratcheted lint tree, where any cleanup could break publishing.
+#
+# The deferral was recorded here with its reason: moving it is **building the inventory pipeline**, not
+# renaming a module. That is what this is. `measure` re-exports every name, so the 33 discovery scripts
+# that import them are untouched.
+from boxscore_forge.pool import Loaded, load  # noqa: E402
 from boxscore_forge.publish import slot_references, to_board  # noqa: E402
 from boxscore_package.format import Package, PrintedBoxscore, Reveal, read, write  # noqa: E402
 from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
