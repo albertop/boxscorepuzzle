@@ -258,22 +258,22 @@ const en = {
   // **Rare and load-bearing is the pair that has to arrive together.** Told only that they are rare,
   // a player stops checking; told only that they matter, they hunt for something that is not there.
   "tutorial.step.row_identity":
-    "Every time a batter comes to the plate it counts as a plate appearance \u2014 whether he hit, "
-    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks \u2014 plus anything in "
+    "Every time a batter comes to the plate it counts as a plate appearance, whether he hit, "
+    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks, plus anything in "
     + "the footnote line. Those are rare. Miss one and nothing will add up.",
   "tutorial.step.column_sum":
     "The Totals row is the sum of the rows above it, column by column. It works downwards to find a "
     + "total, and upwards to find the one row you are missing.",
   "tutorial.step.cross_team":
     "A hit by a batter is a hit allowed by the pitcher who threw it. The two halves of this board are "
-    + "the same game seen from opposite sides, so their totals have to agree \u2014 for H, BB, SO and R.",
+    + "the same game seen from opposite sides, so their totals have to agree: H, BB, SO and R.",
   // ⚠️⚠️ **The conversion leads, and it used to trail.** The board never prints outs — the pitching
   // column is innings pitched — so this relation cannot be used without crossing the two. Read in the
   // old order the player met the rule, agreed with it, and then learned at the last sentence that the
   // number it needs is not on screen. **Every later use of this relation carries that conversion**, so
   // presenting it as an afterthought made an afterthought of the step's hardest part.
   "tutorial.step.global":
-    "The board gives innings, not outs \u2014 and an inning is three outs. That matters here, because "
+    "The board gives innings, not outs, and an inning is three outs. That matters here, because "
     + "every plate appearance ends one of three ways: the batter is out, he scores, or he is still on "
     + "base when the inning ends. Nothing else can happen, so the team\u2019s PA is exactly its outs "
     + "plus its runs plus the men it left on base.",
@@ -281,7 +281,7 @@ const en = {
   // nothing on screen announces that turns are dealt around the order.
   "tutorial.step.batting_order":
     "Turns go around the lineup in order, one after another, and never skip. So reading down the "
-    + "slots, plate appearances never go up \u2014 a batter lower in the order can never have batted "
+    + "slots, plate appearances never go up. A batter lower in the order can never have batted "
     + "more times than the one above him.",
   // ⚠️⚠️ **The worked arithmetic is copy, and it was spelled in code.** (v36-P2-09) Four of these are
   // pure arithmetic and one reads "2 innings = 6 outs" — English words, 19px bold, on screen, in a
@@ -301,7 +301,7 @@ const en = {
   "tutorial.sum.batting_order": "2 \u2264 ? \u2264 3",
 
   "tutorial.reference_hint":
-    "All five stay one tap away while you play \u2014 the button marked The relations.",
+    "All five stay one tap away while you play: the button marked The relations.",
   "tutorial.finish": "Start today\u2019s puzzle",
 
   // ---- dates -----------------------------------------------------------------------------------
