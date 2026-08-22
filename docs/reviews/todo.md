@@ -406,6 +406,38 @@ halves. **Found in a picture** — every computed style said 50px and agreed wit
 
 ---
 
+## 2026-08-22 — ❌ the first real inventory is 34% pre-1950 against a 5% ceiling
+
+**§6 is explicit and still decided:** *pre-1950 boards must not exceed 5% of what the player sees* —
+about eighteen a year, so Ruth is **an event rather than the scenery**. The 150-board batch built today
+is **51 pre-1950, 34%, against a ceiling of 8.**
+
+⚠️⚠️ **It is the sampler, not luck.** `load()` draws *n per decade* across twelve decades, so a
+decade-flat draw **cannot** satisfy a decade-weighted quota except by accident: 1910s–1940s is a third
+of the draw and the quota allows a twentieth of the calendar.
+
+⚠️ **Nothing in the pipeline could catch it.** A 1913 board is perfectly valid, and so is a calendar
+made entirely of them — the gate, the four layers and the calendar's own refusals all pass. **Found by
+printing the decade distribution and reading it**, which is the only thing that has ever found this
+class in this project.
+
+⚠️ **And the run reported `assigned 150 of 150`.** A3.5 asks for quotas asserted after construction
+rather than printed and believed; there is no assertion, so the summary was true about the count and
+silent about the composition.
+
+⬜ **The fix has two halves, and only the first is obvious.** The builder needs an era weight in the
+draw *and* an assertion after selection. ⚠️ **Weighting the draw alone is not enough** — it would make
+the violation rarer rather than impossible, which is the shape `CLAUDE.md` records from the pack that
+reported quotas it had not met.
+
+⚠️ **A related question this raises rather than settles:** §10's re-measurement notes that pre-1950 is
+29% of the *pool* naturally, and that the quota *"remains available as a preference about what the
+player meets; it is no longer a fix for a broken distribution."* It is still a decided quota, so it
+binds — but whether five months of beta 0 should carry eight pre-war boards or a different number is a
+product question, and the number is the operator's.
+
+---
+
 ## 2026-08-22 — ✔ the first yield measurement, and ⚠️⚠️ a gate that refused nothing in 235 attempts
 
 **Run:** `build_inventory.py --measure --per-decade 1` and `--per-decade 3`, gate `0.30`, caps ≤13

@@ -100,17 +100,27 @@ need a database), not as an oversight.
 
 ### A2. Batch generation
 
-- **A2.1** A producer that takes *how many boards, at what stall targets, over what era spread* and
-  returns validated packages. `build()` in the writer is the per-board core and already certifies.
+- ✔ **A2.1 done 2026-08-22.** `boxscore_forge.produce.produce()` is the per-board core — promoted out
+  of `write_reference_puzzles.py` so both producers share one definition — and
+  `scripts/build_inventory.py` is the batch driver. `boxscore_forge.publication_key` holds where the
+  signing key comes from, for the same reason.
 - ✔ **A2.2 done 2026-08-22 — and the answer removes work rather than adding it.** Two samples, 48
   directions, **48 boards: the pipeline loses none.** So the batch does not over-sample and needs no
   retry machinery. **~22 minutes for 150 boards.** What sizes the draw is duplicate games — `load()`
   returns both directions of one game about 10% of the time and the calendar refuses the second (§7) —
   so **draw ~1.15× the dates**. ⚠️ **235 attempts and the publication gate refused none**, recorded in
   `todo.md` as an open question about the gate rather than a clean bill of health.
-- **A2.3** Resumability. A run that dies at board 400 of 450 must not start over.
-- **A2.4** ⚠️ **Idempotence (§21):** the same game must yield the same puzzle id. Assert it by running a
-  slice twice and comparing ids, not by trusting `puzzle_id()`.
+
+  **✔ Confirmed at volume 2026-08-22:** the real 150-board run spent 566 more attempts and the gate
+  refused **none of them**. Roughly **716 attempts, zero certification refusals**, which stops being a
+  small-sample result.
+- ⚠️ **A2.3 NOT done, and the successful run hides it.** `build()` writes the calendar **once, after the
+  loop**. A crash at board 140 of 150 leaves 140 signed packages on disk and **loses every assignment**,
+  because nothing was written yet. What works today is the *short-run* case — the run finishes, keeps its
+  work, and exits non-zero (v38-P2-01) — which is not the same thing as surviving a crash. **Checkpoint
+  the calendar as it goes.**
+- ⬜ **A2.4 not asserted.** §21 needs the same game to yield the same puzzle id, and nothing runs a slice
+  twice and compares. Trusting `puzzle_id()` is the thing the item says not to do.
 - **Done when:** one command produces N validated packages with a recorded survival rate, and running it
   twice produces no duplicates.
 
@@ -137,15 +147,27 @@ pre-1950 allowance, and the quota assertions.
   *reordering of future dates* rather than a rebuild. The `difficulty` field is absent rather than
   guessed (§7). Originally: difficulty by weekday — easy Monday, hard Saturday (§31) — and vary which relation families a
   level opens with, so no two Tuesdays start the same way.
-- **A3.3** ⚠️⚠️ **The one-game-one-puzzle guard, over everything ever published.** Not over a batch.
-  `refuse_second_direction` is per-run and is not enough. **This needs the whole published history as
-  input, so it is a property of the calendar's state.** A calendar without it leaks puzzles: the reveal
-  prints both clubs and the other club's half *is* the other direction's board.
-- **A3.4** The pre-1950 allowance: at most 5% of what a player sees (§6).
-- **A3.5** Assert the quotas after construction, never print them and believe them — the rule
-  `CLAUDE.md` records from the weighted draw that produced zero boards at the easiest rung.
-- **Done when:** five months of dates are assigned, the guard rejects a second direction of a published
-  game, and re-running the builder changes nothing.
+- ✔ **A3.3 done.** `extend()` refuses a game the calendar has already spent, over the whole book and
+  including voided entries. Verified on the real batch: **150 dates, 150 distinct games.**
+- ❌ **A3.4 NOT implemented — and the inventory built on 2026-08-22 violates it by seven times.**
+
+  §6 is explicit and still decided: *pre-1950 boards must not exceed 5% of what the player sees*,
+  roughly eighteen a year, so that Ruth is an **event rather than the scenery**. The batch is
+  **51 of 150 pre-1950 — 34%, against a ceiling of 8.**
+
+  ⚠️⚠️ **It is not bad luck, it is the sampler.** `load()` draws *n per decade* over twelve decades, so
+  a stratified draw **guarantees** the pre-war half is over-represented: 1910s through 1940s is four
+  decades of twelve, and the quota allows one board in twenty. **A calendar built from a decade-flat
+  draw can never satisfy a decade-weighted quota by accident.**
+
+  ⚠️ **Nothing caught it.** Not the gate, not the four layers, not the calendar's own refusals — a
+  board from 1913 is perfectly valid and so is a calendar full of them. It was found by printing the
+  decade distribution and reading it, which is the only thing that has ever found this class here.
+- ⬜ **A3.5 not implemented, and its absence is exactly why A3.4 went unnoticed.** The item says assert
+  the quotas after construction rather than print them and believe them. There is no assertion, so the
+  run reported `assigned 150 of 150` and was wrong about what it had assigned.
+- **Done when:** five months of dates are assigned **within every quota**, the guard rejects a second
+  direction of a published game, and re-running the builder changes nothing.
 
 ### A4. Packaging in bulk
 
@@ -154,7 +176,10 @@ pre-1950 allowance, and the quota assertions.
 - **A4.2** ⚠️ **The manifest must not leak the future.** It currently lists every published puzzle. With
   a calendar, listing tomorrow's id is handing out tomorrow's puzzle — the file is public and
   unauthenticated (§23). **Decide what the client is allowed to see.**
-- **A4.3** Signing at volume; the private key never leaves the laptop.
+- ✔ **A4.3 done.** 150 packages signed with the pinned key; `boxscore_forge.publication_key` refuses to
+  return a key `serve` would not accept, and never prints private material.
+- ⬜ **A4.1 partial.** The generation directory exists (`forge/inventory/<gen>`, 1.4 MB, median 9.7 KB a
+  package). **No manifest is written**, and A4.2 has to be decided before one can be.
 - **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
 
 ⚠️ **A4 is not the end of group A.** What A1–A4 produce is one batch, built by whoever had the whole
@@ -203,6 +228,30 @@ wrong. **The same rule as every other instrument here: the version that has not 
 ⚠️ **And it will drift from the code**, because prose and commands are two places saying one thing. The
 cheapest defence is that the commands it names are the ones a test invokes; at minimum, the runbook names
 the scripts by path so a rename breaks a grep rather than nothing.
+
+### ⚠️⚠️ Status 2026-08-22: the batch ran and **Deliverable A is not met**
+
+**What exists:** 150 dates, 2026-09-01 to 2027-01-28, one game each, 150 signed packages, 25.1 minutes
+from 168 directions. Verified against the artefacts rather than the run's own summary — contiguous, no
+holes, every date has a package, **zero game ids survive into what deploys**.
+
+**What the difficulty spread looks like**, which matters because a later curve has to have material to
+reorder: stalls 1–13 with a median of 9, and all twelve rungs represented. 39% of boards needed the
+lineup clue. **11 of 150 (7%) depend on the batting-order family** — the first time that number has been
+answerable at all, since `FAMILY_OF` gained the fifth family the day before.
+
+**Why it is still not met, in order of weight:**
+
+1. ❌ **34% pre-1950 against §6's 5% ceiling** (A3.4). The calendar has to be rebuilt or reweighted.
+2. ⚠️ **No quota assertion** (A3.5), which is why the run said `150 of 150` and was wrong about what it
+   had assigned.
+3. ⚠️ **No crash resumability** (A2.3): the calendar is written once at the end.
+4. ⬜ **No manifest** (A4.1/A4.2), **no idempotence assertion** (A2.4), **no runbook** (A5).
+
+⚠️ **The 150 dates are assigned and committed, and that is deliberate.** §21 lets a *future* date be
+replaced, so reweighting the eras replaces entries rather than rebuilding the file — and the calendar is
+the one artefact here that cannot be recomputed, so having it on disk and in Git beats having it correct
+and only in memory.
 
 ### ▶ Deliverable A — **five months of dated, signed inventory, and the runbook that produces the next five**
 
