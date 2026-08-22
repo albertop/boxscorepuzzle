@@ -249,13 +249,18 @@ const en = {
   // relation work.
   "tutorial.made_up": "A made-up boxscore, smaller than a real one.",
   "tutorial.blank_prompt": "One number is missing. Here is how you get it.",
-  // ⚠️ **It used to end "…plus the rare ways of reaching that are neither."** True, and the formula
-  // line directly below already shows them: `PA = AB + BB + HBP + SF + SH + CI`. A sentence that
-  // restates the line under it spends the reader's attention twice on one fact, and this is the first
-  // relation they meet.
+  // ⚠⚠ **The footnote line is named, and the warning is the point.** §6: nine rows in ten carry
+  // every footnote term at zero, so players learn to stop looking — and the row where one appears is
+  // exactly the row whose arithmetic fails if they miss it. An earlier version ended at "plus his
+  // walks", which is true of nine rows in ten and silently wrong about the tenth; the one before
+  // that said "plus the rare ways of reaching that are neither", which named no place to look.
+  //
+  // **Rare and load-bearing is the pair that has to arrive together.** Told only that they are rare,
+  // a player stops checking; told only that they matter, they hunt for something that is not there.
   "tutorial.step.row_identity":
     "Every time a batter comes to the plate it counts as a plate appearance \u2014 whether he hit, "
-    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks.",
+    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks \u2014 plus anything in "
+    + "the footnote line. Those are rare. Miss one and nothing will add up.",
   "tutorial.step.column_sum":
     "The Totals row is the sum of the rows above it, column by column. It works downwards to find a "
     + "total, and upwards to find the one row you are missing.",
