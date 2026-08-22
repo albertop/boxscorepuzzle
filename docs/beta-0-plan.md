@@ -8,6 +8,28 @@ it. ⚠️ Where the two differ, this file says so.
 
 ---
 
+## The seven deliverables, in one table
+
+Each group ends with an artefact somebody can point at. **If a group finishes and there is nothing to
+point at, it did not finish.**
+
+| | deliverable |
+|---|---|
+| **A** | five months of dated, signed inventory, reproducible from one command |
+| **B** | a verdict on whether the inventory is humanly solvable, and a difficulty scale that means something |
+| **C** | a client producing a complete, identified event and surviving its own failures, with no backend |
+| **D** | a running service that stores events and refuses to run wrong |
+| **E** | the real routes and the real caching contract, running locally |
+| **F** | `boxscorepuzzle.com` serving today's puzzle, monitored |
+| **G** | an image a player sends in one tap that survives the trip and gives nothing away |
+
+⚠️ **Each deliverable also says what it does *not* give**, in its own section. That half is the one that
+gets skipped, and it is where the milestone's honest limits live — deliverable B does not produce a
+difficulty threshold, F does not answer whether anyone passes it on, G does not produce a recruitment
+rate.
+
+---
+
 ## Where we actually are
 
 | | state |
@@ -99,6 +121,19 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
 - **A4.3** Signing at volume; the private key never leaves the laptop.
 - **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
 
+### ▶ Deliverable A — **five months of dated, signed inventory, reproducible from one command**
+
+A generation directory and a calendar: roughly 150 validated packages, each assigned to a date, signed,
+verifying from a clean checkout, with the one-game-one-puzzle guard refusing a second direction over
+**everything ever published**.
+
+**What it makes possible that nothing before it did:** every other group can be tested against a daily
+game that lasts more than a day. Group B has an inventory to draw a sample from; E has something to
+route `/today` at; F has something to deploy.
+
+⚠️ **What it does not give:** any evidence that a person can solve these boards. Four validation layers
+say the numbers agree with each other. **That is group B, and it is a gate rather than a follow-up.**
+
 ---
 
 ## Group B — the hand-solve gate
@@ -138,6 +173,19 @@ is pass-or-stop rather than a rate.
 
 - Ten boards across the curve, solved by somebody who knows baseball and nothing about this project. It
   is the one contrast the operator cannot give himself. **Calibration, not a gate.**
+
+### ▶ Deliverable B — **a verdict on whether the inventory is humanly solvable, and a difficulty scale that means something**
+
+Two artefacts. **The gate's verdict:** every board in the stratified sample solved by hand without
+guessing — or a stop, with the board that failed. **And Pack A's sheets plus the ranking**, which is the
+only thing that tests whether the stall scale corresponds to felt difficulty.
+
+**What it makes possible:** shipping at all. Until this exists, *the puzzle is solvable* is an assumption
+the four layers cannot check.
+
+⚠️ **What it does not give:** a difficulty threshold. The operator is a sample of one with complete
+command of the identities; what he finds easy will be easy for very few. **The absolute question is
+answered by beta 0's own event records**, which is group C.
 
 ---
 
@@ -181,6 +229,19 @@ it exists is unattributable, and C7 is irreversible.**
 - **Done when:** a deliberately thrown error arrives at the endpoint and the board still plays with the
   endpoint refused.
 
+### ▶ Deliverable C — **a client that produces a complete, identified event and survives its own failures, with no backend at all**
+
+A finished game yields a C7 record carrying the device UUID, an account field that is `null` and
+claimable, and **both dates**. It queues in `localStorage`, drains when there is a connection, and
+delivers exactly one event across a reload mid-flight. Uncaught errors report themselves and can never
+block the play path.
+
+**What it makes possible:** the moment a data layer exists, **events recorded before it existed still
+arrive**, carrying the identity they were created under. That is the whole reason this group precedes D.
+
+⚠️ **What it does not give:** anywhere for the events to go. They accumulate locally until D exists —
+which is the design working, not a gap.
+
 ---
 
 ## Group D — the data layer
@@ -211,6 +272,18 @@ it exists is unattributable, and C7 is irreversible.**
 - **Done when:** the contract suite passes on both engines, the service refuses to start without a token
   and against a wrong schema version, and health goes red when the database is stopped.
 
+### ▶ Deliverable D — **a running service that stores events and refuses to run wrong**
+
+The data layer, against the Postgres already on the VPS, with a contract suite **green on both engines**.
+It will not start without its shared token, will not start against an unexpected schema version, and its
+health endpoint goes red when the database is stopped rather than when the container dies.
+
+**What it makes possible:** the events from deliverable C have a destination, and the error reports have
+one — so beta 0 stops being deployable-blind.
+
+⚠️ **What it does not give:** any of the subscription side. No accounts, no `canAccess()`, no Stripe.
+Those are beta 3 and the schema is shaped so they are an addition rather than a migration.
+
 ---
 
 ## Group E — serving for real
@@ -234,6 +307,17 @@ it exists is unattributable, and C7 is irreversible.**
 - Server block, TLS via certbot, rate limit per IP **without persisting IPs**, and the data layer
   reachable only on the internal network.
 
+### ▶ Deliverable E — **the real routes and the real caching contract, running locally**
+
+`/p/<id>` canonical and `/today` redirecting, with the day decided **server-side** and never from
+device-local state — everyone gets the same puzzle on the same date. `manifest.json` never cached,
+`<generation>/<id>.json` cached for a year, and **only the current day cached ahead**.
+
+**What it makes possible:** what runs on the laptop is now the shape that will run on the VPS, so
+deployment is moving a known-good thing rather than discovering the difference in production.
+
+⚠️ **What it does not give:** a live site. Everything here is still on `localhost`.
+
 ---
 
 ## Group F — deployment
@@ -255,6 +339,19 @@ it exists is unattributable, and C7 is irreversible.**
 - Free daily · subscription · data layer (proxied — ⚠️ **unreachable is unhealthy**, never 200 with
   *unknown*) · **puzzle inventory**, which is the one nobody would think of: `serve` can be perfectly up
   with an empty directory. Threshold in one place, status only, no detail.
+
+### ▶ Deliverable F — **boxscorepuzzle.com serving today's puzzle, monitored**
+
+The site live over TLS on the operator's domain, `serve` and the data layer in their own containers on
+the existing Docker network, the data layer's port unpublished, and **four Uptime Kuma checks** — the
+free daily, the subscription side, the data layer proxied, and the puzzle inventory's runway.
+
+**What it makes possible:** friends and family can play. This is the first moment the product exists
+outside the laptop.
+
+⚠️ **What it does not give:** the answer to the milestone's larger question. At this point beta 0 can
+tell you whether people play and whether they come back. **Whether they pass it on is group G**, and it
+is why G cannot be cut for time.
 
 ---
 
@@ -286,6 +383,19 @@ the finished game — not a priority.
   project has failed at.
 - **Done when:** the image survives all three apps intact and a recipient who has not played learns
   nothing about the board.
+
+### ▶ Deliverable G — **an image a player sends in one tap that survives the trip and gives nothing away**
+
+A PNG carrying the grid, the time and the failed-check count in the reveal's own words — **not a picture
+of the reveal**, with values replaced before any blur — shared through `navigator.share` in one tap, and
+**verified by being sent through WhatsApp, iMessage and X and opened on a real phone.**
+
+**What it makes possible:** beta 0 answers the question it exists for. §20 calls the shared grid the main
+growth channel, and this is the only chance to test it before a paying product rests on it.
+
+⚠️ **What it does not give:** a recruitment rate. The recipients are friends of friends. *Does the
+artefact survive the trip* is fully answered here; *does it recruit* is not, and the two must not be
+reported as one verdict.
 
 ---
 
