@@ -225,10 +225,25 @@ visible in the output.
 
 ### 2. Reproduces a settled decision — needs the arm or the sentence
 
-**`board-configurations/measure.py`** ✅ **fixed 2026-08-22.** Third arm `footnotes>0` added, so the
-report explains itself: opening the non-zero cells and giving them come out the same, and the jump
-appears only when zeros are opened. Labels kept as well — **the label says the question is settled,
-the arm shows why**, and a label depends on someone reading it.
+**`board-configurations/measure.py`** ✅ **fixed 2026-08-22, and re-run to see it.** Third arm
+`footnotes>0` added, so the report explains itself. 48 gated directions, 576 measured ceilings:
+
+| configuration | blanks | chain | **stalls** | five or more |
+|---|---:|---:|---:|---:|
+| `baseline` — the live board | 36 | 23 | **6** | 67% |
+| `footnotes>0` | **36** | 22 | **6** | **67%** |
+| `footnotes` | 71 | 64 | **16** | 100% |
+| `footnotes+lob` | 71 | 63 | **16** | 100% |
+
+⚠️⚠️ **`footnotes>0` is identical to the live board on every column that matters** — same blanks, same
+stalls, same share reaching five, same search p90, same resolution, same cycles. Chain differs by one
+and bounding steps by one, which is noise. **So the entire 6-to-16 gap is zeros**: the full-footnote
+arms erase nearly twice as many cells, and all of the extra is terms that are nought because the thing
+did not happen.
+
+**The number a reader takes away is now the right one without reading a warning.** Labels kept as
+well — **the label says the question is settled, the arm shows why**, and a label depends on someone
+reading it.
 
 ⬜ **Four others carry a settled question in their premise, and none of them says so.** Reported rather
 than changed, because each is a different call:
