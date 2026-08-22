@@ -105,9 +105,14 @@ const en = {
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
   "reveal.close": "Back to the board",
+  // ⚠️ **Present and inert, deliberately.** The share grid does not exist yet (§26: comparison is the
+  // paid feature, and the grid must never leak the solution or a player's name). The button is drawn
+  // now so the shape of the finished screen is the shape it will keep — the reveal is where a player
+  // decides whether to show anyone, and discovering that decision late would move every other control.
+  "reveal.share": "Share",
   // ⚠️ Beside the time, because a shared result has to carry both. One minute with three hints and one
   // minute with none are two different results, and that is the whole reason hints are allowed at all.
-  // ⚠️ **"Check failed", and it read "Tries" for one commit.** The line counts presses of *Check* on a
+  // ⚠️ **"Checks failed", and it read "Tries" for one commit.** The line counts presses of *Check* on a
   // completely filled board that did not balance, and the label names exactly that — under *Tries* the
   // player had to subtract to learn how many came back wrong, and a first-time solve read `1` where a
   // single failure read `2`. Two adjacent numbers for two very different results.
@@ -115,9 +120,19 @@ const en = {
   // ⚠️ §27 says the game cannot be lost, which is the argument for the gentler word. It loses to
   // legibility here: the number is context beside the time, the same as the hints line, and a figure
   // the reader has to do arithmetic on is not context.
-  "reveal.tries": "Check failed",
+  // ⚠️ **"Checks failed", plural, and the singular stood for a day.** The three rows of the result box
+  // are read as a column, and `Your time` / `Hints used` / `Check failed` put two noun phrases above a
+  // verb phrase — the third line read as a sentence about what had just happened rather than as a
+  // label on a figure. One letter. Same construction as the row above it now.
+  "reveal.tries": "Checks failed",
   "reveal.hints": "Hints used",
   "reveal.no_hints": "None",
+  // ⚠️ **Its own key rather than sharing `reveal.no_hints`, and the reason is translation.** The word
+  // is identical in English and the two lines mean the same thing, which is exactly the case where one
+  // key looks obviously right. It is not: Spanish inflects this for the gender of the noun it stands
+  // for — *ninguna* against a pista, *ninguno* against a fallo — so a shared key would force one of the
+  // two rows to be wrong the day the catalogue gains a second language. That is what C11 is for.
+  "reveal.no_failures": "None",
   // ⚠️ The way back to the clipping from a finished board. It replaces the keypad, because a board that
   // cannot be typed into does not need one — and the boxscore has to stay reachable or closing the
   // reveal would throw away the thing the player earned.

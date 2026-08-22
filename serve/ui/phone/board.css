@@ -805,13 +805,58 @@ td.label.substitute { padding-left: 14px; }
   margin-top: 4px;
 }
 
-.reveal-close {
-  width: 100%;
-  min-height: var(--cell);
+/* ⚠️⚠️ **This pair is the tutorial's footer, and the resemblance is the fix rather than an accident.**
+   `.reveal-close` used to be one full-width button in white paper with a grey border at 44px and 15px
+   type — a shape that appears nowhere else in the product. Every other place the app asks for a
+   decision uses the same two things: a dark ground for the way onward, an outline for the way back,
+   50px tall and 16px. The reveal was the odd screen out, and it is the one screen the player reaches
+   by earning it.
+
+   ⚠️ **It is a fourth copy of that look and it should not be.** `.landing-play`, `.tutorial-back` and
+   `.tutorial-next` each spell it again, in `landing.css`, which `play.html` does not load. Four places
+   saying one thing with nothing checking they agree is this project's most-recorded defect, and the
+   copy is being made knowingly rather than discovered later — recorded in `docs/reviews/todo.md`. The
+   fix is a shared button rule the three pages can reach, which is a change to three stylesheets. */
+.reveal-actions {
+  display: flex;
+  gap: 8px;
   margin-top: 12px;
+}
+
+.reveal-close,
+.reveal-share {
+  flex: 1;
+  min-height: 50px;
   border: 1px solid var(--rule-strong);
-  border-radius: 8px;
-  background: var(--paper);
+  border-radius: 10px;
+  background: var(--key);
   color: var(--ink);
-  font: 600 15px/1 var(--face), system-ui, sans-serif;
+  font: 600 16px/1 var(--face), system-ui, sans-serif;
+}
+
+/* ⚠️ **Equal halves, and the tutorial's 1:2 split was tried first.** At 375px that leaves the way back
+   121px wide and `Back to the board` breaks onto two lines against a single-line neighbour — a row of
+   two buttons at different heights, which reads as a mistake before it reads as a hierarchy. The
+   tutorial can afford the split because *Back* is one word. Seen in a picture, not computed. */
+.reveal-share {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-color: var(--header-ground);
+  background: var(--header-ground);
+  color: var(--header-ink);
+}
+
+/* ⚠️ Not yet wired to anything, and it says so. The mark and the label dim together because the icon
+   is drawn in `currentColor`; a full-strength icon over faded text is the tell of a button that was
+   disabled by editing one rule. */
+.reveal-share:disabled {
+  opacity: 0.45;
+}
+
+.reveal-share svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
 }

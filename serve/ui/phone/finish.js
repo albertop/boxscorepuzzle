@@ -145,8 +145,8 @@ export function renderReveal(puzzle, record) {
   // `failed + 1` under the label *Tries* made a clean solve read `1` instead of `0` — tidier, and
   // worse in the two ways that matter.
   //
-  // **`Check failed: 0` says exactly what it means.** Under *Tries* the player has to subtract to
-  // learn how many times the board came back wrong.
+  // **`Checks failed` says exactly what it means.** Under *Tries* the player has to subtract to learn
+  // how many times the board came back wrong.
   //
   // ⚠️ **And it collapsed the distinction it exists for.** Solved first time read `1`; failed once
   // read `2` — two adjacent numbers for very different results, on the line whose whole job is
@@ -161,7 +161,11 @@ export function renderReveal(puzzle, record) {
   const triesFigure = document.createElement("span");
   triesFigure.className = "reveal-tries-figure";
   const failed = record.failed_checks ?? 0;
-  triesFigure.textContent = String(failed);
+  // ⚠️ **`None`, not `0`, and the row above is why.** A clean solve and a spotless board are the same
+  // kind of news, so they are said the same way — a bare `0` beside `None` reads as two different
+  // kinds of statement about the same solve. It is also the figure people misread fastest: `0` next to
+  // a clock is a number waiting to be compared against something.
+  triesFigure.textContent = failed === 0 ? text("reveal.no_failures") : String(failed);
   // A board that never came back wrong is the quiet state, as no hints is on the row above.
   if (failed === 0) tries.dataset.state = "none";
   tries.append(triesLabel, triesFigure);
@@ -173,17 +177,75 @@ export function renderReveal(puzzle, record) {
 
   if (reveal) clipping.append(...clippingFor(puzzle, reveal));
 
+  // ⚠️ **A row of two, which is the shape the tutorial's footer already uses.** The way out and the
+  // way onward, secondary then primary, left then right.
+  const actions = document.createElement("div");
+  actions.className = "reveal-actions";
+
   const close = document.createElement("button");
   close.type = "button";
   close.className = "reveal-close";
   close.textContent = text("reveal.close");
-  sheet.append(close);
+
+  // ⚠️⚠️ **Disabled, not merely unwired, and that is the whole of the honesty here.** A button that
+  // looks pressable and does nothing is worse than one that is plainly not ready: the player presses
+  // it, nothing happens, and the next thing they doubt is whether their result was recorded. Disabled
+  // says *not yet* in the one language every platform already speaks.
+  const share = document.createElement("button");
+  share.type = "button";
+  share.className = "reveal-share";
+  share.disabled = true;
+  // ⚠️ The icon is decorative and the label carries the meaning, so it is hidden from the accessibility
+  // tree — a screen reader announcing "image, Share" reads the same thing twice.
+  share.append(shareIcon(), document.createTextNode(text("reveal.share")));
+
+  actions.append(close, share);
+  sheet.append(actions);
   // ⚠️ **Built here, wired by the shell.** This used to call `panel.remove()` itself, which closes the
   // panel and nothing else — it cannot restore the focus the shell moved, cannot un-inert what the
   // shell hid, and cannot know a panel is open. Two half-owners of one lifecycle. See `present()` and
   // `dismiss()` in `shell.js`; v34-P2-01.
 
   return panel;
+}
+
+/**
+ * The share mark: three nodes and two links, the web's shared vocabulary for sending something on.
+ *
+ * ⚠️ **Inline SVG rather than a font or a file.** An icon font would be a second face to load for one
+ * glyph, and a separate file is a request the reveal would wait on. It is drawn in `currentColor`, so
+ * it follows the button's text through every theme without a second colour to keep in step.
+ *
+ * ⚠️ **The three-node mark, not the square-with-an-arrow.** The latter is Apple's and reads as a
+ * system affordance on iOS and as nothing anywhere else; this one is what the web uses and what an
+ * Android handset shows for the same act. The product is phone-first on both.
+ */
+function shareIcon() {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  for (const [cx, cy] of [[18, 5], [6, 12], [18, 19]]) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    node.setAttribute("cx", String(cx));
+    node.setAttribute("cy", String(cy));
+    node.setAttribute("r", "3");
+    svg.append(node);
+  }
+  for (const [x1, y1, x2, y2] of [[8.6, 10.5, 15.4, 6.5], [8.6, 13.5, 15.4, 17.5]]) {
+    const link = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    link.setAttribute("x1", String(x1));
+    link.setAttribute("y1", String(y1));
+    link.setAttribute("x2", String(x2));
+    link.setAttribute("y2", String(y2));
+    svg.append(link);
+  }
+  return svg;
 }
 
 /**
