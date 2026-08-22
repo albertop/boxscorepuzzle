@@ -242,7 +242,11 @@ const en = {
   "tutorial.progress": "Step {step} of {total}",
   "tutorial.back": "Back",
   "tutorial.next": "Next",
-  "tutorial.skip": "Skip",
+  // ⚠️ **The word is "Cancel"; the key still says `skip` because the *action* still is one.** The
+  // control leaves the tutorial without finishing it — `docs/serve-flow.md` §1b's skippability, which
+  // is the reversal of §8 and the reason this screen is not a barrier. A key renamed to follow a label
+  // would leave the document and the catalogue describing the same control with different words.
+  "tutorial.skip": "Cancel",
   // ⚠️ **Said out loud, because otherwise it reads as a bug.** The board in the tutorial is four
   // batters, one pitcher and three columns; a real one is six columns and up to thirteen rows. A
   // player who is not told will spend a step wondering why it looks wrong instead of watching the

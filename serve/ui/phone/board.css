@@ -556,8 +556,13 @@ td.label.substitute { padding-left: 14px; }
 .again {
   flex: none;
   margin: 0;
-  padding: 0 18px;
-  min-height: var(--cell);
+  /* ⚠️⚠️ **The bottom inset moved here with the strip that used to carry it.** `.footer` padded itself
+     by `env(safe-area-inset-bottom)` and stood between this button and the edge of the phone; with the
+     strip gone on a finished board, this is the last element on the screen and the home indicator sits
+     over it. The operator's own handset showed the label clipped **before** the strip was removed —
+     taking it away without moving the inset would have made the thing being fixed worse. */
+  padding: 0 18px env(safe-area-inset-bottom);
+  min-height: calc(var(--cell) + env(safe-area-inset-bottom));
   border: 0;
   border-top: 1px solid var(--rule);
   background: var(--header-ground);

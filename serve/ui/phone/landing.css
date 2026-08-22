@@ -186,6 +186,11 @@ body {
 
 /* ⚠️ A real button at the touch floor, not a faint word in a corner. §1b: a skip the visitor has to
    hunt for is a compulsory tutorial wearing a disguise. */
+/* ⚠️ The same treatment as `.landing-how`: no underline, weight 600, `--entered`, 15px. Beside a
+   filled button an underlined link reads as small print rather than as the second of two choices, and
+   the same is true beside a step counter. **The type is shared; the placement is not** — `.landing-how`
+   is a centred block under the play button and this sits in the bar at the top right, so it keeps its
+   own box and its own 44px target. */
 .tutorial-skip {
   min-height: 44px;
   padding: 0 12px;
@@ -193,8 +198,9 @@ body {
   background: none;
   font-family: inherit;
   font-size: 15px;
+  font-weight: 600;
   color: var(--entered);
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .tutorial-title {

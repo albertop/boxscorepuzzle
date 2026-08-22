@@ -2192,9 +2192,17 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     assert(shell.root.querySelector(".reveal"), "solving did not open the reveal");
     assert(!shell.root.querySelector(".keypad"), "the keypad survived the end of the game");
     assert(!shell.root.querySelector(".verdict"), "the verdict survived the end of the game");
-    // ⚠️ **The reference stays and the verdict goes.** A finished board is still a boxscore somebody
-    // may want to read the rules against, and the keypad that was the other route to them is gone.
-    assert(shell.root.querySelector(".reference-key"), "a finished board lost the reference sheet");
+    // ⚠️⚠️ **The whole footer goes, reference included, and this asserted the opposite until
+    // 2026-08-22.** The superseded reasoning is kept because it was not silly: *a finished board is
+    // still a boxscore somebody may want to read the rules against, and the keypad that was the other
+    // route to them is gone.* True of the board as an object, false about the moment — the player has
+    // finished, the cells take no entries, and the rules of a puzzle that is over are one more thing
+    // between them and the thing they earned.
+    //
+    // ⚠️ It also cost the screen it sat on: two bands stacked at the bottom of a phone put *See the
+    // boxscore* against the edge, clipped on a real handset.
+    assert(!shell.root.querySelector(".footer"), "the footer strip survived the end of the game");
+    assert(!shell.root.querySelector(".reference-key"), "a finished board still offers the relations");
     equal(shell.root.querySelector(".again")?.textContent, "See the boxscore");
     assert(shell.app.classList.contains("app-finished"), "the finished class was never applied");
     const cells = [...shell.root.querySelectorAll("td.cell")];

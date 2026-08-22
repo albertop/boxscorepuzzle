@@ -212,7 +212,16 @@ export function boot({
     // ⚠️ The close button rather than the heading. It is always present and always actionable, and a
     // screen reader announces the dialog's `aria-label` on entry either way — so this costs nothing and
     // leaves the user on a control instead of on text they cannot act from.
-    close?.focus();
+    //
+    // ⚠️⚠️ **`preventScroll`, because focusing scrolls, and the panel was opening past its own
+    // heading.** The close button sits at the foot of the sheet, so the browser scrolled it into view
+    // the moment it took focus — the player pressed *See the boxscore* and arrived mid-table, with
+    // *You rebuilt it* and their own time already above the fold. **The focus decision above is still
+    // right; what was wrong is a side effect of it**, and the two are separable.
+    close?.focus({ preventScroll: true });
+    // Explicit rather than relying on a fresh element starting at zero: the sheet is rebuilt each time
+    // and a future `scrollIntoView` anywhere in the panel would move it again, silently.
+    node.querySelector(".reveal-sheet")?.scrollTo?.({ top: 0 });
   };
 
   // ⚠️ **The opener is passed, never read from `document.activeElement`.** A pointer press does not
@@ -232,15 +241,43 @@ export function boot({
   //
   // What replaces it is the way back to the clipping. Closing the reveal must not throw away the thing
   // the player earned, and there is no other route to it once the pad is gone.
-  if (game.isFinished()) {
+  /**
+   * The one control a finished board offers, and the chrome it replaces.
+   *
+   * ⚠️⚠️ **The reference goes when the game does, and that reverses a decision recorded here.** The
+   * superseded reasoning, kept because it was not silly: *a finished board is still a boxscore
+   * somebody may want to read the rules against, and the pad that used to be the other route to them
+   * is gone.* True of the board as an object. **It is false about the moment**: the player has
+   * finished, the cells take no entries, and a button offering the rules of a puzzle that is over is
+   * one more thing between them and the thing they earned.
+   *
+   * ⚠️ **And it was costing the screen it sat on.** The footer strip and the way back to the clipping
+   * were two bands stacked at the bottom of a phone, which put *See the boxscore* against the edge —
+   * clipped on the operator's own handset. Removing the strip moves the button up by its whole height.
+   *
+   * ⚠️ **Built once, and it used to be built twice** — here and in `rebuildChrome`, the same six lines
+   * for the board that opens finished and the board that finishes while you watch. Two copies of one
+   * control is how the two states drift into offering different things.
+   */
+  function finishedChrome() {
     markFinished();
+    app.querySelector(".keypad")?.remove();
+    // The whole strip, not only the verdict: the reference lived in it and has nothing to say now.
+    footer.remove();
     const again = doc.createElement("button");
     again.type = "button";
     again.className = "again";
     again.textContent = text("done.see_boxscore");
     again.addEventListener("click", () => showReveal(game.record(), again));
     app.append(again);
-  } else {
+    return again;
+  }
+
+  // ⚠️ **Only the pad is decided here; the finished chrome waits.** `finishedChrome` takes the footer
+  // away, and the footer is created below — calling it from this branch read it before its `const` and
+  // threw `Cannot access 'footer' before initialization` on every restored finished board. Caught by
+  // running the suite, which is the only reason this is a note rather than a defect.
+  if (!game.isFinished()) {
     keypad = renderKeypad(
       (key) => {
         if (!selected) return;
@@ -315,17 +352,7 @@ export function boot({
 
   /** Swap the keypad for the way back to the clipping, in place, when the game ends mid-session. */
   function rebuildChrome() {
-    markFinished();
-    app.querySelector(".keypad")?.remove();
-    // ⚠️ The verdict goes and the reference stays: a finished board is still a boxscore somebody may
-    // want to read the rules against, and the pad that used to be the other route to them is gone.
-    verdict.remove();
-    const again = doc.createElement("button");
-    again.type = "button";
-    again.className = "again";
-    again.textContent = text("done.see_boxscore");
-    again.addEventListener("click", () => showReveal(game.record(), again));
-    app.append(again);
+    finishedChrome();
   }
 
   // ⚠⚠ **A finished board reopens finished.** Completion and its frozen duration are part of the
@@ -334,8 +361,10 @@ export function boot({
   // is sealed by `restore` and cannot be restarted; this is the other half, which is drawing what the
   // player already earned instead of asking them to press Check again. v30-P1-03.
   if (game.isFinished()) {
-    // The verdict has nothing to say about a finished board; the reference strip stays.
-    verdict.remove();
+    // Footer and all, then the clipping the player earned. Same call the mid-session finish makes, so
+    // a board that reopens finished and a board that finishes while you watch cannot offer different
+    // things — which is what two copies of this chrome used to make possible.
+    finishedChrome();
     showReveal(game.record());
   }
 
