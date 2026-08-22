@@ -43,15 +43,30 @@ import { ROUTES, withSearch } from "./daily.js";
  *   global         9 = 6 outs + 1 run + 2 left on base
  *   batting order   3, 2, 2, 2 — down the slots it never goes up
  */
+// ⚠️⚠️ **The plate-appearance column reads 3, 3, 2, 2 so the batting-order step has room to narrow.**
+//
+// It was 3, 2, 2, 2, and the last step then bounded a cell between two neighbours that both held 2 —
+// `2 ≤ ? ≤ 2`, two equal bounds, a **determined** value. That demonstrates the answer rather than the
+// rule: on a real board the order *narrows a range* and something else closes it, and a player shown
+// the degenerate case learns that the relation produces numbers.
+//
+// ⚠️ Ten plate appearances over four slots is what a lineup actually does with them: turns are dealt
+// round in order, so the first two slots bat three times and the last two bat twice. Nine over four
+// gives 3, 2, 2, 2 — correct, and flat exactly where the lesson needs a step.
+//
+// Everything else moved with it, because the board has to satisfy all five relations on the numbers it
+// draws and a test reads them back out of the DOM to check: the second batter's AB goes 1 → 2 so his
+// row still closes, the totals go 9 → 10 and 8 → 9, and left-on-base goes 2 → 3 so `PA = Outs + R +
+// LOB` still holds at 10 = 6 + 1 + 3.
 const BATTERS = [
   { slot: 1, plate_appearances: 3, at_bats: 3, walks: 0 },
-  { slot: 2, plate_appearances: 2, at_bats: 1, walks: 1 },
+  { slot: 2, plate_appearances: 3, at_bats: 2, walks: 1 },
   { slot: 3, plate_appearances: 2, at_bats: 2, walks: 0 },
   { slot: 4, plate_appearances: 2, at_bats: 2, walks: 0 },
 ];
-const TOTALS = { plate_appearances: 9, at_bats: 8, walks: 1 };
+const TOTALS = { plate_appearances: 10, at_bats: 9, walks: 1 };
 const PITCHER = { outs: 6, walks: 1, runs: 1 };
-const LEFT_ON_BASE = 2;
+const LEFT_ON_BASE = 3;
 
 const BATTING_COLUMNS = ["plate_appearances", "at_bats", "walks"];
 const PITCHING_COLUMNS = ["outs", "walks", "runs"];
@@ -314,7 +329,17 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
       : fill("tutorial.progress", { step: String(step + 1), total: String(STEPS.length) });
     skip.hidden = finished;
     title.textContent = finished ? text("tutorial.title") : text(current.name);
-    made.hidden = finished;
+    // ⚠️⚠️ **The first step only. It used to appear on all five.**
+    //
+    // It is a caveat about the board, not part of any relation, and repeating it five times taught the
+    // eye to skip the line above the board — which is where the step's own sentence lives. Saying it
+    // once is enough.
+    //
+    // ⚠️ **Once, not never.** Removing it outright was the other reading and it is wrong until a first
+    // screen exists to carry it: a four-batter, three-column board is visibly not a boxscore, and a
+    // player who is not told spends a step deciding whether the tutorial is broken instead of watching
+    // the relation work. It moves to that screen when there is one.
+    made.hidden = finished || step > 0;
     body.textContent = finished ? text("tutorial.reference_hint") : text(current.body);
     sum.textContent = finished ? "" : text(current.sum);
     sum.hidden = finished;

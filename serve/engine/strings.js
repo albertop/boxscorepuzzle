@@ -155,13 +155,21 @@ const en = {
   // remembered `PA = Outs + Runs + LOB` is measuring memory, not deduction.
   "reference.title": "The relations",
   "reference.close": "Close",
-  "reference.row_identity_name": "Every batting row",
+  // ⚠️ **What the relation is, not which rows it is about.** "Every batting row" says where to
+  // look and nothing about what holds there — and this name is read twice: as the tutorial's
+  // step heading and as an entry on the reference sheet a player scans mid-solve.
+  "reference.row_identity_name": "Each batter\u2019s plate appearances",
   "reference.row_identity": "PA = AB + BB + HBP + SF + SH + CI",
   "reference.column_sum_name": "Every column",
   "reference.column_sum": "Totals = the sum of the rows above",
-  "reference.global_name": "Each team, over the game",
+  // ⚠️ "Each team, over the game" is a scope, not a relation. What it says is that a plate
+  // appearance has exactly three endings and every batter reaches one of them.
+  "reference.global_name": "Where every batter ends up",
   "reference.global": "PA = Outs + Runs + LOB",
-  "reference.cross_team_name": "The two halves",
+  // ⚠️ "The two halves" does not say what the halves are. This is the relation that ties the
+  // board together — §3 records that without it the puzzle degenerates into two independent
+  // halves — so its name should say which two things are being tied.
+  "reference.cross_team_name": "Batting against pitching",
   "reference.cross_team": "Team H = hits allowed by the opposing pitchers (the same for BB, SO and R)",
   "reference.batting_order_name": "The batting order",
   // ⚠️⚠️ **The usable form of the rule, not its arithmetic.** Two earlier versions stated the
@@ -241,23 +249,29 @@ const en = {
   // relation work.
   "tutorial.made_up": "A made-up boxscore, smaller than a real one.",
   "tutorial.blank_prompt": "One number is missing. Here is how you get it.",
+  // ⚠️ **It used to end "…plus the rare ways of reaching that are neither."** True, and the formula
+  // line directly below already shows them: `PA = AB + BB + HBP + SF + SH + CI`. A sentence that
+  // restates the line under it spends the reader's attention twice on one fact, and this is the first
+  // relation they meet.
   "tutorial.step.row_identity":
     "Every time a batter comes to the plate it counts as a plate appearance \u2014 whether he hit, "
-    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks, plus the rare ways of "
-    + "reaching that are neither.",
+    + "walked or anything else. So a batter\u2019s PA is his AB plus his walks.",
   "tutorial.step.column_sum":
     "The Totals row is the sum of the rows above it, column by column. It works downwards to find a "
     + "total, and upwards to find the one row you are missing.",
   "tutorial.step.cross_team":
     "A hit by a batter is a hit allowed by the pitcher who threw it. The two halves of this board are "
     + "the same game seen from opposite sides, so their totals have to agree \u2014 for H, BB, SO and R.",
+  // ⚠️⚠️ **The conversion leads, and it used to trail.** The board never prints outs — the pitching
+  // column is innings pitched — so this relation cannot be used without crossing the two. Read in the
+  // old order the player met the rule, agreed with it, and then learned at the last sentence that the
+  // number it needs is not on screen. **Every later use of this relation carries that conversion**, so
+  // presenting it as an afterthought made an afterthought of the step's hardest part.
   "tutorial.step.global":
-    "Every plate appearance ends one of three ways: the batter is out, he scores, or he is still on "
+    "The board gives innings, not outs \u2014 and an inning is three outs. That matters here, because "
+    + "every plate appearance ends one of three ways: the batter is out, he scores, or he is still on "
     + "base when the inning ends. Nothing else can happen, so the team\u2019s PA is exactly its outs "
-    + "plus its runs plus the men it left on base. "
-    // ⚠️ The board never prints outs — the pitching column is innings pitched — so the sentence that
-    // crosses the two belongs in the step that needs it, not only on the reference sheet.
-    + "The board shows innings rather than outs, and an inning is three outs.",
+    + "plus its runs plus the men it left on base.",
   // ⚠️ Last on purpose. See `docs/serve-flow.md` §1b: the other four are visible in the grid, and
   // nothing on screen announces that turns are dealt around the order.
   "tutorial.step.batting_order":
@@ -269,11 +283,15 @@ const en = {
   // project whose C11 seam is mandatory from day one. All five are here rather than only the offender:
   // a rule that holds for one member of a set and not the others is a rule nobody can apply, and a
   // language that writes the bound the other way round needs the whole line, not a word of it.
-  "tutorial.sum.row_identity": "2 = 1 + 1",
-  "tutorial.sum.column_sum": "3 + 1 + 2 + 2 = 8",
+  "tutorial.sum.row_identity": "3 = 2 + 1",
+  "tutorial.sum.column_sum": "3 + 2 + 2 + 2 = 9",
   "tutorial.sum.cross_team": "1 = 1",
-  "tutorial.sum.global": "2 innings = 6 outs \u00b7 9 \u2212 6 \u2212 1 = 2",
-  "tutorial.sum.batting_order": "2 \u2264 ? \u2264 2",
+  "tutorial.sum.global": "2 innings = 6 outs \u00b7 10 \u2212 6 \u2212 1 = 3",
+  // ⚠️⚠️ **This read `2 \u2264 ? \u2264 2` — two equal bounds, which is a determined value.** A
+  // degenerate case demonstrates the answer rather than the rule: the player sees a number
+  // appear and learns nothing about what the relation does. **On a real board it narrows a
+  // range**, and something else closes it. The board above was changed so it can.
+  "tutorial.sum.batting_order": "2 \u2264 ? \u2264 3",
 
   "tutorial.reference_hint":
     "All five stay one tap away while you play \u2014 the button marked The relations.",

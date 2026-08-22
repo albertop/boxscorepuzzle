@@ -2923,8 +2923,26 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // a disguise, which is the rule the reversal removed.
     assert(view.skip && !view.skip.hidden, "the skip is missing or hidden");
     assert(view.page.querySelector(".tutorial-made-up").textContent.length > 0, "nobody says the board is invented");
+    assert(!view.page.querySelector(".tutorial-made-up").hidden, "the first step does not say the board is invented");
 
     view.teardown();
+  });
+
+  test("⚠️ the board is called made-up once, not on all five steps", async () => {
+    // It is a caveat about the board rather than part of any relation, and five repetitions teach the
+    // eye to skip the line above the board — which is where each step's own sentence lives.
+    //
+    // ⚠️ **Both halves.** Removing it outright is the other reading and it is wrong while no first
+    // screen exists to carry it: a four-batter, three-column board is visibly not a boxscore, and a
+    // player who is not told spends a step deciding whether the tutorial is broken.
+    for (const step of [1, 2, 3, 4]) {
+      const view = await mount({ start: step });
+      assert(
+        view.page.querySelector(".tutorial-made-up").hidden,
+        `step ${step + 1} repeats the made-up caveat`,
+      );
+      view.teardown();
+    }
   });
 
   test("⚠️ the batting order is taught last", async () => {
