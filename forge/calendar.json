@@ -1,0 +1,1202 @@
+[
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-01",
+  "direction": "WS1",
+  "game_id": "WS1191310032",
+  "puzzle_id": "540c14cba5fb0d37",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-02",
+  "direction": "BOS",
+  "game_id": "WS1191305301",
+  "puzzle_id": "d523dfdbc81c5ec2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-03",
+  "direction": "BOS",
+  "game_id": "WS1191304220",
+  "puzzle_id": "734c7c793eed359b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-04",
+  "direction": "WS1",
+  "game_id": "WS1191304240",
+  "puzzle_id": "6d25713e5db3c6c2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-05",
+  "direction": "WS1",
+  "game_id": "WS1191304250",
+  "puzzle_id": "ccc7178ea95aae45",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-06",
+  "direction": "WS1",
+  "game_id": "WS1191307262",
+  "puzzle_id": "0da69de9f3f9851c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-07",
+  "direction": "WS1",
+  "game_id": "WS1191307261",
+  "puzzle_id": "3b727aa3616c800c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-08",
+  "direction": "SLA",
+  "game_id": "WS1191307280",
+  "puzzle_id": "cd84e88c3c80972b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-09",
+  "direction": "SLA",
+  "game_id": "SLA191308170",
+  "puzzle_id": "126c049659c4a61c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-10",
+  "direction": "SLN",
+  "game_id": "SLN191308020",
+  "puzzle_id": "01c2328400411820",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-11",
+  "direction": "PHA",
+  "game_id": "SLA191308240",
+  "puzzle_id": "d2a0915c69c62858",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-12",
+  "direction": "BRO",
+  "game_id": "SLN191308100",
+  "puzzle_id": "1dc5c25c9394bf42",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-13",
+  "direction": "SLA",
+  "game_id": "SLA192310020",
+  "puzzle_id": "0ed0aad8886544ca",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-14",
+  "direction": "SLN",
+  "game_id": "SLN192310072",
+  "puzzle_id": "1dc57470b44caded",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-15",
+  "direction": "SLN",
+  "game_id": "SLN192310071",
+  "puzzle_id": "4f0744440236caef",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-16",
+  "direction": "CLE",
+  "game_id": "SLA192310040",
+  "puzzle_id": "98824c9d311a9ff1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-17",
+  "direction": "CLE",
+  "game_id": "SLA192310010",
+  "puzzle_id": "9f42acb60c536afd",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-18",
+  "direction": "CLE",
+  "game_id": "SLA192310030",
+  "puzzle_id": "238dfdf24e3355e5",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-19",
+  "direction": "BOS",
+  "game_id": "WS1192310040",
+  "puzzle_id": "21f0327428eaab2f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-20",
+  "direction": "NYA",
+  "game_id": "WS1192305270",
+  "puzzle_id": "802e8f3928775ee6",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-21",
+  "direction": "NYA",
+  "game_id": "WS1192305290",
+  "puzzle_id": "201394998c824894",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-22",
+  "direction": "WS1",
+  "game_id": "WS1192305010",
+  "puzzle_id": "e9ea42f6fd5230b7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-23",
+  "direction": "NYA",
+  "game_id": "WS1192305301",
+  "puzzle_id": "077b1d60ec75499f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-24",
+  "direction": "NYA",
+  "game_id": "WS1192305302",
+  "puzzle_id": "9a239f73d97b38b1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-25",
+  "direction": "PHA",
+  "game_id": "WS1192304270",
+  "puzzle_id": "3b68e503fb2b4da9",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-26",
+  "direction": "WS1",
+  "game_id": "WS1193305180",
+  "puzzle_id": "d9cf5682be2562a2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-27",
+  "direction": "NYA",
+  "game_id": "WS1193305312",
+  "puzzle_id": "2326abc48337a444",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-28",
+  "direction": "NYA",
+  "game_id": "WS1193305300",
+  "puzzle_id": "960e2df9a37b9820",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-29",
+  "direction": "WS1",
+  "game_id": "WS1193305200",
+  "puzzle_id": "5f6df3c81bb1e592",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-09-30",
+  "direction": "CHA",
+  "game_id": "WS1193305190",
+  "puzzle_id": "fa066c3a6602dcc3",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-01",
+  "direction": "NYA",
+  "game_id": "WS1193304250",
+  "puzzle_id": "fb8cd31303b7ec92",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-02",
+  "direction": "WS1",
+  "game_id": "WS1193304130",
+  "puzzle_id": "4a819a34ff8b21ad",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-03",
+  "direction": "PHA",
+  "game_id": "WS1193304140",
+  "puzzle_id": "a86790f4b74df312",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-04",
+  "direction": "WS1",
+  "game_id": "WS1193307082",
+  "puzzle_id": "fe7f4af0bae9847c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-05",
+  "direction": "NYA",
+  "game_id": "WS1193307310",
+  "puzzle_id": "4f3e4997ba8ca6e6",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-06",
+  "direction": "CLE",
+  "game_id": "WS1193307081",
+  "puzzle_id": "a9640d4d88b729e6",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-07",
+  "direction": "WS1",
+  "game_id": "WS1193307210",
+  "puzzle_id": "6d48c85f0baeef1a",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-08",
+  "direction": "CHA",
+  "game_id": "WS1193307110",
+  "puzzle_id": "948d152c7e5b3bae",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-09",
+  "direction": "BSN",
+  "game_id": "BSN194409180",
+  "puzzle_id": "38565452ae0cb24b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-10",
+  "direction": "BRO",
+  "game_id": "BSN194409161",
+  "puzzle_id": "2620735bdb210f15",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-11",
+  "direction": "BRO",
+  "game_id": "BSN194409042",
+  "puzzle_id": "186085bacaa3b4a7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-12",
+  "direction": "BSN",
+  "game_id": "BSN194409220",
+  "puzzle_id": "f3c6b5c9885af62b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-13",
+  "direction": "PHI",
+  "game_id": "BSN194408251",
+  "puzzle_id": "9f313c68ca4128a4",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-14",
+  "direction": "BSN",
+  "game_id": "BSN194408272",
+  "puzzle_id": "b7240ff7a215358b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-15",
+  "direction": "SLN",
+  "game_id": "BRO194408010",
+  "puzzle_id": "30ddbec079bc5928",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-16",
+  "direction": "BOS",
+  "game_id": "BOS194408201",
+  "puzzle_id": "f68f77f353871d0d",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-17",
+  "direction": "WS1",
+  "game_id": "BOS194408041",
+  "puzzle_id": "0bb822a92829f484",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-18",
+  "direction": "CLE",
+  "game_id": "BOS194408210",
+  "puzzle_id": "1de9c29684c1f3b2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-19",
+  "direction": "CLE",
+  "game_id": "BOS194408202",
+  "puzzle_id": "863303f7278032bc",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-20",
+  "direction": "SLA",
+  "game_id": "BOS194408131",
+  "puzzle_id": "284bf2cee1bdf0f5",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-21",
+  "direction": "DET",
+  "game_id": "BOS194408160",
+  "puzzle_id": "f74b577eb0a886a2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-22",
+  "direction": "BOS",
+  "game_id": "BOS195408220",
+  "puzzle_id": "01b5a86231b30138",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-23",
+  "direction": "BOS",
+  "game_id": "BOS195408200",
+  "puzzle_id": "97fe02667fde39ee",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-24",
+  "direction": "WS1",
+  "game_id": "BAL195409100",
+  "puzzle_id": "9961887c9af7ba89",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-25",
+  "direction": "CHA",
+  "game_id": "BAL195409250",
+  "puzzle_id": "42313ac5076cf241",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-26",
+  "direction": "BOS",
+  "game_id": "BOS195408280",
+  "puzzle_id": "f2bf1dfc3b453b45",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-27",
+  "direction": "SLN",
+  "game_id": "BRO195408050",
+  "puzzle_id": "1e607655172bca59",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-28",
+  "direction": "SLN",
+  "game_id": "BRO195408040",
+  "puzzle_id": "3676737e145c39a0",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-29",
+  "direction": "BAL",
+  "game_id": "BOS195408260",
+  "puzzle_id": "5f9755ce7aecf52e",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-30",
+  "direction": "BOS",
+  "game_id": "BOS195408240",
+  "puzzle_id": "9eda1ca8b360d21f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-10-31",
+  "direction": "BRO",
+  "game_id": "BRO195408200",
+  "puzzle_id": "c649a339c01dc4e1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-01",
+  "direction": "CLE",
+  "game_id": "BOS195408291",
+  "puzzle_id": "f690b66157130fcb",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-02",
+  "direction": "WS1",
+  "game_id": "BOS195408121",
+  "puzzle_id": "3a7a3cf56f70dce2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-03",
+  "direction": "WS1",
+  "game_id": "BOS195408112",
+  "puzzle_id": "1f0135c529e7ba27",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-04",
+  "direction": "BAL",
+  "game_id": "BAL195409210",
+  "puzzle_id": "76430f8f2a504a67",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-05",
+  "direction": "BOS",
+  "game_id": "BOS196408210",
+  "puzzle_id": "0054e49dc9deb3e9",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-06",
+  "direction": "BAL",
+  "game_id": "BAL196409301",
+  "puzzle_id": "76cce8aa615b6281",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-07",
+  "direction": "LAA",
+  "game_id": "BAL196409201",
+  "puzzle_id": "f318c112c3f75681",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-08",
+  "direction": "DET",
+  "game_id": "BOS196408250",
+  "puzzle_id": "c0b45da94988c94f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-09",
+  "direction": "DET",
+  "game_id": "BOS196408260",
+  "puzzle_id": "646b93b97712e719",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-10",
+  "direction": "NYA",
+  "game_id": "BOS196408222",
+  "puzzle_id": "ee6ceec234e723bd",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-11",
+  "direction": "CHA",
+  "game_id": "BOS196408140",
+  "puzzle_id": "daecbb404d927398",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-12",
+  "direction": "BAL",
+  "game_id": "BAL196409180",
+  "puzzle_id": "12b8a04c837f4a35",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-13",
+  "direction": "WS2",
+  "game_id": "BAL196409302",
+  "puzzle_id": "647e8a46545da81c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-14",
+  "direction": "KC1",
+  "game_id": "BAL196409112",
+  "puzzle_id": "90fc9775cc976076",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-15",
+  "direction": "CLE",
+  "game_id": "BOS196409301",
+  "puzzle_id": "69eec7b21fa6afb3",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-16",
+  "direction": "BAL",
+  "game_id": "BAL196408282",
+  "puzzle_id": "959cf1c9bf1b9973",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-17",
+  "direction": "MIN",
+  "game_id": "BOS196409200",
+  "puzzle_id": "94e70ca17edce6ca",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-18",
+  "direction": "BAL",
+  "game_id": "BAL196408120",
+  "puzzle_id": "8c319c87beb2a157",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-19",
+  "direction": "PHI",
+  "game_id": "ATL197408180",
+  "puzzle_id": "39d3991e54dca1f4",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-20",
+  "direction": "ATL",
+  "game_id": "ATL197408190",
+  "puzzle_id": "029af23825ff7698",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-21",
+  "direction": "ATL",
+  "game_id": "ATL197408210",
+  "puzzle_id": "a2feca19d34391e1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-22",
+  "direction": "ATL",
+  "game_id": "ATL197408200",
+  "puzzle_id": "45179f418357adb1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-23",
+  "direction": "ATL",
+  "game_id": "ATL197409080",
+  "puzzle_id": "4f91ca6b542bfabd",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-24",
+  "direction": "ATL",
+  "game_id": "ATL197409030",
+  "puzzle_id": "2bae4de62cb37c2e",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-25",
+  "direction": "ATL",
+  "game_id": "ATL197409021",
+  "puzzle_id": "8e04432992e602e8",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-26",
+  "direction": "LAN",
+  "game_id": "ATL197409090",
+  "puzzle_id": "c8d04d74e44f47d8",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-27",
+  "direction": "ATL",
+  "game_id": "ATL197409282",
+  "puzzle_id": "f74b86194eca0cc7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-28",
+  "direction": "HOU",
+  "game_id": "ATL197409290",
+  "puzzle_id": "f8bf6971378b0d92",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-29",
+  "direction": "BOS",
+  "game_id": "BOS197408200",
+  "puzzle_id": "3b563298f0d0026c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-11-30",
+  "direction": "BOS",
+  "game_id": "BOS197408210",
+  "puzzle_id": "4b2fa9956898eb6a",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-01",
+  "direction": "BAL",
+  "game_id": "BAL197409280",
+  "puzzle_id": "5511e68637c0de49",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-02",
+  "direction": "BAL",
+  "game_id": "BAL197409290",
+  "puzzle_id": "80af637da67a90ea",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-03",
+  "direction": "PIT",
+  "game_id": "ATL198408150",
+  "puzzle_id": "3fc55972850d588f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-04",
+  "direction": "SLN",
+  "game_id": "ATL198408290",
+  "puzzle_id": "7082a11c829cdb41",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-05",
+  "direction": "ATL",
+  "game_id": "ATL198408120",
+  "puzzle_id": "52dd54e20e9cd837",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-06",
+  "direction": "SDN",
+  "game_id": "ATL198408102",
+  "puzzle_id": "60e448ca7e1757ba",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-07",
+  "direction": "CIN",
+  "game_id": "ATL198409190",
+  "puzzle_id": "47d34fb62bb8edb0",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-08",
+  "direction": "HOU",
+  "game_id": "ATL198409040",
+  "puzzle_id": "bd8e8d30beb9b3ec",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-09",
+  "direction": "ATL",
+  "game_id": "ATL198409200",
+  "puzzle_id": "5e3190308aa09dd1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-10",
+  "direction": "NYA",
+  "game_id": "BAL198409250",
+  "puzzle_id": "2e33a1a1113bd8f2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-11",
+  "direction": "BOS",
+  "game_id": "BOS198408210",
+  "puzzle_id": "248bed48544d278d",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-12",
+  "direction": "BOS",
+  "game_id": "BOS198408260",
+  "puzzle_id": "8549393858ffae8c",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-13",
+  "direction": "TEX",
+  "game_id": "BOS198408030",
+  "puzzle_id": "7bfdc227aa12b433",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-14",
+  "direction": "BOS",
+  "game_id": "BOS198408250",
+  "puzzle_id": "05b0e89cf8df00d2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-15",
+  "direction": "CLE",
+  "game_id": "BOS198408240",
+  "puzzle_id": "a6e5b3c0730edbb1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-16",
+  "direction": "TOR",
+  "game_id": "BOS199408011",
+  "puzzle_id": "0006f0f29764d0e2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-17",
+  "direction": "TOR",
+  "game_id": "BOS199408020",
+  "puzzle_id": "1b5b6049d76e0674",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-18",
+  "direction": "BOS",
+  "game_id": "BOS199408030",
+  "puzzle_id": "0d73db630919352f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-19",
+  "direction": "BOS",
+  "game_id": "BOS199408012",
+  "puzzle_id": "e42d3ff00ce6a0a5",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-20",
+  "direction": "BOS",
+  "game_id": "BOS199408061",
+  "puzzle_id": "700a58f4e266171e",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-21",
+  "direction": "BOS",
+  "game_id": "BOS199408072",
+  "puzzle_id": "8b62e7734105fb85",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-22",
+  "direction": "BOS",
+  "game_id": "BOS199408071",
+  "puzzle_id": "abb114a3c5f931c7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-23",
+  "direction": "CLE",
+  "game_id": "BOS199408062",
+  "puzzle_id": "7cf0af091c671418",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-24",
+  "direction": "TEX",
+  "game_id": "BOS199406040",
+  "puzzle_id": "e77d56d2f4e3c4c7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-25",
+  "direction": "TEX",
+  "game_id": "BOS199406050",
+  "puzzle_id": "35923c27ff64149a",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-26",
+  "direction": "CLE",
+  "game_id": "BAL199407262",
+  "puzzle_id": "f1872f9f3a91ceb7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-27",
+  "direction": "BAL",
+  "game_id": "BAL199407300",
+  "puzzle_id": "3a2eae18b01e65e7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-28",
+  "direction": "TEX",
+  "game_id": "TEX200309120",
+  "puzzle_id": "097d24977be090c4",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-29",
+  "direction": "TEX",
+  "game_id": "TEX200309130",
+  "puzzle_id": "f34b39444c86e601",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-30",
+  "direction": "BOS",
+  "game_id": "SEA200308160",
+  "puzzle_id": "a279c5fe4c857570",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2026-12-31",
+  "direction": "CHA",
+  "game_id": "SEA200308010",
+  "puzzle_id": "3a1598ad3911cec7",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-01",
+  "direction": "PHI",
+  "game_id": "SFN200308090",
+  "puzzle_id": "766f057d422c52d5",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-02",
+  "direction": "MON",
+  "game_id": "SDN200308240",
+  "puzzle_id": "346492810eca0261",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-03",
+  "direction": "TEX",
+  "game_id": "TEX200309190",
+  "puzzle_id": "36432ed5dd6114b2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-04",
+  "direction": "SEA",
+  "game_id": "SEA200308260",
+  "puzzle_id": "b3796293d68d7aa0",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-05",
+  "direction": "TBA",
+  "game_id": "SEA200308270",
+  "puzzle_id": "b0cf4b10a5dd3f92",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-06",
+  "direction": "TEX",
+  "game_id": "TEX200309020",
+  "puzzle_id": "fe71764d575d208e",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-07",
+  "direction": "TEX",
+  "game_id": "TEX200309010",
+  "puzzle_id": "2b4444b144c0fe68",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-08",
+  "direction": "SFN",
+  "game_id": "SFN200308220",
+  "puzzle_id": "e04d1bd955471d49",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-09",
+  "direction": "SEA",
+  "game_id": "SEA200308150",
+  "puzzle_id": "65c9054113642b61",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-10",
+  "direction": "NYN",
+  "game_id": "WAS201307261",
+  "puzzle_id": "2be37503413f2681",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-11",
+  "direction": "LAN",
+  "game_id": "WAS201307210",
+  "puzzle_id": "63e97d3e562532ee",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-12",
+  "direction": "WAS",
+  "game_id": "WAS201307010",
+  "puzzle_id": "9b4084180c9e201d",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-13",
+  "direction": "WAS",
+  "game_id": "WAS201307070",
+  "puzzle_id": "e08c9e8eb86a4224",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-14",
+  "direction": "WAS",
+  "game_id": "WAS201307040",
+  "puzzle_id": "308118461d1fd621",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-15",
+  "direction": "COL",
+  "game_id": "WAS201306220",
+  "puzzle_id": "d1bcf683a82320ec",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-16",
+  "direction": "NYN",
+  "game_id": "WAS201306050",
+  "puzzle_id": "cba263065c280591",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-17",
+  "direction": "WAS",
+  "game_id": "WAS201306200",
+  "puzzle_id": "7e128a54d1bbe568",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-18",
+  "direction": "PIT",
+  "game_id": "SDN201308200",
+  "puzzle_id": "5091d1f6339c15e2",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-19",
+  "direction": "BAL",
+  "game_id": "SFN201308110",
+  "puzzle_id": "9af555b49fc112f1",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-20",
+  "direction": "TEX",
+  "game_id": "TEX201309100",
+  "puzzle_id": "70c8bddac07bfb8f",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-21",
+  "direction": "SDN",
+  "game_id": "SDN201308170",
+  "puzzle_id": "7ba770d4802548cb",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-22",
+  "direction": "BOS",
+  "game_id": "SFN201308190",
+  "puzzle_id": "31d886b1dabcf772",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-23",
+  "direction": "MIL",
+  "game_id": "SEA201308090",
+  "puzzle_id": "1f6c9daa40157117",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-24",
+  "direction": "TBA",
+  "game_id": "TOR202310010",
+  "puzzle_id": "5079de3f48de0f48",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-25",
+  "direction": "COL",
+  "game_id": "WAS202307240",
+  "puzzle_id": "79c2431ea726ed2e",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-26",
+  "direction": "TEX",
+  "game_id": "WAS202307070",
+  "puzzle_id": "0234cab9dc864b5b",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-27",
+  "direction": "WAS",
+  "game_id": "WAS202307090",
+  "puzzle_id": "6a4ba7900d490ec5",
+  "status": "active"
+ },
+ {
+  "assigned": "gen6a8a16ca",
+  "date": "2027-01-28",
+  "direction": "WAS",
+  "game_id": "WAS202307080",
+  "puzzle_id": "41b1b2aa00cc54b7",
+  "status": "active"
+ }
+]

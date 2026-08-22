@@ -3,8 +3,6 @@
 **`docs/beta-0-plan.md` group A, and `docs/calendar.md` is the artefact.** This is the one command the
 runbook (A5) will document, and the one that gets re-run whenever the curve or the caps change.
 
-    uv run python scripts/build_inventory.py --measure --per-decade 2
-
 **Two modes, and only one of them is safe to run without meaning to:**
 
     uv run python scripts/build_inventory.py --measure --per-decade 2   # read-only
@@ -17,21 +15,31 @@ away thinking the bare command is a dry run. (v38-P3-01: this paragraph said *"m
 today"* after the writing half was added, which is operator-facing guidance that had become false on a
 script that mutates publication state.)
 
-⚠️⚠️ **The yield is unknown and everything downstream is sized from it.**
-§5's gate keeps roughly 11% of the pool before any of this runs; on top of that the erasure can fail to
-reach a target and the publication gate can refuse what it produced. **Nobody has ever run this at
-volume**, so the number of directions a five-month calendar costs is not known, and a batch sized from
-a guess either stops halfway or spends hours it did not need. Measure, then build.
+**The yield was unknown and is not any more** (2026-08-22, `docs/reviews/todo.md`). Two samples, 48
+gated directions, **48 boards — the pipeline loses none**, and ~22 minutes for 150. So the batch does
+not over-sample and needs no retry machinery.
+
+⚠️ **What costs directions is duplicate games, not yield.** `load()` returns both directions of one game
+about 10% of the time and the calendar refuses the second (§7). `DRAW_MARGIN` covers that, and a reader
+who takes it for a cushion against production failures will lower it on seeing nothing fail.
 
 ⚠️ **Every refusal is counted by cause.** A pool that cannot be erased and a board the gate rejects are
 different problems with different fixes, and a producer that reports one number cannot tell them apart —
 which is why `produce()` returns its cause rather than printing it.
 
-⚠️ **What the assignment half will have to do, stated here so it is not rediscovered:** read
-`forge/calendar.json` before it starts, write only dates with no entry (§21's idempotence and its
-extends-never-rewrites are the same mechanism), and refuse any game the calendar has already spent (§7)
-— the check no package can perform on itself. `boxscore_forge.calendar` already implements all three;
-what is missing is the producer that feeds it, and it is missing rather than pretended.
+**What the assignment does, and all three come from `boxscore_forge.calendar`:** it reads
+`forge/calendar.json` before it starts, writes only dates with no entry — §21's idempotence and its
+extends-never-rewrites are the same mechanism — and refuses any game the calendar has already spent
+(§7), which is the check no package can perform on itself.
+
+⚠️ **The producer avoids duplicate games and the calendar refuses them.** A batch draws the other
+direction of something about 10% of the time, so a run that aborted on the first one would be useless;
+the loop skips them and the calendar's refusal stays as the last line rather than as a substitute.
+
+⚠️⚠️ **This paragraph described the assignment half as missing until 2026-08-22**, after it was built —
+*"what is missing is the producer that feeds it"*. (v38-P3-01, second pass.) The header above had
+already been corrected and this one had not, which is the harder half of a stale-documentation finding:
+**one true paragraph makes the file read as up to date**, and the false one sits below the fold.
 """
 
 import argparse
