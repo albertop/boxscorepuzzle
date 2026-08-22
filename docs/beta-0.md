@@ -14,9 +14,13 @@
 Landing, tutorial, board, keypad, hints, reference sheet, check, reveal, **share**, persistence, **the
 event record uploading**, and **a calendar with real inventory**.
 
+**And ⚠️ uncaught client errors reported to the data layer.** See below — it is not on the original list
+and it is the hole that produces silence rather than a complaint.
+
 ## What is not
 
-Accounts, Stripe, subscription, archive, streaks, `canAccess()`, tablet, desktop.
+Accounts, Stripe, subscription, archive, streaks, `canAccess()`. **Tablet and desktop get the phone UI,
+provisionally** — see below; they are not *absent*, they are unstyled.
 
 **Those are the next phase and they build on top of a daily that already works, rather than beside it.**
 Every one of them assumes a daily loop people actually complete, and none can be evaluated before one
@@ -73,6 +77,47 @@ names, in the one artefact whose purpose is comparing two results. Same catalogu
 
 ---
 
+## ⚠️⚠️ Uncaught client errors are reported — added 2026-08-22
+
+**Nothing in the original plan tells you the client broke on somebody's phone.** If a friend's JavaScript
+throws, or the board renders wrong on his model, **nobody ever finds out.**
+
+**For a beta whose entire purpose is discovering problems, that is a large hole** — and the failure it
+misses is precisely the one that produces **silence rather than a complaint**. A player whose board did
+not render does not report a bug; he closes the tab. That is the same shape as the underivable board in
+scope question 1: the defects that leave no trace are the ones a beta must be built to catch, because the
+ones that generate complaints will arrive anyway.
+
+**What it is: a handler and an endpoint.** `window.onerror` and `unhandledrejection`, posted to the data
+layer with the device UUID and enough context to reproduce — message, stack, page, viewport, user agent.
+**Not a service and not a dependency.**
+
+⚠️ **It rides with items 2 and 3**, because it needs the UUID to be worth anything and the endpoint to go
+anywhere. An error report with no identity cannot be tied to the session that produced it.
+
+⚠️ **And it must not become a way to break §23.** The reporter fails silently and never blocks the play
+path — a client error handler that throws, or that waits on a network call, turns one broken render into a
+broken game.
+
+⚠️ **§35 applies to it like everything else.** No IP, no geolocation. A user agent and a viewport are
+what reproduce a rendering bug; anything past that is being collected because it was easy.
+
+---
+
+## Feedback channel: none, and that is a decision — 2026-08-22
+
+**Friends and family are controlled enough that they have the operator's phone number.** So **no contact
+link and no FAQ.**
+
+⚠️ **A FAQ written before there are users is a document answering invented questions.** The real ones will
+be different, and **what people ask is what eventually becomes the FAQ** — writing it first means writing
+it twice and being wrong the first time.
+
+**Recorded as a decision rather than left as an omission**, so nobody adds one to fill a gap that was
+chosen.
+
+---
+
 ## What the operator already has
 
 Domain (`boxscorepuzzle.com`), VPS, nginx already running, Postgres already running.
@@ -104,6 +149,20 @@ exists and is `disabled`), and **the deployment**.
 3. **The data layer**, against the Postgres already running.
 4. **Deployment.**
 5. **The share** — last to build, **held to the same standard as everything else in the milestone.**
+
+### ⚠️⚠️ The share is last and it does not get cut
+
+**If anything slips, the last item is what gets cut.** That is what *last* usually means, and here it must
+not: the share is the thing that answers the milestone's larger question, and a beta 0 without it answers
+whether the game works instead of whether people pass it on.
+
+**So the sequencing is deliberate and the priority is not read off it.** It is fifth because it depends on
+a finished reveal and a real board, not because it is the least important. ⚠️ **If time runs short, what
+gives is the scope of something else — never this.**
+
+⬜ **The alternative was moving it earlier**, and it loses on a dependency rather than on importance: the
+PNG draws from the finished game, so building it before the reveal is settled means building it twice.
+The position stands; the exemption is what makes the position safe.
 
 ### ⚠️ Why 2 before 3 is not merely a priority — it preserves data
 
@@ -163,10 +222,39 @@ reported as one verdict on the growth channel.
 
 ## ⚠️⚠️ Three scope questions, raised when this was written down and **decided the same day**
 
-### 1. The fifty-board hand-solve pack is **inside** beta 0 — decided
+### 1. The hand-solve gate is **inside** beta 0 — decided. ⚠️⚠️ Its size is not what any document says
 
 **It is a gate on beta 0, not a step before launch.** Operator's decision, 2026-08-22. It is the
 operator's to do and it is **still outstanding**.
+
+⚠️⚠️ **"The fifty-board hand-solve pack" names three different activities, and one of its two numbers is
+from a retired design.** Found while writing this document down.
+
+| | what it asks | size | axis | status |
+|---|---|---|---|---|
+| **The gate** | are the boards humanly derivable at all | — | — | **undefined, see below** |
+| **Pack A** | does the difficulty ordering correspond to felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | **stalls** | designed 2026-08-21, not built |
+| **The stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | designed, not built |
+
+**Where *fifty* comes from, and why it is stale.** `build_pack.py`'s `audit()` asserts fifty boards with
+**every rung at its quota on the chain axis** — and the generator stopped targeting chain. `todo.md` item
+13 already records that the producer is the last chain-targeted one. **So the fifty carries a number and
+an axis, and the axis is retired.** `CLAUDE.md`, the design document and five package-format documents all
+repeat the phrase.
+
+⚠️ **And sixteen is not the answer either, because it was never sized for this job.** Pack A is a
+*calibration instrument*: four boards per rung tells you about a rung. **The gate is a confidence
+statement about the generator** — that it does not produce underivable boards — and that is a sample-size
+question about the whole inventory, not a per-rung one. Substituting sixteen because sixteen is what
+exists would be the shape `CLAUDE.md` records under *a pack that claims to satisfy quotas and does not*.
+
+⬜ **What has to be decided: the gate's size and its axis**, on the current stall scale. §7 says a value
+that shapes the product is not invented in passing, so it is not being invented here.
+
+**Recommendation, for the operator to take or reject:** Pack A's sixteen **plus** a derivability-only
+sample drawn across the shipping inventory — no survey, no ranking sheet, just *did it solve without
+guessing*. Those are cheaper per board than a calibration sheet, which is what makes a larger N
+affordable. **The two questions are separate and only one of them is a gate.**
 
 `CLAUDE.md` is unambiguous that it is a **launch gate, not a review step**: layer 3 propagates intervals
 across forty-odd simultaneous relations, which is stronger than any person, so **a board can pass all four
@@ -205,6 +293,85 @@ extends it. A guard that only sees today's batch is the enforcement that already
 §33 asks for five. **Generate five.** Generation at volume is **one batch run** and the calendar has to be
 built either way, so generating less saves nothing and buys a reload in the middle of the beta — the one
 moment nobody wants to be running the generator in a hurry.
+
+---
+
+## ⚠️ Is the site public? — a decision, not a consequence
+
+**Friends and family on `boxscorepuzzle.com` with no authentication means anyone who finds the URL
+plays.** §23 requires the daily to be served without authentication, so there is no gate on the game
+itself.
+
+**This has to be decided rather than inherited**, because if it is public **the operator no longer
+controls who sees the first version** — and a first version is seen once.
+
+⬜ **Open.** What it turns on is not security; nothing here is secret and the puzzles are meant to be
+played. It is that a beta which anybody can find stops being a beta: a stranger who meets a rough edge
+forms an opinion the operator never gets to answer, and there is deliberately no feedback channel to hear
+it through (above).
+
+**What is available, cheapest first:** `noindex` plus an unlisted path, which keeps it out of search
+without gating anyone; HTTP basic auth at nginx, which is a real gate and is one line, ⚠️ **but sits in
+front of the puzzle and so has to be reasoned against §23**; or public and accepted.
+
+⚠️ **Note that `noindex` and an unlisted path are not access control** — they are obscurity, and the URL
+travels in every share. **Which is exactly the mechanism this milestone is testing.** A share that works
+is a link spreading beyond friends and family by design.
+
+---
+
+## Tablet and desktop: the phone UI, provisionally
+
+**They already work in the sense that matters** — the board targets 375px, so on a wide screen it renders
+centred and narrow. **Ugly but playable**, and that is acceptable for beta 0.
+
+⚠️ **The only requirement: it must not stretch.** A board built for 375px stretched to 1400px is
+**broken, not provisional** — the cells lose their proportions, the label column stops being 66px of
+seven characters, and §6's whole column argument is about a width that no longer holds.
+
+**So the check is a maximum width, not a layout.** Nothing is designed for the wide screen; something has
+to stop the narrow design from being scaled into a wrong one.
+
+### ✔ Measured 2026-08-22: it does not stretch — and nothing guards that
+
+**At 1400×900 the board holds at 375px, centred**, with the cell at 44.8px and the table at 359px: the
+same numbers it has at 375×812. `#app` carries `max-width: 375px`. **Verified in a browser and in a
+picture, not read off the stylesheet.** So the requirement is met today and beta 0 needs no work for it.
+
+⚠️⚠️ **But the number is spelled three times and tested nowhere.** `board.css:74`, `board.css:599` and
+`landing.css:18` each say `max-width: 375px`, and the only width assertion in the browser suite is for the
+narrow-device media query. **The width every §6 column argument rests on is three copies with nothing
+checking they agree** — this project's most-met defect, sitting under the one property beta 1 will change.
+
+⬜ **Recorded in `todo.md`.** The fix is a token and a test; it is not beta 0 work, but **beta 1 is the
+milestone that edits exactly this**, and finding out then that three files disagree is the expensive
+order.
+
+---
+
+## The beta sequence
+
+| | |
+|---|---|
+| **Beta 0** | the free daily, complete, on the VPS |
+| **Beta 1** | **desktop** |
+| **Beta 2** | **tablet** |
+| **Beta 3** | Stripe, accounts, subscription |
+
+**Desktop before tablet.** Operator's decision, 2026-08-22. **A physical keyboard is a different and
+better interaction** — digits and arrow keys rather than a custom keypad — so desktop is not the phone
+board on a bigger screen; it is the one platform where the input model genuinely improves. **And tablet
+has the fewest unique users of the three**, since whoever has one generally also has a phone and a
+computer.
+
+⚠️ **Each milestone has its successor named so nothing drifts into the wrong one.** The failure this
+prevents is the ordinary one: a desktop concern arriving during beta 0 and being fixed *there*, because
+fixing it is small and the milestone boundary is invisible from inside the work.
+
+⚠️ **`serve-brief.md` says one puzzle and three interfaces, a core that knows nothing about screens.**
+The sequence is what makes that claim testable: if the engine is really screen-agnostic, beta 1 touches
+`ui/` and nothing under `engine/`. **A desktop build that has to reach into the engine is the brief
+failing, and it will say so.**
 
 ---
 

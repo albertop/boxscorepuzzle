@@ -406,6 +406,24 @@ halves. **Found in a picture** — every computed style said 50px and agreed wit
 
 ---
 
+## 2026-08-22 — ⬜ the 375px cap is three copies and no test
+
+**Measured while writing `beta-0.md`:** at 1400×900 the board holds at 375px, centred, cell 44.8px, table
+359px — identical to 375×812. It does not stretch, which is the requirement beta 0 needs.
+
+⚠️⚠️ **The number is spelled three times and asserted nowhere.** `serve/ui/phone/board.css:74`,
+`board.css:599` and `landing.css:18` each carry `max-width: 375px`; the browser suite's only width
+assertion is for the `(max-width: 359px)` media query. **This is the width §6's entire six-column argument
+rests on**, and it is three places with nothing checking they agree.
+
+⚠️ **It is also a presentation constant living outside `tokens.css`**, which `CLAUDE.md` names as the one
+place they go.
+
+⬜ **The fix is a token and a test.** Not beta 0 work — but **beta 1 is desktop**, which is the milestone
+that edits exactly this property, and discovering three disagreeing files then is the expensive order.
+
+---
+
 ## 2026-08-22 — ⬜ the share button is drawn and does nothing
 
 The reveal now carries a *Share* button beside *Back to the board*, `disabled`, with the three-node web
