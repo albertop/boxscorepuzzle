@@ -141,17 +141,18 @@ export function renderReveal(puzzle, record) {
   hints.append(hintLabel, hintFigure);
   result.append(hints);
 
-  // ⚠️⚠️ **Tries, and the number shown is the record's failed checks plus one.** The engine counts
-  // presses of Check that failed on a full board; the player made one more attempt than that, and it
-  // is the one that worked. **Both numbers are true and neither is the other**: C7 stores the event —
-  // how many attempts failed — and this states what the player did, which is why a clean solve reads
-  // `1` rather than `0`. Showing the stored figure under this label would tell a first-time solver
-  // they never tried.
+  // ⚠️⚠️ **The failures, not the attempts, and this was the other way round for one commit.** Showing
+  // `failed + 1` under the label *Tries* made a clean solve read `1` instead of `0` — tidier, and
+  // worse in the two ways that matter.
   //
-  // ⚠️ **`Tries`, not `Failed checks`.** §27 says the game cannot be lost, and a line that counts a
-  // player's failures on the screen celebrating their finish argues the other way. This measures
-  // attempts; the label says attempts. Same reasoning as the hints line beside it: it is context for a
-  // shared time rather than a verdict on it.
+  // **`Check failed: 0` says exactly what it means.** Under *Tries* the player has to subtract to
+  // learn how many times the board came back wrong.
+  //
+  // ⚠️ **And it collapsed the distinction it exists for.** Solved first time read `1`; failed once
+  // read `2` — two adjacent numbers for very different results, on the line whose whole job is
+  // separating somebody probing from somebody correcting. `0` against `1` separates at a glance.
+  //
+  // The C7 field and this line are the same number now, which is also one fewer thing to disagree.
   const tries = document.createElement("p");
   tries.className = "reveal-tries";
   const triesLabel = document.createElement("span");
@@ -159,10 +160,10 @@ export function renderReveal(puzzle, record) {
   triesLabel.textContent = text("reveal.tries");
   const triesFigure = document.createElement("span");
   triesFigure.className = "reveal-tries-figure";
-  const attempts = (record.failed_checks ?? 0) + 1;
-  triesFigure.textContent = String(attempts);
-  // First time is the quiet state, as no hints is on the row above.
-  if (attempts === 1) tries.dataset.state = "none";
+  const failed = record.failed_checks ?? 0;
+  triesFigure.textContent = String(failed);
+  // A board that never came back wrong is the quiet state, as no hints is on the row above.
+  if (failed === 0) tries.dataset.state = "none";
   tries.append(triesLabel, triesFigure);
   result.append(tries);
 
