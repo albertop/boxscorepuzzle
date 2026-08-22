@@ -19,7 +19,7 @@ import sys
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
+from types import ModuleType
 
 import pytest
 
@@ -27,7 +27,7 @@ _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 _TODAY = date(2026, 9, 1)
 
 
-def _builder() -> Any:
+def _builder() -> ModuleType:
     """Load the script fresh, so patching one test's stubs cannot leak into another."""
     spec = importlib.util.spec_from_file_location("build_inventory", _SCRIPTS / "build_inventory.py")
     assert spec is not None and spec.loader is not None
@@ -48,7 +48,7 @@ class _Package:
     puzzle_id: str
 
 
-def _stub(builder: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, available: int) -> None:
+def _stub(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, available: int) -> None:
     """A pool of `available` distinct games, each producing a board, and nothing touching a database."""
     monkeypatch.setattr(builder, "CALENDAR", tmp_path / "calendar.json")
     monkeypatch.setattr(builder, "_ROOT", tmp_path)

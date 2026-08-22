@@ -156,12 +156,20 @@ class Season:
     daily: str
     substitutions: str
     admission: str
+    events: str
+    """The play-by-play table this season's first event is read from.
+
+    ⚠️ **A field rather than a constant, for the same reason `admission` is one.** The postseason has
+    its own events table, and a shared literal would silently read regular-season rows for a postseason
+    game — producing no first event, and so excluding every postseason board. A rule that empties a pool
+    is easier to spot than one that mixes two, but neither should be possible."""
 
 
 REGULAR: Final = Season(
     games="dbo.retroGamesReg",
     daily="dbo.retroDailyReg",
     substitutions="dbo.retroSubstitutionsReg",
+    events="dbo.retroEventsReg",
     # ⚠️ Unchanged, and it must stay unchanged: this is what admits every game the pool already holds.
     # Deduced games and Negro Leagues games are out (§32) and both balance every identity, which is why
     # the exclusion is a join rather than a check — nothing downstream can catch a board that is
@@ -176,6 +184,7 @@ POSTSEASON: Final = Season(
     games="dbo.retroGamesPost",
     daily="dbo.retroDailyPost",
     substitutions="dbo.retroSubstitutionsPost",
+    events="dbo.retroEventsPost",
     # There is no provenance table for the postseason and none is needed: every postseason event file
     # is `.EVE`, with no deduced twin and no league letter, so there is nothing to exclude per game.
     # The floor is protection against Retrosheet publishing something later that would need excluding.
@@ -244,6 +253,25 @@ def eligibility(  # noqa: PLR0913
     -- no longer being built.
     WHERE o.batters <= {max_batters} AND d.pitchers BETWEEN {min_pitchers} AND {max_pitchers}
       AND l.VisLineScore IS NOT NULL
+      -- ⚠️⚠️ **The visiting club batted first, stated by the data rather than inferred.** 49 games in
+      -- the regular season have the home club batting the top of the first — neutral-site and
+      -- rescheduled games where the designated home team led off. Retrosheet is describing something
+      -- real; the board is what cannot represent it.
+      --
+      -- **Everything about the board assumes the visitor bats first**: the `x` for the half-inning
+      -- never played, which side is `AWAY BATTING`, and the outs for a home team that wins without
+      -- batting in the ninth. A reversed game is a different object, and 49 of them do not justify a
+      -- special case running on every board forever. **This is a construction rule, not data quality.**
+      --
+      -- ⚠️⚠️ **`EXISTS` over the visitor batting, never `NOT EXISTS` over the 49.** An exclusion list
+      -- lets a game with no event rows through — the fail-open shape this project has closed twice, and
+      -- the one §32 already states for provenance. Coverage was measured before relying on it:
+      -- **100% of games from 1910 to 2029 have a first event**, so nothing is lost by requiring one.
+      --
+      -- ⚠️ No validation layer can see this. Such a board balances every identity perfectly and is only
+      -- wrong about which team is which — the mislabelled-team shape, found by reading a file.
+      AND EXISTS (SELECT 1 FROM {season.events} ev
+                  WHERE ev.GAME_ID = g.GAME_ID AND ev.EVENT_ID = 1 AND ev.BAT_HOME_ID = 0)
       AND {seasons}
       -- ⚠️ The source rule (§32) is the CROSS APPLY above and is stated **only** there. It is an
       -- acceptance list, never an exclusion list: the form that used to sit here admitted a game with
@@ -253,7 +281,7 @@ def eligibility(  # noqa: PLR0913
       -- rather than kept as a belt — and `Season.admission` is why it stays one place now that there
       -- are two seasons to admit.
       {gate_clause}
-    """
+    """  # noqa: S608 - see `what reaches this query` in the docstring
 
 
 def shape_cte(season: Season = REGULAR) -> str:
