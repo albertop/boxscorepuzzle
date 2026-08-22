@@ -738,6 +738,7 @@ def load(  # noqa: PLR0913, PLR0915
     max_pitchers: int = PITCHER_CAP,
     also: tuple[str, ...] = (),
     season: Season = REGULAR,
+    window: tuple[int, int] = SEASON_WINDOW,
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
 
@@ -780,6 +781,11 @@ def load(  # noqa: PLR0913, PLR0915
     `min_pitchers` exists to sample an *exact* pitcher count rather than a cap, which is what
     comparing a two-pitcher board against a five-pitcher one requires — under a cap the five-pitcher
     boards would be a handful of outliers inside a sample of two-pitcher ones.
+
+    ⚠️⚠️ **`window` exists so a quota can be sampled rather than hoped for.** The draw is *n per decade*,
+    which is flat by construction — and §6 caps pre-1950 boards at 5% of what a player sees. A flat draw
+    cannot satisfy a weighted quota except by accident, which is exactly how the first 150-board calendar
+    came out **34% pre-1950 against a ceiling of 8**. Two draws with two windows can.
 
     ⚠️ **`also` names games the sample must contain**, on top of whatever the stratified draw returns.
     It exists for re-measuring a specific board after a scale changes — the one board carrying a human
@@ -943,7 +949,11 @@ def load(  # noqa: PLR0913, PLR0915
         # Stratified by decade on purpose. The pool is not spread evenly across eras, and a sample
         # that lands in one decade would describe that decade's roster habits rather than the board.
         candidates = []
-        for decade in range(SEASON_WINDOW[0], SEASON_WINDOW[1] + 1, 10):
+        # ⚠️ `window`, not `SEASON_WINDOW`. The constant is the default and no longer the only option:
+        # a **quota** on eras cannot be met by a draw that is flat across all of them (§6's 5% pre-1950),
+        # so a caller has to be able to ask each side of 1950 for its own share. Passing the window is
+        # what makes *sampling with the quota applied* possible instead of drawing flat and hoping.
+        for decade in range(window[0], window[1] + 1, 10):
             candidates += cursor.execute(query, limit, decade, decade + 9).fetchall()
         if also:
             # ⚠️ Keyed by game *and* offensive team, because a game is two directions and they are two

@@ -18,6 +18,7 @@ import importlib.util
 import sys
 from dataclasses import dataclass
 from datetime import date
+from itertools import pairwise
 from pathlib import Path
 from types import ModuleType
 
@@ -49,12 +50,19 @@ class _Package:
 
 
 def _stub(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, available: int) -> None:
-    """A pool of `available` distinct games, each producing a board, and nothing touching a database."""
+    """A pool of `available` distinct games per era, each producing a board, and no database.
+
+    ⚠️ The stub honours `window`, because the real `load()` does — a stub that ignored it would let an
+    era test pass while the builder drew flat, which is the defect these tests exist for.
+    """
     monkeypatch.setattr(builder, "CALENDAR", tmp_path / "calendar.json")
     monkeypatch.setattr(builder, "_ROOT", tmp_path)
-    monkeypatch.setattr(
-        builder, "load", lambda *_args, **_kwargs: [_Loaded(f"CHN2026090{n:04d}") for n in range(available)]
-    )
+
+    def draw(_limit: int, *, window: tuple[int, int] = (1910, 2029), **_kwargs: object) -> list[_Loaded]:
+        year = window[0] + 1
+        return [_Loaded(f"CHN{year}09{n:04d}") for n in range(available)]
+
+    monkeypatch.setattr(builder, "load", draw)
     monkeypatch.setattr(
         builder,
         "_hardest_target",
@@ -160,3 +168,104 @@ class TestItRefusesToTouchThePast:
 
         with pytest.raises(SystemExit, match="extends and never rewrites"):
             builder.build(10, _TODAY, object(), _TODAY)
+
+
+class TestTheEraQuotaIsSampledRatherThanHoped:
+    """⚠️⚠️ The first 150-board calendar was **34% pre-1950 against a 5% ceiling**, because `load()`
+    draws *n per decade* over twelve decades and four of them are before 1950. **A flat draw cannot
+    satisfy a weighted quota except by accident.**"""
+
+    def test_the_calendar_stays_within_the_ceiling(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=200)
+
+        builder.build(100, date(2026, 9, 2), object(), _TODAY)
+
+        cal = builder.read(builder.CALENDAR)
+        pre = [e for e in cal if int(e.game_id[3:7]) < builder.DIVIDE]
+        allowed, _rest = builder.era_quota(len(cal))
+        assert len(pre) <= allowed, f"{len(pre)} pre-1950 of {len(cal)}, ceiling {allowed}"
+
+    def test_the_quota_is_a_ceiling_and_never_rounds_up(self) -> None:
+        builder = _builder()
+
+        assert builder.era_quota(150) == (7, 143), "150 * 5% is 7.5; a ceiling floors it"
+        assert builder.era_quota(19) == (0, 19), "under twenty days there is no room for one"
+
+    def test_the_pre_war_boards_are_spread_rather_than_bunched(self) -> None:
+        # ⚠️⚠️ **Counting is not placing.** §6 asks for one every three weeks so Ruth is an event; seven
+        # on seven consecutive days meets the count and defeats the intent, and a quota implemented as a
+        # tally would have passed its own assertion.
+        builder = _builder()
+        slots = sorted(builder.spread(150, 7))
+
+        gaps = [b - a for a, b in pairwise(slots)]
+        assert min(gaps) >= 20, f"pre-1950 boards land {min(gaps)} days apart: {slots}"
+
+    def test_the_audit_refuses_a_calendar_over_the_ceiling(self) -> None:
+        # A3.5: asserted after construction, never printed and believed. The run that produced the 34%
+        # calendar reported `assigned 150 of 150` and was right about the count.
+        builder = _builder()
+        over = tuple(
+            builder.Entry(f"2026-09-{n + 1:02d}", f"p{n}", f"CHN1913{n:04d}", "CHN", "active", "gen1")
+            for n in range(20)
+        )
+
+        with pytest.raises(SystemExit, match="pre-1950"):
+            builder.audit(over)
+
+    def test_the_audit_refuses_a_repeated_game(self) -> None:
+        builder = _builder()
+        twice = (
+            builder.Entry("2026-09-01", "pa", "CHN19800001", "CHN", "active", "gen1"),
+            builder.Entry("2026-09-02", "pb", "CHN19800001", "SLN", "active", "gen1"),
+        )
+
+        with pytest.raises(SystemExit, match="repeated"):
+            builder.audit(twice)
+
+
+class TestTheCalendarIsCheckpointed:
+    def test_a_crash_midway_keeps_the_assignments_already_made(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️⚠️ **A2.3.** The calendar was written once after the loop, so a crash at board 140 of 150
+        left 140 signed packages and **lost every assignment** — the work survived and the record of it
+        did not. The short-run case working was a different thing, and a successful run hid the gap."""
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=200)
+        real = builder._hardest_target
+        made = {"n": 0}
+
+        def explode(*args: object, **kwargs: object) -> object:
+            made["n"] += 1
+            if made["n"] > 3:
+                raise KeyboardInterrupt
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(builder, "_hardest_target", explode)
+        with pytest.raises(KeyboardInterrupt):
+            builder.build(10, date(2026, 9, 2), object(), _TODAY)
+
+        assert len(builder.read(builder.CALENDAR)) == 3, "the crash lost assignments already made"
+
+
+class TestItIsDeterministic:
+    def test_the_same_game_yields_the_same_puzzle_id_twice(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ **A2.4, §21's double idempotence, asserted rather than trusted.** The rule is that a
+        puzzle id derives from the game and never from the date or the run — so the same slice built
+        into two different calendars must produce the same ids, in the same order."""
+        first, second = tmp_path / "a", tmp_path / "b"
+        got = []
+        for where in (first, second):
+            where.mkdir()
+            builder = _builder()
+            _stub(builder, monkeypatch, tmp_path, available=20)
+            monkeypatch.setattr(builder, "CALENDAR", where / "calendar.json")
+            monkeypatch.setattr(builder, "_ROOT", where)
+            builder.build(5, date(2026, 9, 2), object(), _TODAY)
+            got.append([e.puzzle_id for e in builder.read(builder.CALENDAR)])
+
+        assert got[0] == got[1], "the same games produced different puzzle ids on a second run"

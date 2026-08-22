@@ -57,8 +57,8 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
-from boxscore_forge.calendar import Entry, extend, games, read, write  # noqa: E402
-from boxscore_forge.pool import Loaded, load  # noqa: E402
+from boxscore_forge.calendar import Calendar, Entry, extend, games, read, write  # noqa: E402
+from boxscore_forge.pool import SEASON_WINDOW, Loaded, load  # noqa: E402
 from boxscore_forge.produce import produce  # noqa: E402
 from boxscore_forge.publication_key import publication_key  # noqa: E402
 
@@ -102,6 +102,36 @@ FLOOR = 1
 """The easiest target worth producing. A board that reaches nothing from the ceiling down to here has
 nothing to offer and is discarded silently (§22): with a pool this size, throwing away 30% costs
 nothing."""
+
+
+PRE_1950_SHARE = 0.05
+"""§6's quota: **pre-1950 boards must not exceed 5% of what the player sees** — about eighteen a year,
+one every three weeks, so that Ruth is **an event rather than the scenery**.
+
+⚠️ **It selects rather than corrects, and that is still the reason for it.** §10's re-measurement found
+pre-1950 is 29% of the pool naturally rather than 78%, so the quota stopped being a fix for a broken
+distribution — and the operator's original argument never depended on the distribution: **the most
+committed fan cannot name twenty players from before 1930, and a 1922 boxscore reveals eight strangers
+even to him.**
+
+⚠️⚠️ **Spelled here rather than imported, and that is a defect this file is carrying knowingly.**
+`CLAUDE.md` says a number encoding a domain decision lives in `forge/src/boxscore_domain/` and is never
+spelled elsewhere. This one is a *calendar* rule and `boxscore_domain` holds *board* rules; promoting it
+is the right move and it is not this change. Recorded in `docs/reviews/todo.md`.
+"""
+
+DIVIDE = 1950
+"""Where §6 draws the line. `SEASON_WINDOW` starts at 1910, so the eras are 1910-1949 and 1950-2029."""
+
+
+def era_quota(days: int) -> tuple[int, int]:
+    """How many boards each side of 1950 may have: `(pre_1950, rest)`.
+
+    ⚠️ **`floor`, not `round`.** A quota is a ceiling, so 150 days gives **7**, not 8 — rounding up
+    would put the calendar one board over the rule it exists to keep.
+    """
+    pre = int(days * PRE_1950_SHARE)
+    return pre, days - pre
 
 
 def draw_size(days: int) -> int:
@@ -210,41 +240,102 @@ class Batch:
     refusals: Counter[str]
 
 
-def _entries(sample: list[Loaded], dates: list[str], spent: set[str], batch: Batch) -> list[Entry]:
-    """Produce a board per date, skipping games the calendar has already spent.
+def spread(total: int, count: int) -> set[int]:
+    """Which of `total` date slots get one of `count` special boards, spaced evenly.
 
-    ⚠️⚠️ **The producer avoids duplicate games and the calendar enforces the rule.** `extend()` *raises*
-    on a game already published, which is right for a caller making a mistake — but a batch draws the
-    other direction of something about 10% of the time, and a run that aborted on the first one would be
-    useless. So this skips them and the calendar's refusal stays as the last line of defence. **Two
-    layers, and the outer one is not a substitute for the inner one.**
+    ⚠️⚠️ **The quota is about what the player meets, not about a tally.** §6 asks for pre-1950 boards
+    *one every three weeks* so that Ruth is an event; seven of them on seven consecutive days satisfies
+    the count and defeats the intent entirely. **Counting is not placing**, and a quota implemented as a
+    count only would have passed its own assertion.
     """
-    entries: list[Entry] = []
+    if count <= 0:
+        return set()
+    return {round(index * total / count) for index in range(count)}
+
+
+def _fill(
+    sample: list[Loaded],
+    dates: list[str],
+    calendar: Calendar,
+    batch: Batch,
+    today: date,
+) -> Calendar:
+    """Produce a board for each date and **write the calendar after every one**.
+
+    ⚠️⚠️ **Checkpointed, and it was not.** (A2.3) The calendar used to be written once after the loop,
+    so a crash at board 140 of 150 left 140 signed packages on disk and **lost every assignment** — the
+    work survived and the record of it did not. The short-run case working was not the same thing, and a
+    successful run hid the difference.
+
+    Writing a 26 KB file per board costs nothing against ten seconds of signing, and `extend()` is
+    append-only, so each checkpoint is the previous calendar plus one row.
+
+    ⚠️ **The producer skips a game the calendar has spent and the calendar refuses it anyway.** Two
+    layers; the outer one exists so a run does not abort on the ~10% of draws that are the other
+    direction of something, and it is not a substitute for the inner one.
+    """
+    filled = 0
     for item in sample:
-        if len(entries) == len(dates):
+        if filled == len(dates):
             break
-        if item.game_id in spent:
+        if item.game_id in games(calendar):
             batch.counts["duplicate game"] += 1
             continue
         package = _hardest_target(item, batch.key, batch.counts, batch.refusals)
         if package is None:
             continue
-        spent.add(item.game_id)
-        # ⚠️ `write()` from the package format, not a hand-rolled dump. `as_json()` returns a mapping;
-        # spelling the serialisation here would be a second definition of what a package file looks
-        # like, and the signature is computed over exactly what that function writes.
         write_package(batch.out / f"{package.puzzle_id}.json", package)
-        entries.append(
-            Entry(
-                date=dates[len(entries)],
-                puzzle_id=package.puzzle_id,
-                game_id=item.game_id,
-                direction=item.offense_team,
-                status="active",
-                assigned=batch.out.name,
-            )
+        entry = Entry(
+            date=dates[filled],
+            puzzle_id=package.puzzle_id,
+            game_id=item.game_id,
+            direction=item.offense_team,
+            status="active",
+            assigned=batch.out.name,
         )
-    return entries
+        calendar = extend(calendar, (entry,), today=today)
+        write(CALENDAR, calendar)
+        filled += 1
+    return calendar
+
+
+def audit(calendar: Calendar) -> None:
+    """Assert what the calendar is, after it is built. **Never printed and believed.**
+
+    ⚠️⚠️ **A3.5, and its absence is the whole reason the first inventory was wrong.** The run reported
+    `assigned 150 of 150` — true about the count, silent about the composition — while the calendar was
+    **34% pre-1950 against a 5% ceiling**. `CLAUDE.md` records the same shape from a weighted draw that
+    produced zero boards at the easiest rung and reported quotas it had not met.
+
+    ⚠️⚠️ **Weighting the draw is not enough on its own.** It makes the violation rarer, not impossible —
+    and rarer is worse than never in one specific way: it stops being reproducible. **Any composition
+    property the pipeline cannot see needs its own assertion here.** Era was only the first because it
+    was the first with a written quota; a game published twice, a date assigned twice and a puzzle used
+    twice are the same class, and all four are checked below.
+    """
+    if not calendar:
+        return
+    faults: list[str] = []
+
+    pre = [entry for entry in calendar if int(entry.game_id[3:7]) < DIVIDE]
+    allowed, _rest = era_quota(len(calendar))
+    if len(pre) > allowed:
+        faults.append(f"{len(pre)} pre-{DIVIDE} boards of {len(calendar)}, above §6's ceiling of {allowed}")
+
+    for what, seen in (
+        ("games", [entry.game_id for entry in calendar]),
+        ("dates", [entry.date for entry in calendar]),
+        ("puzzle ids", [entry.puzzle_id for entry in calendar]),
+    ):
+        if len(set(seen)) != len(seen):
+            repeated = sorted({item for item in seen if seen.count(item) > 1})
+            faults.append(f"{what} repeated: {repeated[:5]}")
+
+    if faults:
+        detail = "".join(f"\n  {fault}" for fault in faults)
+        message = f"the calendar is not what it claims:{detail}"
+        raise SystemExit(message)
+    _say(f"  audit: {len(pre)} pre-{DIVIDE} of {len(calendar)} (ceiling {allowed}), no repeats")
 
 
 def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
@@ -280,33 +371,48 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
         message = f"{wanted[0]} is today or earlier; the calendar extends and never rewrites (§21)"
         raise SystemExit(message)
 
-    per_decade = draw_size(days)
-    _say(f"filling {len(wanted)} of the {days} days from {first}; drawing {per_decade} per decade")
-
-    started = time.monotonic()
-    sample = load(per_decade, gated=True, gate=ZERO_DENSITY_GATE)
-    _say(f"  {len(sample)} directions in {time.monotonic() - started:.1f}s")
+    # ⚠️⚠️ **Two draws, one per era, because a flat draw cannot meet a weighted quota.** `load()` takes
+    # *n per decade*; over twelve decades that is a third of the sample before 1950, against §6's one in
+    # twenty. The first 150-board calendar came out **34% pre-1950** exactly this way. Asking each side
+    # for its own share is what "sample with the quota applied" means — the alternative is drawing flat
+    # and hoping, which is what happened.
+    pre_wanted, rest_wanted = era_quota(len(wanted))
+    # ⚠️ **Placed, not just counted.** The pre-1950 boards take evenly spaced slots so they arrive about
+    # one every three weeks, which is what §6 actually asks for.
+    early_slots = spread(len(wanted), pre_wanted)
+    eras = (
+        ("pre-1950", (SEASON_WINDOW[0], DIVIDE - 1), [d for n, d in enumerate(wanted) if n in early_slots]),
+        ("1950 on", (DIVIDE, SEASON_WINDOW[1]), [d for n, d in enumerate(wanted) if n not in early_slots]),
+    )
+    _say(f"filling {len(wanted)} of the {days} days from {first}")
+    _say(f"  era quota (§6): {pre_wanted} pre-1950, {rest_wanted} from 1950 on")
 
     out = _ROOT / "forge" / "inventory" / f"gen{int(time.time()):x}"
     out.mkdir(parents=True, exist_ok=True)
-    counts: Counter[str] = Counter()
-    refusals: Counter[str] = Counter()
+    batch = Batch(key, out, Counter(), Counter())
     started = time.monotonic()
-    entries = _entries(sample, wanted, spent, Batch(key, out, counts, refusals))
+    drawn = 0
+    for name, era, dates in eras:
+        if not dates:
+            continue
+        decades = max(1, (era[1] - era[0] + 1) // 10)
+        per_decade = max(1, ceil(len(dates) * DRAW_MARGIN / decades))
+        sample = load(per_decade, gated=True, gate=ZERO_DENSITY_GATE, window=era)
+        drawn += len(sample)
+        _say(f"  {name}: {len(sample)} directions for {len(dates)} dates ({per_decade} per decade)")
+        calendar = _fill(sample, dates, calendar, batch, today)
     building = time.monotonic() - started
 
-    # ⚠️ The calendar refuses anything the producer let through — a duplicate game, a past date, a date
-    # already assigned. It is the check no package can perform on itself, and it runs even though the
-    # loop above tried to make it unnecessary.
-    write(CALENDAR, extend(calendar, tuple(entries), today=today))
-
+    filled = len(calendar) - len(assigned)
     _say("")
-    _say(f"assigned {len(entries)} of {len(wanted)} dates from {len(sample)} directions")
+    _say(f"assigned {filled} of {len(wanted)} dates from {drawn} directions")
     _say(f"  packages in {out}")
-    _say(f"  {building / 60:.1f} min building ({building / max(len(entries), 1):.1f}s per board)")
-    _say(f"  attempts by outcome: {dict(counts)}")
-    _say(f"  refusals by check: {dict(refusals) or 'none'}")
-    if len(entries) < len(wanted):
+    _say(f"  {building / 60:.1f} min building ({building / max(filled, 1):.1f}s per board)")
+    _say(f"  attempts by outcome: {dict(batch.counts)}")
+    _say(f"  refusals by check: {dict(batch.refusals) or 'none'}")
+    audit(calendar)
+
+    if filled < len(wanted):
         # ⚠️⚠️ **The work is kept and the run still fails.** (v38-P2-01) This printed a warning and exited
         # zero, so a short calendar looked like a finished one — and the calendar is the artefact §21
         # makes irreproducible, read as serving truth.
@@ -318,9 +424,9 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
         #
         # So: keep the boards, keep the assignments, and **exit non-zero** so nothing downstream and
         # nobody reading a terminal mistakes a short run for a complete one.
-        short = len(wanted) - len(entries)
+        short = len(wanted) - filled
         message = (
-            f"{short} of {len(wanted)} dates unfilled. The {len(entries)} boards produced are written "
+            f"{short} of {len(wanted)} dates unfilled. The {filled} boards produced are written "
             f"and their dates are assigned, so re-running fills the gaps. If it comes up short again, "
             f"raise DRAW_MARGIN ({DRAW_MARGIN}) — the draw, not the yield, is what runs out."
         )
