@@ -77,15 +77,17 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
       onSelect: null,
     }),
   );
-  // ⚠️ Hidden from assistive technology, and the caption carries the meaning instead. The example is a
-  // picture of a board: to the eye it says *this is what you get*, and read aloud it is ninety numbers
-  // and thirty announcements of the word blank before the play button.
+  // ⚠️ Hidden from assistive technology. The example is a *picture* of a board: to the eye it says
+  // "this is what you get", and read aloud it is ninety numbers and thirty announcements of the word
+  // blank before the play button. The tagline above carries the meaning for a reader who cannot see
+  // it — which is what the caption below it used to do, before the caption said nothing new.
   example.setAttribute("aria-hidden", "true");
 
-  const caption = doc.createElement("p");
-  caption.className = "landing-caption";
-  caption.textContent = text("landing.example_caption");
-  page.append(example, caption);
+  // ⚠️ **The caption is gone.** It read "A real game, most of it missing. You put it back" — the first
+  // half repeats the tagline and the second describes what the fade already shows. A line that
+  // restates the picture beneath it is a line the eye learns to skip, and it was sitting between the
+  // example and the only button on the page.
+  page.append(example);
 
   // ---- the way in ------------------------------------------------------------------------------
   const session = store?.load(puzzle.id) ?? null;
@@ -108,7 +110,23 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
   when.className = "landing-date";
   when.textContent = longDate(localIso(today));
   play.append(when);
-  page.append(play);
+
+  // ⚠️⚠️ **Directly under the button, in the same block.** It used to sit at the bottom of the page,
+  // after the reserved slot, separated from everything. **Somebody arriving without knowing what this
+  // is presses the big button, meets an empty board, and leaves** — they have to see the way in
+  // *before* they choose, not after they have already chosen wrong.
+  //
+  // ⚠️ No underline: next to a filled button, an underlined link reads as small print rather than as
+  // the second of two choices. It keeps its own 44px target.
+  const how = doc.createElement("a");
+  how.className = "landing-how";
+  how.href = withSearch(ROUTES.tutorial);
+  how.textContent = text("landing.how_to_play");
+
+  const way = doc.createElement("div");
+  way.className = "landing-way";
+  way.append(play, how);
+  page.append(way);
 
   if (finished) {
     const done = doc.createElement("p");
@@ -123,11 +141,6 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
     page.append(done);
   }
 
-  const how = doc.createElement("a");
-  how.className = "landing-how";
-  how.href = withSearch(ROUTES.tutorial);
-  how.textContent = text("landing.how_to_play");
-  page.append(how);
 
   // ⚠️⚠️ **Empty and deliberate. Do not remove as unused** (C9, C8, C10). The archive, the streak and
   // the subscription land in this order, below the way in and above nothing. The slot exists now so
@@ -136,6 +149,17 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
   const later = doc.createElement("div");
   later.className = "landing-later";
   page.append(later);
+
+  // ⚠️⚠️ **Retrosheet's attribution is a condition of using their data, not a courtesy**, and every
+  // board in this product is built from their event files. Quoted verbatim from the catalogue —
+  // paraphrasing an attribution clause is how a condition stops being met.
+  //
+  // Small and grey at the end of the page, which is where a licence notice belongs and where the legal
+  // links will join it. `<footer>` rather than a `<p>`, so it is a landmark a screen reader can skip.
+  const footer = doc.createElement("footer");
+  footer.className = "landing-footer";
+  footer.textContent = text("landing.retrosheet");
+  page.append(footer);
 
   // A test — and a future streak panel — needs to drive this without going through a real anchor.
   if (go) {

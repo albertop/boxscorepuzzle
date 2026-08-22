@@ -202,17 +202,30 @@ const en = {
   // -------------------------------------------------------------------------------------------
   // The landing page (`docs/serve-flow.md` §1). Every visit lands here, not only the first.
   // -------------------------------------------------------------------------------------------
-  "landing.name": "boxscore",
+  // ⚠️ **`boxscore puzzle`, not `boxscore`.** The word alone does not say it is a game — it is the
+  // baseball term for the table itself — and it matches the domain, which is what somebody types when
+  // they try to come back.
+  "landing.name": "boxscore puzzle",
   // ⚠️ **It says what this is and what it is not, in that order.** The second sentence is not filler:
   // the first thing a visitor gets wrong about this product is thinking it is a trivia game, and that
   // mistake is the line separating it from Immaculate Grid (§2, anti-goals).
   "landing.tagline": "Rebuild a real baseball boxscore using nothing but logic.",
-  "landing.not_trivia": "No trivia, no guessing. Every missing number can be worked out.",
-  "landing.example_caption": "A real game, most of it missing. You put it back.",
+  // ⚠️ **The second sentence says *daily*, and it used to repeat the tagline.** It read "no trivia, no
+  // guessing; every missing number can be worked out" — and *can be worked out* is what "nothing but
+  // logic" above already says. **What was missing from the page entirely is that it is daily**, which
+  // is the thing that makes it a product rather than a puzzle.
+  "landing.not_trivia": "No trivia, no guessing. A new puzzle every day.",
   "landing.play": "Play today\u2019s puzzle",
   "landing.how_to_play": "How to play",
   // Shown in place of the tagline's call to action once today is done, beside the time.
   "landing.finished": "You rebuilt it.",
+
+  // ⚠️⚠️ **A licence condition, not a courtesy.** Retrosheet's terms require this notice wherever their
+  // data is used, and every board in this product is built from their event files. It is quoted
+  // verbatim: paraphrasing an attribution clause is how a condition stops being met.
+  "landing.retrosheet":
+    "The information used here was obtained free of charge from and is copyrighted by Retrosheet. " +
+    "Interested parties may contact Retrosheet at www.retrosheet.org.",
 
   // -------------------------------------------------------------------------------------------
   // The tutorial (`docs/serve-flow.md` §1b). Five steps, one per relation family, and skippable.

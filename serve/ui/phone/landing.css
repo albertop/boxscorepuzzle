@@ -86,18 +86,17 @@ body {
   position: static;
 }
 
-.landing-caption {
-  margin: 6px 0 0;
-  font-size: 13px;
-  color: var(--muted);
-  text-align: center;
-}
-
 /* The way in. 44px is the touch floor everywhere else on this product; this one is the single control
    the whole page exists to offer, so it is well above it. */
+/* The two ways in, together. The tutorial link used to sit at the foot of the page; a visitor who does
+   not yet know what this is has to meet it before they choose, not after. */
+.landing-way {
+  margin: 20px 0 0;
+}
+
 .landing-play {
   display: block;
-  margin: 20px 0 0;
+  margin: 0;
   padding: 15px 12px;
   min-height: 56px;
   box-sizing: border-box;
@@ -132,16 +131,29 @@ body {
   color: var(--muted);
 }
 
+/* ⚠️ No underline. Beside a filled button an underlined link reads as small print rather than as the
+   second of two choices — and it is the choice a first-time visitor needs. It keeps the 44px floor:
+   it is quieter than the button, not smaller than a thumb. */
 .landing-how {
   display: block;
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   padding: 12px;
   min-height: 44px;
   box-sizing: border-box;
   text-align: center;
   font-size: 15px;
+  font-weight: 600;
   color: var(--entered);
-  text-decoration: underline;
+  text-decoration: none;
+}
+
+/* ⚠️ Small and grey, at the end, and it is a licence condition rather than decoration — so it is quiet
+   but not hidden. `--muted` is the same grey the rest of the page's secondary text uses. */
+.landing-footer {
+  margin: 28px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted);
 }
 
 /* ⚠️ Reserved and empty (C9, C8, C10). The archive, the streak and the subscription land here. Do not
