@@ -69,11 +69,29 @@ class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
     passes them. **Neither is the adopted design**, and both look correct in a diff.
     """
 
-    def test_the_reference_generator_builds_through_the_fallback(self) -> None:
-        tree = _modules(SCRIPTS)["write_reference_puzzles"]
+    def test_the_production_core_builds_through_the_fallback(self) -> None:
+        """⚠️ **This pointed at `write_reference_puzzles` and now points at the core both producers
+        share** (`docs/beta-0-plan.md`, A2). That is a stronger guarantee than the one it replaces: the
+        reference writer was the only producer when this was written, and the batch producer filling the
+        calendar would have been a second one nothing checked.
+        """
+        tree = _modules(SRC)["boxscore_forge.produce"]
 
-        assert _calls(tree, "erase_with_lineup_fallback"), "the generator no longer uses the retry"
-        assert not _calls(tree, "erase"), "the generator calls erase() directly, bypassing the retry"
+        assert _calls(tree, "erase_with_lineup_fallback"), "the production core no longer uses the retry"
+        assert not _calls(tree, "erase"), "the production core calls erase() directly, bypassing the retry"
+
+    def test_no_producer_reaches_erase_without_going_through_the_core(self) -> None:
+        """The other half: a script that stopped using `produce()` and called the erasure itself.
+
+        ⚠️ Named separately from the test above because they fail for different reasons — one says the
+        core stopped using the retry, this says something bypassed the core. A single test covering both
+        would report either as the other.
+        """
+        for name, tree in _modules(SCRIPTS).items():
+            assert not _calls(tree, "erase"), f"{name} erases directly instead of calling produce()"
+            assert not _calls(tree, "erase_with_lineup_fallback"), (
+                f"{name} reaches the fallback around the production core"
+            )
 
     def test_no_module_outside_the_fallback_passes_slots_to_erase(self) -> None:
         """⚠️ The other way round it: turning the constraint on for every board.

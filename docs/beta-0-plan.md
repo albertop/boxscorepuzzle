@@ -70,7 +70,7 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
 
 **Blocks everything.** Nothing downstream can be tested against one day's puzzle.
 
-### A1. Promote the loader out of `discovery/`
+### ✔ A1. Promote the loader out of `discovery/` — **done 2026-08-22**
 
 - **A1.1** Move `Loaded` and `load()` into `forge/src/boxscore_forge/` (a `pool` module), with the SQL,
   the era windows, the provenance predicate and the caps.
@@ -81,6 +81,22 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
   calls `load()` must keep working — that is the regression surface.
 - **Done when:** `write_reference_puzzles.py` has no `sys.path` insert into `discovery/`, the suite is
   green, and the discovery scripts that load still run.
+
+✔ **Done.** `boxscore_forge.pool`; `measure.py` re-exports and 33 scripts are untouched;
+`test_the_shim_exports_what_is_imported.py` parses every `from measure import` in the tree and asserts
+each name resolves *and is the same object* the pool holds. It caught a real break on its first run —
+`ruff --fix` had removed `ZERO_DENSITY_GATE` from `measure.py`, correctly, and one script imported it
+through there.
+
+⚠️ **What `mypy --strict` found once the code was in `src/`, invisible in `discovery/` for months:**
+`_sum` was annotated `-> object` and fed three `Direction` arguments expecting `BattingLine`,
+`BatterFootnotes` and `PitchingLine`. **The annotation was hiding three real type errors rather than
+passing them.**
+
+⚠️ **A1.2 resolved by counting first: 37 call sites, all `gated=True`, none `False`.** The default is
+`True` now — an omitted argument must not silently widen the population to nine parts unshippable
+boards. Deleting the parameter is recorded as a deferral with its price (37 call sites in scripts that
+need a database), not as an oversight.
 
 ### A2. Batch generation
 
@@ -95,11 +111,28 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
 - **Done when:** one command produces N validated packages with a recorded survival rate, and running it
   twice produces no duplicates.
 
+### ✔ A3 (core). The calendar module — **done 2026-08-22**
+
+`boxscore_forge.calendar`, written test-first, 26 tests, **100% coverage**, and every rule tested by its
+refusal. `docs/calendar.md` is the artefact it implements. §21's two requirements turn out to be one
+mechanism, and *one game, one puzzle* runs over the whole calendar including voided entries.
+
+⚠️ **A guard of mine could not fail, and mutation is what found it.**
+`test_an_existing_entry_is_never_replaced` used `next(...)` over a sorted list, so with the skip removed
+from `extend()` the calendar held two entries for one date and the test stayed green — `sorted` is
+stable and the original came first. Six mutations checked in total; all six now go red.
+
+**What is left of A3** is the builder that feeds it: the weekday curve (deferred, see below), the
+pre-1950 allowance, and the quota assertions.
+
 ### A3. The calendar
 
 - **A3.1** The date → puzzle assignment, persisted, **extends and never rewrites** (§21). A played date
   cannot change; a future defective puzzle is replaced, a past one is marked void and left in place.
-- **A3.2** Difficulty by weekday — easy Monday, hard Saturday (§31) — and vary which relation families a
+- ⬜ **A3.2 deferred — operator's decision 2026-08-22: build the calendar with no curve.** Nobody knows
+  which rung is Monday until the hand-solve pack comes back, and §21 makes applying a curve later a
+  *reordering of future dates* rather than a rebuild. The `difficulty` field is absent rather than
+  guessed (§7). Originally: difficulty by weekday — easy Monday, hard Saturday (§31) — and vary which relation families a
   level opens with, so no two Tuesdays start the same way.
 - **A3.3** ⚠️⚠️ **The one-game-one-puzzle guard, over everything ever published.** Not over a batch.
   `refuse_second_direction` is per-run and is not enough. **This needs the whole published history as

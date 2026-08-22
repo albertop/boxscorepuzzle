@@ -46,6 +46,7 @@ if str(_SCRIPTS) not in sys.path:
 import write_reference_puzzles as writer  # noqa: E402
 
 from boxscore_forge.pool import Loaded  # noqa: E402
+from boxscore_forge.produce import produce  # noqa: E402
 
 GAME, OFFENSE, DEFENSE = "SLN19680808", "CHN", "SLN"
 """The game the shared fixture is. The gate checks the identifier against the evidence, so both have
@@ -94,18 +95,23 @@ def _loaded(direction: Direction) -> Loaded:
 
 @pytest.fixture
 def built(cubs_at_braves_1968: Direction) -> Package:
-    """What `build()` returns, or a failure naming which half went wrong.
+    """What `produce()` returns, or a failure naming which half went wrong.
 
     ⚠️ **A throwaway key.** The real signing key never enters a test (§33), and nothing here needs it:
-    `build()` verifies against `key.public_key()`, which any Ed25519 pair satisfies.
-    """
-    package = writer.build(_loaded(cubs_at_braves_1968), TARGET, Ed25519PrivateKey.generate())
+    `produce()` verifies against `key.public_key()`, which any Ed25519 pair satisfies.
 
-    assert package is not None, (
-        f"the writer built nothing at {TARGET} stalls — either the erasure missed or the gate refused "
-        f"it. Run the writer to see the refusal; a silent None is the regression this file is about."
+    ⚠️ **`build()` moved to `boxscore_forge.produce` as `produce()`** (`docs/beta-0-plan.md`, A2), so the
+    batch producer and this writer share one definition. The assertion below is better for it: the
+    attempt now says *which* half went wrong instead of leaving a silent `None` to be guessed at, which
+    is the regression this whole file is about.
+    """
+    attempt = produce(_loaded(cubs_at_braves_1968), TARGET, Ed25519PrivateKey.generate(), note=writer.NOTE)
+
+    assert attempt.package is not None, (
+        f"the writer built nothing at {TARGET} stalls: {attempt.cause or 'no cause given'}"
+        f"{' — ' + '; '.join(attempt.refusals) if attempt.refusals else ''}"
     )
-    return package
+    return attempt.package
 
 
 class TestTheWriterPublishesWhatItsOwnGateAccepts:
@@ -137,22 +143,28 @@ class TestTheGateHasTeethOnThisExactPackage:
     """
 
     def test_the_producer_attaches_the_keys_the_strip_is_for(self) -> None:
-        """Read off `build()` itself, because the package it returns no longer carries them.
+        """Read off `produce()` itself, because the package it returns no longer carries them.
 
         ⚠️ If this fails, the control below is guarding a field nobody writes and the file has quietly
         stopped testing anything.
+
+        ⚠️ **The scan follows the function.** It parsed `write_reference_puzzles.py` for `def build`;
+        that function is `produce` in `boxscore_forge/produce.py` now, and a scan left pointing at the
+        old file finds nothing — `next()` over an empty generator, which raises rather than passing, and
+        that is the only reason this was caught rather than silently guarding nothing.
         """
-        tree = ast.parse((_SCRIPTS / "write_reference_puzzles.py").read_text(encoding="utf-8"))
-        build = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "build")
+        source = _ROOT / "forge" / "src" / "boxscore_forge" / "produce.py"
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        core = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "produce")
         written = {
             key.value
-            for node in ast.walk(build)
+            for node in ast.walk(core)
             if isinstance(node, ast.Dict)
             for key in node.keys
             if isinstance(key, ast.Constant) and isinstance(key.value, str)
         }
 
-        assert LEAKING_METADATA & written, "build() no longer attaches any key the strip is for"
+        assert LEAKING_METADATA & written, "produce() no longer attaches any key the strip is for"
 
     def test_the_same_package_is_refused_with_the_producers_metadata_back(
         self, built: Package, cubs_at_braves_1968: Direction

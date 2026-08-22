@@ -31,8 +31,6 @@ sys.path.insert(0, str(_ROOT / "forge" / "src"))
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
-from boxscore_forge.identity import puzzle_id  # noqa: E402
-from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 
 # ⚠️ **The loader lives in `boxscore_forge.pool` since 2026-08-22** (`docs/beta-0-plan.md`, A1). It used
 # to be `from measure import Loaded, load`, reaching into `discovery/difficulty-metrics` — so the path
@@ -43,10 +41,19 @@ from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E
 # renaming a module. That is what this is. `measure` re-exports every name, so the 33 discovery scripts
 # that import them are untouched.
 from boxscore_forge.pool import Loaded, load  # noqa: E402
-from boxscore_forge.publish import slot_references, to_board  # noqa: E402
-from boxscore_package.format import Package, PrintedBoxscore, Reveal, read, write  # noqa: E402
-from boxscore_package.signing import sign, sign_manifest, signing_key  # noqa: E402
-from boxscore_verify.certify import Evidence, certify_for_publication  # noqa: E402
+
+# ⚠️ **`produce` was `build()` in this file and is now the only definition of it** (`docs/beta-0-plan.md`,
+# A2). The batch producer that fills the calendar needs the same per-board core, and two copies of *how a
+# package is made* is the shape this project meets most often. `reveal_for`, `required_boxscore` and
+# `evidence_for` went with it: each is a fact about a loaded direction rather than about this script.
+from boxscore_forge.produce import Attempt, evidence_for, produce  # noqa: E402
+from boxscore_package.format import Package, read, write  # noqa: E402
+from boxscore_package.signing import sign_manifest, signing_key  # noqa: E402
+from boxscore_verify.certify import certify_for_publication  # noqa: E402
+
+NOTE = "reference data for serve, not inventory"
+"""What these packages say they are. ⚠️ **A parameter of `produce` now**, because the batch producer
+writes real inventory and must not inherit a note calling itself reference data."""
 
 REFERENCE_BOARDS = 6
 CANDIDATES = 12
@@ -84,7 +91,10 @@ on the new scale, because its rungs were picked on the old one.
 # package says which gate drew it, so this paragraph is the only record and it goes stale the moment
 # the batch is redrawn again — which is exactly how it came to be wrong. **Recording the gate in the
 # package metadata is the durable answer** and is recorded as an open decision, not taken here.
-SEED = 6
+#
+# ⚠️ `SEED` moved to `boxscore_forge.produce` with the core that uses it, and is imported above rather
+# than declared twice. §21 needs it fixed: a seed that varied per run would make the same game yield a
+# different puzzle, which is the double idempotence rule broken at its root.
 OUT = _ROOT / "serve" / "data" / "puzzles"
 EPHEMERAL_OUT = _ROOT / "discovery" / "ephemeral-puzzles"
 """Where a throwaway batch goes. **Outside `serve/`**, so an untrusted writer mode cannot
@@ -128,185 +138,27 @@ nothing requires one now.
 """
 
 
-def reveal_for(loaded: Loaded) -> Reveal:
-    """The answer to the mystery, which section 23 requires to be in the file."""
-    # ⚠️ The teams come from the same query as the roster. `game_id[:3]` is the *home* club, and
-    # labelling it as the offence is right only when the home side batted — which is how four of the
-    # first six files claimed a lineup for a team it never played for. The names and the code have to
-    # come from one source or nothing checks that they agree.
-    return Reveal(
-        # Composed by the loader, not here. ⚠️ This joined a `(first, last)` pair with
-        # `.strip() or "Unknown"` while the prototype builder joined the same pair with neither — one
-        # rule in two places, disagreeing about the players who have no given name on record.
-        batter_names=loaded.names,
-        pitcher_names=loaded.pitcher_names,
-        offense_team=loaded.offense_team,
-        defense_team=loaded.defense_team,
-        played_on=f"{loaded.game_id[3:7]}-{loaded.game_id[7:9]}-{loaded.game_id[9:11]}",
-        # ⚠️ **From the loader and never assembled here.** The printed sheet restates the board's own
-        # numbers for the half they share, and `check_reveal_agrees` refuses a package where the two
-        # disagree — so a second assembly here would be a second definition of the boxscore with a
-        # guard standing between them, which is the arrangement that guard exists to make unnecessary.
-        boxscore=required_boxscore(loaded),
-        card="",
-    )
+def _hardest_unused_target(loaded: Loaded, key: Ed25519PrivateKey, taken: set[int]) -> Package | None:
+    """Ask the board how hard it can be, and take the first target no other board has claimed.
 
+    ⚠️ **Ask rather than tell.** Counting down from the ceiling takes each board's own maximum, and
+    `taken` keeps the six boards at six different rungs — six copies of the easiest one would be a
+    reference set that exercises nothing.
 
-def required_boxscore(loaded: Loaded) -> PrintedBoxscore:
-    """The printed sheet, or a refusal that names the board.
-
-    ⚠️ **Fails rather than defaults.** `Loaded.printed` is `None` only when the loader could not name
-    a club, and it drops those directions — so `None` here means the loader and this writer disagree
-    about what a loaded direction contains. An empty boxscore substituted quietly would ship a reveal
-    with no sheet in it and no error anywhere, which is the absence of a check reading as a passing one.
+    ⚠️ **The refusal is printed here and returned by `produce`.** It used to be printed inside the core,
+    which is a script's interface in a library — and it discarded which check refused how often, which
+    is the number a batch run is sized from.
     """
-    if loaded.printed is None:
-        message = f"{loaded.game_id} {loaded.offense_team} came back from the loader with no printed boxscore"
-        raise SystemExit(message)
-    return loaded.printed
-
-
-def build(loaded: Loaded, target: int, key: Ed25519PrivateKey) -> Package | None:
-    """Generate one puzzle and put it through the publication gate, not a subset of the checks.
-
-    ⚠⚠ **The batting order is a fallback, not a switch.** Boards that reach their target without it
-    never see it, so they never pay its cost: with the constraint on everywhere, a median of eight
-    steps per board became *read the total, divide by nine, write it down* — 244 such cells across the
-    walks measured. On the eleven directions that reach eight stalls only with it, nine carry no such
-    filler at all. It is worth something exactly where the board cannot get there without it.
-    """
-    produced, why = erase_with_lineup_fallback(loaded.direction, tuple(loaded.slots), target_stalls=target, seed=SEED)
-    # ⚠️⚠️ **Kept, and written into the package.** (v36-P2-12) This read `del why` — *the reason is for
-    # the measurement instruments; this script only needs the board* — and `lineup_fallback.py` returns
-    # it precisely because **every measurement comparing these boards needs to know which population
-    # each one is in**. The one production caller was throwing that away.
-    #
-    # Without it, a board that is unique and derivable **only because of the batting-order clue** is
-    # indistinguishable in its own metadata from a plain one. Seam C3 asks for *techniques required*;
-    # a calendar shaping the week by technique, or a client deciding what to surface, cannot see the
-    # one family that cannot be read off a boxscore — the family §8 has to teach for that very reason.
-    #
-    # ⚠️⚠️ **`families` carries it now, and this comment said the opposite for a commit.** (v37-P3-04)
-    # It read *"`FAMILY_OF` maps no `Identity` to the batting order… that is an operator decision and
-    # it is recorded in `todo.md`, not taken here"*. **The decision was taken on 2026-08-21**:
-    # `Family.BATTING_ORDER` exists, `FAMILY_OF` maps the identity to it, and one of the six published
-    # boards lists `batting_order` among its families.
-    #
-    # ⚠️ A settled decision described as open, in the production path, is an invitation to reopen it —
-    # which is worse than a stale figure, because a reader has no number to check it against. `lineup`
-    # below is still worth recording separately: it says whether the board *needed* the clue, which is
-    # not the same question as which families its solution used.
-    if produced is None:
-        return None
-    package = sign(
-        Package(
-            puzzle_id=puzzle_id(loaded.game_id, loaded.offense_team),
-            puzzle=to_board(loaded.direction, produced.erased),
-            solution=to_board(loaded.direction, None),
-            labels=loaded.labels,
-            slot_references=slot_references(loaded.slots),
-            # From the loader, which reads it from the game rather than inferring it. A client cannot
-            # know which club batted last, and one that guessed would be right only when the line
-            # score happens to be ragged.
-            offense_is_home=loaded.offense_is_home,
-            pitcher_labels=loaded.pitcher_labels,
-            reveal=reveal_for(loaded),
-            metadata={
-                "note": "reference data for serve, not inventory",
-                "difficulty_model": "stalls",
-                "target_stalls": target,
-                "stalls": produced.solution.stalls,
-                # Descriptive telemetry. Chain is recorded because every earlier measurement used it
-                # and they have to stay comparable — it is not what the board was selected on.
-                "chain_length": produced.solution.chain_length,
-                "blanks": len(produced.erased),
-                "families": sorted(family.value for family in produced.solution.families_used),
-                # `"plain"` or `"fallback"`: whether this board reached its target without the
-                # batting-order clue or only with it. The distinction the erasure already knows and
-                # the package could not previously state.
-                "lineup": why,
-                "batters": len(loaded.direction.batting),
-                "pitchers": len(loaded.direction.pitching),
-                "seed": SEED,
-                "game_id": loaded.game_id,
-                "season": loaded.season,
-            },
-        ),
-        key,
-    )
-    # ⚠️ The gate, not `verify()`. Assembling a subset of the checks at each call site is the defect
-    # this boundary exists to remove, and this writer was one of the sites doing it.
-    #
-    # ⚠️⚠️ **`published()`, because that is the object the gate is named for — and this call site said
-    # otherwise for one commit, which stopped the writer publishing anything at all.**
-    #
-    # The metadata above deliberately carries `game_id` and `season`: the producer needs them, and
-    # `published()` strips them on the way out. `check_no_leaking_metadata` (v36-P2-10) was added to
-    # the registry so the strip is verified at the boundary rather than trusted — and it is right.
-    # What was wrong is what this line handed it: **the working object, which never ships.** Every
-    # candidate was refused, the run wrote 0 of 6, and the fail-closed staging left the published set
-    # untouched, which is the only reason this cost nothing.
-    #
-    # **`canonical_bytes` had already decided the question.** The signature is computed over
-    # `package.published().as_json()` — the signer's object of record is the shape that travels, so a
-    # gate certifying a different shape was disagreeing with the signature about what the package *is*.
-    #
-    # ⚠️ The leak check cannot fire here, by construction, and that is not a check switched off: the
-    # one that can fire is in `main`, over the package **read back from the file**. This call is a
-    # pre-screen that discards a candidate cheaply; the boundary is disk.
-    for_publication = package.published()
-    certified = certify_for_publication(for_publication, evidence=evidence_for(loaded), secret=key.public_key())
-    if not certified.publishable:
-        print(f"  refused {loaded.game_id} at {target} stalls: {'; '.join(certified.refusals)}")
-        return None
-    return for_publication
-
-
-def evidence_for(loaded: Loaded) -> Evidence:
-    """What the producer knows and the package cannot say for itself.
-
-    ⚠️ **`is_deduced` is the provenance row's own value now.** It used to be rebuilt here as
-    `source_type.startswith("ED")`, which is a second copy of a rule the database already states — so a
-    deduced record filed under an accepted source type would have passed §32's exclusion.
-
-    ⚠️⚠️ **Four of these fields assert `to_board` fidelity and nothing more, and the list does not say
-    so.** (v36-P3-14) `official_errors`, `official_defense_runs`, `official_defense_hits` and
-    `official_defense_errors` are read from `loaded.direction.line_score` — **the same object the
-    package's line score is built from**, one `to_board` copy apart. `check_independent_correspondence`
-    compares the package against them, so what they can catch is a field swapped inside an eight-line
-    copy; they cannot catch a board that never happened.
-
-    **Only `official_at_bats` and `official_left_on_base` are correspondence in the strict sense**: they
-    come from `retroGameLogs`, a table the board is not built from. `Evidence`'s own docstring makes
-    that distinction and this call site presented all of them alike, which is the
-    anchor-derived-from-what-it-verifies shape in miniature — documented as deliberate only for the
-    query-level case.
-
-    They are kept because a `to_board` swap is a real defect and cheap to exclude. They are labelled
-    because a list where two entries mean something different from the other four, unmarked, is how a
-    reader comes to believe the gate is stronger than it is.
-    """
-    return Evidence(
-        # ⚠️ **The board as the database has it**, which is what layer 4 must solve back to. The
-        # package under certification here is the one read back from disk, so the comparison is
-        # between the file and the game rather than between the file and itself.
-        source=to_board(loaded.direction, None),
-        game_id=loaded.game_id,
-        offense_team=loaded.offense_team,
-        source_type=loaded.source_type,
-        is_deduced=loaded.is_deduced,
-        official_hits=loaded.official_hits,
-        official_runs=loaded.official_runs,
-        # ⚠️ These four come from the direction the package is built from. They assert `to_board`
-        # fidelity, not correspondence with the game. See the note above.
-        official_errors=loaded.direction.line_score.offense_errors,
-        official_defense_runs=loaded.direction.line_score.defense_runs,
-        official_defense_hits=loaded.direction.line_score.defense_hits,
-        official_defense_errors=loaded.direction.line_score.defense_errors,
-        # ⚠️ The two real anchors: `retroGameLogs`, a table the board is not built from.
-        official_at_bats=loaded.official_at_bats,
-        official_left_on_base=loaded.official_left_on_base,
-    )
+    for target in range(CEILING, 0, -1):
+        if target in taken:
+            continue
+        attempt: Attempt = produce(loaded, target, key, note=NOTE)
+        if attempt.refusals:
+            print(f"  refused {loaded.game_id} at {target} stalls: {'; '.join(attempt.refusals)}")
+        if attempt.package is not None:
+            taken.add(target)
+            return attempt.package
+    return None
 
 
 def claim(wanted: list[Loaded], seen: set[str], item: Loaded) -> bool:
@@ -661,14 +513,7 @@ def main() -> None:
     for loaded in wanted:
         if written == REFERENCE_BOARDS:
             break
-        package = None
-        for target in range(CEILING, 0, -1):
-            if target in taken:
-                continue
-            package = build(loaded, target, key)
-            if package is not None:
-                taken.add(target)
-                break
+        package = _hardest_unused_target(loaded, key, taken)
         if package is None:
             print(f"  discarded {loaded.game_id}: reached no target from {CEILING} down")
             continue
