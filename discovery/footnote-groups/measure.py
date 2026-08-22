@@ -660,6 +660,34 @@ def publish(
 
 
 def main() -> None:
+    """⚠️⚠️ **RETIRED 2026-08-22. This instrument no longer has a question to answer.**
+
+    **Is an unassigned footnote resolvable? — there is no unassigned footnote.** §6 gives the
+    footnote line entirely, so nothing is erased for attribution to be ambiguous about.
+
+    ⚠️ **Different from `footnote-grouping` and worth separating**: this one does not assume the
+    losing answer, it simply has no subject any more. Its three recorded faults — a metric that
+    could not vary, a baseline that removed what it was testing, denominators chosen by a heading
+    string — stay in this file as the record they are, and `forge/tests/test_group_metrics.py`
+    still exercises `metrics.py` and `report()` directly, so the machinery remains checked.
+
+    **It refuses to run rather than being deleted**, because the machinery is correct and the file is
+    the record of how the question was asked. What it must not be is a *tool*: a report from here would
+    be numbers about a board the product does not build, in the format of a current measurement.
+
+    ⚠️ The test that decides this, from `CLAUDE.md`: **if tomorrow the answer flipped, would this
+    instrument be the thing that told us?** Here, no — it presupposes the configuration that lost.
+    `discovery/rbi-and-hr/` is the opposite case and is deliberately kept for it.
+    """
+    message = (
+        "retired: this instrument measures a configuration the product no longer has. "
+        "See the docstring above and docs/reviews/todo.md. Nothing here is a current figure."
+    )
+    raise SystemExit(message)
+
+
+def _measure_as_it_was() -> None:
+
     out = _destination(sys.argv)
     identity = identify()
     # ⚠️ **Fail closed *before* the work, not after.** This check sat after the sample, three seeds of

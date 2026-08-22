@@ -209,6 +209,57 @@ checked against these six first.
 
 ---
 
+## 2026-08-22 — instruments that build a configuration the product no longer has
+
+**Prompted by `board-configurations` printing a median of 16 stalls against 6 under a heading reading
+*what each configuration buys*.** The sweep asks the same question of every instrument, and the answer
+is not one thing: **three kinds, wanting three treatments.**
+
+### 1. Documents a correction — leave exactly as it is
+
+**`zero-footnotes/measure.py`** keeps arms `all`, `non_zero` and `given`, and its own header says the
+5-to-15 result *"is a correction, not a new result"*, with the mechanism spelled out. **The wrong arm
+is kept and named as wrong**, which is what makes it evidence rather than a trap. Its table already
+shows `7, 9, 1` for both `non_zero` and `given` against `14, 17, 14` for `all` — the whole difference,
+visible in the output.
+
+### 2. Reproduces a settled decision — needs the arm or the sentence
+
+**`board-configurations/measure.py`** ✅ **fixed 2026-08-22.** Third arm `footnotes>0` added, so the
+report explains itself: opening the non-zero cells and giving them come out the same, and the jump
+appears only when zeros are opened. Labels kept as well — **the label says the question is settled,
+the arm shows why**, and a label depends on someone reading it.
+
+⬜ **Four others carry a settled question in their premise, and none of them says so.** Reported rather
+than changed, because each is a different call:
+
+| instrument | what it assumes | why it is settled |
+|---|---|---|
+| `footnote-grouping/measure.py` | one footnote column against four | **its stated motivation is the corrected figure** — *"took the stall ceiling from 5 to 15 and the pool reaching five from 56% to 100%"*. And the question only arises **if the cells are open**; they are given |
+| `footnote-groups/measure.py` | can an unassigned footnote be resolved | there is no unassigned footnote when the line is given |
+| `footnotes-open-or-given/measure.py` | open against given, paired | ⚠️ **the arms are the right comparison** — this one would produce the settling numbers if run. What is stale is its header: *"the comparison has never been repeated on the canonical list"*. `zero-footnotes` repeated it |
+| `scoreboard-blanks/measure.py` | do the four scoreboard duplicates inflate difficulty | decided: they are given, as `SCOREBOARD_DUPLICATES` |
+
+⚠️ **`footnotes-open-or-given` is the interesting one and argues against a blanket rule.** Its
+machinery is current and only its status sentence is wrong — a note fixes it. `footnote-grouping`
+is the opposite: the machinery is fine and the *question* has gone, so a note leaves an instrument
+nobody should run. **Same category, different repair.**
+
+### 3. The only way a question could be reopened — leave, and protect
+
+**`rbi-and-hr/measure.py`** measures what an RBI or a home-run column would buy. §6 records the
+eight-column batting order as **decided and deliberately unbuilt**, and CLAUDE.md calls RBI and HR
+*candidate* columns whose inclusion *"is a measurement rather than a decision"*. **The configuration it
+builds does not exist on purpose**, and this instrument is the only path back to the question. Deleting
+it would close a question the design deliberately left open.
+
+⚠️ **The distinguishing test, since these three look alike from outside:** *if the answer came back the
+other way tomorrow, would this instrument be the thing that told us?* For `rbi-and-hr`, yes. For
+`zero-footnotes`, yes — and it already did. For `footnote-grouping`, no: it assumes the answer that
+lost.
+
+---
+
 ## ⚠️⚠️ READ FIRST — which pool every discovery figure describes
 
 **2026-08-21.** Two separate defects touched the pool every instrument samples. Neither made a *number*

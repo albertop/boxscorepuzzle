@@ -1,5 +1,19 @@
 """What RBI and home runs would add to the board, measured one column at a time.
 
+⚠️⚠️ **KEPT ON PURPOSE. This instrument builds a board the product does not have, and that is the
+point rather than a defect.** Written here because a sweep for *instruments measuring configurations
+that no longer exist* retired three files on 2026-08-22 and reached this one, and the same evidence
+supports the opposite conclusion unless the reason is stated.
+
+§6 records the canonical batting order `PA, AB, R, H, HR, RBI, BB, SO` as **decided and deliberately
+unbuilt**, and `CLAUDE.md` calls RBI and home runs **candidate** columns whose inclusion *"is a
+measurement rather than a decision"*. The seventh column does not exist because **nobody has measured
+what it would buy** — not because it was measured and rejected.
+
+⚠️ The test, from `CLAUDE.md`: **if tomorrow the answer flipped, would this instrument be the thing
+that told us?** Here, yes — it is the only path back to the question. Deleting it would close a
+question the design left open, which is a product decision disguised as tidying.
+
 §6 records a canonical batting order of `PA, AB, R, H, HR, RBI, BB, SO` as decided and deliberately
 unbuilt. Two of those eight are not on the board today, and they do not bring the same things:
 

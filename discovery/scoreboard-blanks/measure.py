@@ -267,6 +267,33 @@ def provenance(directions: int, pairs: int) -> str:
 
 
 def main() -> None:
+    """⚠️⚠️ **RETIRED 2026-08-22. This instrument no longer has a question to answer.**
+
+    **Do the four totals the scoreboard prints inflate the difficulty numbers? — decided: they are
+    given.** `SCOREBOARD_DUPLICATES` names them and `erasable()` excludes them.
+
+    ⚠️ **The finding this instrument produced is why it has nothing left to measure.** A lookup counted
+    as a deduction is a lookup counted as difficulty; the four totals the line score already prints
+    are given now, so no board can carry them blank and no figure can be inflated by them. Like
+    `footnote-groups`, it lost its subject rather than its premise.
+
+    **It refuses to run rather than being deleted**, because the machinery is correct and the file is
+    the record of how the question was asked. What it must not be is a *tool*: a report from here would
+    be numbers about a board the product does not build, in the format of a current measurement.
+
+    ⚠️ The test that decides this, from `CLAUDE.md`: **if tomorrow the answer flipped, would this
+    instrument be the thing that told us?** Here, no — it presupposes the configuration that lost.
+    `discovery/rbi-and-hr/` is the opposite case and is deliberately kept for it.
+    """
+    message = (
+        "retired: this instrument measures a configuration the product no longer has. "
+        "See the docstring above and docs/reviews/todo.md. Nothing here is a current figure."
+    )
+    raise SystemExit(message)
+
+
+def _measure_as_it_was() -> None:
+
     out = _HERE / "results.txt"
     sample = [item for item in load(SAMPLE_PER_DECADE, gated=True, gate=GATE) if not find_violations(item.direction)]
     if not sample:

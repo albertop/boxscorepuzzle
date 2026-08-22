@@ -717,6 +717,47 @@ Do **not** store: real name, photo, date of birth, IP address, geolocation, in-s
 
 ---
 
+## ⚠️⚠️ Dead code, or code held in reserve — one question tells them apart
+
+An instrument that builds a configuration the product does not have is either a **record**, a **trap**,
+or **the only way a decision could be reopened**. From outside all three look identical: source that
+constructs something no longer real. Deleting the third is a product decision disguised as tidying;
+keeping the second reprints a corrected error in the format of a current result.
+
+**The test, and it needs no knowledge of anyone's intent:**
+
+> **If tomorrow the answer flipped, would this instrument be the thing that told us?**
+
+- **Yes, and it already did it once** → a **record**. Keep it exactly as it is, with the losing arm
+  present and *named as losing*. `discovery/zero-footnotes/` keeps arms `all`, `non_zero` and `given`
+  and says in its own header that the 5-to-15 result *"is a correction, not a new result"*. **Keeping
+  the wrong arm and naming it wrong is what makes a file evidence instead of a trap.**
+- **Yes, because nothing has been measured yet** → **held in reserve**. Keep it, and **say in the file
+  why**, because the next sweep meets the same evidence and can reach the opposite conclusion.
+  `discovery/rbi-and-hr/` builds a seventh batting column that does not exist — §6 records the
+  eight-column order as *decided and deliberately unbuilt*, so the column is missing for want of a
+  measurement rather than because one rejected it.
+- **No, it presupposes the answer that lost** → **retire it**. Not delete: the machinery is usually
+  correct and the file is the record of how the question was asked. It must stop being a *tool*.
+
+### ⚠️ The worked example, because an abstract rule gets applied wrongly the first time it matters
+
+**`footnotes-open-or-given` and `footnote-grouping` fall in the same category and want different
+repairs**, and nothing on their surface distinguishes them:
+
+| | machinery | question | repair |
+|---|---|---|---|
+| `footnotes-open-or-given` | **correct** — open against given, paired per board on the canonical list | still meaningful; running it reproduces the settling numbers | **one sentence.** Only its status line was stale, claiming the comparison had never been repeated |
+| `footnote-grouping` | **equally correct** — one footnote column against four | **gone.** The footnote line is given, so there is no unknown to group — and its stated motivation is the *corrected* 5-to-15 figure | **retired**, refusing to run with the reason |
+
+**One has working machinery and a stale sentence; the other has working machinery and no question.**
+A note on the second leaves something nobody should run and somebody will.
+
+**Retirement is a refusal in `main()`**, not a deletion and not a move: the file stays where its tests
+and its history are, and running it raises with the reason and a pointer to what settled the question.
+`footnote-groups` and `scoreboard-blanks` were retired the same way — ⚠️ **and for a different reason
+worth keeping separate: they do not assume the losing answer, they simply have no subject any more.**
+
 ## Discovery scripts are decision tools
 
 They are throwaway code that decides non-throwaway things. Two rules follow.

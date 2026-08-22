@@ -8,9 +8,17 @@ round-robin turns erasing nothing, so the instrument treated footnotes different
 else while measuring the effect of opening footnotes. The bias runs in the direction that inflates the
 gap: at the real rate, 15 could be much lower.
 
-Today's regeneration does not settle it. It re-ran with footnotes open and confirmed 100% coverage at
-targets 5 to 12, but it never isolated open against given. **The comparison has never been repeated on
-the canonical list.**
+~~Today's regeneration does not settle it… **The comparison has never been repeated on the canonical
+list.**~~ ✅ **It has. `discovery/zero-footnotes/` ran it across the pool and the question is closed:
+the cells are given.** Coverage with them erasable-if-non-zero and with them given is the same at every
+target, and pair by pair the two are identical on every field in 91% of trials — **96% of the pool's
+footnote terms are zero**, so what the open arm was measuring was the solver typing noughts.
+
+⚠️ **This instrument is kept and is not retired, and the distinction is worth stating**: its machinery
+is the *correct* comparison — open against given, paired per board on the canonical list — so running
+it today would reproduce the settling numbers rather than a superseded configuration. **Only the status
+sentence above was stale.** Its sibling `footnote-grouping` has equally good machinery and no question
+left, and is retired for that reason. See `CLAUDE.md`, *code held in reserve*.
 
 **Paired per direction**, because a difference between medians cannot say whether every board moved a
 little or a few moved a lot, and the two answers point at different decisions.

@@ -516,6 +516,12 @@ class TestTheArtifactDeclaresItself:
 class TestTheRunRefusesBeforeItSpendsAnything:
     """⚠️ The gate sat after the sample, three seeds of erasure and every solve.
 
+    ⚠️⚠️ **These call `_measure_as_it_was()` rather than `main()` since 2026-08-22, when the instrument
+    was retired.** `main()` now refuses immediately with the reason the question is closed — there is
+    no unassigned footnote once §6 gives the line — and the run it used to perform is the private
+    function below it. **The fail-closed guarantees are still asserted**, on the code that carries them,
+    because a retired instrument whose machinery quietly rots is a record of nothing.
+
     Nothing after `identify()` can repair an `unknown` repository field, so the refusal was decided
     before the work began and discovered hours later. A guaranteed-discarded run that looks like a
     progressing experiment is worse than an immediate refusal.
@@ -529,7 +535,7 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         monkeypatch.setattr(sys, "argv", ["measure.py"])
 
         with pytest.raises(SystemExit, match="provenance is incomplete"):
-            module.main()
+            module._measure_as_it_was()
 
     def test_a_missing_parent_is_found_before_the_loader(self, monkeypatch: pytest.MonkeyPatch) -> None:
         # The same class as the gate above: knowable now, discovered in five hours otherwise.
@@ -538,7 +544,7 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         monkeypatch.setattr(sys, "argv", ["measure.py", "--output", "no/such/place/results.txt"])
 
         with pytest.raises(SystemExit, match="is not a directory"):
-            module.main()
+            module._measure_as_it_was()
 
     def test_a_directory_sitting_at_the_output_is_found_before_the_loader(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -553,7 +559,7 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(tmp_path / "results.txt")])
 
         with pytest.raises(SystemExit, match="is a directory"):
-            module.main()
+            module._measure_as_it_was()
 
     def test_the_probe_leaves_nothing_behind_when_the_destination_is_fine(self, tmp_path: Path) -> None:
         # The check is the operation itself, so it has to clean up after itself like `publish` does.
@@ -703,7 +709,7 @@ class TestTheRunRefusesBeforeItSpendsAnything:
         monkeypatch.setattr(sys, "argv", ["measure.py", "--output", str(out)])
 
         with pytest.raises(SystemExit, match="cannot be replaced"):
-            module.main()
+            module._measure_as_it_was()
 
         assert out.read_text(encoding="utf-8") == "a previous run", "a refused check cost the previous result"
         assert [entry.name for entry in tmp_path.iterdir()] == ["results.txt"], "the copy was left behind"

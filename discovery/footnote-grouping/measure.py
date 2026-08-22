@@ -253,6 +253,36 @@ def report(points: list[Point], runs: int) -> None:
 
 
 def main() -> None:
+    """⚠️⚠️ **RETIRED 2026-08-22. This instrument no longer has a question to answer.**
+
+    **One footnote column against four — and the footnote line is given entirely (§6).** There is no
+    unknown to group.
+
+    ⚠️⚠️ **Its stated motivation is the corrected figure.** The header above reads *"opening the
+    per-batter footnote cells took the stall ceiling from 5 to 15 and the pool reaching five stalls
+    from 56% to 100%"* — both numbers counted the solver deducing footnote zeros. The pool run in
+    `discovery/zero-footnotes/` found coverage identical with the cells open and given, and **96% of
+    the pool's footnote terms are zero**. So the premise of this instrument is the losing answer,
+    which is why a note was not enough: it would have left something nobody should run and somebody
+    would.
+
+    **It refuses to run rather than being deleted**, because the machinery is correct and the file is
+    the record of how the question was asked. What it must not be is a *tool*: a report from here would
+    be numbers about a board the product does not build, in the format of a current measurement.
+
+    ⚠️ The test that decides this, from `CLAUDE.md`: **if tomorrow the answer flipped, would this
+    instrument be the thing that told us?** Here, no — it presupposes the configuration that lost.
+    `discovery/rbi-and-hr/` is the opposite case and is deliberately kept for it.
+    """
+    message = (
+        "retired: this instrument measures a configuration the product no longer has. "
+        "See the docstring above and docs/reviews/todo.md. Nothing here is a current figure."
+    )
+    raise SystemExit(message)
+
+
+def _measure_as_it_was() -> None:
+
     loaded = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
     sample = [item for item in loaded if not find_violations(item.direction)]
     print(f"{len(sample)} gated directions, gate {GATE:.0%}")

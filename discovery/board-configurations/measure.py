@@ -100,6 +100,32 @@ def _stalls(solution: object) -> int:
     return count
 
 
+CONFIGURATIONS = ("baseline", "footnotes>0", "footnotes", "footnotes+lob")
+"""The arms, in the order that makes the report explain itself.
+
+⚠️⚠️ **`footnotes>0` was added on 2026-08-22 and it is the whole reason this table can be read.**
+Without it the comparison is *given* against *fully erasable* — **the exact comparison the pool run
+superseded, missing the arm that refutes it** — and it prints a median of 16 stalls against 6 under a
+heading reading *what each configuration buys*. Anyone reading the output without reading the warning
+above it takes away a board ten stalls harder.
+
+**With three arms the numbers do the explaining**: giving the footnotes and opening only the non-zero
+ones come out the same, and the jump appears only when the zeros are opened too. **The whole
+difference is zeros** — `PA = AB + BB` when `HBP`, `SF`, `SH` and `CI` are all nought for a batter, so
+an erased term asks the solver to deduce a value that exists because the thing did not happen. 96% of
+the pool's footnote terms are zero.
+
+⚠️ **A label depends on someone reading it; an arm that reproduces the result does not.** The
+docstring and the printed heading stay as well — they say the question is settled, and this shows why.
+
+`discovery/zero-footnotes/` is where this comparison was run to decide it, with arms `all`,
+`non_zero` and `given`. **That instrument kept the wrong arm and named it wrong, which is the evidence
+of a correction; this one measured the same option without the arm that refutes it, which reproduces
+the error.** The three names differ because the two files were written apart; what they compute does
+not.
+"""
+
+
 def erasable_for(loaded: Loaded, configuration: str) -> list[str]:
     """Which cells this configuration allows to be unknown.
 
@@ -124,12 +150,19 @@ def erasable_for(loaded: Loaded, configuration: str) -> list[str]:
     `docs/reviews/todo.md`.
     """
     cells = list(erasable(loaded.direction))
+    opened = [
+        footnote_cell(index, field)
+        for index in range(len(loaded.direction.batter_footnotes))
+        for field in FOOTNOTE_COLUMNS
+    ]
     if configuration in {"footnotes", "footnotes+lob"}:
-        cells += [
-            footnote_cell(index, field)
-            for index in range(len(loaded.direction.batter_footnotes))
-            for field in FOOTNOTE_COLUMNS
-        ]
+        cells += opened
+    if configuration == "footnotes>0":
+        # ⚠️ The arm that makes the other two readable: the same cells, minus the ones whose value is
+        # nought. A zero term is not an unknown the player meets — it is a term that did not happen,
+        # and the row identity closes without it.
+        values = cell_values(loaded.direction)
+        cells += [name for name in opened if values[name] != 0]
     if configuration == "footnotes+lob":
         cells.append(team_footnote_cell("left_on_base"))
     return sorted(cells)
@@ -179,15 +212,16 @@ def report(results: list[Ceiling]) -> None:
     # ⚠️ Printed with the table rather than left to the reader. Two of these three rows measure an
     # option that was decided against, on a measurement, and their numbers are inflated by the solver
     # deducing footnote zeros. See `erasable_for`.
-    print("  ONLY `baseline` IS A LIVE CONFIGURATION. The footnote arms measure a deleted option and")
-    print("    their stall counts are inflated by zeros the player never types -- see erasable_for().")
+    print("  ONLY `baseline` IS A LIVE CONFIGURATION -- the footnote line is given (section 6).")
+    print("  Read `footnotes>0` against `footnotes`: same cells minus the ones whose value is nought.")
+    print("  The gap between them is zeros the player never types, not difficulty. See erasable_for().")
     print("Ceiling is not chain length. Chain measures how long the board is, not how hard.")
     heads = (
         f"{'configuration':>16}{'boards':>8}{'blanks':>8}{'chain':>7}"
         f"{'stalls':>9}{'search p90':>12}{'resolution':>12}{'cycles':>8}"
     )
     print(heads)
-    for configuration in ("baseline", "footnotes", "footnotes+lob"):
+    for configuration in CONFIGURATIONS:
         group = [r for r in results if r.configuration == configuration]
         if not group:
             continue
@@ -208,7 +242,7 @@ def report(results: list[Ceiling]) -> None:
     print("=== HOW MANY TIMES THE BOARD MAKES THE PLAYER STOP ===")
     print("  The single most important number here. If the maximum is one or two, no erasure rule")
     print("  reaches five and the answer is a wider board rather than a different rule.")
-    for configuration in ("baseline", "footnotes", "footnotes+lob"):
+    for configuration in CONFIGURATIONS:
         group = [r for r in results if r.configuration == configuration]
         if not group:
             continue
@@ -236,7 +270,7 @@ def main() -> None:
     results = [
         found
         for item in sample
-        for configuration in ("baseline", "footnotes", "footnotes+lob")
+        for configuration in CONFIGURATIONS
         for seed in SEEDS
         if (found := ceiling_for(item, configuration, seed)) is not None
     ]
