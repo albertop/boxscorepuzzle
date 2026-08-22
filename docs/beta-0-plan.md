@@ -102,9 +102,12 @@ need a database), not as an oversight.
 
 - **A2.1** A producer that takes *how many boards, at what stall targets, over what era spread* and
   returns validated packages. `build()` in the writer is the per-board core and already certifies.
-- **A2.2** ⚠️ **Yield is unknown at volume.** The gate keeps 11% of the pool, erasure fails, layers
-  reject. Measure the survival rate on a small run **before** launching a five-month batch, so the batch
-  is sized from a number rather than from hope.
+- ✔ **A2.2 done 2026-08-22 — and the answer removes work rather than adding it.** Two samples, 48
+  directions, **48 boards: the pipeline loses none.** So the batch does not over-sample and needs no
+  retry machinery. **~22 minutes for 150 boards.** What sizes the draw is duplicate games — `load()`
+  returns both directions of one game about 10% of the time and the calendar refuses the second (§7) —
+  so **draw ~1.15× the dates**. ⚠️ **235 attempts and the publication gate refused none**, recorded in
+  `todo.md` as an open question about the gate rather than a clean bill of health.
 - **A2.3** Resumability. A run that dies at board 400 of 450 must not start over.
 - **A2.4** ⚠️ **Idempotence (§21):** the same game must yield the same puzzle id. Assert it by running a
   slice twice and comparing ids, not by trusting `puzzle_id()`.

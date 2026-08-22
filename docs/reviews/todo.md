@@ -406,6 +406,70 @@ halves. **Found in a picture** — every computed style said 50px and agreed wit
 
 ---
 
+## 2026-08-22 — ✔ the first yield measurement, and ⚠️⚠️ a gate that refused nothing in 235 attempts
+
+**Run:** `build_inventory.py --measure --per-decade 1` and `--per-decade 3`, gate `0.30`, caps ≤13
+batters and ≤6 pitchers, stall targets counted down from 12. Two samples so the first was not believed
+on its own.
+
+| | 12 directions | 36 directions | together |
+|---|---:|---:|---:|
+| produced | 12 of 12 | 36 of 36 | **48 of 48 — 100%** |
+| attempts | 55 | 180 | 235 |
+| refused by the erasure | 43 | 144 | 187 |
+| **refused by the gate** | **0** | **0** | **0** |
+| seconds per published board | 13.6 | 9.0 | — |
+| **150 boards** | ~34 min | **~22 min** | — |
+
+**What 100% means and does not.** Of the directions that pass §5's gate and the roster caps, every one
+produced a publishable board at *some* target between 12 and 1. It is **not** 100% of the pool — the gate
+keeps about 11% before any of this runs — and it says nothing about whether the boards are good. It says
+**the pipeline loses no boards**.
+
+⚠️ **The consequence is a design decision, not a statistic: the batch does not need to over-sample.** 150
+dates costs about 150 directions, not fifteen hundred, so the retry-and-top-up machinery that would have
+been written against a guessed yield is not needed.
+
+**Loading has a large fixed cost.** ~19-20 seconds whatever the size: 1.67s per direction at twelve,
+0.53s at thirty-six. At 150 it is noise. ⚠️ **I said the bottleneck was loading rather than building
+before the run finished; it is building, by seven to one.** Stated as a finding when it was a guess about
+a process that had not yet printed anything.
+
+**What actually sizes the batch is duplicate games, not yield.** `load()` can return both directions of
+one game and the calendar refuses the second (§7): **3 of 36 drawn twice (92% usable), 7 of 72 (90%)**.
+So **draw about 1.15× the number of dates.**
+
+### ⚠️⚠️ And the gate refused nothing
+
+**235 production attempts, zero refusals from `certify_for_publication`.** Every one of the 187 failures
+was the erasure not reaching a target.
+
+**The four validation layers rejected nothing.** That is a plausible result — §5's zero-density gate is
+what does the filtering, and it keeps about 11% of the pool before any of this runs, so what survives it
+may genuinely be publishable. **And a check that never fires is indistinguishable from one that is
+broken**, which is this project's own rule and the reason this is written down rather than enjoyed.
+
+⚠️ **What is already known and does not settle it.** `test_the_writer_passes_its_own_gate.py` proves the
+gate has teeth on a real package: it takes a board the writer built and refuses it when the producer's
+metadata is put back. So the gate *can* refuse. What is unknown is whether it refuses anything in the
+population the batch producer will actually feed it.
+
+⬜ **What would settle it**, in order of cost:
+
+1. ✔ **A larger sample — done, and it did not change.** 235 attempts rather than 55. At that size the
+   result stops being small-sample noise and starts being a statement about the pipeline.
+2. **Per-check counts rather than a total.** `certify_for_publication` runs a registry of checks;
+   knowing *which* never fires is more useful than knowing none did. `produce()` already returns the
+   refusal strings, so this is a tally rather than new machinery.
+3. ⚠️ **If it still refuses nothing at volume, that is a finding about the gate and not a clean bill of
+   health.** The honest reading would be that the erasure and the gate overlap almost entirely on gated
+   boards — which is worth knowing before anybody trusts the gate to catch a generator defect.
+
+**Not a blocker for A2**, and it must not become one silently either: the batch can be built while this
+is open, but the answer changes how much §22's four layers are worth in this pipeline.
+
+---
+
 ## 2026-08-22 — ⬜ the 375px cap is three copies and no test
 
 **Measured while writing `beta-0.md`:** at 1400×900 the board holds at 375px, centred, cell 44.8px, table
