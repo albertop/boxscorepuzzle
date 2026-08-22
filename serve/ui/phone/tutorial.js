@@ -86,6 +86,14 @@ const PITCHING_COLUMNS = ["outs", "walks", "runs"];
  * across the five — which is the thing the product is called.
  */
 const STEPS = [
+  // ⚠️⚠️ **First, and it demonstrates nothing.** No hole, no worked line, no formula: the wizard used
+  // to open on a relation, which answers *how* to a player who has not been told *what*. This screen
+  // is the one a stranger decides on, and a relation put here makes it a wall.
+  //
+  // The board is drawn with every later step's cell already blank, which is the point — it is a
+  // picture of the thing being described rather than an illustration of a rule.
+  { name: "tutorial.step.what_this_is_name", body: "tutorial.step.what_this_is",
+    rule: null, hole: null, lit: [], sum: null },
   { name: "reference.row_identity_name", body: "tutorial.step.row_identity",
     rule: "reference.row_identity", hole: "b1.plate_appearances",
     lit: ["b1.at_bats", "b1.walks"], sum: "tutorial.sum.row_identity" },
@@ -339,8 +347,11 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     const finished = step >= STEPS.length;
     // Every earlier hole is filled by now, marked as the thing the player just worked out; every later
     // one is still empty, because a step cannot demonstrate a number the screen has already given.
-    const solved = STEPS.slice(0, step).map((one) => one.hole);
-    const pending = STEPS.slice(step + 1).map((one) => one.hole);
+    // ⚠️ `filter(Boolean)`: the first step has no hole, so both lists would carry a `null` that matches
+    // no cell — harmless in `includes`, and exactly the kind of thing that stays harmless until
+    // something reads the length.
+    const solved = STEPS.slice(0, step).map((one) => one.hole).filter(Boolean);
+    const pending = STEPS.slice(step + 1).map((one) => one.hole).filter(Boolean);
     const current = finished ? null : STEPS[step];
 
     // ⚠️ The whole bar, not its contents. Emptying the progress line and hiding the skip left a 44px
@@ -364,10 +375,13 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     // the relation work. It moves to that screen when there is one.
     made.hidden = finished || step > 0;
     body.textContent = finished ? text("tutorial.reference_hint") : text(current.body);
-    sum.textContent = finished ? "" : text(current.sum);
-    sum.hidden = finished;
-    rule.textContent = finished ? "" : text(current.rule);
-    rule.hidden = finished;
+    // ⚠️ **Hidden when the step has none, not merely empty.** The finish screen already emptied these
+    // and hid them together; the first step is the second case, and an empty-but-present line leaves a
+    // gap where the eye expects the worked example every other screen has.
+    sum.textContent = finished || !current.sum ? "" : text(current.sum);
+    sum.hidden = finished || !current.sum;
+    rule.textContent = finished || !current.rule ? "" : text(current.rule);
+    rule.hidden = finished || !current.rule;
     next.textContent = finished ? text("tutorial.finish") : text("tutorial.next");
     next.classList.toggle("tutorial-finish", finished);
 
@@ -396,7 +410,11 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
 function referenceList(doc) {
   const list = doc.createElement("dl");
   list.className = "tutorial-reference";
-  for (const one of STEPS) {
+  // ⚠️ **The steps that carry a relation, which is no longer all of them.** The first screen says what
+  // the game is and states no rule, so it has no `rule` key — and this sheet is the five relations, not
+  // the six screens. It is the same list §3b puts one tap away during play, and a `How this works` entry
+  // in it would be a heading with nothing under it on the surface a player consults mid-solve.
+  for (const one of STEPS.filter((step) => step.rule)) {
     const name = doc.createElement("dt");
     name.textContent = text(one.name);
     const rule = doc.createElement("dd");

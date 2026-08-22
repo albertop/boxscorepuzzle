@@ -2893,7 +2893,7 @@ suite("The landing page, which every visit lands on", () => {
   });
 });
 
-suite("The tutorial: five steps, skippable, and teaching on a board that adds up", () => {
+suite("The tutorial: six steps, skippable, and teaching on a board that adds up", () => {
   const mount = async ({ start = 0 } = {}) => {
     const { renderTutorial } = await import("../ui/phone/tutorial.js");
     const root = document.createElement("div");
@@ -2929,7 +2929,8 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   test("it is five steps, it says which one, and the skip is a real control", async () => {
     const view = await mount();
 
-    equal(view.total, 5, "the tutorial no longer has one step per relation family");
+    // One screen saying what the game is, then one per relation family.
+    equal(view.total, 6, "the tutorial is no longer an opening screen plus one step per relation");
     assert(view.page.querySelector(".tutorial-progress").textContent.length > 0, "the step is not numbered");
     // ⚠️ Present and visible. §1b: a skip the visitor has to hunt for is a compulsory tutorial wearing
     // a disguise, which is the rule the reversal removed.
@@ -2947,7 +2948,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // ⚠️ **Both halves.** Removing it outright is the other reading and it is wrong while no first
     // screen exists to carry it: a four-batter, three-column board is visibly not a boxscore, and a
     // player who is not told spends a step deciding whether the tutorial is broken.
-    for (const step of [1, 2, 3, 4]) {
+    for (const step of [1, 2, 3, 4, 5]) {
       const view = await mount({ start: step });
       assert(
         view.page.querySelector(".tutorial-made-up").hidden,
@@ -2960,7 +2961,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   test("⚠️ the batting order is taught last", async () => {
     // The other four are visible in the grid. Nothing on screen announces that turns are dealt around
     // the lineup, so it needs the most setup and gets the player who has seen four relations work.
-    const view = await mount({ start: 4 });
+    const view = await mount({ start: 5 });
 
     equal(view.page.querySelector(".tutorial-title").textContent, "The batting order", "the order changed");
 
@@ -2971,7 +2972,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // **The test that matters.** A tutorial teaching arithmetic that does not hold is the worst defect
     // available here, and no screenshot catches a subtle one — the board looks exactly as convincing
     // either way. Read out of the DOM at the last step, where every hole has been filled.
-    const view = await mount({ start: 5 });
+    const view = await mount({ start: 6 });
     const v = shown(view);
 
     for (const row of [0, 1, 2, 3]) {
@@ -3009,7 +3010,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // indistinguishable from an editable cell, and one whole step deduced a number that always arrives
     // with its value. **A tutorial that teaches the opposite of the game is worse than no tutorial**,
     // and this was on the first screen anybody sees.
-    for (let step = 0; step <= 5; step += 1) {
+    for (let step = 0; step <= 6; step += 1) {
       const view = await mount({ start: step });
       const value = shown(view).lob;
 
@@ -3023,7 +3024,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // concluding they missed something. Read out of the DOM rather than off the STEPS list — the list
     // is what would be wrong.
     const blanksAt = [];
-    for (let step = 0; step <= 5; step += 1) {
+    for (let step = 0; step <= 6; step += 1) {
       const view = await mount({ start: step });
       const values = shown(view);
 
@@ -3032,8 +3033,16 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
       view.teardown();
     }
 
-    equal(blanksAt[5].size, 0, "the finished board still has a hole in it");
-    for (let step = 0; step < 5; step += 1) {
+    equal(blanksAt[6].size, 0, "the finished board still has a hole in it");
+    // ⚠️ **The first screen fills nothing, and that is the assertion rather than an exemption.** It
+    // says what the game is and demonstrates no relation, so moving off it must leave the board exactly
+    // as it was — a step 1 that quietly solved a cell would be teaching by sleight of hand.
+    equal(
+      [...blanksAt[0]].filter((name) => !blanksAt[1].has(name)).length,
+      0,
+      "the opening screen filled a cell, so it is demonstrating something after all",
+    );
+    for (let step = 1; step < 6; step += 1) {
       const filled = [...blanksAt[step]].filter((name) => !blanksAt[step + 1].has(name));
       equal(filled.length, 1, `step ${step + 1} fills ${filled.length} cells rather than exactly one`);
     }
@@ -3045,7 +3054,8 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     // over PA, which shows all four plate-appearance cells as facts, and step five then turned one of
     // them back into an unknown.
     const givenSoFar = new Set();
-    for (let step = 0; step < 5; step += 1) {
+    // From the second screen: the first demonstrates no relation and so has no hole of its own.
+    for (let step = 1; step < 6; step += 1) {
       const view = await mount({ start: step });
       const values = shown(view);
       const hole = Object.keys(values).find((name) => values[name] === null);
@@ -3060,7 +3070,7 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
   });
 
   test("the last screen hands over the reference sheet, then the puzzle", async () => {
-    const view = await mount({ start: 5 });
+    const view = await mount({ start: 6 });
 
     // So the player leaves knowing the button exists: a sheet nobody has been shown is a sheet nobody
     // opens, and it is what made skipping this safe.

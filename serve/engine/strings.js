@@ -252,6 +252,29 @@ const en = {
   // player who is not told will spend a step wondering why it looks wrong instead of watching the
   // relation work.
   "tutorial.made_up": "A made-up boxscore, smaller than a real one.",
+
+  // ⚠️⚠️ **The first screen, and it teaches no relation at all.** The wizard taught five relations and
+  // never said what the player was trying to do: somebody arriving cold met a grid and could not tell
+  // whether to fill everything in, guess the game, or something else. Five demonstrations of *how* with
+  // no *what*.
+  //
+  // Four sentences, in the order the questions arrive, and nothing else earns a place here. **This is
+  // the screen where a stranger decides whether to continue**, and the one relation put on it would
+  // make it a wall.
+  //
+  // ⚠️ *"No baseball knowledge"* is the sentence that matters most and looks least important. A fan
+  // meeting a 1913 boxscore assumes he needs to know something about 1913. He does not, and if he
+  // believes he does he leaves before the first relation.
+  //
+  // ⚠️ **The reveal is promised up front**, because it is what separates this from a number puzzle
+  // (§7). A player who does not know there is a game behind the grid is solving sudoku.
+  "tutorial.step.what_this_is_name": "How this works",
+  "tutorial.step.what_this_is":
+    "A real boxscore with most of its numbers taken out. You put them back, and nothing is guessed: "
+    + "every missing number follows from the ones still on the board. No trivia, and no baseball "
+    + "knowledge beyond the five relations coming up. The scoreboard, the footnote line and the cells "
+    + "already filled never change; everything else you work out. Finish it and you find out which "
+    + "game it was: the teams, the date, the players.",
   "tutorial.blank_prompt": "One number is missing. Here is how you get it.",
   // ⚠⚠ **The footnote line is named, and the warning is the point.** §6: nine rows in ten carry
   // every footnote term at zero, so players learn to stop looking — and the row where one appears is
