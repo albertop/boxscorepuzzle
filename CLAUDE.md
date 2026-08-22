@@ -133,8 +133,11 @@ coverage under 95%. Commit `uv.lock` — it is the reproducibility guarantee, no
 
 **CI exists now** — `.github/workflows/ci.yml`, on every push: ruff over `forge/` blocking, the
 `discovery/` ratchet, mypy strict, the suite with the 95% coverage floor, and the browser suite
-headless. On Ubuntu and on Windows, because the laptop is Windows and a redirected stream there is
-cp1252.
+headless. **On Ubuntu only since 2026-08-22** — Windows was 39% of the Actions bill and the platform
+it covered is the laptop, which runs the whole suite through the hook before every push. The
+cp1252 class it existed for is guarded by `test_reports_survive_a_redirected_stream.py`, a static check
+over every `print` argument that runs anywhere, and that is what caught the two instances of it that
+appeared the same day.
 
 **Branch protection does not and cannot exist on this repository.** GitHub gates branch protection
 *and* rulesets behind a paid plan for **private** repositories, and this repository is private
@@ -144,6 +147,27 @@ plan or publishing the repository, and the second one is not available.
 
 So **CI is a report, not a gate**: nothing stops a red commit reaching `main`. Two things follow, and
 they are not optional.
+
+⚠️⚠️ **Re-checked on 2026-08-22 rather than taken from this paragraph, and both endpoints still refuse.**
+`branches/main/protection` and `rulesets` each answer `403 Upgrade to GitHub Pro or make this repository
+public`. The account is on the free plan and the repository is private permanently. **Nothing has
+changed and nothing can be set.**
+
+⚠️ **And CI narrowed on the same day, which moves where the gap is.** It runs on pushes to `main` and on
+pull requests only — not on every push to every branch. So on a working branch **the hook is the only
+check there is**, and `--no-verify` leaves that code unlooked-at until it reaches `main`.
+
+**On `main` itself the position is better than it sounds and worse than a gate.** A `--no-verify` push
+to `main` still triggers CI, so it is *seen* — the badge goes red — and it is not *stopped*. **Detection
+without prevention**, which is the whole of what a free private repository allows. The difference
+matters when reasoning about it: the failure mode is a red `main` nobody has looked at yet, not an
+unchecked commit nobody can ever discover.
+
+⚠️ **A step-level `if` does not save Actions minutes**, and it is the obvious wrong turn from here. The
+runner starts, checks out and installs before it reaches the condition, so a skipped *step* bills the
+same as a run one. Only a skipped **job** or a skipped **workflow** saves anything — which is why the
+saving lives in `paths-ignore` at the trigger. Splitting `forge` and `browser` into jobs with their own
+`paths` would save more; it is a restructure and is deliberately not done here.
 
 ⚠️ **This section is the correction, not the claim.** For every commit until now this paragraph read
 *"`main` always deployable, protected, CI must pass"* and none of the three was enforced by anything —

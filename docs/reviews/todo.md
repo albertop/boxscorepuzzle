@@ -275,6 +275,71 @@ lost.
 
 ---
 
+## 2026-08-22 — the Actions bill, measured before cutting, and a report owed in a month
+
+**Six days, 55 runs, 143 jobs.** ⚠️ Derived from each job's start and finish timestamps, rounded up to
+the minute and multiplied by the runner rate — **not** from the billing endpoint, which returns
+`total_ms: 0` on every job while `run_duration_ms` is populated. A figure that decides a spend says
+where it came from.
+
+| job | runs | billed | share |
+|---|---:|---:|---:|
+| `CI / forge (ubuntu)` | 44 | 416 | 53% |
+| `CI / forge (windows)` | 44 | **302** | **39%** |
+| `CI / browser` | 44 | 46 | 6% |
+| `Graph Update` | 11 | 14 | 2% |
+| | | **778** | |
+
+**130 billed minutes a day, ~3,890 a month, against a 2,000 free allowance.** That accounts for the
+bill without looking further — ⚠️ **though it does not prove Actions is all of it**: the per-product
+endpoints need the `user` scope this token lacks, so packages, LFS and Codespaces are unmeasured.
+`gh auth refresh -h github.com -s user` is what would settle it.
+
+### What changed
+
+**Windows out** — 39% of the bill, and the platform it covered is the laptop, which runs the whole
+suite through the hook before every push. ⚠️ **39%, not the two thirds the 2× rate suggests**: that
+arithmetic needs similar wall time on both, and it was 3.5 minutes against 9.5, because Linux also runs
+the coverage pass.
+
+**`main` and pull requests only**, and **`paths-ignore` for `docs/**` and `**/*.md`**. ⚠️ The trigger
+change saves **nothing today** — all 44 runs were pushes to `main`, and there are no branches or PRs —
+it is the shape that stops a working branch costing a run per save later.
+
+⚠️ **`paths-ignore` rather than `paths`, and the direction is the point.** A list of what *does* affect
+the code forgets the next directory somebody adds, and forgets it silently. This way an unlisted path
+runs CI by default: the failure mode is a wasted run rather than an unchecked one.
+
+**Measured per push, not per commit**: 6 of 43 pushes changed only documents (14%). Per commit it looked
+like 17%, and that would have been wrong — a push carrying twenty commits, one touching `forge/`, needs
+the suite.
+
+⬜ **Owed: minutes per workflow once a month has run.** Without the after, there is no way to know the
+bill moved because of this rather than for some other reason — and the next surprise would be as
+unexplained as this one.
+
+### ⚠️⚠️ Branch protection: re-checked, and still impossible
+
+`branches/main/protection` and `rulesets` both answer `403 Upgrade to GitHub Pro or make this
+repository public`. Free plan, private repository, permanently (§16). **Checked against the API rather
+than read off `CLAUDE.md`**, because that paragraph has been wrong before — it is right now.
+
+⚠️ **And `CLAUDE.md` already says so.** The claim that it asserts protection is out of date: the file
+carries the correction, including the record that it *used* to claim it. Nothing to fix there.
+
+**Where the gap actually is, now that CI narrowed.** On a working branch the hook is the only check, so
+`--no-verify` leaves that code unlooked-at until it reaches `main`. On `main` a `--no-verify` push
+**still triggers CI** — so it is seen and not stopped. **Detection without prevention**, which is all a
+free private repository allows. The failure mode is a red `main` nobody has looked at yet, not an
+unchecked commit nobody can discover.
+
+⬜ **A step-level `if` would not help and is the obvious wrong turn**: the runner starts, checks out and
+installs before reaching the condition, so a skipped step bills like a run one. Only a skipped job or
+workflow saves. Splitting `forge` and `browser` into jobs with their own `paths` would save more, and
+is a restructure left undone deliberately.
+
+---
+
 ## ⚠️⚠️ READ FIRST — which pool every discovery figure describes
 
 **2026-08-21.** Two separate defects touched the pool every instrument samples. Neither made a *number*

@@ -17,11 +17,29 @@
 
 name: CI
 
+# ⚠️⚠️ **`main` and pull requests, not every push to every branch.** Measured before cutting: 44 runs
+# over six days, 130 billed minutes a day against a 2,000-minute monthly allowance. Every one of those
+# 44 was a push to `main` — there are no branches and no pull requests today — so this saves nothing
+# **now**. It is the shape that keeps a working branch from costing a full CI run per save later.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
+    # ⚠️ **`paths-ignore` lists what cannot affect the code, and that direction is the point.** A
+    # `paths` list naming what *does* affect it forgets the next directory somebody adds, and forgets
+    # it silently — the new code simply never runs. This way an unlisted path runs CI by default and
+    # the failure mode is a wasted run rather than an unchecked one.
+    #
+    # Six of 43 measured pushes changed nothing but documents. Measured per **push** rather than per
+    # commit on purpose: a push carrying twenty commits, one of which touches `forge/`, needs the
+    # suite — counting commits put the docs-only share at 17% instead of 14%.
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   pull_request:
     branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
 
 # A second push supersedes the first; a queue of stale runs teaches people to ignore the badge.
 concurrency:
