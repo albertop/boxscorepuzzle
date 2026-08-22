@@ -739,8 +739,22 @@ def load(  # noqa: PLR0913, PLR0915
     also: tuple[str, ...] = (),
     season: Season = REGULAR,
     window: tuple[int, int] = SEASON_WINDOW,
+    rejected: Counter[str] | None = None,
 ) -> list[Loaded]:
     """Sample directions from the pool, stratified by decade.
+
+    ⚠️⚠️ **Tested against a fake driver, not excluded from coverage — and a blanket pragma was written
+    here first.** It looked defensible: this opens a connection, and a test needing a DSN is one CI skips
+    and nobody runs. **The line between "needs a server" and "needs rows" is not "touches the database".**
+
+    Most of what is inside is *logic*: the rejection tally, `also`, the deduplication keyed on game **and**
+    offensive team, and the row-to-`Direction` mapping. None of it needs a server; it needs rows. Hiding
+    it behind an infrastructure excuse would have covered the exact place **the pinch-runner defect
+    lived** — a row query and a shape query disagreeing about what counts as having contributed.
+
+    `pyodbc` is imported inside this function, which is what lets a test put a fake in `sys.modules` and
+    drive the whole thing off fixed rows. See `tests/test_pool_loading.py`.
+
 
     `gated` applies §5's zero-density gate in SQL, which matters more than it sounds: the gate keeps
     only 11% of the pool at 30%, so an ungated sample is nine parts boards that will never ship.
@@ -940,7 +954,15 @@ def load(  # noqa: PLR0913, PLR0915
     """  # noqa: S608 — `season.daily` and `season.substitutions`, both module constants
 
     loaded: list[Loaded] = []
-    rejected: Counter[str] = Counter()
+    # ⚠️⚠️ **Accepted from the caller so its decisions are observable.** This was a local `Counter`
+    # printed at the end — so a *test* could only see `load()`'s refusals by reading stdout, and three
+    # tests written against the empty result passed with the refusals deleted, because **an empty list is
+    # what every path returns**.
+    #
+    # **A function whose decisions are visible only as a printed line cannot be tested for making them.**
+    # Passing the tally in costs one optional argument, changes nothing for the 37 existing callers, and
+    # hands the batch producer the per-cause number it sizes a run from.
+    rejected = Counter() if rejected is None else rejected
     # One lookup per team-season rather than per direction: a stratified draw returns many games from
     # the same club and the table is small.
     team_names: dict[tuple[str, int], tuple[str, str] | None] = {}
