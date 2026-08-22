@@ -689,6 +689,18 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
   shipped under a fabricated `Unknown`. `forge/tests/test_only_retrosheet_tables.py` enforces it — every
   `dbo.X` in a query must be `dbo.retroX`, and an unqualified `FROM someTable` is refused too, since
   that is the same defect with the schema left off.
+- ⚠️⚠️ **Only games the visiting club batted first — an acceptance test, decided 2026-08-22.** 49
+  regular-season games have the home club leading off the first (neutral sites, rescheduled dates); the
+  postseason has none today and carries the same rule preventively. **A construction rule, not data
+  quality:** Retrosheet describes something real and the *board* is what cannot represent it — the `x`
+  for a half-inning never played, which side is `AWAY BATTING`, and the outs for a home team that wins
+  without batting in the ninth all assume the visitor bats first.
+
+  **`EXISTS` over the visitor batting, never `NOT EXISTS` over the 49**: an exclusion list admits a game
+  with no event rows, which is the fail-open shape this section already closed for provenance. Coverage
+  measured before relying on it — 100% of games carry a first event, both seasons. ⚠️ **No validation
+  layer can see this**; such a board balances every identity and is wrong only about which team is
+  which. `forge/tests/test_the_visitor_bats_first.py`.
 - **Exclude deduced event files.** They are reconstructions from partial information and will not balance.
 - Offensive and pitching stats are well proofed by Retrosheet. Defensive stats (PO, A) are not — and are not used by the board anyway.
 - The Chadwick Bureau person register resolves player identities for the final reveal (§7).
