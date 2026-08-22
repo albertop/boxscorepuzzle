@@ -651,7 +651,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 | C6 | Per-puzzle routes: `/p/<id>` canonical, `/today` redirects |
 | C7 | **Store events, not state**: puzzle_id, date, duration, hints, errors, highest technique |
 | C8 | `canAccess(puzzle, user)` — single decision point; returns true in v1 |
-| C9 | Reserved, empty layout slots for future ads |
+| C9 | Reserved, empty layout slots for future ads. **Three places, and ⚠️ none during play** — §10 says where and why, including the rule that resolves *renders nothing* against *does not shift the layout*: a slot goes where nothing the player might be about to touch sits below it. **No ad code, no network, no decision to run ads** |
 | C10 | Two-phase boot that can wait for consent |
 | C11 | Zero user-facing strings in code |
 

@@ -1431,6 +1431,108 @@ Retrosheet explicitly permits commercial use, with one requirement: the copyrigh
 
 **Consequence:** ads return to the plan, and logically so — they're the complement to the wall, not the primary model. This reactivates seam C9.
 
+### ⚠️⚠️ Ads: the design stays ready, and nothing is built — 2026-08-22
+
+**This is not a decision to run ads.** The requirement is that **if that decision is ever taken, it is not
+a rebuild.** C9 and C10 already reserve the slots and the two-phase boot; this is about making the
+reservation real rather than a sentence in a document.
+
+**The decision itself waits until there is a problem to solve** — poor conversion against real traffic,
+which does not exist yet.
+
+#### Where a slot belongs
+
+| slot | why there |
+|---|---|
+| **Between the solved board and the reveal** | the player has just finished, there is already a transition, and nothing is interrupted. It is what daily games that monetise this way do |
+| **The landing, beneath the button** | seen before playing, competing with nothing |
+| **The finished board on return** | a screen with nothing on it today |
+
+#### ⚠️⚠️ No slot during play, and the exclusion is deliberate
+
+**The board is 375px and every pixel was argued for** (§6). A banner there destroys the height budget and
+interrupts somebody concentrating.
+
+**Recorded as a decision so nobody adds one later as the obvious spot** — and it is the obvious spot: it
+is where the attention is, which is exactly why it is worth more to an advertiser and costs more here.
+
+#### What *ready* has to mean concretely
+
+A slot that is **empty today and can be filled without moving anything else**.
+
+- **Empty slots render nothing at all** — no placeholder, no border, no gap.
+- **The two-phase boot exists and works with zero ad code**, so adding a network dependency later does not
+  change the boot sequence. C10 already requires this.
+- ⚠️ **Nothing in the play path may depend on an ad loading.** §23 requires the daily to play with the
+  backend down; **an ad network that fails, is slow, or is blocked must not be able to stop the game.**
+  That is a property of *where the slots sit*, and it is the second reason none goes on the board.
+
+#### ⚠️⚠️ *Renders nothing* and *does not shift the layout* contradict each other, and resolving it is what picks the locations
+
+**Stated plainly, the two requirements cannot both hold.** A slot with zero height that later fills with a
+250px block **must** move whatever is beneath it. Reserving the 250px instead means shipping a 250px hole
+for a decision that may never be taken.
+
+**The resolution is not a compromise between them — it is a constraint on placement:**
+
+> **A slot goes where nothing the player might be about to touch sits below it, or it is filled before
+> first paint.**
+
+That is the real property. It is not *the layout must never move*; it is **nothing the player is reaching
+for may move under their finger** — which is what a layout-shift rule is actually protecting, and it is
+satisfiable with slots that render nothing.
+
+**Check the three against it:**
+
+- **Between the solved board and the reveal** — a transition of its own, nothing below. ✔
+- **The finished board on return** — nothing below. ✔
+- **The landing, beneath the button** — ⚠️ **the Retrosheet footer is below it.** The footer moving costs
+  nothing: it carries no control and no one is reaching for it. **But that has to be checked rather than
+  assumed**, and if the landing ever gains a control below the button, the slot moves or the rule breaks.
+
+⚠️ **A reservation that fails this test is decorative**, and a decorative reservation is worse than none:
+it reads as done in a document while the rebuild is still waiting.
+
+#### Two things to record while the reasoning is fresh
+
+**1. Ads and subscription cannibalise each other.** If the free tier with ads is tolerable, fewer people
+pay. **The resolution is already in the two-tier design above** — removing ads is part of what the
+subscription sells — and it is written here, where the ad decision would be taken, rather than somewhere
+it would have to be rediscovered.
+
+**2. ⚠️ A generic ad network will clash with everything built here.** A boxscore is a sober object; the
+Fenway green, the monospace and the restraint are the product's character. **Network ads are not going to
+respect any of it.**
+
+**The mitigation is niche advertisers** — baseball retailers, memorabilia, card shops. ⚠️ **But that is
+direct sales, not a network: a different business with a different amount of work.** Worth stating now
+because *turn on a network* and *sell to baseball advertisers* get conflated when the decision is being
+made in a hurry, and they share almost nothing but the word.
+
+#### ✔ One of the three already exists, and it is the pattern for the other two
+
+**The landing slot is not hypothetical.** `serve/ui/phone/landing.js` appends `.landing-later` between the
+button and the footer — put there for the archive, the streak and the subscription, on the reasoning that
+*the shape is present before the feature is*. **An ad slot is that element or one beside it.**
+
+**Measured 2026-08-22 at 375px:** height 0, no margin, no padding, no border, no children, `display:
+none`. **It renders nothing at all**, which is the requirement, and it is worth reading how:
+
+```css
+.landing-later:empty { display: none; }
+```
+
+⚠️ **`:empty` is what makes the reservation self-maintaining**, and that is the part to copy. The slot
+disappears while nothing is in it and appears the moment something is, with no flag to set and nothing to
+remember — so a slot cannot be left showing an empty box, and filling one cannot be forgotten halfway.
+**A reservation that needs somebody to toggle it is a reservation that will one day be toggled wrong.**
+
+#### Build nothing
+
+**Empty slots, no ad code, no network, no configuration.** This document says where they go and what they
+must not break; the code reserves the space when the slots are built. **One of the three is built, and it
+was built for something else** — which is the seams working as intended rather than a head start on ads.
+
 ### Chosen model: recurring subscription
 
 **Recurring subscription**, not one-time purchase.
@@ -1605,7 +1707,7 @@ These must exist in v1 even if no paid feature is used.
 | C6 | Per-puzzle routes from day one: `/p/<id>` canonical, `/today` redirect | Archive, sharing |
 | C7 | **Store events, not state** (puzzle_id, duration, hints, techniques, errors) | Stats, calibration, migration to accounts |
 | C8 | `canAccess(puzzle, user)` — in v1 always returns true | Any gating |
-| C9 | Reserved, empty layout slots | Ads without wrecking mobile |
+| C9 | Reserved, empty layout slots — three of them, **none during play** (§10) | Ads without wrecking mobile |
 | C10 | Two-phase boot that can wait for consent | Privacy |
 | C11 | Zero strings in code, including generated text and metadata | Optional Spanish (§13) |
 
