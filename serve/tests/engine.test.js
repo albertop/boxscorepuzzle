@@ -3512,6 +3512,53 @@ suite("⚠️⚠️ C11 over what the player actually reads, not over what the c
     );
   });
 
+  test("⚠️⚠️ every screen's tab is distinguishable from the others when truncated", async () => {
+    // **The property the per-screen titles exist for.** All three pages once carried the identical
+    // `boxscore — the daily baseball logic puzzle`, so a tab among twenty said nothing about which one
+    // it was — and the tab is what gets bookmarked and what shows in history.
+    //
+    // ⚠️ **Truncated, not whole.** A narrow tab shows about eleven characters. Titles that differ only
+    // after that point are identical to the reader, which is why the distinguishing part goes first:
+    // `boxscore puzzle — August 22` and the landing page's title are the same tab.
+    const { CATALOGS } = await import("../engine/strings.js");
+    const en = CATALOGS.en;
+    const shown = [
+      en["page.landing.title"],
+      en["page.tutorial.title"],
+      en["page.board.title"].replace("{date}", "August 22"),
+      en["page.solved.title"],
+    ].map((title) => title.slice(0, 11));
+
+    equal(new Set(shown).size, shown.length, `two screens share a tab: ${shown.join(" | ")}`);
+    for (const title of shown) assert(title.trim().length > 0, "a screen has no title at all");
+  });
+
+  test("⚠️ the board's tab names the day, and the solved one names no time", async () => {
+    const { CATALOGS, fill } = await import("../engine/strings.js");
+    const en = CATALOGS.en;
+
+    // The date is a placeholder rather than a fixed word, so the tab says which board this is.
+    assert(en["page.board.title"].includes("{date}"), "the board's tab does not name the day");
+    equal(fill("page.board.title", { date: "August 22" }), "August 22 — boxscore puzzle");
+
+    // ⚠️ **Decided, not omitted.** The reveal prints the time; a title carries it into history,
+    // bookmarks and screenshots of the window — the tab strip, which is the part of a shared screen
+    // people forget is visible, and which goes on announcing the result from a background tab. §26
+    // shares the time because the player chose to.
+    assert(!/\d/.test(en["page.solved.title"]), "the solved tab carries a figure");
+  });
+
+  test("⚠️ every page's tab uses the name the landing page shows", async () => {
+    // A page saying one name and its tab another leaves neither sticking, and the tab is the half that
+    // gets bookmarked.
+    const { CATALOGS } = await import("../engine/strings.js");
+    const en = CATALOGS.en;
+
+    for (const key of ["page.landing.title", "page.board.title", "page.solved.title", "page.tutorial.title"]) {
+      assert(en[key].includes("boxscore puzzle"), `${key} does not use the product's name`);
+    }
+  });
+
   test("every shipped page declares a language, and it is the catalogue's", async () => {
     for (const page of PAGES) {
       const source = await (await fetch(`../ui/phone/${page}`)).text();

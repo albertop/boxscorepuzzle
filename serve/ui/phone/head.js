@@ -20,7 +20,7 @@
  * every human. **Making them visible to a crawler is server-rendering, and that is the other item.**
  */
 
-import { text } from "../../engine/strings.js";
+import { fill, text } from "../../engine/strings.js";
 
 /**
  * The description each page offers, composed where composing is safer than repeating.
@@ -39,15 +39,22 @@ const DESCRIPTION = {
 /**
  * Give the document its title, its description and its language, from the catalogue.
  *
+ * ⚠️ **The distinguishing part of each title goes first**, because a tab among twenty is about eleven
+ * characters wide and that is all a reader gets. `August 22 — boxscore puzzle` says which tab it is;
+ * `boxscore puzzle — August 22` truncates to the landing page's tab exactly.
+ *
  * @param {"landing" | "board" | "tutorial"} page which of the three shipped pages this is.
+ * @param {Record<string, string>} values placeholders for the title, when it has any.
  */
-export function applyHead(page) {
+export function applyHead(page, values = null) {
   const describe = DESCRIPTION[page];
   // Fail loudly rather than titling the page after a missing key. A typo here would otherwise ship a
   // page whose tab reads `page.bord.title`, which no test looks at and every player does.
   if (describe === undefined) throw new Error(`no head strings for page ${page}`);
 
-  document.title = text(`page.${page}.title`);
+  // `fill` refuses a missing placeholder, so a title gaining one and a caller that does not know is a
+  // loud failure rather than a tab reading `{date} — boxscore puzzle`.
+  document.title = values === null ? text(`page.${page}.title`) : fill(`page.${page}.title`, values);
   document.documentElement.lang = text("catalog.lang");
 
   // Created if absent, updated if present — the markup carries none, and a second `<meta>` would leave
@@ -59,4 +66,21 @@ export function applyHead(page) {
     document.head.append(meta);
   }
   meta.content = describe();
+}
+
+/**
+ * The title a finished board carries, once the player has earned it.
+ *
+ * ⚠️ **No time in it, and that is decided rather than left out.** The reveal prints the time, so a
+ * screenshot of the *page* carries it either way. A title carries further: into history, into
+ * bookmarks, and into screenshots of the **window** — the tab strip, which is the part of a shared
+ * screen people forget is visible. **A background tab would go on announcing the result** while the
+ * player is doing something else. §26 shares the time because the player chose to; this would be the
+ * browser doing it unasked.
+ *
+ * ⚠️ Only the title changes. The description still describes the page, which is what a description is
+ * for, and a solved board is the same page.
+ */
+export function applySolvedTitle() {
+  document.title = text("page.solved.title");
 }

@@ -207,9 +207,25 @@ const en = {
   // disagree. `<html lang="en">` is still written in the markup, because a crawler and a screen reader
   // both need it before any script has run; `applyHead` keeps it in step when the catalogue changes.
   "catalog.lang": "en",
-  "page.landing.title": "boxscore — the daily baseball logic puzzle",
-  "page.board.title": "Today’s puzzle — boxscore",
-  "page.tutorial.title": "How to play — boxscore",
+  // ⚠️⚠️ **One title for three pages, and it said the wrong name.** All three read `boxscore` while
+  // the landing page says `boxscore puzzle` — **the tab is what gets bookmarked and what shows in
+  // history**, so a page naming itself one thing and its tab another leaves neither sticking. And
+  // *the daily baseball logic* was a noun short: it read as truncated rather than as a phrase.
+  //
+  // ⚠️ **The distinguishing part goes first, because that is what survives truncation.** A tab among
+  // twenty is about eleven characters wide. `boxscore puzzle — August 22` truncates to
+  // `boxscore pu…`, which is the landing page's tab exactly — the case this change exists to fix.
+  // `August 22 —` says which of them it is.
+  "page.landing.title": "boxscore puzzle — a daily baseball deduction",
+  "page.board.title": "{date} — boxscore puzzle",
+  // ⚠️ **No time on it, and that is a decision rather than an omission.** `Solved in 8:14` was the
+  // first draft. The reveal already prints the time, so a screenshot of the *page* carries it either
+  // way — what a title adds is history, bookmarks, and screenshots of the **window**: the tab strip,
+  // which is the part of a shared screen people forget is visible. **A background tab would go on
+  // announcing the result while the player is doing something else.** §26 shares the time because
+  // the player chose to; this would be the browser showing it without being asked.
+  "page.solved.title": "Solved — boxscore puzzle",
+  "page.tutorial.title": "How to play — boxscore puzzle",
   // ⚠️ The board and the tutorial get their own sentence; the landing page composes its description
   // from the two it already shows, so the pitch a visitor reads and the pitch a search result shows
   // cannot drift apart. See `applyHead`.
@@ -350,6 +366,9 @@ const en = {
   // renderer indexes rather than parses, and so a language that orders the parts differently changes
   // `date.long` alone.
   "date.long": "{month} {day}, {year}",
+  // ⚠️ No year: it labels today, on a tab, where the year says nothing and costs three characters.
+  // `date.long` keeps it because that one labels a game played in 1913, and there the year is the point.
+  "date.short": "{month} {day}",
   "month.1": "January",
   "month.2": "February",
   "month.3": "March",
@@ -403,6 +422,27 @@ export function fill(key, values) {
 export function longDate(iso) {
   const [year, month, day] = iso.split("-");
   return fill("date.long", { month: text(`month.${Number(month)}`), day: String(Number(day)), year });
+}
+
+/** `August 22` — today, on a tab, where the year says nothing and costs three characters. */
+export function shortDate(iso) {
+  const [, month, day] = iso.split("-");
+  return fill("date.short", { month: text(`month.${Number(month)}`), day: String(Number(day)) });
+}
+
+/**
+ * `2026-08-22` from a Date, in **local** time.
+ *
+ * ⚠️ Not `toISOString()`, which is UTC and is the previous day for most of the Americas every
+ * evening — a daily puzzle dated tomorrow at 8pm is a bug the operator would see and nobody else
+ * could reproduce.
+ *
+ * ⚠️ **Here rather than in `landing.js`, for the reason `longDate` gives above it**: it was private to
+ * the landing page, and the board's tab now needs today's date too. A second copy of a date rule is
+ * how one screen ends up a day ahead of another in the same session.
+ */
+export function localIso(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 export function keys() {

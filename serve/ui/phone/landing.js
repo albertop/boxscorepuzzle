@@ -20,16 +20,10 @@
 
 import { battingCell, battingTotalCell } from "../../engine/columns.js";
 import { createGame, isSession } from "../../engine/game.js";
-import { longDate, text } from "../../engine/strings.js";
+import { localIso, longDate, text } from "../../engine/strings.js";
 import { columnsFor, renderLineScore, renderSection } from "./board.js";
 import { ROUTES, withSearch } from "./daily.js";
 import { formatDuration } from "./finish.js";
-
-/** `2026-08-21` from a Date, in local time. ⚠️ Not `toISOString()`, which is UTC and is the previous
- * day for most of the Americas every evening — a daily puzzle dated tomorrow at 8pm is a bug the
- * operator would see and nobody else could reproduce. */
-const localIso = (date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 
 export function renderLanding({ puzzle, root, store, doc = document, today = new Date(), go = null }) {
   const page = doc.createElement("div");

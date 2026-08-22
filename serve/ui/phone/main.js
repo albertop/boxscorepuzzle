@@ -14,12 +14,16 @@
 import { PackageError } from "../../engine/package.js";
 import { boot } from "./shell.js";
 import { loadPuzzle } from "./daily.js";
-import { text } from "../../engine/strings.js";
+import { localIso, shortDate, text } from "../../engine/strings.js";
 import { applyHead } from "./head.js";
 
 // The tab, the bookmark and the search result, from the catalogue rather than the markup
 // (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
-applyHead("board");
+//
+// ⚠️ **Today's date, so a tab among twenty says which one this is.** It comes from the clock rather
+// than from the package, which is deliberate: the title must be right before the fetch resolves, and
+// a board that fails to load should still be `August 22 — boxscore puzzle` rather than nameless.
+applyHead("board", { date: shortDate(localIso(new Date())) });
 
 try {
   const loaded = await loadPuzzle();

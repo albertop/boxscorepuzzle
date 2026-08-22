@@ -20,6 +20,7 @@ import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { browserStorage, createStore } from "../../engine/store.js";
 import { checkBoard, renderReference, renderReveal } from "./finish.js";
+import { applySolvedTitle } from "./head.js";
 import { text } from "../../engine/strings.js";
 import {
   applyKey,
@@ -261,6 +262,10 @@ export function boot({
    */
   function finishedChrome() {
     markFinished();
+    // ⚠️ **Both paths, because there are two and they used to differ.** A board that finishes while you
+    // watch and a board that reopens finished both come through here now; a title set on one of them
+    // only would leave a reopened solve advertising itself as today's unplayed puzzle.
+    applySolvedTitle();
     app.querySelector(".keypad")?.remove();
     // The whole strip, not only the verdict: the reference lived in it and has nothing to say now.
     footer.remove();
