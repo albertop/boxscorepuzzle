@@ -29,6 +29,11 @@ fault in the game, it reads as not being good enough, and the person who conclud
 telling anyone. ⚠️ **And the share has to work perfectly** — it is the only growth mechanism the product
 has, and beta 0 is the one chance to test it before a paying product rests on it.
 
+**The route there: `docs/beta-0-plan.md`.** Seven groups, A to G, against the repository as it actually
+stands — including three facts the other documents do not carry: the publication path still imports its
+loader from `discovery/`, `game.record()` has **no date** although C7 lists one, and `build_pack.py`
+still targets chain.
+
 Status: design complete at the "what and why" level. Implementation starting.
 
 ---
