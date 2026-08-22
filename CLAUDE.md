@@ -21,8 +21,13 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 complete, on the VPS, given to friends and family — landing, tutorial, board, check, reveal, share,
 persistence, event upload, and **a calendar with real inventory**. No accounts, no Stripe, no archive, no
 streaks, no `canAccess()`. ⚠️ **The large piece is the one that has never been run: generation at volume,
-calendar construction, signed packaging in bulk.** The calendar also inherits *one game, one puzzle* over
-everything ever published, which no package and no validation layer can enforce.
+calendar construction, signed packaging in bulk** — **five months of inventory, not three** (§33), because
+it is the same batch run either way. The calendar carries a guard for *one game, one puzzle* over
+everything ever published, which no package and no validation layer can enforce. ⚠️⚠️ **The fifty-board
+hand-solve pack is a gate on beta 0**, not a step before launch: an impossible board does not read as a
+fault in the game, it reads as not being good enough, and the person who concludes that leaves without
+telling anyone. ⚠️ **And the share has to work perfectly** — it is the only growth mechanism the product
+has, and beta 0 is the one chance to test it before a paying product rests on it.
 
 Status: design complete at the "what and why" level. Implementation starting.
 
