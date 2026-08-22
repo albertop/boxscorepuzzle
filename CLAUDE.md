@@ -151,6 +151,14 @@ generator code must never reach the VPS.
 
 **Generated puzzle inventory never goes in Git.** It lives in an ignored folder inside `forge/`.
 
+⚠️⚠️ **The calendar is the exception, and it is committed.** `docs/calendar.md` carries the reasoning; the
+short version is that the rule above exists for packages — large, secret (§16), and **reproducible from
+the game**. §21 makes the date → puzzle assignment *fixed and never recomputed*, which means there is
+nothing to recompute it from: **it is the one artefact in this project that cannot be regenerated**, and
+§33 names Git as the backup for a laptop that is a single point of failure. Losing it loses every past
+date's assignment, which is what streaks, shared results and stats hang from. A puzzle id is a hash and
+names nothing without its package.
+
 Commit messages in English, imperative mood, one logical change per commit, prefixed with scope
 (`forge:`, `serve:`, `docs:`). `main` always deployable. Nothing pushed with a failing test or
 coverage under 95%. Commit `uv.lock` — it is the reproducibility guarantee, not a build artifact.
