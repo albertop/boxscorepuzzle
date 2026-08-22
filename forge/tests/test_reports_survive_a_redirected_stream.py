@@ -12,6 +12,12 @@ A comment is not stopping this. **A rule this project keeps re-breaking is a rul
 checkable rather than remembered**, which is the same conclusion the label-formatting guard and the
 copied-constants guard reached.
 
+⚠️⚠️ **Fourth occurrence, 2026-08-22, and the first this guard could not see.** `build_inventory.py`
+passed `description=__doc__` to `argparse`, whose `--help` writes that docstring to stdout — so a module
+docstring carrying warning signs became a report on its way to a redirected stream, without a single
+`print` involved. **The guard was reading the wrong verb.** It covers argparse now: help text must be
+plain, and a docstring is never help text.
+
 ⚠️ **Only `print` arguments, and only literals.** The scope is deliberately narrow: source files may
 carry any character in comments, docstrings and identifiers, and they do — this file included. What
 cannot survive the trip is a character on its way to a redirected stdout. A guard covering the whole
@@ -102,3 +108,74 @@ class TestNoReportDiesOnItsOwnDecoration:
 
     def test_plain_text_passes(self) -> None:
         assert _unprintable(ast.parse('print("NOTE: one unreadable row makes the board unsolvable")')) == []
+
+
+class TestHelpTextIsAlsoAReportOnItsWayToAStream:
+    """⚠️ `argparse` prints, and it was outside the scan above because it is not spelled `print`.
+
+    The scope stays narrow for the same reason: what is checked is the text argparse will *write*, not
+    the file it lives in. A docstring may carry anything; the moment it becomes `description=` it stops
+    being a docstring and becomes output.
+    """
+
+    def test_no_script_hands_argparse_its_module_docstring(self) -> None:
+        offenders: list[str] = []
+        for path in _sources():
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+                    continue
+                if node.func.attr != "ArgumentParser":
+                    continue
+                for keyword in node.keywords:
+                    if isinstance(keyword.value, ast.Name) and keyword.value.id == "__doc__":
+                        offenders.append(f"{path.relative_to(_ROOT)}:{node.lineno} {keyword.arg}=__doc__")
+
+        assert not offenders, (
+            "argparse writes help to stdout and a module docstring may carry anything; a redirected "
+            f"stream on Windows is {_ENCODING}. Write a plain description instead: {offenders}"
+        )
+
+    def test_every_argparse_string_survives_the_encoding(self) -> None:
+        # The general form: any literal handed to argparse is text it may print. `help=` strings are the
+        # ones most likely to grow a warning sign later, and nothing else would catch it.
+        offenders: list[str] = []
+        for path in _sources():
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+                    continue
+                if node.func.attr not in {"ArgumentParser", "add_argument"}:
+                    continue
+                for keyword in node.keywords:
+                    if not (isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str)):
+                        continue
+                    try:
+                        keyword.value.value.encode(_ENCODING)
+                    except UnicodeEncodeError:
+                        offenders.append(f"{path.relative_to(_ROOT)}:{node.lineno} {keyword.arg}=")
+
+        assert not offenders, f"argparse text that cannot reach a redirected stream: {offenders}"
+
+    def test_the_scan_would_catch_the_defect_it_was_written_for(self) -> None:
+        # ⚠️ A scan that finds nothing is indistinguishable from one that is broken. This asserts the
+        # matcher fires on the exact source that raised, rather than on a hand-made example.
+        lines = ["import argparse", 'p = argparse.ArgumentParser(description="\N{WARNING SIGN} x")']
+        broken = ast.parse("\n".join(lines))
+        found = [
+            keyword.arg
+            for node in ast.walk(broken)
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+            for keyword in node.keywords
+            if isinstance(keyword.value, ast.Constant) and _cannot_encode(keyword.value.value)
+        ]
+
+        assert found == ["description"], "the argparse scan no longer recognises its own defect"
+
+
+def _cannot_encode(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        value.encode(_ENCODING)
+    except UnicodeEncodeError:
+        return True
+    return False

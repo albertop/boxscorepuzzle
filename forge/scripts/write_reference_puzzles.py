@@ -8,8 +8,14 @@ fails when read from disk is precisely the class of defect this project keeps fi
 trip is the point rather than a formality.
 
 They exist so `serve` has something real to build against from day one instead of invented data.
-Spread across the chain 5-11 curve and across decades, and they include the two cases the tutorial
-has to teach: a suffixed label and a live footnote.
+Spread across the chain 5-11 curve and across decades, and they include the two cases **the client has
+to be able to draw**: a suffixed label and a live footnote.
+
+⚠️ **This said "the two cases the tutorial has to teach" and the tutorial reads none of this.**
+(v37-P3-04, reissued as v38-P3-02) `tutorial-main.js` fetches nothing — no package, no manifest, no
+network — so the requirement was true when the tutorial was going to be built on real data and stopped
+being true when it was not. What the two traits are actually for is **rendering coverage**: a reference
+set with no suffixed label and no live footnote leaves two of the board's shapes undrawn by anything.
 
 Read-only against DGL. Run from `forge/`.
 """
@@ -47,8 +53,18 @@ from boxscore_forge.pool import Loaded, load  # noqa: E402
 # package is made* is the shape this project meets most often. `reveal_for`, `required_boxscore` and
 # `evidence_for` went with it: each is a fact about a loaded direction rather than about this script.
 from boxscore_forge.produce import Attempt, evidence_for, produce  # noqa: E402
+
+# ⚠️ **Where the key comes from is stated once, in `boxscore_forge.publication_key`.** These three
+# constants and the pinned check were declared here and the batch producer needed all of them; two
+# copies of *which file holds the private key* is the one duplication in this repository that fails as
+# a five-month outage rather than as a bug.
+from boxscore_forge.publication_key import (  # noqa: E402
+    KEY_FILE,
+    KEY_VARIABLE,
+    publication_key,
+)
 from boxscore_package.format import Package, read, write  # noqa: E402
-from boxscore_package.signing import sign_manifest, signing_key  # noqa: E402
+from boxscore_package.signing import sign_manifest  # noqa: E402
 from boxscore_verify.certify import certify_for_publication  # noqa: E402
 
 NOTE = "reference data for serve, not inventory"
@@ -100,42 +116,7 @@ EPHEMERAL_OUT = _ROOT / "discovery" / "ephemeral-puzzles"
 """Where a throwaway batch goes. **Outside `serve/`**, so an untrusted writer mode cannot
 change the trusted namespace at all — which is stronger than a reader that refuses it."""
 
-PINNED_PUBLIC_KEY = _ROOT / "serve" / "data" / "signing-public-key.hex"
 MANIFEST = "manifest.json"
-
-KEY_VARIABLE = "BOXSCORE_SIGNING_KEY"
-"""The forge's Ed25519 private key, 64 hex characters, from the environment and never from here.
-
-⚠️ **The fallback and the fixtures mode are gone rather than migrated.** Both existed because an
-HMAC key is symmetric: a convenient one in the repository let the script run, and anything it
-signed was forgeable by anyone holding the repository — so the mode had to be made loud and
-guarded instead of removed.
-
-With a key pair the problem dissolves. A **generated** key signs a throwaway batch perfectly well
-and is worth nothing to an attacker, because the public half that would verify it goes nowhere.
-`--ephemeral` does that and prints the public half; `serve` holds a different public key and
-**refuses the batch itself**, instead of a comment asking to be believed.
-"""
-
-KEY_FILE = Path.home() / ".boxscorepuzzle-signing-key"
-"""Where `docs/signing-keys.md` tells the operator to generate the private key, read at publish time.
-
-⚠️⚠️ **This exists so the key never has to sit in an environment variable.** (v36-P3-29) The document
-recommended persisting it with `SetEnvironmentVariable(..., "User")`, which hands it to **every process
-the account runs** — every `npm install` postinstall, every pip build hook, every script from every
-sibling project on a machine that holds several. One compromised dependency anywhere reads
-`os.environ` and takes it, and the holder can then sign inventory `serve` accepts.
-
-⚠️ **And this is the one secret in the project that cannot be rotated cheaply**: rotating invalidates
-every signature ever issued, so every package and every manifest has to be reissued. The convenience
-the permanent variable bought was avoiding *"publish failed, you forgot to set it"* — an error this
-script already raises loudly, by design. **A permanent exposure to buy nothing** is the trade the
-recommendation was making.
-
-Read here, at the moment of use: the key is in this process and in no other, for the length of one
-publish. The variable still wins if it is set, because a deliberate export is an instruction — but
-nothing requires one now.
-"""
 
 
 def _hardest_unused_target(loaded: Loaded, key: Ed25519PrivateKey, taken: set[int]) -> Package | None:
@@ -240,9 +221,8 @@ def _traits_survived(published: list[Package]) -> None:
         missing.append("no board carries a live footnote term")
     if missing:
         message = (
-            f"the written batch of {len(published)} does not teach what the tutorial needs: "
-            + "; ".join(missing)
-            + " - published set left as it was"
+            f"the written batch of {len(published)} does not cover the client rendering traits the "
+            f"reference set exists to exercise: " + "; ".join(missing) + " - published set left as it was"
         )
         raise SystemExit(message)
 
@@ -458,17 +438,11 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
         print("=" * 78)
         return key, EPHEMERAL_OUT
 
-    key = signing_key(material)
-    pinned = PINNED_PUBLIC_KEY.read_text(encoding="utf-8").strip()
-    offered = key.public_key().public_bytes_raw().hex()
-    if offered != pinned:
-        message = (
-            f"{KEY_VARIABLE} does not match the key serve pins in {PINNED_PUBLIC_KEY.name}. "
-            f"Publishing with it would replace the live manifest with one serve refuses, which is "
-            f"an outage rather than a rejected file. Offered {offered[:16]}..., pinned {pinned[:16]}..."
-        )
-        raise SystemExit(message)
-    return key, OUT
+    # ⚠️ **The pinned check lives in `boxscore_forge.publication_key` now**, because the batch producer
+    # needs the same rule and *where the key comes from* is the one duplication here that fails as a
+    # five-month outage rather than as a bug. This function keeps what is genuinely its own: choosing
+    # the destination, and the `--ephemeral` trust domain.
+    return publication_key(), OUT
 
 
 def main() -> None:

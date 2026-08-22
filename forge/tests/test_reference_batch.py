@@ -13,6 +13,11 @@ from pathlib import Path
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+# ⚠️⚠️ **Patched where the rule lives.** The key constants and the pinned check moved to
+# `boxscore_forge.publication_key` on 2026-08-22; these tests set them on the writer module, which the
+# check no longer reads. The writer is loaded fresh per test by `_writer()`, so patching *its* copy of an
+# imported name would also have been per-instance — two ways to patch nothing at once.
+from boxscore_forge import publication_key as keys
 from boxscore_package.format import read
 
 _KEY = Ed25519PrivateKey.generate()
@@ -199,12 +204,12 @@ class TestTheTrustDomainDecidesTheDestination:
         fails on what is in a home directory is testing the machine rather than the code.
         """
         writer = _writer()
-        monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"] if flag else ["w"])  # type: ignore[attr-defined]
-        monkeypatch.setattr(writer, "KEY_FILE", tmp_path / "no-key-here")  # type: ignore[attr-defined]
+        monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"] if flag else ["w"])
+        monkeypatch.setattr(keys, "KEY_FILE", tmp_path / "no-key-here")  # type: ignore[attr-defined]
         if key is None:
-            monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)  # type: ignore[attr-defined]
+            monkeypatch.delenv(keys.KEY_VARIABLE, raising=False)  # type: ignore[attr-defined]
         else:
-            monkeypatch.setenv(writer.KEY_VARIABLE, key)  # type: ignore[attr-defined]
+            monkeypatch.setenv(keys.KEY_VARIABLE, key)  # type: ignore[attr-defined]
         return writer, writer.key_and_destination()
 
     def test_an_ephemeral_batch_cannot_reach_the_served_directory(self, monkeypatch: object, tmp_path: Path) -> None:
@@ -225,18 +230,18 @@ class TestTheTrustDomainDecidesTheDestination:
     def test_the_pinned_key_publishes_to_the_served_directory(self, monkeypatch: object) -> None:
         # The other direction. A guard that refuses everything would satisfy the test above.
         writer = _writer()
-        pinned = writer.PINNED_PUBLIC_KEY.read_text(encoding="utf-8").strip()
+        pinned = keys.PINNED_PUBLIC_KEY.read_text(encoding="utf-8").strip()
         private = Ed25519PrivateKey.generate()
         monkeypatch.setattr(  # type: ignore[attr-defined]
-            writer, "PINNED_PUBLIC_KEY", writer.PINNED_PUBLIC_KEY
+            keys, "PINNED_PUBLIC_KEY", keys.PINNED_PUBLIC_KEY
         )
         # Use a key whose public half really is the pinned one by pinning this key's public half.
         temp = writer.EPHEMERAL_OUT.parent / "pinned-for-test.hex"
         temp.parent.mkdir(parents=True, exist_ok=True)
         temp.write_text(private.public_key().public_bytes_raw().hex(), encoding="utf-8")
-        monkeypatch.setattr(writer, "PINNED_PUBLIC_KEY", temp)  # type: ignore[attr-defined]
+        monkeypatch.setattr(keys, "PINNED_PUBLIC_KEY", temp)  # type: ignore[attr-defined]
         monkeypatch.setattr(writer.sys, "argv", ["w"])  # type: ignore[attr-defined]
-        monkeypatch.setenv(writer.KEY_VARIABLE, private.private_bytes_raw().hex())  # type: ignore[attr-defined]
+        monkeypatch.setenv(keys.KEY_VARIABLE, private.private_bytes_raw().hex())  # type: ignore[attr-defined]
 
         _, out = writer.key_and_destination()
 
@@ -276,10 +281,21 @@ class TestNoKeyMaterialLivesInTheScript:
         assert "BOXSCORE_SIGNING_SECRET" not in source
 
     def test_a_missing_key_is_an_error_rather_than_a_quieter_mode(self) -> None:
-        source = self._source()
+        """⚠️ **Read off the module that owns the rule**, which is no longer this script.
+
+        `BOXSCORE_SIGNING_KEY` and the fail-closed refusal moved to `boxscore_forge.publication_key` on
+        2026-08-22 so the batch producer could not grow a second copy. A scan left pointing at the
+        writer would have found neither string and gone red — which it did, and is the only reason this
+        was noticed rather than the assertion quietly becoming vacuous.
+        """
+        source = (_SCRIPTS.parent / "src" / "boxscore_forge" / "publication_key.py").read_text(encoding="utf-8")
 
         assert "raise SystemExit(message)" in source
         assert "BOXSCORE_SIGNING_KEY" in source
+        assert "Ed25519PrivateKey.generate()" not in source, (
+            "the key module must never fall back to a generated key: a throwaway is something a caller "
+            "asks for, in a directory serve does not read"
+        )
 
     def test_the_throwaway_key_is_generated_and_never_stored(self) -> None:
         # The distinction that makes --ephemeral safe: the key exists for one run. A constant here
@@ -361,8 +377,8 @@ class TestTheTwoKeyModesAreExclusive:
         # production key configured asked for a throwaway trust domain and got the real one.
         writer = _writer()
         monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"])
-        monkeypatch.setattr(writer, "KEY_FILE", tmp_path / "no-key-here")
-        monkeypatch.setenv(writer.KEY_VARIABLE, "11" * 32)
+        monkeypatch.setattr(keys, "KEY_FILE", tmp_path / "no-key-here")
+        monkeypatch.setenv(keys.KEY_VARIABLE, "11" * 32)
 
         with pytest.raises(SystemExit, match="Refusing to guess which trust"):
             writer.key_and_destination()
@@ -380,8 +396,8 @@ class TestTheTwoKeyModesAreExclusive:
         key_file.write_text("11" * 32, encoding="utf-8")
         writer = _writer()
         monkeypatch.setattr(writer.sys, "argv", ["w", "--ephemeral"])
-        monkeypatch.setattr(writer, "KEY_FILE", key_file)
-        monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)
+        monkeypatch.setattr(keys, "KEY_FILE", key_file)
+        monkeypatch.delenv(keys.KEY_VARIABLE, raising=False)
 
         _, out = writer.key_and_destination()
 

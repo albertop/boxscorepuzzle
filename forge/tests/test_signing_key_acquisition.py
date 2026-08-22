@@ -29,6 +29,16 @@ if str(_SCRIPTS) not in sys.path:
 
 import write_reference_puzzles as writer  # noqa: E402
 
+# ⚠️⚠️ **Patched where the rule lives, not where it is called from.** These tests set
+# `writer.KEY_FILE` and `writer.PINNED_PUBLIC_KEY`; the rule moved to `boxscore_forge.publication_key`
+# on 2026-08-22 and patching the writer's names would have patched **nothing that the check reads**.
+#
+# **They failed loudly only by luck**: ruff removed the now-unused imports from the writer, so the
+# attributes disappeared and `monkeypatch.setattr` raised. Had one survived as an unused import, every
+# test here would have gone on passing while testing a copy of a path nobody consults. *Patch the module
+# that owns the constant.*
+from boxscore_forge import publication_key as keys  # noqa: E402
+
 
 def _material() -> str:
     """64 hex characters of a key that exists for one test and is worth nothing to anybody."""
@@ -50,17 +60,17 @@ def elsewhere(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Iterat
     putting the real private key in a test, which §33 forbids and which is the thing this item is
     about. `test_reference_batch.py` is where the *real* pin is asserted.
     """
-    monkeypatch.delenv(writer.KEY_VARIABLE, raising=False)
+    monkeypatch.delenv(keys.KEY_VARIABLE, raising=False)
     path = tmp_path / ".boxscorepuzzle-signing-key"
-    monkeypatch.setattr(writer, "KEY_FILE", path)
-    monkeypatch.setattr(writer, "PINNED_PUBLIC_KEY", tmp_path / "pinned.hex")
+    monkeypatch.setattr(keys, "KEY_FILE", path)
+    monkeypatch.setattr(keys, "PINNED_PUBLIC_KEY", tmp_path / "pinned.hex")
     yield path
 
 
 def _pin(material: str) -> str:
     """Write the public half of `material` where the writer looks for the pin, and return it."""
     key = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(material))
-    writer.PINNED_PUBLIC_KEY.write_text(key.public_key().public_bytes_raw().hex(), encoding="utf-8")
+    keys.PINNED_PUBLIC_KEY.write_text(key.public_key().public_bytes_raw().hex(), encoding="utf-8")
     return material
 
 
@@ -80,7 +90,7 @@ class TestWhereTheKeyComesFrom:
         """An export is an instruction; a file in the home directory is only where the key is kept."""
         exported = _pin(_material())
         elsewhere.write_text(_material(), encoding="utf-8")
-        monkeypatch.setenv(writer.KEY_VARIABLE, exported)
+        monkeypatch.setenv(keys.KEY_VARIABLE, exported)
 
         key, _ = writer.key_and_destination()
 
@@ -104,7 +114,7 @@ class TestWhatItRefuses:
         with pytest.raises(SystemExit) as refusal:
             writer.key_and_destination()
 
-        assert writer.KEY_VARIABLE in str(refusal.value)
+        assert keys.KEY_VARIABLE in str(refusal.value)
         assert str(elsewhere) in str(refusal.value)
 
     def test_an_unreadable_key_file_is_an_error_rather_than_a_missing_key(self, elsewhere: pathlib.Path) -> None:
@@ -127,7 +137,7 @@ class TestWhatItRefuses:
     def test_ephemeral_still_refuses_to_guess_when_the_variable_is_exported(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        monkeypatch.setenv(writer.KEY_VARIABLE, _material())
+        monkeypatch.setenv(keys.KEY_VARIABLE, _material())
 
         with pytest.raises(SystemExit) as refusal:
             monkeypatch.setattr(sys, "argv", ["writer", "--ephemeral"])
