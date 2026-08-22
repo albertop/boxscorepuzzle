@@ -15,7 +15,7 @@ point at, it did not finish.**
 
 | | deliverable |
 |---|---|
-| **A** | five months of dated, signed inventory, reproducible from one command |
+| **A** | five months of dated, signed inventory, **and the runbook that produces the next five** |
 | **B** | a verdict on whether the inventory is humanly solvable, and a difficulty scale that means something |
 | **C** | a client producing a complete, identified event and surviving its own failures, with no backend |
 | **D** | a running service that stores events and refuses to run wrong |
@@ -121,15 +121,60 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
 - **A4.3** Signing at volume; the private key never leaves the laptop.
 - **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
 
-### ▶ Deliverable A — **five months of dated, signed inventory, reproducible from one command**
+⚠️ **A4 is not the end of group A.** What A1–A4 produce is one batch, built by whoever had the whole
+pipeline in their head that week. **A5 is what makes it a process.**
 
-A generation directory and a calendar: roughly 150 validated packages, each assigned to a date, signed,
-verifying from a clean checkout, with the one-game-one-puzzle guard refusing a second direction over
-**everything ever published**.
+### A5. The runbook — `docs/runbook-inventory.md`
+
+**How to add new games to the app**, written for the person who will actually run it: **the operator,
+three months later, having forgotten all of it.** That is not a rhetorical framing — §33 alerts below
+three months of runway, so **the interval between two runs is measured in months by design**, and
+whatever is obvious today will not be obvious then.
+
+- **A5.1 Preconditions**, each one checkable before anything starts: the Retrosheet database reachable,
+  the signing key present (⚠️ and **where it is not** — never in the repository), a clean working tree,
+  and how much runway is left right now.
+- **A5.2 The commands, in order**, with **what each one prints when it is working.** A step whose success
+  looks like silence is a step nobody can tell failed.
+- **A5.3 What to check before publishing**: the survival rate, the era share, the weekday spread, and
+  ⚠️ **the one-game-one-puzzle guard's report** — the check no package can perform on itself.
+- **A5.4 What to do when the yield is short.** The likely outcome, not the exceptional one: the gate keeps
+  11% of the pool. Say whether to widen the era window, lower the target, or run again — and ⚠️ **what
+  must never be done, which is quietly dropping a rung to fill a quota.**
+- **A5.5 How to deploy the new generation**, and **how to roll back.** ⚠️ Not near the daily rollover.
+- **A5.6 Why re-running is safe.** §21: puzzle ids derive from the game, the calendar extends and never
+  rewrites, so a run that half-finished is resumed rather than cleaned up. **State it explicitly** —
+  somebody who is unsure whether a second run will duplicate things will hesitate at exactly the moment
+  the runway is short.
+
+⚠️⚠️ **A runbook that has never been followed literally is a guess.** It gets executed once, from a clean
+checkout, by doing exactly what it says and nothing the author remembers — and corrected wherever it was
+wrong. **The same rule as every other instrument here: the version that has not been run is not evidence.**
+
+⚠️ **And it will drift from the code**, because prose and commands are two places saying one thing. The
+cheapest defence is that the commands it names are the ones a test invokes; at minimum, the runbook names
+the scripts by path so a rename breaks a grep rather than nothing.
+
+### ▶ Deliverable A — **five months of dated, signed inventory, and the runbook that produces the next five**
+
+**Two things, and the second is what makes the first repeatable.**
+
+**The inventory:** a generation directory and a calendar — roughly 150 validated packages, each assigned
+to a date, signed, verifying from a clean checkout, with the one-game-one-puzzle guard refusing a second
+direction over **everything ever published**.
+
+**The runbook** (`docs/runbook-inventory.md`): how to add new games to the app, **followed literally once
+before it is believed.**
+
+⚠️ **The runbook is not documentation of the deliverable; it is half of it.** Five months of inventory
+with no repeatable way to make more is a product with a five-month expiry date — and the moment it needs
+running is the moment the inventory health check goes amber (F3), which is precisely when nobody wants to
+be rediscovering how the generator is invoked. **§33's three-month alert is only useful if there is
+something to do about it.**
 
 **What it makes possible that nothing before it did:** every other group can be tested against a daily
 game that lasts more than a day. Group B has an inventory to draw a sample from; E has something to
-route `/today` at; F has something to deploy.
+route `/today` at; F has something to deploy. **And the product stops having an expiry date.**
 
 ⚠️ **What it does not give:** any evidence that a person can solve these boards. Four validation layers
 say the numbers agree with each other. **That is group B, and it is a gate rather than a follow-up.**
