@@ -2906,7 +2906,11 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
    */
   const shown = (view) => {
     const values = {};
-    for (const cell of view.page.querySelectorAll(".tcell")) {
+    // ⚠️ `[data-cell]`, not `.tcell`. LOB is drawn as text rather than as a cell — the real board's
+    // footnote line is a bold run, not a box — so a query keyed on the grid's class silently lost the
+    // one term the global identity needs, and the check below would have compared PA against outs and
+    // runs alone while reading as though it covered all three.
+    for (const cell of view.page.querySelectorAll("[data-cell]")) {
       const raw = cell.textContent;
       if (raw === "") values[cell.dataset.cell] = null;
       else values[cell.dataset.cell] = cell.dataset.cell === "p.outs" ? inningsFromDisplay(raw) : Number(raw);

@@ -311,12 +311,25 @@ export function renderTutorial({ root, doc = document, go = null, start = 0 }) {
     pitching.append(prow);
     wrapper.append(pitching);
 
-    // The footnote line, which is where LOB lives on a real board too.
+    // ⚠️⚠️ **The footnote line is text, because that is what the real board draws.** `renderFootnotes`
+    // emits `LOB: 3` as one bold run — `.footnotes .term.lob` is a font weight and nothing else, no
+    // border and no box. The tutorial drew the value in a bordered cell identical to an editable one,
+    // so the first board a player ever sees told them LOB is a thing you fill in. It is a given (§6),
+    // and it is not even shaped like an input.
+    //
+    // ⚠️ The value keeps `data-cell` so the tests that read every number back out of the DOM still
+    // find it — the identity check needs LOB, and a footnote drawn as prose that no test can read is
+    // the arithmetic guarantee quietly losing a term.
     const line = doc.createElement("p");
     line.className = "tfootnote";
     const term = doc.createElement("span");
     term.textContent = `${text("board.left_on_base")}: `;
-    line.append(term, cellNode("lob", state));
+    const value = doc.createElement("span");
+    value.className = "tlob";
+    value.dataset.cell = "lob";
+    value.textContent = String(valueOf.lob());
+    if (state.lit.includes("lob")) value.classList.add("lit");
+    line.append(term, value);
     wrapper.append(line);
 
     return wrapper;
