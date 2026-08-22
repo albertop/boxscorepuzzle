@@ -2989,6 +2989,44 @@ suite("The tutorial: five steps, skippable, and teaching on a board that adds up
     view.teardown();
   });
 
+  test("⚠️⚠️ left on base is a value on every step, never a hole", async () => {
+    // **§6: the footnote line is given, complete, and never erased** — `erasable()` excludes LOB and
+    // every per-batter footnote cell from every board this product publishes.
+    //
+    // It was the fourth step's hole, so a new player's first screens showed LOB as an empty box
+    // indistinguishable from an editable cell, and one whole step deduced a number that always arrives
+    // with its value. **A tutorial that teaches the opposite of the game is worse than no tutorial**,
+    // and this was on the first screen anybody sees.
+    for (let step = 0; step <= 5; step += 1) {
+      const view = await mount({ start: step });
+      const value = shown(view).lob;
+
+      assert(value !== null && value !== undefined, `step ${step + 1} draws LOB as a blank`);
+      view.teardown();
+    }
+  });
+
+  test("⚠️ every hole on the board is filled by exactly one step", async () => {
+    // A hole no step explains leaves a player at the end of the wizard with an incomplete board,
+    // concluding they missed something. Read out of the DOM rather than off the STEPS list — the list
+    // is what would be wrong.
+    const blanksAt = [];
+    for (let step = 0; step <= 5; step += 1) {
+      const view = await mount({ start: step });
+      const values = shown(view);
+
+      assert(Object.keys(values).length > 0, `step ${step + 1} drew no cells at all`);
+      blanksAt.push(new Set(Object.keys(values).filter((name) => values[name] === null)));
+      view.teardown();
+    }
+
+    equal(blanksAt[5].size, 0, "the finished board still has a hole in it");
+    for (let step = 0; step < 5; step += 1) {
+      const filled = [...blanksAt[step]].filter((name) => !blanksAt[step + 1].has(name));
+      equal(filled.length, 1, `step ${step + 1} fills ${filled.length} cells rather than exactly one`);
+    }
+  });
+
   test("⚠️ a cell given in one step is never a hole in a later one", async () => {
     // The board has to stay consistent across the five or it teaches that the relations are unrelated
     // tricks. This is the failure the second step was rewritten to avoid: the column sum was taught

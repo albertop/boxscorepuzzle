@@ -104,9 +104,19 @@ const STEPS = [
   // the identity against the numbers actually drawn is what found the gap — the step was arithmetically
   // right about a quantity the screen never displayed, which is the one kind of error that reads as
   // perfectly clear.
+  // ⚠️⚠️ **The hole is the innings cell, and it used to be LOB — which taught the opposite of the
+  // game.** §6: the footnote line is given, complete, never erased, and `erasable()` says so in code —
+  // the per-batter cells and LOB are excluded from every board this product publishes. **A player's
+  // first screens showed LOB as an empty box identical to an editable cell**, so the tutorial spent a
+  // step deducing a number that always arrives with its value.
+  //
+  // ⚠️ **`p.outs` is erasable on a real board** — `erasable()` includes every pitching column — and it
+  // makes the conversion load-bearing in the direction the board actually needs. The player computes
+  // `10 − 1 − 3 = 6` **outs** and then has to write **2** in a cell headed `IP`. Solving for LOB never
+  // required crossing innings into outs at all; it just happened to mention it.
   { name: "reference.global_name", body: "tutorial.step.global",
-    rule: "reference.global", hole: "lob",
-    lit: ["t.plate_appearances", "p.outs", "p.runs"], sum: "tutorial.sum.global" },
+    rule: "reference.global", hole: "p.outs",
+    lit: ["t.plate_appearances", "p.runs", "lob"], sum: "tutorial.sum.global" },
   { name: "reference.batting_order_name", body: "tutorial.step.batting_order",
     rule: "reference.batting_order", hole: "b2.plate_appearances",
     lit: ["b1.plate_appearances", "b3.plate_appearances"], sum: "tutorial.sum.batting_order" },

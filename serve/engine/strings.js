@@ -286,7 +286,9 @@ const en = {
   "tutorial.sum.row_identity": "3 = 2 + 1",
   "tutorial.sum.column_sum": "3 + 2 + 2 + 2 = 9",
   "tutorial.sum.cross_team": "1 = 1",
-  "tutorial.sum.global": "2 innings = 6 outs \u00b7 10 \u2212 6 \u2212 1 = 3",
+  // ⚠️ Reads in the order the player works: subtract to reach outs, then convert to the unit the
+  // cell is headed with. It used to end at a number of *runners*, which needed no conversion at all.
+  "tutorial.sum.global": "10 \u2212 1 \u2212 3 = 6 outs = 2 innings",
   // ⚠️⚠️ **This read `2 \u2264 ? \u2264 2` — two equal bounds, which is a determined value.** A
   // degenerate case demonstrates the answer rather than the rule: the player sees a number
   // appear and learns nothing about what the relation does. **On a real board it narrows a
