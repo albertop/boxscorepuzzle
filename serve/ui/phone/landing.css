@@ -60,7 +60,14 @@ body {
      exists to offer, cut off, on the smallest device the product supports. Measured in the browser by
      asking for the button's rectangle; the screenshot showed a page that looked finished, because the
      part that was missing was the part below the fold. */
-  max-height: min(300px, 33vh);
+  /* ⚠️ **One row taller than it was**, and expressed as a row rather than as pixels: `--cell` is the
+     44px touch target §6 derives the whole board from, and a batting row is exactly one of them. Both
+     halves move together, or the ceiling clips the row the viewport term just paid for.
+
+     Re-measured after the change on the handset the note above is about — a 320x568 screen, the
+     smallest the product supports: the play button's bottom edge sits at 471px of 568, so the control
+     this page exists to offer is still whole and above the fold. At 375x812 it is 552 of 812. */
+  max-height: min(calc(300px + var(--cell)), calc(33vh + var(--cell)));
   overflow: hidden;
   pointer-events: none;
   -webkit-mask-image: linear-gradient(to bottom, #000 68%, transparent 100%);
