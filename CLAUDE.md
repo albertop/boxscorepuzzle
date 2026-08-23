@@ -23,8 +23,8 @@ persistence, event upload, and **a calendar with real inventory**. No accounts, 
 streaks, no `canAccess()`. ⚠️ **The large piece is the one that has never been run: generation at volume,
 calendar construction, signed packaging in bulk** — **five months of inventory, not three** (§33), because
 it is the same batch run either way. The calendar carries a guard for *one game, one puzzle* over
-everything ever published, which no package and no validation layer can enforce. ⚠️⚠️ **The fifty-board
-hand-solve pack is a gate on beta 0**, not a step before launch: an impossible board does not read as a
+everything ever published, which no package and no validation layer can enforce. ⚠️⚠️ **The hand-solve gate
+is a gate on beta 0**, not a step before launch: an impossible board does not read as a
 fault in the game, it reads as not being good enough, and the person who concludes that leaves without
 telling anyone. ⚠️ **And the share has to work perfectly** — it is the only growth mechanism the product
 has, and beta 0 is the one chance to test it before a paying product rests on it.
@@ -596,7 +596,7 @@ separate and equally necessary class. So is solving by hand.
 
 **⚠️ Layer 3 does not verify human derivability.** It propagates intervals to fixed point across forty-odd
 simultaneous relations, which is stronger than any person. A board can pass it and be underivable by a
-human. **Solving fifty by hand is therefore a launch gate, not a review step** — it is the only real
+human. **Solving boards by hand is therefore a launch gate, not a review step** — it is the only real
 verification of human derivability that exists, and the only check the common-author risk does not touch.
 
 **⚠️ Independence has a limit worth stating.** The verifier shares no code with the generator and was
@@ -887,7 +887,22 @@ result that cannot be re-run identically is not evidence.
 filtering must assert the sample size first, and say which filters were applied and what the minimum
 was. When a gate, an era window, or a data change empties a sample, the script should say so.
 
-**Anything acting as a launch gate is asserted, not printed.** The fifty-board hand-solve pack must
+⚠️⚠️ **"The fifty-board pack" named three different things and one of its numbers came from a retired
+design.** Resolved 2026-08-22, and the three are separate work with separate sizes:
+
+| | asks | size | axis |
+|---|---|---|---|
+| **the gate** | are these boards derivable by a person at all | **Pack A's sixteen plus a derivability-only sample over the shipping inventory**; ⬜ that sample's N is open | stalls |
+| **Pack A** | does the difficulty ordering match felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | stalls |
+| **the stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread |
+
+**Where *fifty* came from:** `build_pack.py`'s `audit()` asserts fifty boards with every rung at its
+quota **on the chain axis**, and the generator stopped targeting chain. The number and the axis are both
+from the superseded design. ⚠️ **Sixteen is not the answer either** — Pack A is a calibration instrument
+and four boards per rung says something about a rung, not about the generator. `docs/beta-0.md` carries
+the reasoning and the open N.
+
+**Anything acting as a launch gate is asserted, not printed.** The hand-solve pack must
 assert its quotas after selection — chain rungs, era allowance, uncertified share, one board per game —
 not report them and be believed. A pack that claims to satisfy quotas and does not invalidates the
 experiment silently, which has already happened once when weighted sampling produced zero boards at the

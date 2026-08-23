@@ -35,6 +35,22 @@ Each of these is checkable in a few seconds, and each one has cost a run when it
 `~/.boxscorepuzzle-signing-key`, and if neither exists the build refuses to start rather than signing
 with something else. **Do not paste it anywhere to check it** — the command above prints a boolean.
 
+### ⚠️⚠️ If that check says `False`
+
+**Restore the key from backup. It cannot be regenerated.**
+
+`serve` pins the public half in `serve/data/signing-public-key.hex`, and every package and every manifest
+ever published was signed with the private half. A new pair is a **different** key: the client refuses
+everything already deployed, which is an outage rather than a rejected file.
+
+**With no backup, the only way forward is reissuing everything** — every package in every live
+generation and every manifest, re-signed with a new pair, and the pinned public key changed in `serve`
+in the same deploy. Hours, and every one of them avoidable.
+
+⚠️ **This is the situation months between runs creates**: somebody sits down to top up the inventory,
+finds no key, and does not know whether it can simply be made again. **It cannot.** That is the whole
+reason this paragraph exists.
+
 ---
 
 ## 1. Measure before you build
@@ -198,10 +214,83 @@ irreproducible artefact; the packages are not. If a batch is wrong, replace the 
 
 ---
 
+## 6b. ⚠️⚠️ Verify the deploy from outside — do not skip this
+
+**The whole access model is one sentence — *only two packages are public* — and nothing so far has
+checked that it is true.** Step 5 says the rotation enforces it; this is what confirms the rotation
+worked.
+
+⚠️ **It is the one thing here that breaks irreversibly.** A file downloaded once has already left. A
+rotation that failed is not something you find out about later and repair — you find out that the
+archive has been readable for however long, and it stays read.
+
+**Two requests, from a machine that is not the VPS:**
+
+```
+curl -sS -o NUL -w "today:            %{http_code}
+" https://boxscorepuzzle.com/p/<today-id>.json
+curl -sS -o NUL -w "two days ago:     %{http_code}
+" https://boxscorepuzzle.com/p/<older-id>.json
+```
+
+**What right looks like:**
+
+```
+today:            200
+two days ago:     404
+```
+
+⚠️ **`403` is also wrong.** It means the file is there and something is declining to serve it — one
+configuration change away from being public, and it says the rotation did not run. **The package must
+not be on the public path at all.**
+
+Get the two ids from the calendar:
+
+```
+uv run python -c "import sys,pathlib,datetime as dt; sys.path.insert(0,'src'); from boxscore_forge.calendar import read; c={e.date: e.puzzle_id for e in read(pathlib.Path('calendar.json'))}; t=dt.date.today(); print('today  ', c.get(t.isoformat())); print('2 days ', c.get((t-dt.timedelta(days=2)).isoformat()))"
+```
+
+⚠️ **Before the calendar's first date arrives, both print `None`** — the whole window is in the future
+and there is nothing public yet. That is the correct answer and not a fault; it also means **this step
+cannot be rehearsed before launch**, so run it the first day there is something to serve.
+
+⚠️ **From outside, not from the VPS.** A request made on the server can reach a path the internet
+cannot, and one made from inside a network can pass a rule that exists at its edge — which would confirm
+exactly the wrong thing.
+
+**This is also what F3's inventory health check asserts continuously** (`docs/beta-0.md`): the public
+path holds no more than two packages. **This step is the one-off; that check is the standing one**, and
+neither replaces the other — this catches a bad deploy now, that catches a rotation that stops later.
+
+---
+
+## 6c. Check the committed calendar names the deployed generation
+
+**They can drift silently, and the calendar is the artefact that cannot be regenerated.** If generation
+`X` is on the VPS and a calendar referencing `Y` is in Git, nothing complains: every package is
+individually valid and the calendar is internally consistent.
+
+```
+uv run python -c "import sys,pathlib,collections; sys.path.insert(0,'src'); from boxscore_forge.calendar import read; print(collections.Counter(e.assigned for e in read(pathlib.Path('calendar.json'))))"
+```
+
+Compare against the generation directory actually deployed. **More than one generation in the counter is
+normal** — a top-up adds a new one and the old dates keep theirs — but **every generation named there
+must still be on the VPS**, because those dates' packages live in it.
+
+⚠️ **This is the check that catches a partial deploy**, which otherwise surfaces months later as one
+date serving nothing.
+
+---
+
 ## What this runbook does not cover
 
-- **The hand-solve gate.** Fifty-ish boards solved by a person is the only verification of human
-  derivability that exists (`beta-0.md`), and no command produces it.
+- **The hand-solve gate**, which is the only verification of human derivability that exists
+  (`docs/beta-0.md`) and which no command produces. ⚠️ **It is not "fifty boards"** — that number and its
+  chain axis are both from a retired design. The gate is **Pack A's sixteen** (four each at stall rungs
+  5, 8, 11, 12) **plus a derivability-only sample over the shipping inventory**, whose N is still open.
+  `CLAUDE.md` says the same thing in the same words; if these two ever disagree, `beta-0.md` is the
+  decision and the others are copies.
 - **The daily rotation on the VPS**, which is deployment work (group E) rather than inventory work.
 - **The difficulty curve.** Deferred until the hand-solve pack returns; applying it later is a
   reordering of future dates, which §21 supports.
