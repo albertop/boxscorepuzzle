@@ -8,6 +8,26 @@ it. ⚠️ Where the two differ, this file says so.
 
 ---
 
+## Where it stands — 2026-08-22
+
+| | | |
+|---|---|---|
+| **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
+| **B** the hand-solve gate | **B1 ✔ mine and done** | B2–B4 are the operator's: afternoons of solving by hand |
+| **C** client identity and events | **C1, C2 ✔** | ⬜ C3 and C4 wait for D — they need somewhere to send |
+| **D** the data layer | ⬜ | designed in `data-layer.md`, not built |
+| **E** serving for real | ⬜ | waits on A (done) and D |
+| **F** deployment | ⬜ | |
+| **G** the share | ⬜ | last to build, **exempt from being cut** |
+
+⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
+stops everything — and G, which cannot be dropped for time.
+
+⚠️ **The gate has not run.** *These boards are solvable by a person* is still an assumption; the four
+validation layers say the numbers agree with each other, which is a different claim.
+
+---
+
 ## The seven deliverables, in one table
 
 Each group ends with an artefact somebody can point at. **If a group finishes and there is nothing to
@@ -403,23 +423,42 @@ answered by beta 0's own event records**, which is group C.
 **Can start in parallel with A.** ⚠️ **C1 is the one thing with an asymmetric cost — every event before
 it exists is unattributable, and C7 is irreversible.**
 
-### C1. The device UUID
+### ✔ C1. The device UUID — **done 2026-08-22**, `serve/engine/device.js`
 
-- **C1.1** A random UUID in `localStorage`, created once, surviving reloads.
-- **C1.2** ⚠️ Its own key and its own lifetime — **not inside the per-puzzle session**, which is keyed
+- ✔ **C1.1 done.** A random UUID in `localStorage`, created once, surviving reloads. ⚠️ `crypto.randomUUID`
+  needs a secure context and `http://` on the local network is how this board gets looked at during
+  development, so there is a `getRandomValues` fallback and a `Math.random` one below it — **not
+  cryptographic and it does not need to be**: the id names a device to a counter, authorises nothing, and
+  what it must be is unlikely to collide.
+- ✔ **C1.2 done.** ⚠️ Its own key and its own lifetime — **not inside the per-puzzle session**, which is keyed
   `boxscorepuzzle.session.v1.<id>` and is disposable.
-- **C1.3** ⚠️ Survive the storage failing. `browserStorage()` already handles a refused storage; a device
+- ✔ **C1.3 done.** ⚠️ Survive the storage failing. `browserStorage()` already handles a refused storage; a device
   with no storage plays anonymously rather than not at all (§23).
-- **Done when:** the UUID persists across reloads and across finishing a puzzle, and a blocked storage
+- ✔ **Met**, and a refused storage returns a fresh id each call — the honest outcome, since there is
+  nothing to tie those events to. Previously: the UUID persists across reloads and across finishing a puzzle, and a blocked storage
   does not break the game.
 
-### C2. The event record gains what C7 promised
+### ✔ C2. The event record gains what C7 promised — **done 2026-08-22**
 
-- **C2.1** ⚠️ **Add the date.** C7 lists it and `record()` has none. Both the puzzle's calendar date and
+- ✔ **C2.1 done.** ⚠️ **Add the date.** C7 lists it and `record()` has none. Both the puzzle's calendar date and
   the date it was played — they differ for archive play and neither is recoverable later.
-- **C2.2** Add the device UUID, and the account field as `null` — the schema is claimable from the first
+- ✔ **C2.2 done.** Add the device UUID, and the account field as `null` — the schema is claimable from the first
   row (`data-layer.md` §6), and that cannot be retrofitted.
-- **Done when:** a finished game produces a record carrying identity and both dates, asserted in a test.
+- ✔ **Met.** 244 browser tests. Previously: a finished game produces a record carrying identity and both dates, asserted in a test.
+
+⚠️⚠️ **Three things the verification found, and they belong here because each is a shape rather than a
+bug.** The obvious timezone assertion — that `localDate` differs from `toISOString` — **passes or fails on
+the machine's zone**, so it reports the environment rather than the code. **The mutation harness read an
+empty or errored run as green**, which is absence-of-a-check-reading-as-a-pass *inside the harness written
+to check for it*, and it made four mutations look survivable. And the identity test **supplied every
+field**, so a `playedOn ?? calendarDate` fallback — the exact confusion the two fields exist to prevent —
+passed unnoticed: **a test that gives every field cannot see a wrong default.**
+
+⚠️ **`calendar_date` is `null` until `/today` exists** (E1). Null is the honest value; the tempting
+alternative is the player's local date wearing the calendar's name, which is wrong for archive play and
+across every rollover.
+
+### ⬜ C3 and C4 wait for D — they need somewhere to send
 
 ### C3. Upload, queued and offline-first
 
