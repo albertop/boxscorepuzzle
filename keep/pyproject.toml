@@ -1,0 +1,61 @@
+[project]
+name = "keep"
+version = "0.1.0"
+description = "The data layer: devices, events and later accounts. The only thing that touches a database."
+requires-python = "==3.13.*"
+# No runtime dependencies. Three routes, no templating, no ORM, no async workload -- section 23 asks for
+# availability from having fewer pieces rather than bigger ones. psycopg is a dev extra because
+# production installs it and the tests reach it only when a Postgres is configured.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "mypy>=1.13",
+    "ruff>=0.8",
+    "psycopg[binary]>=3.2",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/keep"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM", "RUF", "S", "T20", "TRY", "EM", "RET", "PTH", "FBT", "PL", "ARG"]
+
+[tool.ruff.lint.per-file-ignores]
+# ⚠️  and  in tests: a WSGI environment is untyped by the spec, and a store's row count
+# is deliberately not on the interface — the helper that reads it knows which engine it is looking at,
+# which is the honest place for that knowledge.
+"tests/**" = ["S101", "S105", "S106", "PLR2004", "ANN401", "SLF001"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
+
+[[tool.mypy.overrides]]
+module = "psycopg.*"
+ignore_missing_imports = true

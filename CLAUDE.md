@@ -139,7 +139,8 @@ boxscorepuzzle/
 ├── CLAUDE.md
 ├── docs/
 ├── forge/     ← generator, cwbox, SQL, validation, calendar (never leaves the laptop)
-└── serve/     ← app, nginx, docker, endpoints (deploys to VPS)
+├── serve/     ← app, nginx, docker, endpoints (deploys to VPS)
+└── keep/      ← the data layer: devices, events, later accounts (deploys to VPS, port unpublished)
 ```
 
 **A single private Git repository on GitHub: `boxscorepuzzle`.** One push backs up everything, which
@@ -149,7 +150,10 @@ matters because the repository's primary job is being the backup.
 human-solvability guarantee, which is trade secret (§16). Never push any part of it to a public gist,
 issue, or paste service.
 
-**No cross-imports between `forge/` and `serve/`.** They share no code and no deployment cycle. The
+**No cross-imports between `forge/`, `serve/` and `keep/`.** ⚠️ **Three trees now**, and the rule that
+kept two apart is what keeps three apart: they share no code and no deployment cycle. `keep` has **no
+runtime dependencies at all** — three routes, no ORM, no framework — and `forge` never learns that users
+exist (§33). They share no code and no deployment cycle. The
 only thing that crosses is a signed package of validated puzzles. **Deployment ships `serve/` only** —
 generator code must never reach the VPS.
 
