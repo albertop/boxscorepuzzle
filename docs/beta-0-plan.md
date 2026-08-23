@@ -833,6 +833,32 @@ A ──────────────────────────
 ⚠️ **Two things gate the milestone rather than merely being in it:** B3 — one board failing by hand stops
 everything — and G, which cannot be dropped for time.
 
+### ⚠⚠ E before F is load-bearing, and nothing enforces it — recorded 2026-08-23
+
+**The arrow from E to F above is not a convenience.** If F lands while `daily.js` is still the loader,
+`docs/runbook-inventory.md` §5 becomes a trap with an operator in front of it and a generation in hand,
+and **both ways out are wrong**:
+
+- **Follow §5** — keep `manifest.json` behind the wall — and `daily.js` 404s on the landing page and on
+  the board. Every visit lands on the landing page, so the site does not work at all.
+- **Put the manifest on a public path so `daily.js` works** and it lists **every published id**, which
+  is the leak A4.2 and `docs/calendar.md` exist to prevent. ⚠️ Worse than the first: a 404 is visible
+  within minutes and an over-published manifest is not, and *anything fetched once is gone*.
+
+**Today the trap is real and not armed**, because both outcomes need a VPS that is serving and F is not
+begun — §5 and §6b presuppose the whole of it. **What keeps it disarmed is only this ordering.**
+
+⚠️ **The marking done in `docs/calendar.md` is what stops this being invisible. It is not what stops it
+happening.** A reader who follows §5 to the letter now meets a pointer saying which clause is future;
+a reader who does not read it meets nothing. **That is detection, and the ordering is still a judgement.**
+
+⬜ **What would remove the judgement is an assertion rather than a procedure, and it does not exist.**
+Same shape as `docs/reloading-retrosheet.md`'s closing section, which names the two assertions that
+would replace *look at a number and act on it* and says neither is built. Here the thing to assert is
+that the served root's loader does not depend on a file the deploy is instructed to withhold — **named
+as absent rather than designed here**, because designing it belongs with E1, which is what changes the
+loader. Until then the ordering is the check, which is why it is written down.
+
 ---
 
 ## What was open before starting — four of five closed

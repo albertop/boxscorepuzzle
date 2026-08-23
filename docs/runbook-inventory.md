@@ -189,7 +189,9 @@ rotation is what enforces it**, and a rotation that fails once leaks the archive
   and pointers called out as private, which would have put the whole archive one URL away — the exact
   hole `docs/calendar.md` was written to close, reintroduced in the instructions for closing it.
 - The full `manifest.json` and the `days/` pointers stay behind the wall too: `serve` reads them, the
-  browser never does.
+  browser never does. ⚠⚠ **That last clause is E1b's end state, not today** — `docs/calendar.md` owns
+  the fact and says what `daily.js` currently does instead. **The rule above it is not marked and does
+  not change:** *only two packages are public* is present and permanent.
 - ⚠⚠ **After a top-up, the rotation reads `days/` from the *newest* generation and only that one.**
   Every build writes a complete pointer schedule, but an older generation's was written before the later
   dates existed — it has no pointer for them. **Each pointer names the generation that owns its package**

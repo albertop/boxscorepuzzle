@@ -325,6 +325,22 @@ leaks the future. A manifest listing only today leaks nothing and protects nothi
 | `days/<date>.json` | the browser, one at a time | this id is this date's, **and this is the generation it lives in**, signed |
 | `<generation>/<id>.json` | the browser | the puzzle, immutable, cached a year |
 
+### ⚠⚠ That table is E1b's end state. **Today the browser reads `manifest.json`** — marked 2026-08-23
+
+**This is the one place that fact lives.** `docs/runbook-inventory.md` §5 and `write_manifest`'s
+docstring point here rather than restating it: three copies of a status is three things to remember to
+un-mark, and the one that gets forgotten is the one somebody believes.
+
+**What the code does today**, which is a statement about `serve/ui/phone/daily.js` and not about what it
+should do: it fetches `manifest.json` with `cache: "no-store"` **from the browser, on both player
+pages** — the landing and the board — and follows it to `${generation}/${id}.json`. It picks the id from
+the query string. `daily.js` says of itself that *the real `/today` route is server work and does not
+live here*: it is scaffolding **E1 retires**, and the table above is what replaces it.
+
+⚠️ **Only the audience is future. The access model is not.** *Only two packages are public* is a
+present, permanent rule and nothing here softens it — what is not yet true is the row saying **never the
+browser**, because the browser is currently the only reader there is.
+
 ### ⚠⚠ A pointer names the generation that owns its package — not the one that wrote the pointer
 
 **The two differ the moment there is a top-up**, which is the second build rather than an exotic case.

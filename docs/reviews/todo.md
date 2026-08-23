@@ -1,5 +1,55 @@
 # Review backlog
 
+## ⬜ 2026-08-23 — two on `MANIFEST_SCHEMA`, found while answering *which schema is that `1`*
+
+**Noticed in passing during the v5 documentation pass, reported in conversation, and not written down
+until asked** — which is the rule this file exists to enforce, broken in the same session that closed
+three instances of it elsewhere. *A defect mentioned in prose and not recorded is a defect nobody will
+find again until a review finds it.* **Recorded, not fixed.**
+
+### a) `write_reference_puzzles.py:334` spells the manifest version as a literal
+
+```python
+document = sign_manifest(
+    {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)}, key
+)
+```
+
+`build_inventory.py` has `MANIFEST_SCHEMA = 1` and uses it in both the manifest and the per-date
+pointers. This is the **second copy of the same number**, in the other writer, and the file imports
+nothing from `build_inventory` today — so it is a copy that cannot be de-duplicated by adding an import
+alone; one of the two has to move somewhere both can reach.
+
+⚠⚠ **And this now makes a *document* false, which is what raises it above tidiness.**
+`docs/package-format-v5.md` was given a sentence on 2026-08-23 telling a reader that the manifest's
+schema *"is `MANIFEST_SCHEMA` in `forge/scripts/build_inventory.py`"* — stated as the one place it
+lives. **It is not, while this literal exists.** A pointer to *the* definition, when there are two, is
+worse than no pointer: it tells the next reader they have found the thing to change.
+
+⚠️ **Neither writer's number is currently wrong**, and that is why nothing has failed. Both say `1`.
+The defect is that nothing makes them agree — the shape this project meets most often, and the reason a
+version bump is the moment it would surface.
+
+### b) `MANIFEST_SCHEMA` carries no docstring
+
+`CLAUDE.md`'s constants rule: a value encoding a decision *records the reason it holds that value, the
+measurement that set it, and whether it is provisional.* `MANIFEST_SCHEMA = 1` records none of it and
+sits between `write_pointers` and `DAYS`, both of which are documented at length.
+
+⚠️ **This is why the question was asked at all.** `manifest.json` and a package both carry a key called
+`schema`; one is `1` and the other is `5`, and nothing beside either says they are different formats
+with independent version lines. **A reader who takes the `1` for a package version concludes the
+inventory is four versions behind** — which is a plausible, wrong, and unprompted conclusion.
+
+### What a fix has to decide, and why it is not being done here
+
+**Where the constant lives.** `build_inventory.py` is a script and `write_reference_puzzles.py` is
+another; neither imports the other, and §33 does not forbid it — they are both in `forge/`. The choices
+are a shared module under `forge/src/`, or retiring the reference writer's manifest path if
+`build_inventory` has superseded it. **That is a judgement about which writer survives**, not a rename,
+and it belongs with whoever decides that.
+
+---
 ## ⚠⚠ 2026-08-23 — a mutation restore that a stale `.pyc` survived, and the suite ran the mutant
 
 **Found by accident, and it is the most dangerous harness failure of the three this week.**
