@@ -29,9 +29,9 @@ on. With the data behind its own service:
   reporting query that has to enter through the player-facing application is a reporting query that
   will one day take the player-facing application down with it.
 
-⚠️ **It has no name yet.** `keep` is proposed — one syllable, a verb, and what it does, beside `forge`
-and `serve`. Not decided; this document says *the data layer* throughout so that nothing depends on the
-choice.
+**It is called `keep`** — one syllable, a verb, and what it does, beside `forge` and `serve`. Decided
+2026-08-22. **Its API surface is `docs/keep-api.md`**, written before the service because it decides
+everything after it.
 
 ---
 
@@ -288,18 +288,17 @@ link is a report that has to be written differently.
 
 ## What is open
 
-- ⬜ **The service's name.** `keep` proposed.
-- ⬜ **Whether SQLite is supported or only a development convenience** (§2). Different promises, different
-  obligations on the contract suite.
-- ⬜ **Where the cross-engine contract suite runs**, given the push workflows no longer carry the full run
-  (`docs/ci.md`). One that only runs weekly is a real gap.
+**Four items closed on 2026-08-22** and moved to `docs/keep-api.md`: the name (`keep`), whether SQLite is
+supported (**it is a development convenience, not a supported engine**), where the contract suite runs,
+and the API surface itself. EU VAT was closed the same day — no European is subscribing to a baseball
+puzzle.
+
+
 - ⬜ **Event retention** (§6). Kept indefinitely because nobody has decided otherwise, which is not the
   same as by design.
 - ⬜ **A second payment processor — undecided, not rejected** (§10). One processor means one source of
   truth about who has paid and one webhook signature to verify, and §35 calls that webhook the
   highest-value attack here. **The evidence that would reopen it is a blocked customer**: someone who
   tries to pay and cannot, seen in support or in a failed-checkout pattern.
-- ⬜ **The API surface itself.** Nothing here says what the endpoints are. That is the next document, or
-  the first commit, and it should not be invented in passing.
 
 **Nothing gets built until this has been read.**

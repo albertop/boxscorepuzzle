@@ -39,7 +39,8 @@ from reportlab.lib.styles import ParagraphStyle  # noqa: E402
 from reportlab.lib.units import mm  # noqa: E402
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # noqa: E402
 
-from boxscore_domain import HAND_SOLVE_ZERO_DENSITY_GATE  # noqa: E402
+from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
+from boxscore_forge.calendar import read  # noqa: E402
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 from boxscore_forge.publish import (  # noqa: E402
     slot_references,
@@ -79,7 +80,14 @@ UNCERTIFIED_SHARE = 1 / 3
 PRE_1950_ALLOWANCE = 2
 """§5's pre-1950 preference, applied so the pack looks like what will actually ship."""
 
-GATE = HAND_SOLVE_ZERO_DENSITY_GATE
+GATE = ZERO_DENSITY_GATE
+"""⚠️⚠️ **The shipping gate, not `HAND_SOLVE_ZERO_DENSITY_GATE`.** The pack drew at 0.25 while the
+inventory ships at 0.30, which made it grade a cleaner population than the player meets. See
+`shipping_games()` — the pack takes the calendar's boards now, so the draw's gate is whatever produced
+them, and this constant only survives for the candidate filter."""
+
+CALENDAR = Path(__file__).resolve().parents[2] / "forge" / "calendar.json"
+INVENTORY = Path(__file__).resolve().parents[2] / "forge" / "inventory"
 """Tighter than `ZERO_DENSITY_GATE`, deliberately and only for the hand-solve packs.
 
 This pack puts boards in front of a person to judge, so it draws from the cleaner end — a board
@@ -636,9 +644,46 @@ def write_sheet(path: Path, count: int) -> None:
             writer.writerow([f"{index:02d}", "", "", "", "", "", "", ""])
 
 
+def shipping_games() -> tuple[str, ...]:
+    """The games behind the boards that will actually ship, from the calendar.
+
+    ⚠️⚠️ **The pack drew its own sample until 2026-08-22, and at a different gate.** It called
+    `load(SAMPLE_PER_DECADE, gated=True, gate=HAND_SOLVE_ZERO_DENSITY_GATE)` — a fresh draw at **0.25**
+    against the shipping **0.30** — so it graded a population that is not the inventory, on two counts.
+
+    ⚠️ **The deviation was reasoned, and the reason stopped applying.** It said the sample is *"chosen to
+    answer whether this is derivable by a human rather than to be representative"*. Under that framing
+    it is defensible. **The gate's job is not derivability in general — it is to confirm that no
+    publishable board is impossible**, and for that question being representative is not a nicety, it is
+    the entire claim. *A justification is scoped and does not travel.*
+
+    **So the pack draws from the calendar**, through `load(also=...)` — which exists for exactly this:
+    naming the boards to be examined rather than hoping a draw contains them.
+    """
+    calendar = read(CALENDAR)
+    generations = {entry.assigned for entry in calendar}
+    by_game: dict[str, str] = {}
+    for entry in calendar:
+        for generation in generations:
+            package = INVENTORY / generation / f"{entry.puzzle_id}.json"
+            if package.exists():
+                by_game[entry.game_id] = package.read_text(encoding="utf-8")
+                break
+    if not by_game:
+        message = f"no packages found for {len(calendar)} calendar entries under {INVENTORY}"
+        raise SystemExit(message)
+    return tuple(by_game)
+
+
 def main() -> None:
     rng = random.Random(SEED)
-    sample = load(SAMPLE_PER_DECADE, gated=True, gate=GATE)
+    named = shipping_games()
+    # ⚠️ `limit=0` with `also`: no stratified draw at all, only the named games. The caps, the gate and
+    # the provenance rule still apply to them — `also` cannot smuggle in a board the pool would refuse —
+    # so a calendar board that no longer qualifies comes back missing rather than silently different.
+    sample = load(0, gated=True, gate=ZERO_DENSITY_GATE, also=named)
+    if len(sample) < len(named):
+        print(f"  {len(named) - len(sample)} calendar games no longer pass the pool rules")
     pool = candidates(sample)
     chosen = choose(pool, rng)
     audit(chosen)

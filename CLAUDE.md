@@ -8,7 +8,11 @@ A daily puzzle where the player reconstructs the boxscore of a real Major League
 
 **Player flow: `docs/serve-flow.md`. Read it with the brief.** The brief says how the engine is shaped; this says **what the game does** — the landing page, what happens on an error, why there are no hints, what the clock counts and when it is visible, what persists and where, the reveal at the end, and what gets measured. It closes the §36 items that had been open for months rather than deciding beside them. ⚠️ **Its §9 is superseded** — the SQLite decision was overturned on 2026-08-22 and the section is now the record of it, not the direction.
 
-**Data layer: `docs/data-layer.md`. Read it before touching anything that stores a person.** The third
+**Data layer: `docs/data-layer.md`, and its API surface `docs/keep-api.md`. Read both before touching
+anything that stores a person.** The service is called **`keep`**. ⚠️ **Every event carries a
+client-generated `event_id` made when the event is created, never when it is sent** — a retry after a
+lost response would otherwise duplicate a game into the streaks and percentiles, and an id generated per
+*attempt* deduplicates nothing while looking like it does. The third
 tier, in its own container beside `serve` — accounts, devices, subscriptions and the C7 event records,
 behind an interface that hides the engine. It carries the Postgres decision and what overturned the
 SQLite one, what `canAccess()` does when the layer is unreachable and why the answer rides in the access
