@@ -324,11 +324,37 @@ say the numbers agree with each other. **That is group B, and it is a gate rathe
 **Depends on A.** It draws from the shipping inventory. **It is a gate on beta 0** (`beta-0.md`), and it
 is pass-or-stop rather than a rate.
 
-### B1. Re-axis the pack producer
+### ✔ B1. Re-axis the pack producer — **done 2026-08-22**
 
-- **B1.1** `build_pack.py` targets chain and `audit()` speaks in chain rungs. Move both to stalls.
-- **B1.2** Keep `audit()` asserting rather than printing, and keep its seven rejecting tests.
-- **Done when:** the producer builds a stall-targeted pack and the audit rejects a missing rung.
+- ✔ **B1.1 done.** `TARGETS` are stall rungs **(5, 8, 11, 12, four each)** and `WANTED` is 16, not fifty
+  on the chain axis. **`build_pack.py` was the last chain-targeted thing in the tree**, and its own
+  docstring had said so for weeks: *"the target variable is now stalls… this pack must not be printed
+  until `erase` can take a stall target."* It can. Correcting the documents and leaving the producer
+  would have been the visible half of a fix with the working half untouched.
+- ✔ **B1.2 done.** `audit()` still asserts and its rejecting tests still pass; the two that named the
+  chain axis in their own titles were renamed with it, so the retired word does not survive in the one
+  place a reader checks what the pack measures.
+- ✔ **Met:** the producer builds a stall-targeted pack and the audit rejects a missing rung — verified by
+  reverting the rungs to chain and watching `test_a_pack_that_meets_every_quota` go red.
+
+⚠️⚠️ **And the axis was the smaller half.** The pack called `erase()` **directly**, while production goes
+through `erase_with_lineup_fallback` — and **39% of the boards in the live inventory needed that fallback
+to reach their target.** A pack built without it grades a population the player never meets, and this is
+the artefact that decides whether the boards are humanly derivable at all.
+
+`CLAUDE.md`'s rule — *a sample that evaluates the board is rendered with the board's renderer, never a
+copy of it* — applies to **producing** as well as rendering, and this is where it matters most. ⚠️ The
+guard written the same morning covered `scripts/` and not `discovery/`, where the pack lives. **It covers
+it now**, and both mutations go red: erasing directly kills the new guard, reverting the rungs kills the
+quota test.
+
+### ⚠️ What is left of B is the operator's, and B1 was what blocked it
+
+**B1 was mine and it is done.** B2, B3 and B4 are afternoons of somebody solving boards by hand — the one
+measurement in this project whose instrument is a person. **Until B1 landed the pack could not be built
+at all**: it would have produced boards against a retired axis, or failed its own audit.
+
+⚠️ **B3 is a gate on beta 0, not a step after it.** One board failing by hand stops the milestone.
 
 ### B2. Pack A — calibration, sixteen boards
 
