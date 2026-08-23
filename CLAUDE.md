@@ -816,7 +816,15 @@ a date not changing once played. This is about two dates never drawing on one ga
 - **Everyone gets the same puzzle on the same date.** Never derive the day's puzzle from device-local state.
 - **Timer runs for everyone, silently (§26).** Comparison and percentiles are the paid feature, not the timing itself.
 - **No comments or forums (§28).**
-- Cache only the current day's puzzle, never the week — caching ahead leaks future puzzles.
+- ⚠⚠ **What keeps future puzzles unreachable is that their id is not public — the cache rule is the
+  belt, not the buckle.** A package is named by an opaque id and only today's and yesterday's are listed
+  anywhere a client can read, so **nobody can request tomorrow's puzzle because nobody can name it**, and
+  no browser, proxy or CDN can prefetch a URL it cannot construct. **Cache only the current day's
+  puzzle, never the week** — caching ahead would put a nameable future puzzle in an intermediary.
+
+  ⚠️ **Stated in this order on purpose.** Written the other way round, the cache header reads as the
+  thing holding the line, and a later reader relaxes it for a good reason — a slow first load, a CDN
+  default — believing the exposure is a cache setting. It is not: it is which ids exist publicly.
 
 ---
 

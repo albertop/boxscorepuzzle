@@ -462,4 +462,6 @@ Already decided elsewhere, gathered here because item 4 is where they all land a
 - **The data layer's port is not published to the host**, and it refuses to start without its shared token
   (`data-layer.md` §4).
 - **No secrets in images. Containers unprivileged.** Rate limit per IP in nginx; do not persist IPs.
-- **Cache only the current day's puzzle, never the week** — caching ahead leaks future puzzles.
+- ⚠️ **Future puzzles are unreachable because their ids are not public**; the cache rule is the belt.
+  **Cache only the current day's puzzle, never the week** — caching ahead would hand an intermediary a
+  future puzzle it could otherwise never name.

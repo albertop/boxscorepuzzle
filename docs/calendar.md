@@ -78,6 +78,98 @@ One entry per date. Enough to make every §21 rule checkable and nothing more:
 
 ---
 
+## ⚠⚠ What clock defines the day — **UTC−8, fixed; the day rolls at 08:00 UTC.** Decided 2026-08-23
+
+**§36 carried *what time the puzzle rolls over: local midnight or UTC* as an open item and nothing could
+be built on top of it.** `date` above is the key of every entry and the subject of every §21 rule, and
+until this sentence existed it did not name a clock.
+
+### It is one question, not two — the client's clock was never available
+
+The obvious framing is *server's clock or client's clock*. **The second one is already closed**, by
+`CLAUDE.md`: *everyone gets the same puzzle on the same date; never derive the day's puzzle from
+device-local state.*
+
+⚠️ **And the reason it is closed is stronger than the one usually given.** *Two players in the same house
+could see different puzzles* is true and is the mild version. The hard version is that **a device clock is
+something the player sets**: deriving the day from it makes changing a phone setting a way to fetch
+tomorrow's board — the archive leak of §9, reached from the client instead of from a URL. So the design
+question is only **which single clock**, and *local midnight* was never one of the answers.
+
+### Which clock, and one constraint decides it
+
+**The rollover must not land while people are playing.** Everything else — tidiness, neutrality, matching
+the operator's own day — is preference; this one costs somebody their board mid-game.
+
+| clock | when it lands in the US | |
+|---|---|---|
+| **UTC** | **20:00 Eastern**, 17:00 Pacific | ❌ The worst answer available. A player who sits down at 19:45 Eastern loses the board fifteen minutes later, every night, forever |
+| **Midnight US Eastern** | 00:00 Eastern, **21:00 Pacific** | ❌ Splits the West Coast evening in half |
+| **UTC−8** | **03:00 Eastern, 00:00 Pacific** (winter); 04:00 and 01:00 (summer) | ✔ Nobody in the contiguous states is at a board |
+
+### ⚠️ A fixed offset rather than a named zone, and that is deliberate
+
+`UTC−8` is an offset, **not `America/Los_Angeles`**. A named zone observes DST, which buys one hour of
+alignment and costs a 23-hour day, a 25-hour day, an ambiguous local time twice a year, and a timezone
+database on both sides.
+
+**The hour it would buy is between 03:00 and 04:00 Eastern.** Both are hours nobody is playing, so the
+drift the DST zone exists to prevent **has nothing to prevent** — and the arithmetic becomes
+`(utc_now − 8h).date()`, which has no edge cases to get wrong.
+
+### ⚠⚠ What this rests on, because it is the third thing resting on it
+
+**§10's premise that the audience is US baseball fans.** That premise already carries the payments
+decision (Stripe rather than a merchant of record) and the English-first decision, and `CLAUDE.md` says
+those two *are not independent any more — an argument for a Caribbean market would have to move both or
+neither.* **This is now the third.**
+
+⚠️ If the audience premise ever moves, this moves with it — and the rule is to **re-derive the reason in
+the new place rather than carry the conclusion across.** A rollover at 03:00 Eastern is 08:00 in Santo
+Domingo and 10:00 in Madrid: correct here, and silently wrong there.
+
+### The consequence for the two dates on the event, which is the same question asked twice
+
+C2 put **two dates on every C7 record**, on two different clocks, and this is what makes them disagree:
+
+| | clock | example |
+|---|---|---|
+| `calendar_date` | **this one.** Which puzzle it was | `2026-08-23` |
+| `played_on` | the **player's**, from `localDate()`. When somebody sat down | `2026-08-24` |
+
+**A player on the East Coast at 01:00 on the 24th is still on the 23rd's puzzle**, and both statements
+are true at once. Neither is recoverable from the other once the row is written, which is why there are
+two of them rather than one.
+
+⚠️ **And the streak falls out of it rather than needing a rule.** A streak hangs off `calendar_date`, so
+the night owl at 01:00 keeps the streak alive on the day they believe it is — they have not slept, so
+they have not had a new day. That is a property of the choice, not a concession added to it.
+
+### ⚠⚠ The forge has to compute the same date, and it was computing a different one
+
+`build_inventory.py` used `date.today()` — **the local day of whoever ran the build** — to decide which
+dates are frozen (§21: at or before today cannot be assigned or replaced).
+
+**That was safe, and safe for a reason that is not a guarantee**: Madrid is nine or ten hours ahead of
+UTC−8, so the forge's boundary was always *ahead* of the serving day and it froze conservatively. **It
+is a fact about where the operator is sitting.** Run the same build from a laptop in Los Angeles at
+23:00 and the boundary falls behind the serving day — and the command that refuses to touch the past
+would let you replace a puzzle already being served.
+
+The forge computes the serving date now, from the same rule.
+
+⚠️ **Two implementations of one rule, and that is the prescribed arrangement rather than an
+oversight.** §33 forbids `forge` and `serve` sharing code, and `CLAUDE.md`'s constants rule says a
+decided value lives in **one module per tree, never one module shared**, *because §33 is exactly the
+boundary a shared one would break.* So the guard is that each side names this section as its source.
+
+⚠⚠ **No test can compare them**, and that limit is named here rather than discovered: `ci-forge.yml`
+ignores `serve/**` and `ci-browser.yml` ignores `forge/**`, so a change on one side does not even run
+the other's suite. It is the same limit already recorded for the event's field list, and the same
+answer: the reminder goes red on the side where the change is made.
+
+---
+
 ## How it extends without rewriting
 
 **The builder reads the calendar first and only writes dates that have no entry.** That is the whole

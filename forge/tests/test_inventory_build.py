@@ -18,7 +18,7 @@ import importlib.util
 import json
 import sys
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
 from types import ModuleType, SimpleNamespace
@@ -559,3 +559,115 @@ class TestWhatTheClientMaySee:
         text = (_generation(tmp_path) / "manifest.json").read_text(encoding="utf-8")
         for entry in builder.read(builder.CALENDAR):
             assert entry.date not in text, f"{entry.date} is in the manifest"
+
+
+class TestWhichDateIsBeingServed:
+    """⚠️⚠️ The clock that defines the day, decided 2026-08-23 in `docs/calendar.md`.
+
+    §21 freezes any date at or before today, so this boundary decides whether a puzzle already in front
+    of players can be replaced. It was `date.today()` — **the local day of whoever ran the build** — and
+    it was safe only because Madrid runs nine or ten hours ahead of UTC-8, so the boundary was always
+    *ahead* of the serving day. **That is a fact about where the operator is sitting, not a guarantee**,
+    and every case below fails on the old code from somewhere on earth while passing from Spain.
+    """
+
+    def test_the_day_rolls_at_eight_in_the_morning_utc(self) -> None:
+        builder = _builder()
+
+        just_before = datetime(2026, 8, 23, 7, 59, tzinfo=UTC)
+        just_after = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
+
+        assert builder.serving_date(just_before) == date(2026, 8, 22)
+        assert builder.serving_date(just_after) == date(2026, 8, 23)
+
+    def test_it_is_the_same_answer_everywhere_on_earth(self) -> None:
+        # ⚠️ The whole point of a single clock: the instant decides, not the observer. `CLAUDE.md` —
+        # everyone gets the same puzzle on the same date.
+        moment = datetime(2026, 8, 23, 12, 0, tzinfo=UTC)
+
+        builder = _builder()
+        answers = {
+            builder.serving_date(moment.astimezone(timezone(timedelta(hours=offset))))
+            for offset in (-11, -8, -5, 0, 2, 9, 14)
+        }
+
+        assert answers == {date(2026, 8, 23)}, f"the serving date depends on who is asking: {answers}"
+
+    def test_a_west_coast_evening_is_not_already_tomorrow(self) -> None:
+        """⚠️⚠️ The case the old code got wrong, and it needs a laptop outside Spain to see.
+
+        23:00 in Los Angeles on the 23rd is 06:00 UTC on the 24th. `date.today()` there answers **the
+        24th**, so a build would have treated the 24th as frozen — while the server is still serving the
+        23rd, and the 24th is a future date somebody may still need to replace. The boundary was behind
+        the truth in one direction and ahead of it in the other, depending on the operator's longitude.
+        """
+        builder = _builder()
+        pacific_evening = datetime(2026, 8, 24, 6, 0, tzinfo=UTC)
+
+        assert builder.serving_date(pacific_evening) == date(2026, 8, 23)
+        # The local calendar there says the 23rd too; it is UTC that has moved on. Both agree, and the
+        # old code agreed with neither because it read the machine's zone rather than the rule.
+        assert pacific_evening.astimezone(timezone(timedelta(hours=-7))).date() == date(2026, 8, 23)
+
+    def test_a_datetime_naming_no_zone_is_refused(self) -> None:
+        # ⚠️ Fail closed. A naive datetime means *whatever zone this machine is in*, which is the exact
+        # ambiguity this function exists to remove — assuming one would put the operator's longitude
+        # back into the answer through a different door.
+        builder = _builder()
+
+        with pytest.raises(ValueError, match="names no zone"):
+            builder.serving_date(datetime(2026, 8, 23, 12, 0))  # noqa: DTZ001 - the point of the case
+
+    def test_the_offset_is_spelled_once_and_the_function_uses_it(self) -> None:
+        # ⚠️ Not a tautology: it asserts the constant is *load-bearing*, so a hardcoded 8 inside the
+        # function would go red. `CLAUDE.md` — a decided value is spelled in one place.
+        builder = _builder()
+        assert builder.ROLLOVER_OFFSET_HOURS == -8
+
+        moment = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
+        shifted = moment - timedelta(hours=builder.ROLLOVER_OFFSET_HOURS)
+
+        assert builder.serving_date(moment) == date(2026, 8, 23)
+        assert builder.serving_date(shifted - timedelta(minutes=1)) == date(2026, 8, 23)
+
+    def test_it_takes_the_clock_as_an_argument_so_this_suite_is_not_about_today(self) -> None:
+        # ⚠️ A function reading the wall clock can only be tested against the day the suite runs, which
+        # is a test that reports the environment — the same shape as the timezone case in the browser
+        # suite. The default exists for `main()`; every case here supplies the instant.
+        builder = _builder()
+
+        assert isinstance(builder.serving_date(), date)
+
+    def test_nothing_in_the_script_asks_the_machine_what_day_it_is(self) -> None:
+        """⚠️⚠️ The wiring, which the cases above cannot reach.
+
+        Every one of them calls `serving_date()` directly, so all of them stay green while `main()` goes
+        back to `date.today()` — and `main()` is where the defect actually was. A mutation run showed
+        exactly that: three caught, and the one that reintroduces the bug survived.
+
+        ⚠️ **An AST walk, not a regular expression.** This project has twice been bitten by a pattern
+        matching the tail of another name — `sign(` inside `verify_signature(`, and `keep` inside
+        `keeps`. `date.today` as a parsed attribute access cannot match anything else.
+
+        There is no legitimate call: the boundary is `serving_date()` and the wall clock enters through
+        `datetime.now(tz=UTC)` inside it, where the zone is named.
+        """
+        import ast  # noqa: PLC0415 - only this case needs it
+
+        source = (_SCRIPTS / "build_inventory.py").read_text(encoding="utf-8")
+        tree = ast.parse(source)
+
+        offences = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "today"
+            and isinstance(node.func.value, ast.Name)
+            and node.func.value.id == "date"
+        ]
+
+        assert not offences, (
+            f"build_inventory.py calls date.today() at lines {offences}. The calendar's boundary is the "
+            f"serving date (docs/calendar.md), not the local day of whoever ran the build."
+        )

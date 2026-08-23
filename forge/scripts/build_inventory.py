@@ -48,7 +48,7 @@ import sys
 import time
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from itertools import pairwise
 from math import ceil
 from pathlib import Path
@@ -125,6 +125,54 @@ is the right move and it is not this change. Recorded in `docs/reviews/todo.md`.
 
 DIVIDE = 1950
 """Where §6 draws the line. `SEASON_WINDOW` starts at 1910, so the eras are 1910-1949 and 1950-2029."""
+
+ROLLOVER_OFFSET_HOURS = -8
+"""The clock that defines which puzzle is today's. **`docs/calendar.md` is the decision and the reason.**
+
+The short version: the rollover must not land while people are playing, and at UTC it lands at **20:00
+Eastern** — a player who sits down at 19:45 loses the board fifteen minutes later. At UTC-8 it lands at
+03:00 Eastern and midnight Pacific, where nobody in the contiguous states is at a board.
+
+⚠️ **An offset, not `America/Los_Angeles`.** A named zone buys one hour of alignment between 03:00 and
+04:00 Eastern — hours nobody is playing, so the drift it exists to prevent has nothing to prevent — and
+costs a 23-hour day, a 25-hour day, an ambiguous local time twice a year, and a timezone database.
+
+⚠⚠ **It rests on §10's premise that the audience is US baseball fans**, which already carries the
+payments decision and the English-first decision. If that premise moves, **re-derive this rather than
+carrying the conclusion across**: 03:00 Eastern is 10:00 in Madrid.
+
+⚠️ **`serve` will spell this number again when E1 builds the loader, and that is prescribed rather than
+sloppy** — §33 forbids the two trees sharing code and `CLAUDE.md` puts a decided value in one module *per
+tree, never one module shared*. Neither CI workflow runs the other's suite, so **no test can compare
+them**; both sides cite `docs/calendar.md` instead."""
+
+
+def serving_date(now: datetime | None = None) -> date:
+    """Which date's puzzle is being served right now.
+
+    ⚠⚠ **This was `date.today()`, and it was the local day of whoever ran the build.** §21 freezes any
+    date at or before today, so that boundary decided whether a puzzle already in front of players could
+    be replaced — and it was answering with the operator's own calendar.
+
+    **It was safe, for a reason that is not a guarantee:** Madrid runs nine or ten hours ahead of UTC-8,
+    so the boundary was always *ahead* of the serving day and froze conservatively. **That is a fact
+    about where the operator is sitting.** The same build from Los Angeles at 23:00 puts the boundary
+    *behind* the serving day, and the command that refuses to touch the past would let you replace a
+    puzzle already being served.
+    """
+    moment = now if now is not None else datetime.now(tz=UTC)
+    if moment.tzinfo is None:
+        # ⚠️ **Refused rather than assumed.** A naive datetime means *whatever zone this machine is in*,
+        # which is the exact ambiguity this function exists to remove. Guessing here would put the
+        # operator's longitude back into the answer through a different door.
+        message = f"serving_date needs an aware datetime; {moment!r} names no zone"
+        raise ValueError(message)
+    # ⚠⚠ **Normalised to UTC before the offset, and it was not.** `.date()` reads the calendar of
+    # whatever zone is attached, so the same instant expressed in two zones gave two different serving
+    # dates — the arithmetic was right and the reading was local. Found by the test asking whether seven
+    # observers agree, which is the property the whole decision is about.
+    return (moment.astimezone(UTC) + timedelta(hours=ROLLOVER_OFFSET_HOURS)).date()
+
 
 MINIMUM_EARLY_GAP = 14
 """How close two pre-1950 boards may be, in days. **A bunching guard, not a second quota.**
@@ -630,7 +678,7 @@ def main() -> None:
         measure(args.per_decade, Ed25519PrivateKey.generate())
         return
 
-    today = date.today()  # noqa: DTZ011 — the calendar's boundary is the local day, not an instant
+    today = serving_date()
     first = date.fromisoformat(args.first) if args.first else today + timedelta(days=1)
     build(args.days, first, publication_key(), today)
 

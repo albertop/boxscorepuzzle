@@ -642,14 +642,17 @@ Those are beta 3 and the schema is shaped so they are an addition rather than a 
 
 **Depends on A** (there is a calendar to serve) **and on D** (there is somewhere to post).
 
-### E1. `/today` and `/p/<id>`
+⚠⚠ **Start with E1b, and the numbering is left alone rather than renamed.** E1b is what enforces the
+access model, and everything else in this group is built on top of *which files exist on which path* —
+so writing the routes first means writing them before knowing what they are allowed to reach. It is also
+the part whose failure is worst: **a rotation that fails once leaks the archive one day at a time,
+silently and permanently**, because anything fetched once is gone. The routes can be wrong and fixed;
+this cannot.
 
-- **E1.1** C6: `/p/<id>` canonical, `/today` redirects. `daily.js` currently takes an id from the query
-  string — that is development scaffolding and it goes.
-- **E1.2** ⚠️ **The engine still does not know what day it is** (C4). A loader decides, server-side.
-- **E1.3** Everyone gets the same puzzle on the same date — **never derived from device-local state.**
+*(E1 keeps its number because `docs/` and the review history already refer to it. The order of work is
+E1b, then E1, then E2, then E3.)*
 
-### ⚠️⚠️ E1b. Two public paths, and the rotation that keeps them two — added 2026-08-22
+### ⚠️⚠️ E1b. Two public paths, and the rotation that keeps them two — **do this first**
 
 **The access model changed while group A was being built** (`docs/calendar.md`). Static delivery (§23)
 and paid access (§9) are in tension, and the resolution is **two paths rather than one**:
@@ -682,10 +685,30 @@ worth keeping.
 event like any other — C7 stores what happened — and the streak calculation is what excludes it. The
 event carries **both dates** already (C2), so nothing new has to be stored for this to be computable.
 
+### E1. `/today` and `/p/<id>` — **second, after E1b**
+
+- **E1.1** C6: `/p/<id>` canonical, `/today` redirects. `daily.js` currently takes an id from the query
+  string — that is development scaffolding and it goes.
+- **E1.2** ⚠️ **The engine still does not know what day it is** (C4). A loader decides, server-side.
+  ✔ **And which clock it decides with is settled**: `docs/calendar.md` — the day rolls at **08:00 UTC**,
+  a fixed `UTC-8`, which is 03:00 Eastern and midnight Pacific in winter. §36 carried this open as *local
+  midnight or UTC* and **UTC is the worst answer available**: it lands at 20:00 Eastern, so a player who
+  sits down at 19:45 loses the board fifteen minutes later. The forge already computes the same date
+  (`serving_date()`); `serve` spells the offset again, which §33 prescribes and no test can check across
+  the two trees.
+- **E1.3** Everyone gets the same puzzle on the same date — **never derived from device-local state.**
+
 ### E2. The caching contract
 
 - **E2.1** `manifest.json` never cached; `<generation>/<id>.json` cached for a year (it is immutable).
-- **E2.2** ⚠️ **Cache only the current day, never the week** — caching ahead leaks future puzzles.
+- **E2.2** ⚠⚠ **The enforcement is the absent id; the cache rule is the belt.** Packages are named by
+  an opaque id and the public manifest lists **two**, so tomorrow's puzzle cannot be requested by anyone
+  who cannot name it — and no intermediary or CDN can prefetch a URL it cannot construct. **Cache only
+  the current day, never the week** on top of that.
+
+  ⚠️ **Written in that order deliberately.** The other way round, the cache header looks like the thing
+  holding the line, and the next person to meet a slow first load relaxes it believing the exposure is a
+  cache setting.
 
 ### E3. nginx
 
