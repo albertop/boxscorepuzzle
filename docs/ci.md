@@ -8,12 +8,13 @@ and cannot be; this says what runs instead, why each piece is where it is, and w
 
 ---
 
-## The three files
+## The four files
 
 | File | Trigger | Skips when the push touches only | Runs |
 |---|---|---|---|
 | `.github/workflows/ci-forge.yml` | push and PR to `main` | `serve/`, `docs/`, any `.md` | ruff check, ruff format, the discovery ratchet, mypy, **pytest without coverage** |
 | `.github/workflows/ci-browser.yml` | push and PR to `main` | `forge/`, `discovery/`, `docs/`, any `.md` | the browser suite in headless Chromium |
+| `.github/workflows/ci-keep.yml` | push and PR to `main` | `forge/`, `discovery/`, `serve/`, `docs/`, any `.md` | ruff, mypy and the contract suite **against a Postgres service container**, with coverage |
 | `.github/workflows/weekly.yml` | Monday 06:00 UTC, and by hand | — | **all of the above, plus the coverage floor** |
 
 `.githooks/pre-push` runs everything, with coverage, on the laptop, before any push to `main`. Enable
@@ -120,12 +121,37 @@ repository's shape rather than a measurement.
 
 ---
 
+## ⚠️⚠️ Why `keep`'s suite refuses to run without a database
+
+Its Postgres arm **fails rather than skips**. Without a server `PostgresStore` is 80% covered and the
+suite is 92% — **under its own 95% floor, while looking green**. So the floor only held on a machine
+that happened to have Docker running, which is a guarantee true where it was written and nowhere else.
+
+⚠️ **The tempting repair was a fake connection.** It would have taken `PostgresStore` to 100% and
+proved nothing about Postgres — coverage theatre, and the number would then lie in exactly the place it
+is relied on. **Postgres is production; its store is tested against Postgres.**
+
+The hook starts a `keep-test-pg` container if one is not already up; CI uses a service container.
+
+---
+
 ## The guard
 
 `forge/tests/test_the_hook_runs_what_ci_runs.py` asserts that the hook and the push workflows check
 the same set of tools, and that the weekly run is the complete one. It reads **the whole workflow
 directory**, so a new workflow cannot introduce a check the hook does not run, and it compares **tool
 names, not command lines**, so it does not go red on a reordered flag.
+
+⚠️⚠️ **And it was blind to whole trees until 2026-08-22.** `keep` arrived and the tool sets did
+not change — it runs the same ruff, mypy and pytest — so the guard stayed green **while nothing ran
+`keep` at all**, and would have stayed green with it in the hook and out of CI. *A guard comparing the
+wrong dimension reports an agreement it never looked for.* `test_every_tree_with_a_project_is_checked_by_both`
+now asks whether every tree with a `pyproject.toml` is named by the hook **and** by a push workflow.
+
+⚠️ **That one needed a word boundary before it worked.** `"keep" in text` matches **`keeps`**, which
+`ci-forge.yml` says in a comment about the gate — so deleting `ci-keep.yml` outright left it passing.
+Found by deleting the workflow and watching nothing break, which is the only way that class is found,
+and it is the `sign(` that matched inside `verify_signature(` again.
 
 ⚠️ **It is blind to flags by construction, which is exactly where the current divergence lives.**
 `pytest` and `pytest --cov` are one entry, so this test cannot see coverage leaving the hook. That is
