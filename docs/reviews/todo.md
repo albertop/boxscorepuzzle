@@ -1,5 +1,38 @@
 # Review backlog
 
+## ⚠⚠ 2026-08-23 — a mutation restore that a stale `.pyc` survived, and the suite ran the mutant
+
+**Found by accident, and it is the most dangerous harness failure of the three this week.**
+
+A mutation run changed `SCHEMA_VERSION: Final = 5` to `6`, ran, and restored the file. `git diff` was
+clean and `grep` showed `= 5`. **The next full run imported it as `6`** and reported ten failures against
+code nobody had written.
+
+⚠⚠ **Why the restore did not take: `5` and `6` are the same length.** CPython decides a `.pyc` is stale
+from the source's **size and mtime**, and on Windows the mtime granularity is coarse enough that a
+same-size rewrite inside the same tick looks unchanged. So the bytecode cache kept the mutant while
+every text-level check — diff, grep, reading the file — agreed the source was correct.
+
+**The two earlier harness failures were *silence*: a run that did not happen, read as a run that passed.
+This one is worse.** The run happened, produced real output, and the output described a program that
+exists nowhere. **Every text-level verification is blind to it by construction**, which is the shape
+`CLAUDE.md` records as *ask what the instrument is supplying rather than measuring* — here the
+interpreter was supplying the code.
+
+### What to do about it
+
+⬜ **Any harness that edits a `.py` and restores it must clear `__pycache__` after restoring**, or run
+the child with `PYTHONDONTWRITEBYTECODE=1`. The second is better: it removes the class rather than
+cleaning up after it, and costs nothing on a suite this size.
+
+⚠️ **A same-length mutation is not exotic — it is the *normal* case.** `5`→`6`, `<`→`>`, `and`→`or`,
+`True`→`​False` is not but `>=`→`<=` is. Every mutation this session that changed a Python file was at
+risk, and the ones that reported *caught* were reporting truthfully only by luck of differing lengths.
+
+⚠️ **Nothing in the repository has this defect** — the harnesses are scratch scripts, not committed
+code. Recorded here because the next one will be written the same way.
+
+---
 ## 2026-08-22 — ✔ v39: five findings, five closed — and ⬜ one number left to the operator
 
 `docs/reviews/code_review_v39.md` carries the findings. All five were reproduced in the code before

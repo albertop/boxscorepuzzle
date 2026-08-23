@@ -57,6 +57,24 @@ constructed.
 in the package, so nothing here could tell a real one from a fabrication. That is the layer-4 problem
 and it belongs to `certify_for_publication` against the game log.
 
+## What travels
+
+Two shapes exist. The forge holds the full package; **`published()` produces what leaves the
+laptop**, and the *Published* column below is the part `serve` actually receives. That distinction
+used to live only in the code, which is the implicit-contract shape this project has paid for
+repeatedly — `forge/tests/verify/test_schema_document.py` asserts this table against what `published()`
+really does, so the two cannot drift.
+
+⚠️ **The section was lost in the cut from v4 to v5, and the guarantee it describes never lapsed.** The
+test reads *this* document rather than a pinned version — `DOCUMENTS` is keyed off `SCHEMA_VERSION` — and
+it checks both directions: every field the table calls **kept** is published, and **nothing published is
+absent from the table**, which is the direction that matters more, because a field reaching `serve` that
+nobody wrote down is a contract the client can come to depend on by accident.
+
+⚠️ **The path is `forge/tests/verify/test_schema_document.py`.** v4 said `forge/tests/test_schema_document.py`,
+which is not where it is — a pointer that sends a reader to nothing is how a real guarantee comes to look
+like a claim.
+
 | Field | Type | Null? | Published | Meaning |
 |---|---|---|---|---|
 | `schema` | integer | no | kept | Always `5` here. A reader that sees anything else must refuse the file — including `4`, whose reveal cannot name a club or print a second one. |
@@ -110,6 +128,12 @@ contract is the failure this project has paid for repeatedly.*
 | `boxscore` | object | **Required from version 5.** Both clubs, complete. See below. |
 | `card` | string | §29's generated reveal card. **Outstanding** — empty in the reference files, template work over data already present. |
 
+**⚠️ `offense_team` was wrong in four of the first six files**, because it was taken from the game
+identifier, which holds the *home* club. It coincides whenever the home side batted and lies
+otherwise, and no verifier layer can see it: a wrong team name breaks no equation. It is now taken
+from the same query as the roster, and `boxscore_verify.plausibility.reveal_faults` checks the block
+before a file is written.
+
 ### reveal.boxscore
 
 Two keys, `offense` and `defense`. ⚠️ **They name the *puzzle's* sides, not the game's** — the offence
@@ -141,12 +165,6 @@ screen this version exists to take it off, and the absence would read as a passi
 `PA` is what breaks the constraint forest. `RBI` earns none of that — no cross-team counterpart, no
 place in the row identity — which is exactly why it is worth printing at the end: it is the one number
 on the finished sheet the puzzle never asked for. **`PA` is not here**, because no newspaper printed it.
-
-**⚠️ `offense_team` was wrong in four of the first six files**, because it was taken from the game
-identifier, which holds the *home* club. It coincides whenever the home side batted and lies
-otherwise, and no verifier layer can see it: a wrong team name breaks no equation. It is now taken
-from the same query as the roster, and `boxscore_verify.plausibility.reveal_faults` checks the block
-before a file is written.
 
 ## Two decisions worth stating, because both reverse an earlier one
 
@@ -195,6 +213,13 @@ serve/data/puzzles/
   manifest.json          {"schema": 1, "generation": "<12 hex>", "puzzles": ["<id>", ...]}
   <generation>/<puzzle_id>.json
 ```
+
+⚠⚠ **`schema` there is the *manifest's* own format version and does not track the package schema.**
+Two documents, two independently versioned formats, one key name. It is `MANIFEST_SCHEMA` in
+`forge/scripts/build_inventory.py` and it has been `1` since the manifest existed, while the package
+schema is on its fifth version — so a reader who takes the `1` for a package version concludes the
+inventory is four versions behind. **A package's own `schema` is a different field in a different file**,
+written from `Package.written_as`.
 
 **A reader follows the manifest and reads only the puzzles it names.**
 

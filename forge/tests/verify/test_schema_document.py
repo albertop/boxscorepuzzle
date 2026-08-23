@@ -1,8 +1,12 @@
 """The schema document and the code have to say the same thing.
 
-`serve` is built against `docs/package-format-v1.md`, not against this package's source, so a field
-the document describes and the code does not ship — or the reverse — is a broken contract between two
+`serve` is built against the schema document rather than against this package's source, so a field the
+document describes and the code does not ship — or the reverse — is a broken contract between two
 systems that deploy separately (§33).
+
+⚠️ **The version is not spelled in this sentence.** It said *`docs/package-format-v1.md`* through four
+version bumps, which is the drift the `DOCUMENTS` mapping below was keyed off `SCHEMA_VERSION` to
+prevent — in the prose of the file doing the preventing.
 
 This is the same shape of defect as everything else this week: two places that must agree, with
 nothing checking that they do.
@@ -67,6 +71,27 @@ def a_package(board: Board, *, version: int = SCHEMA_VERSION) -> Package:
         # constructor accepted it because only the parse path checked. v36-P2-02.
         signature="de" * 64,
         offense_is_home=True,
+    )
+
+
+def test_the_front_page_names_the_current_schema_document() -> None:
+    """⚠⚠ The contract exists and nothing on the front page said so.
+
+    `CLAUDE.md` lists every standing document — the design, the engine brief, the player flow, the data
+    layer, its API, the milestone, the route to it, the calendar — and **the one contract between the two
+    trees was not among them.** The operator went looking for the schema document and concluded it did
+    not exist. It does; the entry point did not know.
+
+    ⚠️ **Keyed off `SCHEMA_VERSION`, like `DOCUMENTS` above and for the same reason.** A version bump
+    that leaves the front page pointing at the superseded document goes red here, and a bump is a change
+    to `forge/`, so CI runs this case even though a documents-only push would not.
+    """
+    front_page = _DOCS.parent / "CLAUDE.md"
+    wanted = f"docs/package-format-v{SCHEMA_VERSION}.md"
+
+    assert wanted in front_page.read_text(encoding="utf-8"), (
+        f"CLAUDE.md does not name {wanted}. It is the only contract between forge and serve, and a "
+        f"reader of the front page has no way to learn it exists."
     )
 
 

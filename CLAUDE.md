@@ -8,6 +8,19 @@ A daily puzzle where the player reconstructs the boxscore of a real Major League
 
 **Player flow: `docs/serve-flow.md`. Read it with the brief.** The brief says how the engine is shaped; this says **what the game does** — the landing page, what happens on an error, why there are no hints, what the clock counts and when it is visible, what persists and where, the reveal at the end, and what gets measured. It closes the §36 items that had been open for months rather than deciding beside them. ⚠️ **Its §9 is superseded** — the SQLite decision was overturned on 2026-08-22 and the section is now the record of it, not the direction.
 
+**Package format: `docs/package-format-v5.md`, and read it before changing anything either tree
+serialises.** ⚠⚠ **It is the only contract between `forge` and `serve`**, which share no code and no
+deployment cycle (§33) — a signed package is the one thing that crosses. `forge/tests/verify/test_schema_document.py`
+checks it against the code field by field, **keyed off `SCHEMA_VERSION` rather than a typed number**, so
+a version bump cannot leave the test asserting the old document.
+
+⚠️ **v1 to v4 are history and are deliberately not checked.** A document tested against code that no
+longer produces it has to be edited to stay green, which is how history gets rewritten to match the
+present. Each opens with a banner saying so.
+
+⚠️ **This pointer was missing until 2026-08-23**, and the file being unnamed here read as the file not
+existing. The other eight standing documents were listed; the contract between the two trees was not.
+
 **Data layer: `docs/data-layer.md`, and its API surface `docs/keep-api.md`. Read both before touching
 anything that stores a person.** The service is called **`keep`**. ⚠️ **Every event carries a
 client-generated `event_id` made when the event is created, never when it is sent** — a retry after a
