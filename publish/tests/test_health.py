@@ -11,7 +11,8 @@ from pathlib import Path
 
 from publish.health import PUBLIC_LIMIT, inspect
 from publish.rotate import TODAY, YESTERDAY, rotate
-from tests.test_rotation import _FIRST, _inventory
+from tests.conftest import FIRST as _FIRST
+from tests.conftest import build_inventory as _inventory
 
 
 def _rotated(tmp_path: Path, *, days: int = 6, offset: int = 3) -> tuple[Path, date]:

@@ -25,7 +25,11 @@ build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+# ⚠️⚠️ `"."` as well as `"src"`, so `tests.conftest` imports the same way under `pytest` and under
+# `python -m pytest`. Without it the two differ: `python -m` puts the working directory on sys.path and
+# plain `pytest` does not -- so a suite verified one way passed while the pre-push hook, which runs the
+# other, refused the push. The environment belongs in configuration rather than in how it was invoked.
+pythonpath = ["src", "."]
 
 [tool.ruff]
 line-length = 120

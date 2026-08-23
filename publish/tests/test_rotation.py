@@ -20,29 +20,8 @@ import pytest
 
 from publish.health import PUBLIC_LIMIT
 from publish.rotate import MANIFEST, TODAY, YESTERDAY, RotationError, rotate
-
-_FIRST = date(2026, 9, 1)
-
-
-def _inventory(root: Path, days: int, *, generation: str = "gen1", start: date = _FIRST) -> Path:
-    """A private inventory shaped exactly as `build_inventory.py` writes one: packages at the top of a
-    generation directory, signed per-date pointers under `days/`."""
-    inventory = root / "inventory"
-    where = inventory / generation
-    (where / "days").mkdir(parents=True, exist_ok=True)
-    for offset in range(days):
-        when = start + timedelta(days=offset)
-        puzzle_id = f"p{when.isoformat().replace('-', '')}"
-        (where / f"{puzzle_id}.json").write_text(f'{{"puzzle_id": "{puzzle_id}"}}', encoding="utf-8")
-        pointer = {
-            "date": when.isoformat(),
-            "generation": generation,
-            "puzzle_id": puzzle_id,
-            "schema": 1,
-            "signature": "0" * 128,
-        }
-        (where / "days" / f"{when.isoformat()}.json").write_text(json.dumps(pointer), encoding="utf-8")
-    return inventory
+from tests.conftest import FIRST as _FIRST
+from tests.conftest import build_inventory as _inventory
 
 
 def _public_packages(public: Path) -> set[str]:

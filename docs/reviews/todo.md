@@ -25,6 +25,29 @@ checks a machine** - the same question the hook-primary arrangement turns on.
 ⚠️ **Costs nothing meanwhile: do not commit while a push is running.** Done twice that day, unnoticed.
 
 ---
+## ⚠️⚠️ 2026-08-23 - the hook caught what my own runs could not: I was verifying with a different command
+
+**`uv run python -m pytest` all session; the hook runs `uv run pytest`.** `python -m` puts the working
+directory on `sys.path` and plain `pytest` does not — so `publish/tests/test_health.py` importing
+`from tests.test_rotation import ...` passed thirty-three times locally and **the pre-push hook refused
+the push** with `ModuleNotFoundError: No module named 'tests'`.
+
+**The import was the defect and the command was the reason it survived.** Every "33 passed" reported
+during E1b came from an environment the gate does not use. ⚠️ **This is the fourth instrument failure
+this week and the only one the project's own machinery caught** — the mutation harness reading a dead run
+as green, the stale `.pyc`, the watcher matching `failed` inside `xfailed`, and this. The others were
+found by looking; this one was found by the hook doing exactly what it is for.
+
+**Fixed in configuration rather than in the invocation**: `pythonpath = ["src", "."]` in `publish`'s
+pytest config, so both commands behave identically, plus a `conftest.py` holding the shared fixture so
+no test module imports another. **The implicitness was the problem** — an environment that depends on
+how a command was typed is one where the gate and the check can differ without either being wrong.
+
+⚠️ **What is not fixed: nothing checks that the two commands agree.** `forge` and `keep` have no
+cross-test imports today, so the same defect there would be invisible in the same way. Not built — the
+honest guard is to stop using `python -m` for verification, which is a habit rather than a test.
+
+---
 ## ✔ 2026-08-23 - `publish/`, a fourth tree, and what the mutation run changed about its tests
 
 **E1b's rotation.** `docs/calendar.md` carries the design and now the code that enforces it.

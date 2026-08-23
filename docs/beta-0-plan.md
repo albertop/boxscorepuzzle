@@ -18,7 +18,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
-| **E** serving for real | ▶ **E1b met** | `publish/` — the rotation and the health verdict. E1, E2, E3 open |
+| **E** serving for real | ⬜ **not met** | ✔ **E1b met** — `publish/`, the rotation and the health verdict as a **function**; its endpoint is F3. E1, E2, E3 open |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
@@ -677,9 +677,19 @@ work at midnight otherwise. **Two days is not an archive**, so it does not compe
 - ✔ **E1b.3 done** — the public manifest is written **from the files actually placed**, never from the
   calendar, so it cannot claim something the directory does not hold. It carries no generation name:
   nothing public needs one.
-- **E1b.4** ⚠️ `canAccess()` is a **display** decision. It runs in the browser over files the browser
-  can already fetch. **The enforcement is which files exist on a public path**, and a reader of C8 could
-  reasonably believe otherwise.
+- ✔ **E1b.4 is a statement, and E1b.1–.3 satisfied it.** Not a task: `canAccess()` **does not exist in
+  any file** and should not — C8 says it *returns true in v1*, and there are no tiers to decide between.
+  What the item asserts is **where enforcement lives**: `canAccess()` runs in the browser over files the
+  browser can already fetch, so it decides what the interface *offers*; **the enforcement is which files
+  exist on a public path.**
+
+  ⚠⚠ **That sentence stopped being a design when the rotation and the health verdict were built.** Before
+  E1b.1–.3 it described an intention; now `publish.rotate.rotate()` makes it true and
+  `publish.health.inspect()` watches it. **The item is closed by them rather than pending beside them.**
+
+  ⚠️ **The risk it names stays named, because that is what the line is for:** a reader of C8 could
+  reasonably believe `canAccess()` is an enforcement point. It is not, and nothing it returns can change
+  what the server hands out.
 
 ✔ **Decided 2026-08-22: yesterday is playable and does not count for the streak** (`docs/calendar.md`,
 and §27 beside the grace day). **The two rules have to be read together** — the window is meaningless
@@ -687,9 +697,21 @@ without knowing what it does to a streak, and *playable* and *counts* are differ
 forgiveness mechanisms stacked make a streak nearly unbreakable, and an unbreakable streak stops being
 worth keeping.
 
-⚠️ **E1b.5 follows from it and is code, not prose:** a game finished on yesterday's board records its
-event like any other — C7 stores what happened — and the streak calculation is what excludes it. The
-event carries **both dates** already (C2), so nothing new has to be stored for this to be computable.
+⬜ **E1b.5 follows from it and is code — and the code cannot be written in E.** A game finished on
+yesterday's board records its event like any other (C7 stores what happened) and **the streak
+calculation is what excludes it.**
+
+⚠⚠ **There is no streak calculation anywhere.** Nothing in `forge/`, `serve/`, `keep/` or `publish/`
+computes one; every mention of the word is a reference to the rule. A streak spans **many events**, and
+the only thing that holds many events is `keep` — the client knows one game, its own.
+
+**Where it lands: beta 3, with `keep`'s metric reads**, beside `GET /access` and the archive endpoint,
+which `docs/keep-api.md` already names as later and undesigned. **It is recorded there as well as
+here**, because removing it from E's ledger without writing it into beta 3's is how a decided-but-unbuilt
+rule goes missing: E stops counting it and beta 3 never starts.
+
+✔ **What E1b did leave ready:** the event carries **both dates** already (C2), so **nothing new has to be
+stored** for the exclusion to be computable when the reads exist.
 
 ### E1. `/today` and `/p/<id>` — **second, after E1b**
 

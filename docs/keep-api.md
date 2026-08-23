@@ -126,6 +126,24 @@ out more than it needs to.
 a past puzzle (E1b), and the metrics reads (§8). **None of them exist and none is designed here** —
 naming them is so that the first person to need one finds a place rather than an absence.
 
+### ⚠⚠ An obligation the metric reads inherit: **yesterday does not count for the streak**
+
+**Decided 2026-08-22** (`docs/calendar.md`, and §27 beside the grace day): yesterday's board is playable
+and **does not keep a streak alive.** Two forgiveness mechanisms stacked make a streak nearly
+unbreakable, and an unbreakable streak stops being worth keeping.
+
+**It is written here because this is where the code lands.** A game finished on yesterday's board records
+its event like any other — C7 stores what happened — so **the exclusion belongs to whatever computes the
+streak, and that is a read over many events, which only `keep` has.** The client knows one game, its own.
+
+⚠️ **Recorded at the destination rather than only at the origin.** `beta-0-plan.md` carried this as
+E1b.5 and E cannot build it; taking it off E's ledger without writing it onto this one is how a
+decided-but-unbuilt rule goes missing — the origin stops counting it and the destination never starts.
+
+✔ **Nothing new has to be stored for it.** The event already carries **both dates** (C2):
+`calendar_date` says which puzzle, `played_on` says when somebody sat down. A streak hangs off
+`calendar_date`, and the exclusion is a comparison the stored row already supports.
+
 ---
 
 ## SQLite is a development convenience, not a supported engine — decided
