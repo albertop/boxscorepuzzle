@@ -1,5 +1,71 @@
 # Review backlog
 
+## ❌❌ 2026-08-23 - `main` has been red in CI for days, and four tests pass here by reading the real signing key
+
+**Found while checking which workflows a push runs.** The `forge` workflow is `completed/failure` on
+`fc61c9f`, `acb9781` and `e8e77f3` - three consecutive pushes - while the pre-push hook passed on the
+laptop every time. **`CLAUDE.md` names this exact outcome:** *the failure mode is a red `main` nobody has
+looked at yet.* Nobody had.
+
+```
+FAILED tests/test_signing_key_acquisition.py::TestWhereTheKeyComesFrom::test_the_file_is_enough_with_no_variable_set
+FAILED tests/test_signing_key_acquisition.py::TestWhereTheKeyComesFrom::test_trailing_whitespace_in_the_file_is_not_a_different_key
+FAILED tests/test_signing_key_acquisition.py::TestWhatItRefuses::test_neither_source_is_an_error_naming_both
+FAILED tests/test_signing_key_acquisition.py::TestWhatItRefuses::test_an_unreadable_key_file_is_an_error_rather_than_a_missing_key
+```
+
+### ⚠️⚠️ Why they pass here: they read the operator's own key file
+
+The `elsewhere` fixture patches **`publication_key.KEY_FILE`**. `write_reference_puzzles.py` does
+`from boxscore_forge.publication_key import KEY_FILE`, which binds the value into **the writer's own
+namespace**, and `key_and_destination()` reads that binding. Patching the module changes nothing it
+consults. Demonstrated:
+
+```
+writer.KEY_FILE           : C:\Users\aperd\.boxscorepuzzle-signing-key
+publication_key.KEY_FILE  : C:\Users\aperd\.boxscorepuzzle-signing-key
+after patching the module, writer still says: C:\Users\aperd\.boxscorepuzzle-signing-key
+```
+
+**On this laptop that file exists** - 64 bytes, the operator's real private key - so `KEY_FILE.exists()`
+is true, the writer reads it, and the tests go green **having exercised the real key instead of the
+throwaway one the fixture wrote.** On a runner the file is absent, so the same code takes the refusal
+path and four assertions about the *temporary* path fail.
+
+⚠️⚠️ **So the green is worse than the red.** The red is a correct report about a broken test. The green is
+a test suite that reaches for production key material whenever it happens to be present - which section
+33 exists to prevent, and which the fixture's own docstring says it is avoiding: *"the alternative is
+putting the real private key in a test, which section 33 forbids and which is the thing this item is
+about."*
+
+### ⚠️⚠️ The comment above the patch describes this defect and the code kept it
+
+Lines 32-39 of the test say, in bold: *"These tests set `writer.KEY_FILE` ... patching the writer's names
+would have patched **nothing that the check reads**. ... **Patch the module that owns the constant.**"*
+
+**The cure was applied in the wrong direction.** The patch moved to the module - and the *reader* is
+still the writer's imported binding, so the same sentence is now true with the two sides swapped. A
+defect written down, understood, and reintroduced by its own fix.
+
+### ⚠️ Why neither the hook nor the reviews caught it
+
+**The hook cannot**: it runs on the one machine that has the key, which is the condition that makes the
+tests pass. **CI can and did** - it is the only checker without the key - and CI is a report nobody read.
+This is the concrete cost of *detection without prevention*, and it is the first time that cost has been
+paid rather than described.
+
+### ⬜ What a fix has to decide, and it is not obvious
+
+- **Patch what the reader reads**, or stop the writer importing the name and have it call through the
+  module. The second removes the class; the first re-arms it on the next `from ... import`.
+- ⚠️⚠️ **And a test that only fails on a machine without the key is not enough.** Whatever is done, there
+  should be a case asserting the writer does **not** consult the real path - one that fails *on this
+  laptop*, where every existing case cannot.
+
+**Not fixed here**: it touches the signing path, and which of the two repairs is right is a judgement
+about how the writer should reach the rule at all.
+
+---
 ## ⬜ 2026-08-23 — two on `MANIFEST_SCHEMA`, found while answering *which schema is that `1`*
 
 **Noticed in passing during the v5 documentation pass, reported in conversation, and not written down
