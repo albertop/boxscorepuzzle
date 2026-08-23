@@ -672,9 +672,15 @@ work at midnight otherwise. **Two days is not an archive**, so it does not compe
   can already fetch. **The enforcement is which files exist on a public path**, and a reader of C8 could
   reasonably believe otherwise.
 
-⬜ **Open, and it is a product call:** whether yesterday's puzzle **counts for the streak** or is merely
-playable. Consistent with §27's grace day either way; *playable* and *counts* are different, and leaving
-it implicit is how a grace day gets granted by accident.
+✔ **Decided 2026-08-22: yesterday is playable and does not count for the streak** (`docs/calendar.md`,
+and §27 beside the grace day). **The two rules have to be read together** — the window is meaningless
+without knowing what it does to a streak, and *playable* and *counts* are different things. Two
+forgiveness mechanisms stacked make a streak nearly unbreakable, and an unbreakable streak stops being
+worth keeping.
+
+⚠️ **E1b.5 follows from it and is code, not prose:** a game finished on yesterday's board records its
+event like any other — C7 stores what happened — and the streak calculation is what excludes it. The
+event carries **both dates** already (C2), so nothing new has to be stored for this to be computable.
 
 ### E2. The caching contract
 
