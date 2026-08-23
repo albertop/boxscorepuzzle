@@ -67,19 +67,41 @@ tests pass. **CI can and did** - it is the only checker without the key - and CI
 This is the concrete cost of *detection without prevention*, and it is the first time that cost has been
 paid rather than described.
 
-### ⬜ What a fix has to decide, and it is not obvious
+### ✔ FIXED 2026-08-23 — a consolidation finished, not a deletion
 
-- ⚠️ **The correction above changes the options.** The duplicate's result is discarded, so a third
-  possibility exists that the first version of this entry could not see: **delete the vestigial block**
-  rather than patch around it. That is not a repair to the test setup at all.
-- **Patch what the reader reads**, or stop the writer importing the name and have it call through the
-  module. The second removes the class; the first re-arms it on the next `from ... import`.
-- ⚠️⚠️ **And a test that only fails on a machine without the key is not enough.** Whatever is done, there
-  should be a case asserting the writer does **not** consult the real path - one that fails *on this
-  laptop*, where every existing case cannot.
+**It was live, for one day.** `dd4974b` (2026-08-21) introduced the block as *the* acquisition rule.
+`c8df7a7` (2026-08-22) created `boxscore_forge.publication_key`, moved the rule there and added
+`return publication_key(), OUT` — **and left the original standing.** So this is the second half of a
+move that was never completed, not dead code that never ran.
 
-**Not fixed here**: it touches the signing path, and which of the two repairs is right is a judgement
-about how the writer should reach the rule at all.
+**Is `publication_key()` the only copy now? Yes.** `build_inventory.py` calls it; nothing else
+implements it. There was no third copy, and after this there is one.
+
+**What removing its effect left behind:** the two things line 440's comment already said the function
+keeps — the destination, and the `--ephemeral` trust-domain refusal. Neither reads `material`. The
+*no key at all* refusal is not repeated either: `publication_key()` raises it with the same words from
+the module that owns the path, so the message names the file the rule actually consulted.
+
+### How it is kept fixed, and why there are two guards
+
+**`test_no_module_outside_publication_key_imports_the_key_path`** — the part that carries this forward.
+**Broad rather than narrow, and that was checked before choosing**: the writer was the only importer of
+the name, and every other consumer reaches it as a module attribute, which is what makes it patchable.
+An **AST walk**, because `docs/ci.md` records two failures of this guard shape here — `"keep"` matching
+`keeps`, `sign(` matching inside `verify_signature(` — and verified the way both were found: by
+reintroducing the import and watching it go red.
+
+**`test_the_writer_consults_no_key_path_of_its_own`** — the behavioural half, and ⚠⚠ **written to survive
+the fix it proves.** A case that can never fail again is one the next reader deletes as noise, and the
+absence then reads as a passing check. So it asserts the *property* rather than the repair: **absence or
+non-use both satisfy it.** With no such name bound it passes trivially; if a future import binds one, the
+sentinel is installed and any use of it is red again. The static guard catches the import; this catches a
+*use*.
+
+⚠️ **Both were red on this laptop with the real key in place, and green after** — which is the whole
+point. Nothing was deleted, moved or renamed: `~/.boxscorepuzzle-signing-key` is the one secret that
+cannot be regenerated, and a test strategy needing it absent is one somebody eventually runs without
+putting it back.
 
 ---
 ## ⬜ 2026-08-23 — two on `MANIFEST_SCHEMA`, found while answering *which schema is that `1`*

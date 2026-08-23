@@ -59,7 +59,6 @@ from boxscore_forge.produce import Attempt, evidence_for, produce  # noqa: E402
 # copies of *which file holds the private key* is the one duplication in this repository that fails as
 # a five-month outage rather than as a bug.
 from boxscore_forge.publication_key import (  # noqa: E402
-    KEY_FILE,
     KEY_VARIABLE,
     publication_key,
 )
@@ -398,37 +397,32 @@ def key_and_destination() -> tuple[Ed25519PrivateKey, Path]:
     ephemeral = "--ephemeral" in sys.argv
     exported = os.environ.get(KEY_VARIABLE, "")
 
-    # ⚠️ **The variable, then the file** (v36-P3-29). An export is a deliberate act and keeps winning;
-    # the file is where the key lives, so a publish needs no export at all and the key can stop being
-    # inherited by every process on the machine. See `KEY_FILE`.
+    # ⚠⚠ **Where the key comes from is not decided here, and the second copy of that rule that used to
+    # live at this point is gone.** (2026-08-23) It was the live rule for one day — introduced
+    # 2026-08-21, superseded 2026-08-22 when `boxscore_forge.publication_key` was created and this
+    # function grew its `return publication_key(), OUT`. **The move added the call and left the original
+    # standing**, so the block went on computing `material` that nothing below it read.
+    #
+    # ⚠⚠ **Dead logic with two live effects, and both were invisible from this machine.** It read the
+    # operator's real private key into a discarded variable whenever `~/.boxscorepuzzle-signing-key`
+    # existed — and where it did not, it **raised before `publication_key()` was ever reached**, naming a
+    # path no caller had chosen. That is why the suite was green here and `main` was red in CI for three
+    # pushes: the branch taken depended on the home directory of whoever ran it.
     #
     # ⚠️ **`--ephemeral` weighs only the variable, and the asymmetry is the point.** The refusal below
-    # exists so the script never guesses which trust domain was meant — and an export says *publish for
+    # exists so the script never guesses which trust domain was meant — an export says *publish for
     # real* where a file in the home directory says only *this is where the key is kept*. Weighing the
-    # file too would make `--ephemeral` impossible on the one machine that has a key.
-    material = exported
-    if not material and not ephemeral and KEY_FILE.exists():
-        try:
-            material = KEY_FILE.read_text(encoding="utf-8").strip()
-        except OSError as error:
-            # Fail closed and say which file. An unreadable key file falling through to "unset" would
-            # report the wrong problem and invite exporting the secret to work around it.
-            message = f"{KEY_FILE} exists and could not be read: {error}"
-            raise SystemExit(message) from error
-
+    # file too would make `--ephemeral` impossible on the one machine that has a key. **That is this
+    # function's own rule and it stays**; the acquisition it used to sit beside was never its own.
     if ephemeral and exported:
         message = (
             f"--ephemeral was given and {KEY_VARIABLE} is set. Refusing to guess which trust "
             "domain was meant: unset the variable for a throwaway batch, or drop the flag to publish."
         )
         raise SystemExit(message)
-    if not material and not ephemeral:
-        message = (
-            f"no signing key: {KEY_VARIABLE} is unset and {KEY_FILE} does not exist. Publishing needs "
-            "the forge's private key, 64 hex characters. Pass --ephemeral to write a throwaway batch "
-            "outside the served directory."
-        )
-        raise SystemExit(message)
+    # ⚠️ **The *no key at all* refusal is not repeated here either.** `publication_key()` raises it, with
+    # the same words, from the module that owns the path — so the message names the file the rule
+    # actually consulted rather than one this function believed in. A copy here could only ever disagree.
 
     if ephemeral:
         key = Ed25519PrivateKey.generate()

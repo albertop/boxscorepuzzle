@@ -15,6 +15,7 @@ loosened by a convenience patch and noticed by nobody.
 fixture, or the repository.
 """
 
+import ast
 import pathlib
 import sys
 from collections.abc import Iterator
@@ -65,6 +66,34 @@ def elsewhere(tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> Iterat
     monkeypatch.setattr(keys, "KEY_FILE", path)
     monkeypatch.setattr(keys, "PINNED_PUBLIC_KEY", tmp_path / "pinned.hex")
     yield path
+
+
+_ABSENT = object()
+"""Sentinel for *the writer holds no key path at all*, which is the fixed shape."""
+
+
+class _ConsultedError(Exception):
+    """Raised by `_ExplodingPath` when the writer touches a key path of its own."""
+
+
+class _ExplodingPath:
+    """A stand-in for `Path` that refuses to be asked anything.
+
+    ⚠️ **It raises rather than returning `False`.** Returning a falsey answer would send the writer
+    down the *no key* branch and produce a refusal, which is a plausible outcome the test could mistake
+    for correct behaviour. An exception cannot be mistaken for anything.
+    """
+
+    def exists(self) -> bool:
+        message = "the writer called .exists() on a key path of its own"
+        raise _ConsultedError(message)
+
+    def read_text(self, *_args: object, **_kwargs: object) -> str:
+        message = "the writer called .read_text() on a key path of its own"
+        raise _ConsultedError(message)
+
+    def __str__(self) -> str:
+        return "<a path the writer should not have>"
 
 
 def _pin(material: str) -> str:
@@ -160,3 +189,103 @@ class TestWhatItRefuses:
 
         assert key.private_bytes_raw().hex() != elsewhere.read_text(encoding="utf-8").strip()
         assert destination != writer.OUT, "an ephemeral batch must not target the served directory"
+
+
+class TestTheWriterHoldsNoKeyPathOfItsOwn:
+    """⚠️⚠️ The four CI failures of 2026-08-23, made visible on the machine that has the key.
+
+    `main` was red for three consecutive pushes while the hook passed here every time, because
+    `key_and_destination()` consulted **its own imported `KEY_FILE`** — a path outside any test's
+    control. On this laptop that file exists, so the block read it and stayed quiet; on a runner it does
+    not, so the block raised before the code under test was reached and four assertions about the
+    temporary path failed.
+
+    **The hook cannot see that class of defect by construction**: it runs on the one machine whose home
+    directory makes the bad branch invisible. Leaving the repair to be proved by CI would leave the next
+    one waiting for a report nobody reads.
+
+    ⚠️ **Nothing here deletes, moves or renames `~/.boxscorepuzzle-signing-key`.** It is the one secret
+    in this project that cannot be regenerated (`docs/signing-keys.md`), and a test strategy that needs
+    it absent is one that will eventually be run by somebody who does not put it back.
+    """
+
+    def test_the_writer_consults_no_key_path_of_its_own(self, elsewhere: pathlib.Path) -> None:
+        """**Absence or non-use — either satisfies this, and that is deliberate.**
+
+        ⚠️⚠️ **It is written to survive the fix that makes it pass**, because a case that can never fail
+        again is one the next reader deletes as noise, and its absence then reads as a passing check.
+        The property is not *the import is gone*; it is **the writer never decides where the key lives**.
+        So:
+
+        - **Before the fix** the name is bound in the writer, this points it at a sentinel, and the dead
+          acquisition block calls `.exists()` on it. Red — **on this laptop, with the real key in place.**
+        - **After the fix** there is no such name to bind, the writer asks
+          `boxscore_forge.publication_key` and nothing else. Green.
+        - **If a future `from ... import KEY_FILE` reappears**, the name is bound again, the sentinel is
+          installed again, and any use of it is red again. The case has teeth after the repair, which is
+          the whole reason it is shaped this way rather than as *assert the import is absent*.
+
+        `test_no_module_outside_publication_key_imports_the_key_path` is the static half and catches the
+        import even when nothing reads it. This is the behavioural half: it catches a *use*.
+        """
+        held = getattr(writer, "KEY_FILE", _ABSENT)
+        if held is _ABSENT:
+            # The fixed shape: the writer holds no key path, so there is nothing that could be consulted.
+            return
+
+        monkeypatch_free_sentinel = _ExplodingPath()
+        try:
+            writer.KEY_FILE = monkeypatch_free_sentinel  # type: ignore[attr-defined]
+            with pytest.raises(SystemExit):
+                writer.key_and_destination()
+        except _ConsultedError as consulted:
+            pytest.fail(
+                f"{consulted}. `key_and_destination()` decides where the key lives instead of asking "
+                f"boxscore_forge.publication_key, so a machine without "
+                f"{elsewhere.name} in its home directory takes a different branch than this one."
+            )
+        finally:
+            writer.KEY_FILE = held  # type: ignore[attr-defined]
+
+
+def test_no_module_outside_publication_key_imports_the_key_path() -> None:
+    """⚠️⚠️ The half that carries this forward. **Broad, not narrow, and that was checked before choosing.**
+
+    The narrow form — *`write_reference_puzzles.py` must not import `KEY_FILE`* — closes the instance
+    and leaves the next writer free to reintroduce it. The broad form was available because **there are
+    no legitimate importers**: every other consumer reaches the value as a module attribute
+    (`keys.KEY_FILE`), which is what makes it patchable, and that is the point.
+
+    ⚠️ **An AST walk, not a text search.** `docs/ci.md` records two failures of this exact guard shape
+    here — `"keep" in text` matching `keeps`, and `sign(` matching inside `verify_signature(` — both
+    found only by deleting the thing and watching nothing break. A parsed `ImportFrom` cannot match the
+    tail of another name, and this one was verified the same way: by reintroducing the import and
+    confirming it goes red.
+
+    **What it is really protecting.** A `from ... import KEY_FILE` binds the value into the importer at
+    import time, so a test that patches the module patches something the importer never reads — the
+    defect is not the copy, it is that the copy is *unpatchable*. `docs/signing-keys.md` makes the file
+    the operator's real private key, so the unpatchable copy is one that reads production key material
+    on whichever machine happens to have it.
+    """
+    offenders: dict[str, list[int]] = {}
+    for path in sorted((_ROOT / "forge").rglob("*.py")):
+        if ".venv" in path.parts or path.name == "publication_key.py":
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        lines = [
+            node.lineno
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and (node.module or "").endswith("publication_key")
+            and any(alias.name == "KEY_FILE" for alias in node.names)
+        ]
+        if lines:
+            offenders[str(path.relative_to(_ROOT))] = lines
+
+    assert not offenders, (
+        f"KEY_FILE is imported by name in {offenders}. Importing it binds the value at import time, so "
+        f"patching boxscore_forge.publication_key patches something that module never reads — and the "
+        f"unpatched value is the operator's real signing key on any machine that has one. Reach it as "
+        f"`publication_key.KEY_FILE`, or call `publication_key()` and let it own the rule."
+    )
