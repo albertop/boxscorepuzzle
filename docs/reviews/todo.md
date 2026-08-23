@@ -14,12 +14,26 @@ FAILED tests/test_signing_key_acquisition.py::TestWhatItRefuses::test_neither_so
 FAILED tests/test_signing_key_acquisition.py::TestWhatItRefuses::test_an_unreadable_key_file_is_an_error_rather_than_a_missing_key
 ```
 
-### ⚠️⚠️ Why they pass here: they read the operator's own key file
+### ⚠️⚠️ CORRECTED 2026-08-23 - the conclusion held, the mechanism I wrote did not
 
-The `elsewhere` fixture patches **`publication_key.KEY_FILE`**. `write_reference_puzzles.py` does
-`from boxscore_forge.publication_key import KEY_FILE`, which binds the value into **the writer's own
-namespace**, and `key_and_destination()` reads that binding. Patching the module changes nothing it
-consults. Demonstrated:
+**The first version of this entry said the four tests "go green having exercised the real key instead of
+the throwaway one the fixture wrote." That is false, and it is kept here named as false** because the
+shape recurs: a mechanism inferred from a failure message, plausible, written down without being run.
+**It was corrected by instrumenting it**, which is the only thing that could have.
+
+**What is actually there.** `key_and_destination()` carries **a complete second copy of the acquisition
+rule** at lines 398-430, reading the writer's own imported `KEY_FILE`. It computes `material` - and
+`material` is **never used again**. Line 444 is `return publication_key(), OUT`: the real rule runs
+afterwards and reads the *module* global, which is what the fixture patches.
+
+So the duplicate is **dead logic with two live effects**:
+
+- On this laptop `writer.KEY_FILE` exists, so it **opens and reads the operator's real private key** into
+  a variable that is discarded. Then `publication_key()` runs against the patched path and the
+  assertions are satisfied by the fixture's throwaway key, exactly as intended.
+- On a runner the file is absent, so the same block **raises before `publication_key()` is ever
+  reached**, with a message naming a path the test did not choose. Four assertions about the temporary
+  path then fail.
 
 ```
 writer.KEY_FILE           : C:\Users\aperd\.boxscorepuzzle-signing-key
@@ -27,16 +41,15 @@ publication_key.KEY_FILE  : C:\Users\aperd\.boxscorepuzzle-signing-key
 after patching the module, writer still says: C:\Users\aperd\.boxscorepuzzle-signing-key
 ```
 
-**On this laptop that file exists** - 64 bytes, the operator's real private key - so `KEY_FILE.exists()`
-is true, the writer reads it, and the tests go green **having exercised the real key instead of the
-throwaway one the fixture wrote.** On a runner the file is absent, so the same code takes the refusal
-path and four assertions about the *temporary* path fail.
+⚠️⚠️ **The conclusion is unchanged and is sharper for it: the suite passes here only because the real key
+file happens to exist.** Its presence is what keeps the vestigial block quiet long enough for execution
+to reach the code under test. **The hook cannot see that, because the hook runs where the key is.**
 
-⚠️⚠️ **So the green is worse than the red.** The red is a correct report about a broken test. The green is
-a test suite that reaches for production key material whenever it happens to be present - which section
-33 exists to prevent, and which the fixture's own docstring says it is avoiding: *"the alternative is
-putting the real private key in a test, which section 33 forbids and which is the thing this item is
-about."*
+⚠️ **And the duplicate is a leftover.** The rule moved to `boxscore_forge.publication_key` on 2026-08-22;
+line 440's own comment says *"This function keeps what is genuinely its own: choosing the destination,
+and the `--ephemeral` trust domain"* - while forty lines above it are still doing the acquisition it
+says it no longer keeps. **A mechanism kept past the problem it solved**, which is a rule this project
+already carries.
 
 ### ⚠️⚠️ The comment above the patch describes this defect and the code kept it
 
@@ -56,6 +69,9 @@ paid rather than described.
 
 ### ⬜ What a fix has to decide, and it is not obvious
 
+- ⚠️ **The correction above changes the options.** The duplicate's result is discarded, so a third
+  possibility exists that the first version of this entry could not see: **delete the vestigial block**
+  rather than patch around it. That is not a repair to the test setup at all.
 - **Patch what the reader reads**, or stop the writer importing the name and have it call through the
   module. The second removes the class; the first re-arms it on the next `from ... import`.
 - ⚠️⚠️ **And a test that only fails on a machine without the key is not enough.** Whatever is done, there
