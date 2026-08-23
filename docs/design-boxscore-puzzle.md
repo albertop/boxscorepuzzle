@@ -1584,10 +1584,10 @@ below that the merchant of record was doing is now either Stripe's, the operator
 - **Now the operator's:** being the legal seller, **chargeback liability**, and **billing support**. That
   last one was called *decisive* below and the point still stands — most tickets in a subscription
   business are billing. It is now a solo-support cost rather than a delegated one.
-- **Now conditional: EU VAT.** ⚠️ This is the live edge of the decision. Stripe Tax *computes*; it does
-  not become the seller. **If EU sales ever reach a real volume, the registration and remittance
-  obligation is the operator's**, and that is exactly what the 2% was buying. The premise this rests on
-  is *no meaningful European market* — so **EU revenue share is the number that would reopen it**.
+- **EU VAT: closed 2026-08-22, not conditional.** Stripe Tax handles US sales tax and **no European is
+  subscribing to a baseball puzzle.** This was written as an open condition with EU revenue share as the
+  trigger; the operator's answer is that the trigger will not fire, and treating a market that does not
+  exist as a live edge is analysis for its own sake.
 
 ⚠️ **And a related sentence in §16 stays true and is not part of this change:** *with users in Spain and
 the EU, GDPR applies.* GDPR follows the users, not the seller of record, so it was never something the
