@@ -43,6 +43,7 @@ already been corrected and this one had not, which is the harder half of a stale
 """
 
 import argparse
+import json
 import sys
 import time
 from collections import Counter
@@ -75,6 +76,7 @@ from boxscore_forge.publication_key import publication_key  # noqa: E402
 # *all checks passed* was describing the file as it was, and the fix is what broke it.
 from boxscore_package.format import Package  # noqa: E402
 from boxscore_package.format import write as write_package  # noqa: E402
+from boxscore_package.signing import sign_manifest  # noqa: E402
 
 CALENDAR = _ROOT / "forge" / "calendar.json"
 """⚠️ **Committed, unlike the packages** (`docs/calendar.md`). §21 makes the assignment *fixed and never
@@ -299,6 +301,63 @@ def _fill(
     return calendar
 
 
+MANIFEST_SCHEMA = 1
+
+DAYS = "days"
+"""Where the per-date pointers go, inside the generation.
+
+⚠️⚠️ **These are not deployed to the served root.** A pointer is named by its date and a date is not a
+secret, so anything that can add one day to today can read tomorrow's — which is the whole leak A4.2
+exists to close (`docs/calendar.md`). **A daily job copies one of them out**, and only that one is
+reachable. The job needs no key: every pointer is signed here, at generation."""
+
+
+def write_pointers(calendar: Calendar, generation: str, out: Path, key: Ed25519PrivateKey) -> int:
+    """One signed pointer per date: *this puzzle is this date's, and the forge says so.*
+
+    ⚠️ **This is the client's whole set-integrity guarantee**, and it replaces a manifest listing every
+    id. `sign_manifest`'s own docstring says a per-package signature proves each puzzle genuine and
+    **only the manifest proves the set is** — so dropping the list without this would leave a swapped
+    but genuine package undetectable. A pointer signs the *pairing*, which is what the client depends on.
+
+    ⚠️ Voided dates get no pointer. There is nothing to serve on a date whose puzzle was withdrawn, and
+    writing one would make a withdrawn assignment fetchable.
+    """
+    days = out / DAYS
+    days.mkdir(parents=True, exist_ok=True)
+    written = 0
+    for entry in calendar:
+        if entry.status != "active":
+            # ⚠️⚠️ **Removed, not merely skipped.** Skipping was the first version and a test caught it:
+            # a date voided *after* its pointer was written kept the old file on disk, and the daily
+            # copy would have served a withdrawn puzzle. **Not writing something is not the same as
+            # unpublishing it** — the same distinction §21 draws when it says a voided date keeps its
+            # assignment and stops counting.
+            (days / f"{entry.date}.json").unlink(missing_ok=True)
+            continue
+        pointer = sign_manifest(
+            {"date": entry.date, "puzzle_id": entry.puzzle_id, "generation": generation, "schema": MANIFEST_SCHEMA},
+            key,
+        )
+        (days / f"{entry.date}.json").write_text(json.dumps(pointer, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        written += 1
+    return written
+
+
+def write_manifest(generation: str, out: Path, key: Ed25519PrivateKey) -> int:
+    """The signed record that this generation is whole. **`serve` and the operator read it; the browser
+    never does** (`docs/calendar.md`).
+
+    ⚠️ Built from the files on disk rather than from the calendar, deliberately: the calendar says what
+    was *assigned* and this says what was *written*. Generating both from one list would make the
+    manifest agree with the calendar by construction and check nothing about the deployment.
+    """
+    ids = sorted(path.stem for path in out.glob("*.json"))
+    document = sign_manifest({"generation": generation, "puzzles": ids, "schema": MANIFEST_SCHEMA}, key)
+    (out / "manifest.json").write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    return len(ids)
+
+
 def audit(calendar: Calendar) -> None:
     """Assert what the calendar is, after it is built. **Never printed and believed.**
 
@@ -411,6 +470,12 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     _say(f"  attempts by outcome: {dict(batch.counts)}")
     _say(f"  refusals by check: {dict(batch.refusals) or 'none'}")
     audit(calendar)
+
+    # ⚠️ Written after the audit, never before: a manifest over a calendar that failed its quotas would
+    # be a signed statement that a wrong set is whole.
+    packages = write_manifest(out.name, out, key)
+    pointers = write_pointers(calendar, out.name, out, key)
+    _say(f"  manifest: {packages} packages; {pointers} dated pointers in {DAYS}/")
 
     if filled < len(wanted):
         # ⚠️⚠️ **The work is kept and the run still fails.** (v38-P2-01) This printed a warning and exited

@@ -114,12 +114,12 @@ need a database), not as an oversight.
   **✔ Confirmed at volume 2026-08-22:** the real 150-board run spent 566 more attempts and the gate
   refused **none of them**. Roughly **716 attempts, zero certification refusals**, which stops being a
   small-sample result.
-- ⚠️ **A2.3 NOT done, and the successful run hides it.** `build()` writes the calendar **once, after the
+- ✔ **A2.3 done.** The calendar is written after every assignment; a test interrupts the run at board 4 of 10 and requires the three already made to be on disk. *Previously:* ⚠️ **NOT done, and the successful run hides it.** `build()` writes the calendar **once, after the
   loop**. A crash at board 140 of 150 leaves 140 signed packages on disk and **loses every assignment**,
   because nothing was written yet. What works today is the *short-run* case — the run finishes, keeps its
   work, and exits non-zero (v38-P2-01) — which is not the same thing as surviving a crash. **Checkpoint
   the calendar as it goes.**
-- ⬜ **A2.4 not asserted.** §21 needs the same game to yield the same puzzle id, and nothing runs a slice
+- ✔ **A2.4 done.** The same slice built into two calendars must produce the same ids in the same order. *Previously:* ⬜ **not asserted.** §21 needs the same game to yield the same puzzle id, and nothing runs a slice
   twice and compares. Trusting `puzzle_id()` is the thing the item says not to do.
 - **Done when:** one command produces N validated packages with a recorded survival rate, and running it
   twice produces no duplicates.
@@ -149,7 +149,7 @@ pre-1950 allowance, and the quota assertions.
   level opens with, so no two Tuesdays start the same way.
 - ✔ **A3.3 done.** `extend()` refuses a game the calendar has already spent, over the whole book and
   including voided entries. Verified on the real batch: **150 dates, 150 distinct games.**
-- ❌ **A3.4 NOT implemented — and the inventory built on 2026-08-22 violates it by seven times.**
+- ✔ **A3.4 done, after violating it by seven times.** The draw is per era now and the dates are spread; the rebuilt calendar is 7 pre-1950 of 150 at 21 and 22 days apart. *The finding, kept because the shape recurs:* ❌ **the inventory built earlier that day violated it by seven times.**
 
   §6 is explicit and still decided: *pre-1950 boards must not exceed 5% of what the player sees*,
   roughly eighteen a year, so that Ruth is an **event rather than the scenery**. The batch is
@@ -163,7 +163,7 @@ pre-1950 allowance, and the quota assertions.
   ⚠️ **Nothing caught it.** Not the gate, not the four layers, not the calendar's own refusals — a
   board from 1913 is perfectly valid and so is a calendar full of them. It was found by printing the
   decade distribution and reading it, which is the only thing that has ever found this class here.
-- ⬜ **A3.5 not implemented, and its absence is exactly why A3.4 went unnoticed.** The item says assert
+- ✔ **A3.5 done.** `audit()` refuses a calendar over the era ceiling or carrying a repeated game, date or puzzle id, and it runs before the manifest is written. *Previously:* ⬜ **not implemented, and its absence is exactly why A3.4 went unnoticed.** The item says assert
   the quotas after construction rather than print them and believe them. There is no assertion, so the
   run reported `assigned 150 of 150` and was wrong about what it had assigned.
 - **Done when:** five months of dates are assigned **within every quota**, the guard rejects a second
@@ -191,7 +191,7 @@ pre-1950 allowance, and the quota assertions.
 ⚠️ **A4 is not the end of group A.** What A1–A4 produce is one batch, built by whoever had the whole
 pipeline in their head that week. **A5 is what makes it a process.**
 
-### A5. The runbook — `docs/runbook-inventory.md`
+### ✔ A5. The runbook — **written and followed literally, 2026-08-22**
 
 **How to add new games to the app**, written for the person who will actually run it: **the operator,
 three months later, having forgotten all of it.** That is not a rhetorical framing — §33 alerts below
@@ -227,7 +227,13 @@ whatever is obvious today will not be obvious then.
   somebody who is unsure whether a second run will duplicate things will hesitate at exactly the moment
   the runway is short.
 
-⚠️⚠️ **A runbook that has never been followed literally is a guess.** It gets executed once, from a clean
+⚠️✔ **Followed literally on 2026-08-22, and it changed step 5.** The deploy step said *copy the generation
+directory to the VPS* and named only the manifest and the pointers as private — **the directory holds all
+150 packages.** It would have published the archive: the hole `calendar.md` exists to close, reintroduced
+in the instructions for closing it, and invisible while writing because every individual sentence was
+true.
+
+⚠️ **A runbook that has never been followed literally is a guess.** It gets executed once, from a clean
 checkout, by doing exactly what it says and nothing the author remembers — and corrected wherever it was
 wrong. **The same rule as every other instrument here: the version that has not been run is not evidence.**
 

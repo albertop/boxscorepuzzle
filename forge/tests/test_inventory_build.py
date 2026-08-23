@@ -15,6 +15,7 @@ the bookkeeping and a test that needs a DSN is a test that never runs in CI.
 """
 
 import importlib.util
+import json
 import sys
 from dataclasses import dataclass
 from datetime import date
@@ -24,8 +25,25 @@ from types import ModuleType
 
 import pytest
 
+from boxscore_forge.calendar import void
+
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 _TODAY = date(2026, 9, 1)
+
+
+def _key() -> object:
+    """A throwaway signing pair. ⚠️ The real key never enters a test (§33) and nothing here needs it:
+    a signature is verified against the public half of whatever signed it."""
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: PLC0415
+
+    return Ed25519PrivateKey.generate()
+
+
+def _generation(tmp_path: Path) -> Path:
+    """The one generation directory this run wrote."""
+    generations = sorted((tmp_path / "forge" / "inventory").iterdir())
+    assert len(generations) == 1, f"expected one generation, found {[g.name for g in generations]}"
+    return generations[0]
 
 
 def _builder() -> ModuleType:
@@ -77,7 +95,7 @@ class TestAShortRunIsAFailure:
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=20)
 
-        builder.build(10, date(2026, 9, 2), object(), _TODAY)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 10
 
@@ -86,7 +104,7 @@ class TestAShortRunIsAFailure:
         _stub(builder, monkeypatch, tmp_path, available=4)
 
         with pytest.raises(SystemExit, match="unfilled"):
-            builder.build(10, date(2026, 9, 2), object(), _TODAY)
+            builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
     def test_a_short_run_still_keeps_the_boards_it_made(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # ⚠️⚠️ **The half that "treat a short build as failure before writing" would have broken.**
@@ -96,7 +114,7 @@ class TestAShortRunIsAFailure:
         _stub(builder, monkeypatch, tmp_path, available=4)
 
         with pytest.raises(SystemExit):
-            builder.build(10, date(2026, 9, 2), object(), _TODAY)
+            builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 4, "the partial batch was discarded"
 
@@ -105,10 +123,10 @@ class TestAShortRunIsAFailure:
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=4)
         with pytest.raises(SystemExit):
-            builder.build(10, date(2026, 9, 2), object(), _TODAY)
+            builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         _stub(builder, monkeypatch, tmp_path, available=20)
-        builder.build(10, date(2026, 9, 2), object(), _TODAY)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 10
 
@@ -126,9 +144,9 @@ class TestTheWindowIsIdempotent:
     ) -> None:
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=40)
-        builder.build(10, date(2026, 9, 2), object(), _TODAY)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
-        builder.build(10, date(2026, 9, 2), object(), _TODAY)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 10
 
@@ -137,9 +155,9 @@ class TestTheWindowIsIdempotent:
     ) -> None:
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=40)
-        builder.build(10, date(2026, 9, 2), object(), _TODAY)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
-        builder.build(10, date(2026, 9, 12), object(), _TODAY)
+        builder.build(10, date(2026, 9, 12), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 20
 
@@ -167,7 +185,7 @@ class TestItRefusesToTouchThePast:
         _stub(builder, monkeypatch, tmp_path, available=20)
 
         with pytest.raises(SystemExit, match="extends and never rewrites"):
-            builder.build(10, _TODAY, object(), _TODAY)
+            builder.build(10, _TODAY, _key(), _TODAY)
 
 
 class TestTheEraQuotaIsSampledRatherThanHoped:
@@ -179,7 +197,7 @@ class TestTheEraQuotaIsSampledRatherThanHoped:
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=200)
 
-        builder.build(100, date(2026, 9, 2), object(), _TODAY)
+        builder.build(100, date(2026, 9, 2), _key(), _TODAY)
 
         cal = builder.read(builder.CALENDAR)
         pre = [e for e in cal if int(e.game_id[3:7]) < builder.DIVIDE]
@@ -245,7 +263,7 @@ class TestTheCalendarIsCheckpointed:
 
         monkeypatch.setattr(builder, "_hardest_target", explode)
         with pytest.raises(KeyboardInterrupt):
-            builder.build(10, date(2026, 9, 2), object(), _TODAY)
+            builder.build(10, date(2026, 9, 2), _key(), _TODAY)
 
         assert len(builder.read(builder.CALENDAR)) == 3, "the crash lost assignments already made"
 
@@ -265,7 +283,87 @@ class TestItIsDeterministic:
             _stub(builder, monkeypatch, tmp_path, available=20)
             monkeypatch.setattr(builder, "CALENDAR", where / "calendar.json")
             monkeypatch.setattr(builder, "_ROOT", where)
-            builder.build(5, date(2026, 9, 2), object(), _TODAY)
+            builder.build(5, date(2026, 9, 2), _key(), _TODAY)
             got.append([e.puzzle_id for e in builder.read(builder.CALENDAR)])
 
         assert got[0] == got[1], "the same games produced different puzzle ids on a second run"
+
+
+class TestWhatTheClientMaySee:
+    """⚠️⚠️ **A4.2.** `manifest.json` listed every published puzzle, was public and never cached. With
+    six reference packages that was harmless; **with a calendar behind it, listing tomorrow's id hands
+    out tomorrow's puzzle.**
+
+    The split is in `docs/calendar.md`: the manifest says *this generation is whole* and is read by
+    `serve`, never the browser; a **signed pointer per date** says *this id is this date's*, which is the
+    one guarantee the client needs. Dropping the list without the pointers would have left a swapped but
+    genuine package undetectable — `sign_manifest`'s own docstring says only the manifest proves the set.
+    """
+
+    def test_every_active_date_gets_a_signed_pointer(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+
+        cal = builder.read(builder.CALENDAR)
+        days = _generation(tmp_path) / builder.DAYS
+        for entry in cal:
+            pointer = json.loads((days / f"{entry.date}.json").read_text(encoding="utf-8"))
+            assert pointer["puzzle_id"] == entry.puzzle_id
+            assert pointer["signature"], "a pointer without a signature proves nothing about the pairing"
+
+    def test_a_pointer_carries_one_date_and_never_a_list(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ⚠️ The whole point. A pointer that grew a `puzzles` array would be the manifest again, served
+        # to the browser, with the leak restored and nothing to notice it.
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+
+        days = _generation(tmp_path) / builder.DAYS
+        pointer = json.loads(next(days.glob("*.json")).read_text(encoding="utf-8"))
+
+        assert set(pointer) == {"date", "puzzle_id", "generation", "schema", "signature"}
+
+    def test_a_voided_date_gets_no_pointer(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # There is nothing to serve on a date whose puzzle was withdrawn, and writing one would make a
+        # withdrawn assignment fetchable.
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+        cal = builder.read(builder.CALENDAR)
+        gone = cal[0].date
+
+        # ⚠️ `void` comes from the calendar module, not through the script. Importing it into
+        # `build_inventory` so a test could reach it would put a name in production code whose only
+        # caller is a test — and ruff would call it unused, correctly.
+        builder.write_pointers(void(cal, gone), "gen", _generation(tmp_path), _key())
+
+        assert not (_generation(tmp_path) / builder.DAYS / f"{gone}.json").exists()
+
+    def test_the_manifest_is_read_from_disk_and_not_from_the_calendar(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ Built from the files present, deliberately. The calendar says what was *assigned* and the
+        manifest says what was *written*; generating both from one list would make them agree by
+        construction and check nothing about the deployment."""
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+        out = _generation(tmp_path)
+        (out / "an-extra-package.json").write_text("{}", encoding="utf-8")
+
+        builder.write_manifest("gen", out, _key())
+
+        listed = json.loads((out / "manifest.json").read_text(encoding="utf-8"))["puzzles"]
+        assert "an-extra-package" in listed, "the manifest describes the calendar rather than the disk"
+
+    def test_the_manifest_never_carries_a_date(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        # ⚠️ The manifest is the generation's integrity record. A date in it would make the *file the
+        # browser must not read* the only place the schedule lives, which is the leak wearing a new hat.
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+
+        text = (_generation(tmp_path) / "manifest.json").read_text(encoding="utf-8")
+        for entry in builder.read(builder.CALENDAR):
+            assert entry.date not in text, f"{entry.date} is in the manifest"
