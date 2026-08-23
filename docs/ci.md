@@ -135,6 +135,47 @@ The hook starts a `keep-test-pg` container if one is not already up; CI uses a s
 
 ---
 
+## ⚠⚠ What the hook checks is not what the push delivers — established 2026-08-23
+
+**The hook runs before the transfer, against the working tree, and the transfer sends whatever the
+branch tip is when it gets there.** Those are three different moments, and the suite takes thirteen
+minutes with coverage.
+
+**The evidence, because this was first mistaken for a second push.** GitHub records **one** PushEvent:
+
+```
+2026-08-23T14:42:29Z  actor=albertop  before=fc61c9f  head=942393a
+```
+
+The local remote-tracking reflog records `update by push` → **`2efeb52`** at 14:42:27Z, two seconds
+earlier. **Same push. It reported one commit and delivered three.** Two commits made *while the hook was
+running* went to `main` in a push that had been invoked before they existed.
+
+✔ **So there is no delivery path that skips the hook**, which was the thing worth ruling out: one push,
+one hook run, `git worktree list` shows a single tree, and there is no `post-commit` hook, alias or
+autopush anywhere in the configuration.
+
+⚠⚠ **What there is instead is a hook whose subject is not its payload.** `.githooks/pre-push` reads
+stdin only to see whether `refs/heads/main` is among the refs — **it discards both SHAs**, they are
+`_local_sha` and `_remote_sha` — and then runs the suite against `$(git rev-parse --show-toplevel)`.
+So it does not test the commits being pushed. It tests **whatever is on disk while it runs**, and on a
+thirteen-minute run that is a moving target: the tree gained two commits under it.
+
+**Nothing broke here** — the two were documentation and a `todo.md` entry, and the suite that mattered
+had already passed. **The guarantee is weaker than it reads**, which is the finding: *the hook passed*
+does not mean *what was pushed passed*.
+
+⬜ **Not fixed, and the repair is not obvious.** Checking out the pushed SHA into a temporary tree would
+make the hook test its payload and would also make it slower and stateful. Refusing to run when the tree
+is dirty or when HEAD moves mid-run is cheaper and narrower. **Which one is right depends on whether the
+hook is meant to gate a *push* or to check a *machine*,** and that is the same question the
+hook-primary arrangement above turns on — so it is recorded here rather than decided in passing.
+
+⚠️ **The operational rule that costs nothing meanwhile: do not commit while a push is running.** It was
+done twice on 2026-08-23, by me, without noticing.
+
+---
+
 ## The guard
 
 `forge/tests/test_the_hook_runs_what_ci_runs.py` asserts that the hook and the push workflows check

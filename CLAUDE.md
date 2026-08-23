@@ -523,6 +523,19 @@ looked specific. Second instance in this project, after the `sed` that renamed a
 **Rewrites across call sites are verified by running, never by reading the diff**, and a pattern that
 anchors on a bare identifier needs a word boundary in front of it or it is matching substrings.
 
+⚠⚠ **Fourth instance, 2026-08-23, and the setting is the point: it was in an instrument built during
+work whose subject was this exact failure.** A watcher polling a push log for completion matched
+`failed` — **inside `1 xfailed`** — and reported the push finished while the browser suite still had to
+run. Written in the same session that fixed `"keep"` matching `keeps` and while auditing the `sign(`
+case, by someone who had just written the rule down twice.
+
+**So knowing the rule does not apply it.** All four instances are the same shape and the first three
+were all *known* when the fourth was written. What distinguishes the ones that were caught is not
+knowledge but **anchoring**: a word boundary around `failed` costs nothing, and the two guards written deliberately that
+day — `(?<![\w-])` around a tree name, an `ast.ImportFrom` walk — both survived mutation, while the
+throwaway one-liner did not. **The discipline is not remembering the rule; it is that a pattern gets an
+anchor by default, including in code that will be deleted in an hour.**
+
 **Verify against the real artifact, not against what you believe you wrote.** Parse the file before
 running three hours of compute against it.
 

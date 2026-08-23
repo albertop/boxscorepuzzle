@@ -1,5 +1,30 @@
 # Review backlog
 
+## ⬜ 2026-08-23 - the pre-push hook does not test the commits it is gating
+
+**`docs/ci.md` carries the full account and the evidence.** Recorded here because it is an open decision,
+not because the reasoning belongs in two places.
+
+**One push delivered three commits and reported one.** GitHub logs a single PushEvent,
+`before=fc61c9f head=942393a`; the local reflog says `update by push` to `2efeb52` two seconds earlier.
+Two commits made **while the hook was running** reached `main` in a push invoked before they existed.
+
+⚠️ **No delivery path skips the hook** - one tree, one push, no `post-commit` hook, no alias, no autopush.
+That was the thing worth ruling out and it is ruled out.
+
+⚠️⚠️ **The gap is different and smaller and real:** the hook discards the SHAs it is handed and runs the
+suite against the working tree, so it tests **what is on disk while it runs** rather than what is being
+pushed. On a thirteen-minute run the tree moves. *The hook passed* does not mean *what was pushed
+passed*.
+
+⬜ **The repair is a judgement, which is why it is not made here.** Checking the pushed SHA into a
+temporary tree makes the hook test its payload, and makes it slower and stateful. Refusing to run when
+HEAD moves mid-run is cheaper and narrower. **Which is right depends on whether the hook gates a push or
+checks a machine** - the same question the hook-primary arrangement turns on.
+
+⚠️ **Costs nothing meanwhile: do not commit while a push is running.** Done twice that day, unnoticed.
+
+---
 ## ❌❌ 2026-08-23 - `main` has been red in CI for days, and four tests pass here by reading the real signing key
 
 **Found while checking which workflows a push runs.** The `forge` workflow is `completed/failure` on
