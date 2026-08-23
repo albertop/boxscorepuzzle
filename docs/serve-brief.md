@@ -639,6 +639,19 @@ something on the server sets it too.
 
 Recorded here as they are made, with the date and the reason.
 
+**2026-08-22 — the reader compares the line score and requires the reveal.** (v39-P2-02) Both halves
+of the line score went through the same reader, correctly, and `agreesWithTheAnswer()` compared
+everything except them — two places that must agree, inside the function whose whole job is checking
+that they do. One edited digit made a valid daily arithmetically impossible while the checker went on
+grading against the untouched solution: a board nobody can solve, refusing every correct answer, with
+nothing to say anything was wrong.
+
+⚠️ **And `reveal` is required rather than optional.** It was optional while nothing drew it, which was
+defensible then and stopped being defensible the moment something did — and nothing went red. An absent
+reveal let a player solve the whole board and reach a payoff panel with **the boxscore missing**, on the
+one screen they reach once. The now-unreachable `if (reveal)` in `finish.js` was **deleted** rather than
+kept as a guard that cannot fire.
+
 **2026-08-22 — an event's id is the device and the puzzle, not a UUID.** `keep-api.md` asked only that
 the id be made when the event is created rather than when it is sent; `${device_id}:${puzzle_id}`
 satisfies that more strongly, because a board reopened after a reload produces **the same id** and the

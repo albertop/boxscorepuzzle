@@ -14,8 +14,8 @@ it. ⚠️ Where the two differ, this file says so.
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
 | **B** the hand-solve gate | **B1 ✔ mine and done** | B2–B4 are the operator's: afternoons of solving by hand |
-| **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; 36 browser tests, every mutation caught |
-| **D** the data layer | ✔ **met** | `keep/`, 71 tests, 100% on both engines |
+| **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
+| **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ⬜ | **A and D are both done; nothing blocks it** |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
@@ -52,37 +52,49 @@ rate.
 
 ## Where we actually are
 
+⚠️ **Kept current rather than as written.** This table was a snapshot of the morning the plan was
+written, and it stayed that way for a day while five of its rows stopped being true — which is the
+defect v39-P3-01 found in `CLAUDE.md`, in the file people come to for the state of the work. **Last
+checked against the tree: 2026-08-22, after v39.**
+
 | | state |
 |---|---|
-| **Client** | landing, tutorial, board, keypad, hints, reference sheet, check, reveal, persistence — **built and tested** (236 browser tests) |
+| **Client** | landing, tutorial, board, keypad, hints, reference sheet, check, reveal, persistence — **built and tested** (283 browser tests) |
 | **Packages** | schema 5, signed, four validation layers, `certify_for_publication()` — **built** |
-| **Inventory** | **six reference puzzles**, one generation, hand-picked |
-| **Calendar** | **does not exist** |
-| **Batch generation** | **does not exist.** `write_reference_puzzles.py` publishes a hand-chosen set |
-| **`/today`** | **does not exist.** `daily.js` reads the manifest and takes an id from the query string |
-| **Device UUID** | **does not exist** |
-| **Event upload** | **does not exist.** `game.record()` produces the C7 event; nothing sends it |
-| **Data layer** | **does not exist.** Designed in `data-layer.md` |
-| **Share PNG** | **does not exist.** The button is drawn and `disabled` |
-| **Deployment** | **does not exist.** `compose.yaml` is a dev server on a mounted tree, no image, no nginx |
+| **Inventory** | **six reference puzzles** plus whatever `build_inventory.py` has produced; the calendar is the authority |
+| **Calendar** | ✔ **built.** `boxscore_forge.calendar` — extend, void, replace, `for_serving`; committed to Git because it cannot be regenerated |
+| **Batch generation** | ✔ **built.** `forge/scripts/build_inventory.py`, with `audit()` asserting era, placement and repeats |
+| **`/today`** | ⬜ **does not exist.** `daily.js` reads the manifest and takes an id from the query string. **Group E** |
+| **Device UUID** | ✔ **built.** `serve/engine/device.js`, its own key and its own lifetime |
+| **Event upload** | ✔ **built.** `serve/engine/outbox.js` queues and drains; `report.js` reports uncaught errors |
+| **Data layer** | ✔ **built.** `keep/`, 77 tests at 100% on both engines |
+| **Share PNG** | ⬜ **does not exist.** The button is drawn and `disabled`. **Group G** |
+| **Deployment** | ⬜ **does not exist.** `compose.yaml` is a dev server on a mounted tree, no image, no nginx. **Group F** |
+| **Signed date pointers** | ✔ **built**, and ⚠️ **only the newest generation holds a complete schedule** — an older one was written before the later dates existed. That is what makes the newest generation the rotation's source |
 
-### ⚠️⚠️ Three facts about the current code that shape the plan
+### ✔ Three facts about the current code that shaped the plan — **all three closed 2026-08-22**
 
-**1. The publication path imports its loader from `discovery/`.** `write_reference_puzzles.py` does
+⚠️ **Kept rather than deleted, because they are why the groups are ordered the way they are.** Each one
+now says what closed it; the reasoning underneath is what stops the next plan being written against the
+documents instead of the tree.
+
+**1. ✔ Closed — the publication path imported its loader from `discovery/`.** `write_reference_puzzles.py` does
 `from measure import Loaded, load` — the SQL, the connection string, the era windows and the provenance
 predicate all live in `discovery/difficulty-metrics/measure.py`, outside `mypy --strict` and inside the
 ratcheted lint tree. The deferral is recorded in the file with its reason: **moving it is building the
 inventory pipeline, not renaming a module.** That is group A, and it is the first subtask rather than a
-cleanup at the end.
+cleanup at the end. ✔ *Done in A1: `boxscore_forge.pool`, `mypy --strict` clean, the ratchet down to 156.*
 
-**2. `game.record()` has no date.** C7 in `CLAUDE.md` lists *puzzle_id, date, duration, hints, errors,
+**2. ✔ Closed — `game.record()` had no date.** C7 in `CLAUDE.md` lists *puzzle_id, date, duration, hints, errors,
 highest technique*. The record has `puzzle_id, duration_ms, hints, errors, failed_checks,
 highest_technique, solved, assisted` — **no date of any kind.** A streak hangs off the calendar date and
 an archive play is a different date from the puzzle's; neither is recoverable later, and C7 is
-irreversible. **This is a group C subtask and it is cheap now.**
+irreversible. **This is a group C subtask and it is cheap now.** ✔ *Done in C2: both dates, on two
+different clocks, plus the device id and a null-and-claimable `account_id`.*
 
-**3. `build_pack.py` still targets chain and asserts fifty.** The generator targets a stall count; the
-pack producer is the last chain-targeted code in the tree. Group B cannot start against it as it stands.
+**3. ✔ Closed — `build_pack.py` targeted chain and asserted fifty.** The generator targets a stall
+count; the pack producer was the last chain-targeted code in the tree, and group B could not start
+against it. ✔ *Done in B1: re-axed onto stalls, and the fifty came from the superseded design.*
 
 ---
 
@@ -211,6 +223,29 @@ pre-1950 allowance, and the quota assertions.
 
 ⚠️ **A4 is not the end of group A.** What A1–A4 produce is one batch, built by whoever had the whole
 pipeline in their head that week. **A5 is what makes it a process.**
+
+### ⚠⚠ A6 — what v39 found in this group, after it was marked met (2026-08-22)
+
+**Two P1s, both reachable through the documented procedure, and both invisible on the first batch**
+because the first batch is one window built once. `docs/reviews/code_review_v39.md` has the report.
+
+- ✔ **A top-up signed old dates into the wrong generation.** `write_pointers` stamped the generation it
+  was currently writing onto **every** date, so the second run claimed generation-A dates lived in B —
+  where their package does not exist. `Entry.assigned` had carried the right answer since the calendar
+  existed and nothing read it. The parameter is **gone** now rather than corrected.
+- ✔ **A retry granted itself a fresh era allowance.** The quota and the spacing were computed over the
+  *gaps*, so A5's own instruction — *re-run it if it comes up short* — was the way to break A3.4: seven
+  pre-1950 boards became thirteen, one day apart. `_era_plan()` plans over the whole window and
+  reconciles with what the window already holds.
+- ✔ **`audit()` now asserts placement, not only the count.** A3.5 closed the count; nothing checked that
+  `spread()` had done its job, and seven early boards on seven consecutive days satisfy the ceiling and
+  defeat exactly what it is for. **Counting is not placing** — the same sentence `spread()` was written
+  under, one level up.
+
+⚠️ **What this says about A being *met*.** It is: the deliverable exists and the first batch is real.
+What the group had not been exercised on is its **second** run, which is the one the runbook describes
+and the one nobody had done. A group is met against the work it did, not against every future call of
+it — and that gap is where both P1s were.
 
 ### ✔ A5. The runbook — **written and followed literally, 2026-08-22**
 
@@ -553,14 +588,16 @@ which is the design working, not a gap.
 - ✔ **D3.1–D3.3 done.** Event upload. **D3.2** Client error reports. **D3.3** Health, running
   `SELECT 1 FROM <a known table> LIMIT 1` — ⚠️ testing that the query does not error, **not** the row
   count.
-- ✔ **Met, and verified against a real Postgres in Docker rather than skipped: 71 tests, 100% coverage.**
+- ✔ **Met, and verified against a real Postgres in Docker rather than skipped: 77 tests, 100% coverage.**
   Previously: the contract suite passes on both engines, the service refuses to start without a token
   and against a wrong schema version, and health goes red when the database is stopped.
 
 ### ✔ Status: **Deliverable D is met**
 
-**`keep` exists**: `keep/` beside `forge/` and `serve/`, **no runtime dependencies**, three routes, 71
-tests at 100% coverage across both engines.
+**`keep` exists**: `keep/` beside `forge/` and `serve/`, **no runtime dependencies**, three routes, 77
+tests at 100% coverage across both engines. ⚠️ Its Postgres arm **fails rather than skips**: without a
+server `PostgresStore` is 80% covered and the suite is 92%, under its own floor **while looking green**,
+so the floor only held on a machine that happened to have Docker running.
 
 ⚠️⚠️ **The mutation that survived is the one worth keeping.** `INSERT OR REPLACE` keeps exactly one row
 too, so **every count-based test passed with it** — while it overwrites the original with the retry's
@@ -570,6 +607,19 @@ is retrying — pinning both engines to the same *meaning* rather than the same 
 
 ⚠️ **The token is checked before the schema, and that order is asserted.** A missing token is the failure
 whose absence is silent; a wrong-shaped database at least shows up in a query error.
+
+⚠⚠ **v39-P2-01, closed 2026-08-22 — one bad row was an outage.** A failed statement leaves the Postgres
+transaction *aborted*, and Postgres then refuses every later statement on that connection. `keep` reuses
+one, so a single out-of-range integer took down every upload, every error report **and the health
+check**, until the process was restarted. Every statement rolls back and re-raises now — re-raises,
+because rolling back and reporting success would make a lost write look like a stored one and the client
+would drop it from its queue on the strength of that. The column's range is checked at the boundary too,
+so the ordinary cause never reaches the driver.
+
+⬜ **What is still missing there, and it is the operator's call:** `CLAUDE.md` asks for a *sanity check
+on client-reported durations so absurd values do not corrupt percentiles*. What exists is the column's
+range — twenty-five days — which is a fact about the schema rather than a judgement about the game. A
+ceiling on plausible play is a number that shapes the product (§7).
 
 ⬜ **What is not built here and belongs to F:** the Dockerfile, and the container running with its port
 unpublished.
@@ -754,10 +804,24 @@ everything — and G, which cannot be dropped for time.
 
 ---
 
-## What is open before starting
+## What was open before starting — four of five closed
 
-- ⬜ **B3's N and stratum quotas** (`beta-0.md` scope question 1).
-- ⬜ **A4.2 — what the manifest may reveal**, now that a calendar means there is a future to leak.
-- ⬜ **The data layer's name.** `keep` proposed.
-- ⬜ **Whether SQLite is supported or only convenient** (`data-layer.md` §2).
-- ⬜ **The API surface**, which no document has written down yet.
+| | |
+|---|---|
+| ⬜ **B3's N and stratum quotas** | **still open** (`beta-0.md` scope question 1). It is a gate on beta 0, and the number is the operator's |
+| ✔ **A4.2 — what the manifest may reveal** | closed, and the first answer was the smaller half. The manifest stopped listing the future; **the past is the product**, so the enforcement is which files are on a public path — today's and yesterday's, nothing else (`docs/calendar.md`) |
+| ✔ **The data layer's name** | `keep` |
+| ✔ **Whether SQLite is supported or only convenient** | a development convenience, **not supported**; a difference between the engines is a bug in the *tests* (`docs/keep-api.md`) |
+| ✔ **The API surface** | `docs/keep-api.md`, written before the service rather than after |
+
+---
+
+## What is open now — 2026-08-22, after v39
+
+| | whose call |
+|---|---|
+| ⬜ **B3's N and stratum quotas** | the operator's. It gates beta 0 |
+| ⬜ **Whether yesterday's puzzle counts for the streak** | decided — *it does not* — and E1b carries it; the code does not exist yet |
+| ⬜ **A plausible ceiling on a reported duration** | the operator's (§7). `CLAUDE.md` asks for the sanity check and it does not exist; what `keep` has is the column's range, which is twenty-five days. `docs/reviews/todo.md` |
+| ⬜ **Event retention** | indefinite because nobody has decided otherwise, recorded so the absence is not read as a decision (`docs/keep-api.md`) |
+| ⬜ **A second payment processor** | undecided, not rejected: *none until there is evidence of a blocked customer* |

@@ -127,28 +127,50 @@ nginx server block, certbot for the certificate, and a DNS record.
 
 ---
 
-## ⚠️ The large missing piece: calendar and inventory
+## ✔ The large missing piece: calendar and inventory — **built 2026-08-22**
 
-There are six reference puzzles. A daily game needs puzzles assigned to dates with months of runway, and
-**the forge has never produced a batch** — generation at volume, calendar construction, signed packaging
-in bulk.
+*Written when there were six reference puzzles and the forge had never produced a batch: generation at
+volume, calendar construction, signed packaging in bulk. It blocked everything else.*
 
-**Without it there is no *today's puzzle* that lasts more than a day, and it blocks everything else.**
+**It exists now.** `boxscore_forge.calendar` and `forge/scripts/build_inventory.py`, with `audit()`
+asserting the era ceiling, the three-week placement and no repeated game, date or puzzle id — and a
+runbook that produces the next five months (`docs/runbook-inventory.md`).
 
-Also missing: **the data layer** with the device UUID and event upload (designed in `data-layer.md`, not
-built), **the device UUID** specifically, **the share PNG** (designed in `serve-flow.md` §7b; the button
-exists and is `disabled`), and **the deployment**.
+⚠️ **The measured cost, because it was an unknown when this was written:** 100% yield on the boards
+drawn, ~22 minutes for 150, roughly 1,235 attempts, **zero certification refusals** — which is recorded
+in `todo.md` as an open question about the gate rather than as good news.
+
+⚠⚠ **And two defects reachable only on the *second* run, found by v39 after the group was marked met.**
+A top-up signed old dates into a generation their package is not in; a retry granted itself a fresh
+pre-1950 allowance, which made the runbook's own recovery instruction the way to break §6's ceiling. Both
+closed. **The group was met against the work it did, and the second run is the one nobody had done.**
+
+### Where the rest of that list stands
+
+| | |
+|---|---|
+| **The device UUID** | ✔ built — `serve/engine/device.js`, its own key and its own lifetime |
+| **The data layer** | ✔ built — `keep/`, 77 tests at 100% on both engines |
+| **Event upload** | ✔ built — `serve/engine/outbox.js`, queued, offline-first, one event per finished game |
+| **Uncaught client errors** | ✔ built — `serve/engine/report.js`, rate-limited two ways and unable to throw |
+| **The share PNG** | ⬜ **not built.** Designed in `serve-flow.md` §7b; the button exists and is `disabled` |
+| **The deployment** | ⬜ **not built.** No image, no nginx, no DNS |
+| **`/today` and `/p/<id>`** | ⬜ **not built.** The routes and the caching contract are decided in `serve-brief.md` and unimplemented |
 
 ---
 
 ## The order
 
-1. **Calendar and inventory** — blocks everything.
-2. **Device UUID** — asymmetric cost; every event before it exists is unattributable, and C7 is
-   irreversible.
-3. **The data layer**, against the Postgres already running.
-4. **Deployment.**
-5. **The share** — last to build, **held to the same standard as everything else in the milestone.**
+1. ✔ **Calendar and inventory** — blocks everything. **Done 2026-08-22.**
+2. ✔ **Device UUID** — asymmetric cost; every event before it exists is unattributable, and C7 is
+   irreversible. **Done 2026-08-22**, and the upload queue with it.
+3. ✔ **The data layer**, against the Postgres already running. **Done 2026-08-22** — `keep`.
+4. ⬜ **Serving for real**, then ⬜ **deployment**. *Not in the original list because `/today` was assumed
+   to come with the calendar; it does not, and it is where the two-public-paths rule becomes real code.*
+5. ⬜ **The share** — last to build, **held to the same standard as everything else in the milestone.**
+
+⚠️ **What is left is items 4 and 5, plus the hand-solve gate**, which is the operator's and is the one
+thing here that no command produces.
 
 ### ⚠️⚠️ The share is last and it does not get cut
 

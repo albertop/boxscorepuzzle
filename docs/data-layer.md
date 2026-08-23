@@ -6,11 +6,16 @@ before anything was built.
 ## ✔ Built 2026-08-22 — `keep/`, and what the build changed
 
 **The service exists**: `keep/` beside `forge/` and `serve/`, **no runtime dependencies**, three routes,
-71 tests at 100% coverage across both engines. `docs/keep-api.md` is the surface it was built against.
+77 tests at 100% coverage across both engines. `docs/keep-api.md` is the surface it was built against.
 
-**Verified against a real Postgres in Docker rather than skipped**, which is the whole reason the
-contract suite exists — the Postgres arm skips with a reason when there is no server, because a skip
-says *not checked* and a silent pass says *checked*.
+**Verified against a real Postgres in Docker**, which is the whole reason the contract suite exists.
+
+⚠⚠ **Its Postgres arm fails rather than skips, and that changed the day after it was written.** A skip
+is honest about itself and was still wrong here: without a server `PostgresStore` is **80%** covered and
+the suite is **92%**, under its own 95% floor **while looking green** — so the floor only held on a
+machine that happened to have Docker running, which is a guarantee true where it was written and nowhere
+else. The tempting repair was a fake connection; it would have reached 100% and proved nothing about
+Postgres. **Postgres is production; its store is tested against Postgres.**
 
 ⚠️⚠️ **One thing the build taught that the design did not contain.** `INSERT OR REPLACE` keeps exactly
 one row too, so **every count-based test passed with it** — and it overwrites the original with the
@@ -21,8 +26,25 @@ the same *meaning* rather than the same row count.
 ⚠️ **The token is checked before the schema, and the order is asserted**: a missing token is the failure
 whose absence is silent, while a wrong-shaped database at least surfaces in a query error.
 
+⚠⚠ **v39-P2-01, closed 2026-08-22 — one bad row was an outage, and the design did not contain this
+either.** A failed statement leaves the Postgres transaction *aborted*, and Postgres then refuses every
+later statement on that connection. `keep` reuses one, so a single out-of-range integer took down every
+upload, every error report **and the health check** — the endpoint that reports an outage was extending
+one past its cause — until the process was restarted.
+
+Every statement rolls back on failure and **re-raises**: rolling back and reporting success would make a
+lost write look like a stored one, and the client would drop it from its queue on the strength of that.
+The rollback repairs the *connection*; what happened to the row is still an error. The `INTEGER` range
+is checked at the boundary too, so the ordinary cause never reaches the driver.
+
+⬜ **What that still leaves open, and it is a product number rather than a bug** (§7): `CLAUDE.md` asks
+for a *sanity check on client-reported durations so absurd values do not corrupt percentiles*. The
+column's range is twenty-five days, so a duration far past absurd is still storable. There are no
+percentiles yet. `docs/reviews/todo.md`.
+
 ⬜ **Not built here, and it belongs to deployment (F):** the Dockerfile, and the container running with
-its port unpublished.
+its port unpublished, and the nginx block proxying `/api/events` and `/api/errors` with the shared
+token — **without which the client's two queues 404 and keep everything**, which is by design.
 
 ---
  Where a question is still open it says so; those are not implementation
@@ -86,7 +108,11 @@ is a service container in GitHub Actions and costs little — ⚠️ though note
 since the push workflows were cut back on 2026-08-22 (`docs/ci.md`); a cross-engine suite that only runs
 weekly is a real gap and needs deciding when the code exists, not assumed away here.
 
-⬜ **Open: whether SQLite is a supported engine or only a development convenience.** They are different
+✔ **Closed 2026-08-22 in `docs/keep-api.md`: SQLite is a development convenience, not a supported
+engine.** A behavioural difference between the two is a bug in the *tests*. The reasoning below is what
+the decision was taken against and is kept for it.
+
+⬜ *Was open: whether SQLite is a supported engine or only a development convenience.* They are different
 promises. If it is supported, the contract suite is mandatory on every run and a behavioural difference
 is a bug. If it is a convenience, the honest statement is *local development runs on something that is
 not production* — a named risk rather than a hidden one.

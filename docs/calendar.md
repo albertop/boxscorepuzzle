@@ -230,8 +230,25 @@ leaks the future. A manifest listing only today leaks nothing and protects nothi
 | artefact | who reads it | says |
 |---|---|---|
 | `manifest.json` | `serve` and the operator, **never the browser** | the generation is whole |
-| `days/<date>.json` | the browser, one at a time | this id is this date's, signed |
+| `days/<date>.json` | the browser, one at a time | this id is this date's, **and this is the generation it lives in**, signed |
 | `<generation>/<id>.json` | the browser | the puzzle, immutable, cached a year |
+
+### ⚠⚠ A pointer names the generation that owns its package — not the one that wrote the pointer
+
+**The two differ the moment there is a top-up**, which is the second build rather than an exotic case.
+Every build writes a complete pointer schedule over the whole calendar, so the newest generation's
+`days/` is the rotation's source — an older one was written before the later dates existed and has no
+pointer for them. But **the packages stay where they were made**, and `Entry.assigned` is what records
+that.
+
+⚠️ **This was wrong until 2026-08-22 (v39-P1-01).** `write_pointers` stamped the generation it was
+currently writing onto every date, so the first top-up would have pointed generation-A dates into B —
+where their file does not exist. A 404 on a legitimately assigned date, **signed by the forge**, so the
+wrong pairing read as authoritative rather than being caught. The parameter is gone now: the pointer
+reads `entry.assigned` and there is no way to pass a different answer.
+
+**What follows for the deploy:** every generation the calendar names must still be on the VPS, not just
+the newest one. `docs/runbook-inventory.md` §6c is the check.
 
 ### ⚠️ Dates are guessable, so the pointers cannot simply be served
 

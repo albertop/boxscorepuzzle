@@ -160,6 +160,12 @@ DRAW_MARGIN (1.15) - the draw, not the yield, is what runs out.
 is touched, however many times it runs. The boards already made are kept — the failure is the exit code,
 not the work.
 
+⚠⚠ **And the retry keeps §6's era quota, which it did not until v39-P1-02.** The allowance and the
+spacing are planned over the **whole window** and reconciled against the pre-1950 boards already inside
+it, so a second pass cannot grant itself a fresh 5%. Before that fix this very instruction was the way
+to break the ceiling: a 150-day window that had spent all seven of its early boards took two more per
+retry, landing them a day apart from the ones already there. **The recovery path was the defect.**
+
 **If it comes up short twice**, raise `DRAW_MARGIN` in `scripts/build_inventory.py`. What runs out is the
 *draw*: `load()` returns both directions of one game about 10% of the time and the calendar refuses the
 second.
@@ -184,6 +190,15 @@ rotation is what enforces it**, and a rotation that fails once leaks the archive
   hole `docs/calendar.md` was written to close, reintroduced in the instructions for closing it.
 - The full `manifest.json` and the `days/` pointers stay behind the wall too: `serve` reads them, the
   browser never does.
+- ⚠⚠ **After a top-up, the rotation reads `days/` from the *newest* generation and only that one.**
+  Every build writes a complete pointer schedule, but an older generation's was written before the later
+  dates existed — it has no pointer for them. **Each pointer names the generation that owns its package**
+  (`entry.assigned`), so the newest tree resolves correctly into the older directories, which is why they
+  all have to stay on the VPS.
+
+  ⚠️ **This was wrong until v39-P1-01, and the first top-up would have been the first time it showed.**
+  Every pointer was stamped with the generation being written, so old dates pointed at a file that does
+  not exist — a 404 on a legitimately assigned date, signed by the forge so it read as authoritative.
 - ⚠️ **Not near the daily rollover.** Most outages are self-inflicted deployments, and the rollover is
   the one moment something has to fire on time.
 - **Commit `forge/calendar.json`.** It is the one artefact here that cannot be regenerated — §21 makes
@@ -208,6 +223,10 @@ time.
   write. Idempotence and *extends rather than rewrites* are the same mechanism.
 - **A crash keeps what it made.** The calendar is written after every assignment, so a run that dies at
   board 140 of 150 keeps all 140 and the next run fills the rest.
+- **A retry plans against the window, not against the gaps** (v39-P1-02), so the era quota and the
+  three-week spacing survive however many passes it takes.
+- **A pointer names the generation that produced its package** (v39-P1-01), so a top-up cannot re-point
+  an older date at a file that was never written into the new directory.
 
 ⚠️ **The one thing that is not safe is deleting `forge/calendar.json` to start over.** It is the
 irreproducible artefact; the packages are not. If a batch is wrong, replace the future entries.
