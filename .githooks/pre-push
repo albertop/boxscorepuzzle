@@ -78,4 +78,24 @@ uv run ruff format --check src scripts tests
 echo "  the browser suite"
 uv run python ../tools/run_browser_tests.py
 
+# ⚠️⚠️ **`keep` is a third tree and nothing here ran it until 2026-08-22.** A suite that is not executed
+# protects nothing, and this one holds the retry contract the event record depends on.
+#
+# ⚠️ **Its Postgres arm fails rather than skips**, deliberately: without a database `PostgresStore` is
+# 80% covered and the suite falls under its own floor while looking green. So the hook starts one if it
+# is not already up. **A push that cannot reach Docker fails here rather than pushing untested code.**
+cd "$root/keep"
+echo "  keep: a postgres to test against"
+if ! docker exec keep-test-pg pg_isready -q 2>/dev/null; then
+  docker rm -f keep-test-pg >/dev/null 2>&1 || true
+  docker run -d --name keep-test-pg -e POSTGRES_PASSWORD=keep -e POSTGRES_DB=keep     -p 55432:5432 postgres:17-alpine >/dev/null
+  until docker exec keep-test-pg pg_isready -q 2>/dev/null; do sleep 1; done
+fi
+
+echo "  keep: ruff, mypy, and the contract suite on both engines"
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv run mypy src
+KEEP_TEST_POSTGRES="postgresql://postgres:keep@localhost:55432/keep"   uv run pytest -q --cov --cov-report=term-missing
+
 echo "pre-push: clean."

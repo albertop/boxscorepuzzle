@@ -1,0 +1,76 @@
+# The data layer's own suite. **Why the arrangement is split like this is `docs/ci.md`.**
+name: keep
+
+# ⚠️ `paths-ignore` lists what cannot affect this job — see `ci-forge.yml` for why the list runs that
+# direction. `keep` imports nothing from `forge` or `serve` (§33), so a change to either cannot break it.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "serve/**"
+      - "discovery/**"
+      - "docs/**"
+      - "**/*.md"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "serve/**"
+      - "discovery/**"
+      - "docs/**"
+      - "**/*.md"
+
+concurrency:
+  group: keep-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  keep:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: keep
+
+    # ⚠️⚠️ **A real Postgres, because the suite refuses to run without one.** Its arm fails rather than
+    # skips: without a database `PostgresStore` is 80% covered and the whole suite falls under its own
+    # 95% floor **while looking green**. Postgres is production, so its store is tested against Postgres
+    # — a fake connection would reach 100% and prove nothing, which is worse than the gap it closes.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: keep
+          POSTGRES_DB: keep
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: true
+
+      # ⚠️ `--frozen`: the lockfile is the thing being tested, and this is the one property the laptop
+      # cannot check — its virtualenv is warm and cannot fail the way a clean resolve can.
+      - name: Install
+        run: uv sync --frozen --group dev
+
+      - name: Lint
+        run: uv run ruff check src tests
+
+      - name: Format
+        run: uv run ruff format --check src tests
+
+      - name: Types
+        run: uv run mypy src
+
+      - name: The contract suite, on both engines, with the coverage floor
+        run: uv run pytest -q --cov --cov-report=term-missing
+        env:
+          KEEP_TEST_POSTGRES: postgresql://postgres:keep@localhost:5432/keep

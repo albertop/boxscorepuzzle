@@ -27,6 +27,16 @@ jobs:
       run:
         working-directory: forge
 
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: keep
+          POSTGRES_DB: keep
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
@@ -63,3 +73,19 @@ jobs:
 
       - name: Browser suite
         run: uv run python ../tools/run_browser_tests.py
+
+      # ⚠️ `keep` too: the weekly run is the complete one, and a tree missing from it would make that
+      # claim false in the one place nothing else checks.
+      - name: keep — install
+        run: uv sync --frozen --group dev
+        working-directory: keep
+
+      - name: keep — lint, types and the contract suite on both engines
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+          uv run mypy src
+          uv run pytest -q --cov --cov-report=term-missing
+        working-directory: keep
+        env:
+          KEEP_TEST_POSTGRES: postgresql://postgres:keep@localhost:5432/keep

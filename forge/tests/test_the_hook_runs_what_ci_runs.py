@@ -140,6 +140,38 @@ class TestTheHookAndCiCheckTheSameThings:
         assert push == expected, f"the push workflows no longer run {sorted(expected - push)}"
         assert hook_tools() == expected, f"the hook no longer runs {sorted(expected - hook_tools())}"
 
+    def test_every_tree_with_a_project_is_checked_by_both(self) -> None:
+        """⚠️⚠️ **The comparison above is over tools, and tools are not trees.**
+
+        `keep` arrived on 2026-08-22 and the tool sets did not change — it runs the same ruff, mypy and
+        pytest as `forge`. So the guard stayed green **while `keep` was checked by neither side**, and
+        would have stayed green with it in the hook and out of CI. *A guard that compares the wrong
+        dimension reports agreement it has not looked for.*
+
+        This asks the question the other one cannot: **does every tree with a `pyproject.toml` get named
+        by the hook and by a push workflow?**
+        """
+        trees = sorted(path.parent.name for path in _ROOT.glob("*/pyproject.toml"))
+        assert trees, "no project trees found, so this scan proves nothing"
+
+        hook = _HOOK.read_text(encoding="utf-8")
+        pushed = chr(10).join(path.read_text(encoding="utf-8") for path in on_push())
+        # ⚠️⚠️ **A word boundary, because `keep` is inside `keeps`.** The first version asked
+        # `tree not in text` and `ci-forge.yml` says *"the gate keeps 11% of the pool"* in a comment —
+        # so deleting `ci-keep.yml` entirely left this green. **A regular expression over code cannot
+        # tell a name from the tail of another name**, which `CLAUDE.md` records from a `sign\(` that
+        # matched inside `verify_signature(`. Found by deleting the workflow and watching nothing break.
+        def named(tree: str, text: str) -> bool:
+            return re.search(rf"(?<![\w-]){re.escape(tree)}(?![\w-])", text) is not None
+
+        missing = {
+            tree: [side for side, text in (("hook", hook), ("CI", pushed)) if not named(tree, text)]
+            for tree in trees
+        }
+        unchecked = {tree: sides for tree, sides in missing.items() if sides}
+
+        assert not unchecked, f"trees nothing checks: {unchecked}"
+
     def test_setup_commands_are_excluded_deliberately(self) -> None:
         # The hook runs on a machine that is already set up and CI starts from nothing; that difference
         # is real, and naming it is what stops it being used to excuse a missing check later.

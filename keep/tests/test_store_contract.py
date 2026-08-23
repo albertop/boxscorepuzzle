@@ -10,8 +10,10 @@ not a supported engine** (`docs/keep-api.md`). Running one suite against both is
 suite**: a failure means a test assumed something one engine does not promise. It is not a compatibility
 guarantee, and calling it one would be the more generous claim and the less honest one.
 
-**The Postgres arm skips when there is no server** rather than passing without one — a skip says *not
-checked*, and a silent pass says *checked*.
+⚠️⚠️ **The Postgres arm fails when there is no server — it does not skip.** A skip is honest about
+itself and was still wrong here: without it `PostgresStore` is 80% covered and the suite is 92%, under
+its own 95% floor, **so the floor only held on a machine that happened to have Postgres running.** The
+message says how to start one.
 """
 
 import os
@@ -71,12 +73,29 @@ def sqlite_store() -> Iterator[Store]:
 def postgres_store() -> Iterator[Store]:
     """A throwaway schema on a real Postgres, or a skip.
 
-    ⚠️ **`KEEP_TEST_POSTGRES` unset is a skip and never a pass.** The one thing worse than not running
-    this arm is believing it ran.
+    ⚠️⚠️ **Unset is a failure, not a skip.** It was a skip, which was honest about itself and still
+    wrong: it took the suite from 100% to 92%, under its own floor, **so the floor only held on a
+    machine that happened to have a database running.** A guarantee that depends on somebody's local
+    Docker is not one.
     """
     dsn = os.environ.get(POSTGRES_VARIABLE)
     if not dsn:
-        pytest.skip(f"{POSTGRES_VARIABLE} is not set; the Postgres arm did not run")
+        # ⚠️⚠️ **A failure, not a skip, and that changed on 2026-08-22.** It skipped, and the skip was
+        # honest about itself — but it took `PostgresStore` from 100% to **80%** and the whole suite from
+        # 100% to 92%, under the 95% floor. **So the floor only held when somebody happened to have a
+        # database running**, which is a guarantee that is true on the machine that wrote it and nowhere
+        # else.
+        #
+        # ⚠️ **The tempting repair was a fake connection**, which would have covered `PostgresStore` to
+        # 100% while proving nothing about Postgres — coverage theatre, and the number would then lie in
+        # exactly the place it is relied on. Postgres is production; its store is tested against Postgres.
+        pytest.fail(
+            f"{POSTGRES_VARIABLE} is not set and this suite does not run without it: Postgres is "
+            f"production, and skipping it drops keep's coverage under its own floor while looking "
+            f"green. Start one with:  docker run -d --name keep-test-pg -e POSTGRES_PASSWORD=keep "
+            f"-e POSTGRES_DB=keep -p 55432:5432 postgres:17-alpine  --  then set "
+            f"{POSTGRES_VARIABLE}=postgresql://postgres:keep@localhost:55432/keep"
+        )
     psycopg = pytest.importorskip("psycopg")
     connection = psycopg.connect(dsn, autocommit=False)
     with connection.cursor() as cursor:
