@@ -121,14 +121,141 @@ the pool.
 
 ---
 
-## What the client is allowed to see
+## ⚠️⚠️ The access model: static delivery and paid access are in tension — decided 2026-08-22
 
-⚠️ `manifest.json` currently lists **every** published puzzle, is public, and is never cached. With a
-calendar behind it, **listing tomorrow's id is handing out tomorrow's puzzle** (A4.2, open).
+**Read this before the section below it.** That section solves a smaller problem and was written first;
+this one is the reason the shape is what it is.
 
-The shape that follows: the client asks for *today* and the server answers with one id. The mapping is
-server-side. **Nothing the client can fetch may enumerate the future** — which also means the deployed
-calendar is read by the server, not served as a file.
+### The tension, and both halves are decided
+
+**§23: the day's puzzle is a static file.** That is what makes the three nines true — with the backend
+down, the file carries everything and the game still plays. Nothing decides whether to serve it.
+
+**§9: the free tier is today's puzzle; the archive is what a subscription buys.** That is the business.
+
+**A static file on a public path cannot be sold.** Anyone can request `/p/<old-id>.json` and get it — no
+server is asked. **And the manifest listed every id**, so nothing even had to be guessed.
+
+⚠️⚠️ **`canAccess()` is in the client, and a lock in the client over public files is not a lock.**
+
+**The archive could not be sold, because it was already published.**
+
+### ⚠️ And my framing of A4.2 was too narrow
+
+The section below worried about **the future** leaking — tomorrow's id in a public manifest. True, and the
+smaller half. **The past is the product**, and it was fully public with a list pointing at it. Fixing the
+manifest's forward half would have left the whole business model unenforceable and looked like a fix.
+
+### The decision: two puzzles on a public path, today's and yesterday's
+
+**Nothing else.** The resolution is **two paths rather than one**, which lets the two decided properties
+coexist:
+
+- **Today and yesterday are static files**, on a public path, unauthenticated. §23 holds: the daily plays
+  with the backend down.
+- **Everything else is on no public path at all.** A past puzzle is requested from an endpoint that
+  checks the subscription before returning the file. §9 holds: the archive is served *because* it is
+  controlled.
+
+**The daily is static because it needs no control; the archive is served because it does.**
+
+### Why yesterday, and why that is not generosity
+
+**Someone who starts at eleven at night and does not finish loses their work at midnight.** With two days
+they finish it. **And two days is not an archive** — it does not compete with what the subscription
+sells.
+
+### ⚠️⚠️ The rotation is the enforcement, and it has to actually happen
+
+When today's puzzle arrives, **the day before yesterday's must leave the public path.** A rotation that
+fails once leaves that puzzle reachable, and **the archive leaks one day at a time** — slowly enough that
+nobody notices, and permanently, since anything fetched once is gone.
+
+**So it is checked rather than trusted:** the inventory health endpoint asserts **the public path never
+holds more than two packages**, and Uptime Kuma watches it (`beta-0.md`, F3). ⚠️ A rotation is a moving
+part whose failure is silent; the check is what makes it loud.
+
+### ⚠️⚠️ `canAccess()` decides what the interface offers, not what the server returns
+
+**Someone reading `canAccess()` later could reasonably assume it gates access. It does not and cannot.**
+It runs in the browser, over files the browser can already fetch. What it decides is what the interface
+*shows* — whether the archive button is there, whether a date is offered.
+
+**The enforcement is which files exist on a public path.** That sentence is the whole access model, and
+it lives in the deployment rather than in the code. C8 in `CLAUDE.md` calls it *a single decision point*,
+which is true about presentation and would be a dangerous thing to believe about access.
+
+### ⬜ Open: does yesterday count for the streak?
+
+A puzzle still playable the next day means somebody can keep a streak alive a day late. **That is
+consistent with §27's grace day and it is a different decision** — *playable* and *counts* are not the
+same thing, and one of them can be true without the other.
+
+**Not decided here.** It is a product call, it belongs with the streak rules, and leaving it implicit is
+how a grace day gets granted by accident.
+
+---
+
+## What the client is allowed to see — decided 2026-08-22
+
+⚠️ `manifest.json` lists **every** published puzzle, is public, and is never cached. With six reference
+packages that is harmless. **With a calendar behind it, listing tomorrow's id is handing out tomorrow's
+puzzle.**
+
+### ⚠️⚠️ The tension, because the obvious fix breaks something the manifest exists for
+
+`sign_manifest`'s own docstring states it: *"altering it breaks no package signature — omit ids, point at
+a retained generation, point at nothing, and every package the client does receive still checks out. A
+signature on each puzzle says each puzzle is genuine; **only this says the set is.**"*
+
+So the two requirements pull opposite ways. **A manifest that lists everything protects the set and
+leaks the future. A manifest listing only today leaks nothing and protects nothing.**
+
+### The split, and it is principled rather than a compromise
+
+**Ask what set-integrity protects against, and the answer differs by audience.**
+
+- **The client** needs one guarantee: *this is the puzzle for this date, and the forge says so.* A
+  **signed pointer per date** gives exactly that. Substituting another genuine package for today fails
+  its signature; omitting today is an error the player sees.
+- **The operator and `serve`** need the other one: *this deployed generation is complete and
+  unmodified.* That is the full manifest — **a deployment check, not a browser fetch.**
+
+| artefact | who reads it | says |
+|---|---|---|
+| `manifest.json` | `serve` and the operator, **never the browser** | the generation is whole |
+| `days/<date>.json` | the browser, one at a time | this id is this date's, signed |
+| `<generation>/<id>.json` | the browser | the puzzle, immutable, cached a year |
+
+### ⚠️ Dates are guessable, so the pointers cannot simply be served
+
+`days/2026-09-02.json` is not a secret name. **Something has to know what day it is**, and there are two
+ways:
+
+1. **A daily job copies today's pointer into the served root** as `today.json`. Nothing served can name
+   a future date, because only one exists.
+2. **nginx serves `days/<date>.json` only when the date is not in the future.** No daily job, but one
+   configuration rule stands between the whole calendar and the world.
+
+**Decided: the daily copy.** Not because it is simpler — it is a moving part and the other is not — but
+because **its failure is visible and the other's is silent.** A job that does not run leaves yesterday's
+puzzle in place, which players notice within hours and the inventory health check (F3) can catch by
+comparing the pointer's date to the actual one. A misconfigured location block publishes five months of
+answers and looks exactly like a working server.
+
+⚠️ **The job needs no key.** All 150 pointers are signed at generation; the daily step is a copy. The
+private key stays on the laptop (§16, §33).
+
+### ⚠️ And the naming is what makes any of this work
+
+**Package files are named by their opaque id, never by date.** §7 chose that so a player could not look
+the *game* up — and it turns out to be the same property that stops anyone enumerating the *future*. A
+board at `2026-09-02.json` would be readable by anyone who can add a day to a date, whatever the
+manifest said.
+
+**So the id is load-bearing twice, for two unrelated reasons, and only one of them is written down.**
+That is exactly the shape `CLAUDE.md` records about mechanisms acquiring hidden dependents — recorded
+here so that a future change to how packages are named meets both reasons rather than one.
 
 ---
 

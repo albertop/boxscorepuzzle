@@ -642,7 +642,23 @@ estimates.
 
 There is no fail state. No error limit, no clock that kills the game. The puzzle stays open all day, saves itself, and at midnight closes for streak purposes only — it remains playable from the archive.
 
-### 9. Playability survives backend failure (§23)
+### 9. Playability survives backend failure (§23) — ⚠️ and it is in tension with §9
+
+⚠️⚠️ **Static delivery and paid access pull opposite ways, and both are decided.** §23 makes the day's
+puzzle a static file so the game survives the backend being down; §9 sells the archive. **A static file
+on a public path cannot be sold** — anyone can request it and no server is asked.
+
+**The resolution is two paths rather than one** (`docs/calendar.md`): **today's and yesterday's packages
+are public static files**, and **everything else is on no public path at all**, served by an endpoint
+that checks the subscription first. The daily is static because it needs no control; the archive is
+served because it does.
+
+**Yesterday is deliberate**: somebody who starts at eleven at night loses their work at midnight
+otherwise, and two days is not an archive. ⚠️ **The rotation is the enforcement** — when today arrives,
+the day before yesterday must leave — and a rotation that fails once leaks the archive one day at a
+time, permanently. The inventory health endpoint asserts the public path never holds more than two.
+
+
 
 The day's puzzle is a static file, validation is client-side, and events are stored locally first (C7). If the backend is down, login and sync fail but **the game still works.** Never introduce a backend dependency into the play path.
 
@@ -663,7 +679,7 @@ Present in v1 even when the corresponding feature is not built. Do not remove th
 | C5 | Engine carries no chrome or branding; themeable via CSS variables |
 | C6 | Per-puzzle routes: `/p/<id>` canonical, `/today` redirects |
 | C7 | **Store events, not state**: puzzle_id, date, duration, hints, errors, highest technique |
-| C8 | `canAccess(puzzle, user)` — single decision point; returns true in v1 |
+| C8 | `canAccess(puzzle, user)` — ⚠️⚠️ **a display decision, not an enforcement point.** It runs in the browser over files the browser can already fetch, so it decides what the interface *offers*; it cannot decide what the server returns. **The enforcement is which files exist on a public path** — today's and yesterday's, and nothing else (`docs/calendar.md`). Returns true in v1 |
 | C9 | Reserved, empty layout slots for future ads. **Three places, and ⚠️ none during play** — §10 says where and why, including the rule that resolves *renders nothing* against *does not shift the layout*: a slot goes where nothing the player might be about to touch sits below it. **No ad code, no network, no decision to run ads** |
 | C10 | Two-phase boot that can wait for consent |
 | C11 | Zero user-facing strings in code |

@@ -178,6 +178,12 @@ pre-1950 allowance, and the quota assertions.
   unauthenticated (§23). **Decide what the client is allowed to see.**
 - ✔ **A4.3 done.** 150 packages signed with the pinned key; `boxscore_forge.publication_key` refuses to
   return a key `serve` would not accept, and never prints private material.
+- ⚠️ **A4 was reframed on 2026-08-22 and its output survives.** The question it answered — *what may the
+  client see* — turned out to be the smaller half: it worried about **tomorrow** leaking, and **the past
+  is the product**. The artefacts still fit: the generation manifest was already decided to be
+  server-side rather than browser-facing, and the per-date pointers were already decided not to be
+  deployed. **What changes is the daily step**, which copies **two** days out rather than one, and the
+  public manifest, which lists those two.
 - ⬜ **A4.1 partial.** The generation directory exists (`forge/inventory/<gen>`, 1.4 MB, median 9.7 KB a
   package). **No manifest is written**, and A4.2 has to be decided before one can be.
 - **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
@@ -439,6 +445,33 @@ Those are beta 3 and the schema is shaped so they are an addition rather than a 
   string — that is development scaffolding and it goes.
 - **E1.2** ⚠️ **The engine still does not know what day it is** (C4). A loader decides, server-side.
 - **E1.3** Everyone gets the same puzzle on the same date — **never derived from device-local state.**
+
+### ⚠️⚠️ E1b. Two public paths, and the rotation that keeps them two — added 2026-08-22
+
+**The access model changed while group A was being built** (`docs/calendar.md`). Static delivery (§23)
+and paid access (§9) are in tension, and the resolution is **two paths rather than one**:
+
+- **Today's and yesterday's packages are public static files.** Unauthenticated, cached, backend-down
+  safe. §23 unchanged.
+- **Everything else is on no public path.** An endpoint checks the subscription before returning a past
+  puzzle. §9 becomes enforceable for the first time.
+
+⚠️ **Yesterday is deliberate and is not generosity**: somebody starting at eleven at night loses their
+work at midnight otherwise. **Two days is not an archive**, so it does not compete with what is sold.
+
+- **E1b.1** The rotation: when today arrives, **the day before yesterday leaves the public path.**
+- **E1b.2** ⚠️⚠️ **A rotation that fails once leaks the archive one day at a time** — slowly, silently,
+  and permanently, since anything fetched once is gone. **The inventory health endpoint asserts the
+  public path holds no more than two packages** and Kuma watches it (F3).
+- **E1b.3** The public manifest lists **those two**. The full generation manifest stays behind the wall
+  as the deployment's integrity record.
+- **E1b.4** ⚠️ `canAccess()` is a **display** decision. It runs in the browser over files the browser
+  can already fetch. **The enforcement is which files exist on a public path**, and a reader of C8 could
+  reasonably believe otherwise.
+
+⬜ **Open, and it is a product call:** whether yesterday's puzzle **counts for the streak** or is merely
+playable. Consistent with §27's grace day either way; *playable* and *counts* are different, and leaving
+it implicit is how a grace day gets granted by accident.
 
 ### E2. The caching contract
 
