@@ -211,6 +211,19 @@ now asks whether every tree with a `pyproject.toml` is named by the hook **and**
 Found by deleting the workflow and watching nothing break, which is the only way that class is found,
 and it is the `sign(` that matched inside `verify_signature(` again.
 
+⚠⚠ **And blind to the *invocation* as well, which is the same blindness one level up.** On 2026-08-23 a
+suite was verified all day with `uv run python -m pytest` while the hook runs `uv run pytest`. **They are
+different commands**: `python -m` puts the working directory on `sys.path` and plain `pytest` does not,
+so `publish`'s tests passed thirty-three times locally and the hook refused the push with
+`ModuleNotFoundError`. The guard compares **tool names** — `pytest` is `pytest` either way — so it could
+not have seen it, and neither could a guard comparing flags.
+
+⚠️ **What caught it was the hook itself**, doing what it is for. Checked afterwards and clean: no
+workflow and no line of the hook uses `python -m`, so the divergence was a verification habit rather
+than a difference in the machinery. **`forge` resolves `from tests.…` through `tests/__init__.py`,
+`keep` has no cross-test imports, and `publish` now declares `pythonpath = ["src", "."]`** — two
+mechanisms for one property, named here so neither reads as broken.
+
 ⚠️ **It is blind to flags by construction, which is exactly where the current divergence lives.**
 `pytest` and `pytest --cov` are one entry, so this test cannot see coverage leaving the hook. That is
 named here and in the test's own docstring rather than left to be discovered.
