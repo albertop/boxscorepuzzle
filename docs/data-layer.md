@@ -1,7 +1,31 @@
 # The data layer
 
 **Standing direction, the way `serve-brief.md` is for the client.** Decisions taken 2026-08-22, written
-before anything is built. Where a question is still open it says so; those are not implementation
+before anything was built.
+
+## ✔ Built 2026-08-22 — `keep/`, and what the build changed
+
+**The service exists**: `keep/` beside `forge/` and `serve/`, **no runtime dependencies**, three routes,
+71 tests at 100% coverage across both engines. `docs/keep-api.md` is the surface it was built against.
+
+**Verified against a real Postgres in Docker rather than skipped**, which is the whole reason the
+contract suite exists — the Postgres arm skips with a reason when there is no server, because a skip
+says *not checked* and a silent pass says *checked*.
+
+⚠️⚠️ **One thing the build taught that the design did not contain.** `INSERT OR REPLACE` keeps exactly
+one row too, so **every count-based test passed with it** — and it overwrites the original with the
+retry's values. A queued event whose clock kept running would rewrite what happened. **C7 stores what
+happened and the first telling is the one that did.** There is a test for it now, pinning both engines to
+the same *meaning* rather than the same row count.
+
+⚠️ **The token is checked before the schema, and the order is asserted**: a missing token is the failure
+whose absence is silent, while a wrong-shaped database at least surfaces in a query error.
+
+⬜ **Not built here, and it belongs to deployment (F):** the Dockerfile, and the container running with
+its port unpublished.
+
+---
+ Where a question is still open it says so; those are not implementation
 details left to whoever writes the code first.
 
 `§N` points at `docs/design-boxscore-puzzle.md`.
@@ -39,6 +63,8 @@ everything after it.
 
 **`serve` never knows which engine is underneath.** The data layer exposes one API; whether Postgres or
 SQLite answers it is not a fact any caller can observe.
+
+✔ **Built.** `keep.store.PostgresStore` and `SqliteStore` behind `Store`, one contract suite over both.
 
 **Postgres first.** The operator already runs and maintains an instance on the VPS. That removes
 SQLite's main argument — one fewer piece to administer — and it avoids a migration later, which is the

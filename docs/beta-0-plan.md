@@ -14,9 +14,9 @@ it. ⚠️ Where the two differ, this file says so.
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
 | **B** the hand-solve gate | **B1 ✔ mine and done** | B2–B4 are the operator's: afternoons of solving by hand |
-| **C** client identity and events | **C1, C2 ✔** | ⬜ C3 and C4 wait for D — they need somewhere to send |
-| **D** the data layer | ⬜ | designed in `data-layer.md`, not built |
-| **E** serving for real | ⬜ | waits on A (done) and D |
+| **C** client identity and events | **C1, C2 ✔** | ⬜ C3 and C4 — **D is done now, so nothing blocks them** |
+| **D** the data layer | ✔ **met** | `keep/`, 71 tests, 100% on both engines |
+| **E** serving for real | ⬜ | **A and D are both done; nothing blocks it** |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
@@ -496,29 +496,47 @@ which is the design working, not a gap.
 
 **Depends on C for its shape and on nothing else.** Designed in `data-layer.md`; this is building it.
 
-### D1. The service
+### ✔ D1. The service — **done 2026-08-22**, `keep/`
 
-- **D1.1** One API, engine behind an interface. Postgres in production, SQLite for development and tests.
-- **D1.2** ⚠️ **One contract suite parameterised on the backend**, not two suites. A suite green on
+- ✔ **D1.1 done.** One API, engine behind an interface. Postgres in production, SQLite for development and tests.
+- ✔ **D1.2 done.** ⚠️ **One contract suite parameterised on the backend**, not two suites. A suite green on
   SQLite says nothing about Postgres and says it convincingly.
-- **D1.3** Shared-token auth that **fails closed at startup** — no token, no service. Constant-time
+- ✔ **D1.3 done.** Shared-token auth that **fails closed at startup** — no token, no service. Constant-time
   comparison; the token never in a log or a URL.
 
-### D2. Schema and migrations
+### ✔ D2. Schema and migrations — **done**, `keep/migrations/001-initial.sql`
 
-- **D2.1** Events, devices, and the claimable subject: device UUID always, account when one exists.
-- **D2.2** ⚠️ **Migrations are manual; startup refuses an unexpected schema version.** Neither half works
+- ✔ **D2.1 done.** Events, devices, and the claimable subject: device UUID always, account when one exists.
+- ✔ **D2.2 done.** ⚠️ **Migrations are manual; startup refuses an unexpected schema version.** Neither half works
   alone — manual without the check gives silent drift, the check without manual gives a deploy the power
   to alter data at 3am.
-- **D2.3** §35 only: no real name, no IP, no geolocation, no filled cells.
+- ✔ **D2.3 done.** §35 only: no real name, no IP, no geolocation, no filled cells.
 
-### D3. Endpoints
+### ✔ D3. Endpoints — **done**
 
-- **D3.1** Event upload. **D3.2** Client error reports. **D3.3** Health, running
+- ✔ **D3.1–D3.3 done.** Event upload. **D3.2** Client error reports. **D3.3** Health, running
   `SELECT 1 FROM <a known table> LIMIT 1` — ⚠️ testing that the query does not error, **not** the row
   count.
-- **Done when:** the contract suite passes on both engines, the service refuses to start without a token
+- ✔ **Met, and verified against a real Postgres in Docker rather than skipped: 71 tests, 100% coverage.**
+  Previously: the contract suite passes on both engines, the service refuses to start without a token
   and against a wrong schema version, and health goes red when the database is stopped.
+
+### ✔ Status: **Deliverable D is met**
+
+**`keep` exists**: `keep/` beside `forge/` and `serve/`, **no runtime dependencies**, three routes, 71
+tests at 100% coverage across both engines.
+
+⚠️⚠️ **The mutation that survived is the one worth keeping.** `INSERT OR REPLACE` keeps exactly one row
+too, so **every count-based test passed with it** — while it overwrites the original with the retry's
+values. A queued event whose clock kept running would rewrite what happened. **C7 stores what happened
+and the first telling is the one that did**, so there is now a test that a retry never rewrites what it
+is retrying — pinning both engines to the same *meaning* rather than the same row count.
+
+⚠️ **The token is checked before the schema, and that order is asserted.** A missing token is the failure
+whose absence is silent; a wrong-shaped database at least shows up in a query error.
+
+⬜ **What is not built here and belongs to F:** the Dockerfile, and the container running with its port
+unpublished.
 
 ### ▶ Deliverable D — **a running service that stores events and refuses to run wrong**
 
