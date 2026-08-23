@@ -99,7 +99,7 @@ question is only **which single clock**, and *local midnight* was never one of t
 ### Which clock, and one constraint decides it
 
 **The rollover must not land while people are playing.** Everything else — tidiness, neutrality, matching
-the operator's own day — is preference; this one costs somebody their board mid-game.
+whatever clock the build happens to run on — is preference; this one costs somebody their board mid-game.
 
 | clock | when it lands in the US | |
 |---|---|---|
@@ -161,7 +161,6 @@ find one interest here, not three.
 | zone | when the rollover lands | weight |
 |---|---|---|
 | **US Eastern / Pacific** | 03:00 / 00:00 winter, 04:00 / 01:00 summer | ✔ **decides it** |
-| Madrid | 09:00 or 10:00 | informative — the operator's own morning, and he is not the audience |
 | Santo Domingo | **04:00, year-round** (UTC-4, no daylight saving) | informative — see below |
 
 ### ⚠️ Santo Domingo was a target market at conception and is not one now — settled 2026-08-23
@@ -201,11 +200,14 @@ they have not had a new day. That is a property of the choice, not a concession 
 `build_inventory.py` used `date.today()` — **the local day of whoever ran the build** — to decide which
 dates are frozen (§21: at or before today cannot be assigned or replaced).
 
-**That was safe, and safe for a reason that is not a guarantee**: Madrid is nine or ten hours ahead of
-UTC−8, so the forge's boundary was always *ahead* of the serving day and it froze conservatively. **It
-is a fact about where the operator is sitting.** Run the same build from a laptop in Los Angeles at
-23:00 and the boundary falls behind the serving day — and the command that refuses to touch the past
-would let you replace a puzzle already being served.
+**That was safe, and safe for a reason that is not a guarantee: the machine happened to be east of
+UTC−8.** Anywhere east of the serving clock, the local day runs *ahead* of the serving day, so the
+boundary froze more than it had to — conservative, and harmless. **It is a fact about where the build is
+run, not about the code.**
+
+⚠️ **At or west of UTC−8 it inverts.** Run the same build from Los Angeles at 23:00 and the local day is
+*behind* the serving day — so the command that refuses to touch the past would let you replace a puzzle
+already being served.
 
 The forge computes the serving date now, from the same rule.
 

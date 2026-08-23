@@ -567,7 +567,7 @@ class TestWhichDateIsBeingServed:
 
     §21 freezes any date at or before today, so this boundary decides whether a puzzle already in front
     of players can be replaced. It was `date.today()` — **the local day of whoever ran the build** — and
-    it was safe only because Madrid runs nine or ten hours ahead of UTC-8, so the boundary was always
+    it was safe only because the machine happened to be east of UTC-8, so the boundary was always
     *ahead* of the serving day. **That is a fact about where the operator is sitting, not a guarantee**,
     and every case below fails on the old code from somewhere on earth while passing from Spain.
     """

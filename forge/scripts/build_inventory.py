@@ -140,7 +140,8 @@ costs a 23-hour day, a 25-hour day, an ambiguous local time twice a year, and a 
 
 ⚠⚠ **It rests on §10's premise that the audience is US baseball fans**, which already carries the
 payments decision and the English-first decision. If that premise moves, **re-derive this rather than
-carrying the conclusion across**: the same instant is 09:00 or 10:00 in Madrid.
+carrying the conclusion across**: an offset chosen because the contiguous states span UTC-4 to UTC-8
+is not automatically right for an audience that does not.
 
 ⚠️ **`serve` will spell this number again when E1 builds the loader, and that is prescribed rather than
 sloppy** — §33 forbids the two trees sharing code and `CLAUDE.md` puts a decided value in one module *per
@@ -155,11 +156,12 @@ def serving_date(now: datetime | None = None) -> date:
     date at or before today, so that boundary decided whether a puzzle already in front of players could
     be replaced — and it was answering with the operator's own calendar.
 
-    **It was safe, for a reason that is not a guarantee:** Madrid runs nine or ten hours ahead of UTC-8,
-    so the boundary was always *ahead* of the serving day and froze conservatively. **That is a fact
-    about where the operator is sitting.** The same build from Los Angeles at 23:00 puts the boundary
-    *behind* the serving day, and the command that refuses to touch the past would let you replace a
-    puzzle already being served.
+    **It was safe, for a reason that is not a guarantee: the machine happened to be east of UTC-8.**
+    Anywhere east of the serving clock the local day runs *ahead* of the serving day, so the boundary
+    froze more than it had to — conservative, and harmless. **That is a fact about where the build is
+    run, not about the code.** At or west of UTC-8 it inverts: the same build from Los Angeles at 23:00
+    puts the boundary *behind* the serving day, and the command that refuses to touch the past would let
+    you replace a puzzle already being served.
     """
     moment = now if now is not None else datetime.now(tz=UTC)
     if moment.tzinfo is None:
