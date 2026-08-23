@@ -1,0 +1,63 @@
+# The serving side's executables. **Why the arrangement is split like this is `docs/ci.md`.**
+name: publish
+
+# ⚠️ `paths-ignore` lists what cannot affect this job. `publish` imports nothing from any other tree —
+# §33 forbids it, and `forge` must never reach the VPS at all — so a change to one cannot break it.
+#
+# ⚠️⚠️ **`docs/` is NOT ignored, and that is deliberate.** `docs/calendar.md` states
+# `ROLLOVER_OFFSET_HOURS` once for the three trees that spell it, and this suite asserts the constant
+# against that line. Ignoring documents would leave the one check that keeps three copies in agreement
+# silent on the only change that can break it.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "serve/**"
+      - "keep/**"
+      - "discovery/**"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "forge/**"
+      - "serve/**"
+      - "keep/**"
+      - "discovery/**"
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: publish
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+
+      - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86  # v5
+        with:
+          enable-cache: true
+
+      # ⚠️ `--frozen`: the lockfile is the thing being tested, and this is the one property the laptop
+      # cannot check — its virtualenv is warm and cannot fail the way a clean resolve can.
+      - name: Install
+        run: uv sync --frozen --group dev
+
+      - name: Lint
+        run: uv run ruff check src tests
+
+      - name: Format
+        run: uv run ruff format --check src tests
+
+      - name: Types
+        run: uv run mypy src
+
+      - name: The rotation suite, with the coverage floor
+        run: uv run pytest -q --cov --cov-report=term-missing

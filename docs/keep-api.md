@@ -3,7 +3,7 @@
 **The surface, written before the service.** 2026-08-22. `docs/data-layer.md` is the architecture; this
 is what it exposes and why each piece is shaped the way it is.
 
-**The service is called `keep`** — one syllable, a verb, and what it does, beside `forge` and `serve`.
+**The service is called `keep`** — one syllable, a verb, and what it does. ⚠️ **It is no longer the only service:** `publish/` arrived 2026-08-23 with the serving side's executables. `keep` remains the only thing that touches a database, which is the boundary that matters here.
 
 ---
 

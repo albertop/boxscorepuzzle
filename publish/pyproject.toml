@@ -1,0 +1,54 @@
+[project]
+name = "publish"
+version = "0.1.0"
+description = "The serving side's executables: the daily rotation now, the health endpoints and the archive endpoint later."
+requires-python = "==3.13.*"
+# No runtime dependencies, the same shape keep proved. The rotation copies two files, deletes one and
+# writes a small JSON document -- stdlib does all of it, and a dependency on the VPS is a thing that can
+# fail at three in the morning for a reason nobody on this project chose.
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=6",
+    "mypy>=1.13",
+    "ruff>=0.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/publish"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM", "RUF", "S", "T20", "TRY", "EM", "RET", "PTH", "FBT", "PL", "ARG"]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 is pytest's assert. PLR2004 is a magic number in a test, where the number is the subject.
+"tests/**" = ["S101", "PLR2004"]
+
+[tool.coverage.run]
+branch = true
+source = ["src"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+python_version = "3.13"
+strict = true
+warn_return_any = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]

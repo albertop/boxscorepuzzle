@@ -7,6 +7,11 @@ name: forge
 # the new code never runs. This way an unlisted path runs the job by default, so the failure mode is a
 # wasted run rather than an unchecked one.
 #
+# ⚠️ **`keep/**` and `publish/**` joined the list on 2026-08-23**, when `publish` was created. The same
+# argument covers all three: §33 forbids the cross-import, and `forge` must never reach the VPS at all,
+# so nothing in those trees can change what this job checks. Before that a keep-only change paid for the
+# whole Python suite.
+#
 # `serve/**` is here because nothing under it is imported by `forge/` — CLAUDE.md forbids the
 # cross-import, and `forge/tests/test_no_cross_imports.py` is what makes that a fact rather than a
 # hope. If that ever stops being true this list is wrong, which is why the reason is written down
@@ -16,12 +21,16 @@ on:
     branches: [main]
     paths-ignore:
       - "serve/**"
+      - "keep/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
   pull_request:
     branches: [main]
     paths-ignore:
       - "serve/**"
+      - "keep/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
 

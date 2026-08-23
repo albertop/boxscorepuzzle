@@ -18,7 +18,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
-| **E** serving for real | ⬜ | **A and D are both done; nothing blocks it** |
+| **E** serving for real | ▶ **E1b met** | `publish/` — the rotation and the health verdict. E1, E2, E3 open |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
@@ -667,12 +667,16 @@ and paid access (§9) are in tension, and the resolution is **two paths rather t
 ⚠️ **Yesterday is deliberate and is not generosity**: somebody starting at eleven at night loses their
 work at midnight otherwise. **Two days is not an archive**, so it does not compete with what is sold.
 
-- **E1b.1** The rotation: when today arrives, **the day before yesterday leaves the public path.**
-- **E1b.2** ⚠️⚠️ **A rotation that fails once leaks the archive one day at a time** — slowly, silently,
-  and permanently, since anything fetched once is gone. **The inventory health endpoint asserts the
-  public path holds no more than two packages** and Kuma watches it (F3).
-- **E1b.3** The public manifest lists **those two**. The full generation manifest stays behind the wall
-  as the deployment's integrity record.
+- ✔ **E1b.1 done 2026-08-23** — `publish.rotate.rotate()`. ⚠⚠ **Built by difference, not by deleting a
+  remembered third day**: *remove the day before yesterday* leaves anything an earlier run failed to
+  remove in place forever, so one missed run becomes a permanent leak rather than a recoverable one.
+- ✔ **E1b.2 done** — `publish.health.inspect()`, and it asks **two** questions because neither catches
+  the other's failure: **how many packages are public** (a rotation that stopped deleting) and **which
+  date `today.json` names** (a rotation that stopped running). A count passes the second and a date
+  passes the first. ⬜ The *endpoint* exposing the verdict is F3; today it is a function.
+- ✔ **E1b.3 done** — the public manifest is written **from the files actually placed**, never from the
+  calendar, so it cannot claim something the directory does not hold. It carries no generation name:
+  nothing public needs one.
 - **E1b.4** ⚠️ `canAccess()` is a **display** decision. It runs in the browser over files the browser
   can already fetch. **The enforcement is which files exist on a public path**, and a reader of C8 could
   reasonably believe otherwise.
@@ -693,7 +697,7 @@ event carries **both dates** already (C2), so nothing new has to be stored for t
   string — that is development scaffolding and it goes.
 - **E1.2** ⚠️ **The engine still does not know what day it is** (C4). A loader decides, server-side.
   ✔ **And which clock it decides with is settled**: `docs/calendar.md` — the day rolls at **08:00 UTC**,
-  a fixed `UTC-8`, which is 03:00 Eastern and midnight Pacific in winter. §36 carried this open as *local
+  a fixed `UTC-8` — **03:00 Eastern and midnight Pacific in winter, 04:00 and 01:00 under daylight saving.** §36 carried this open as *local
   midnight or UTC* and **UTC is the worst answer available**: it lands at 20:00 Eastern, so a player who
   sits down at 19:45 loses the board fifteen minutes later. The forge already computes the same date
   (`serving_date()`); `serve` spells the offset again, which §33 prescribes and no test can check across
@@ -743,6 +747,25 @@ deployment is moving a known-good thing rather than discovering the difference i
   which is exactly why a 404 leaves the queue intact: every event and error recorded before deployment
   is waiting to be delivered by the first visit after it, and dropping them would be permanent.
 - **F1.4** ⚠️ The VPS holds the **public** signing key. The private key never leaves the laptop.
+- **F1.5** ⚠⚠ **Two sentences become false the moment F ships, and they are recorded here because
+  nothing else will remember them.** E1b adds a fourth tree, `publish/`, holding the serving-side
+  executables — the rotation now, the health endpoints at F3, the archive endpoint at beta 3, and the
+  ingest step `serve/data/README.md` already anticipates. **Something executable now has to reach the
+  VPS**, and today two documents say it does not:
+
+  | | says | why it stops being true |
+  |---|---|---|
+  | `docs/runbook-inventory.md` §5 | *"Copy the generation directory to the VPS. `forge/` never goes — **packages only**."* | `publish/` goes too, and the runbook is followed literally by somebody who has forgotten everything |
+  | `CLAUDE.md` §33 | *"**Deployment ships `serve/` only** — generator code must never reach the VPS."* | the second half stays true and is the point; the first half does not |
+
+  ⚠️ **Deliberately not edited when `publish/` was built.** E1b is localhost-only, and §5 and §6b
+  presuppose a serving VPS that F builds — editing them earlier would describe a deployment that does
+  not exist. **But §5 has already reintroduced the archive hole once by being followed literally**, so
+  this is the ordering trap recorded above, and it is written down rather than left to memory.
+
+  ⚠️ **What must not be lost in the rewrite:** *generator code must never reach the VPS* is the half
+  §33 exists for. `publish/` deploying is not a softening of it — `publish/` is not the generator, holds
+  no private key, and cannot produce a puzzle.
 
 ### F2. The VPS
 

@@ -25,6 +25,56 @@ checks a machine** - the same question the hook-primary arrangement turns on.
 ⚠️ **Costs nothing meanwhile: do not commit while a push is running.** Done twice that day, unnoticed.
 
 ---
+## ✔ 2026-08-23 - `publish/`, a fourth tree, and what the mutation run changed about its tests
+
+**E1b's rotation.** `docs/calendar.md` carries the design and now the code that enforces it.
+
+### Why a sibling rather than a directory inside `serve/`
+
+The deciding argument was not tidiness. **Inside `serve/`, §33's *deployment ships `serve/` only* would
+have survived by wording** while its meaning changed silently from *static assets* to *assets plus a
+service*. As a sibling it becomes visibly false and has to be rewritten. **A sentence that stays true by
+wording while changing in substance is worse than one that visibly needs rewriting.**
+
+Three other things were checked because they might have decided it and did not:
+
+- **The tree guard is neutral.** `_ROOT.glob("*/pyproject.toml")` takes the parent directory name, so
+  either placement demands the hook and a push workflow name it. Checked before choosing.
+- **No imports in either direction.** The rotation copies JSON; the browser reads it over HTTP.
+- **The relationship is one `forge` already has**: it writes into `serve/data/puzzles/` from outside
+  `serve/` and never needed to live inside.
+
+⚠️ **And `docs/javascript-conventions.md` needed no change at all**, which was the point: it says its
+rules apply to *the hand-written JavaScript under `serve/`*, and with the sibling that stays true and
+complete. A Python project inside would have made it describe half a tree.
+
+### ⚠️⚠️ What the mutation run changed, and it was the fixture rather than the assertion
+
+Four cases were written for the delete. **Removing the delete entirely turned only two of them red.**
+
+The set-equality case - the one written precisely because *today in public and yesterday in public* is
+true of a rotation that never removes anything - **pointed at an empty directory**, so a single run had
+nothing to remove and it passed with the delete gone. **The assertion was right and the fixture was
+empty.** That is the distinction between a test that watches the delete and one that watches the copies,
+and no amount of care about the assertion would have found it.
+
+Given something stale to start with, three of the four now go red.
+
+### ⚠️ One mutation survived, and it is not a defect
+
+Building the public manifest from the directory rather than from what was copied changes nothing in any
+reachable state: the delete runs first, so the two are equal unless the delete has already failed - and
+if it fails it raises. **Recorded rather than papered over with a contrived test.** Building it from what
+was placed is the safer of two equivalent choices because it cannot compound a delete failure, and that
+is the whole of its value.
+
+### ⬜ What this creates for F
+
+`docs/runbook-inventory.md` §5 and `CLAUDE.md` §33 both say only packages reach the VPS. **They stop being
+true when F ships**, and F1.5 in the plan records it. Untouched today by instruction: E1b is
+localhost-only, and §5 presupposes a serving VPS.
+
+---
 ## ❌❌ 2026-08-23 - `main` has been red in CI for days, and four tests pass here by reading the real signing key
 
 **Found while checking which workflows a push runs.** The `forge` workflow is `completed/failure` on

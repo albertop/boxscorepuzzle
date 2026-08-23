@@ -84,6 +84,13 @@ uv run python ../tools/run_browser_tests.py
 # ⚠️ **Its Postgres arm fails rather than skips**, deliberately: without a database `PostgresStore` is
 # 80% covered and the suite falls under its own floor while looking green. So the hook starts one if it
 # is not already up. **A push that cannot reach Docker fails here rather than pushing untested code.**
+cd "$root/publish"
+echo "  publish: ruff, mypy, and the rotation suite"
+uv run ruff check src tests
+uv run ruff format --check src tests
+uv run mypy src
+uv run pytest -q --cov --cov-report=term-missing
+
 cd "$root/keep"
 echo "  keep: a postgres to test against"
 if ! docker exec keep-test-pg pg_isready -q 2>/dev/null; then

@@ -8,13 +8,14 @@ and cannot be; this says what runs instead, why each piece is where it is, and w
 
 ---
 
-## The four files
+## The five files
 
 | File | Trigger | Skips when the push touches only | Runs |
 |---|---|---|---|
-| `.github/workflows/ci-forge.yml` | push and PR to `main` | `serve/`, `docs/`, any `.md` | ruff check, ruff format, the discovery ratchet, mypy, **pytest without coverage** |
-| `.github/workflows/ci-browser.yml` | push and PR to `main` | `forge/`, `discovery/`, `docs/`, any `.md` | the browser suite in headless Chromium |
-| `.github/workflows/ci-keep.yml` | push and PR to `main` | `forge/`, `discovery/`, `serve/`, `docs/`, any `.md` | ruff, mypy and the contract suite **against a Postgres service container**, with coverage |
+| `.github/workflows/ci-forge.yml` | push and PR to `main` | `serve/`, `keep/`, `publish/`, `docs/`, any `.md` | ruff check, ruff format, the discovery ratchet, mypy, **pytest without coverage** |
+| `.github/workflows/ci-browser.yml` | push and PR to `main` | `forge/`, `discovery/`, `publish/`, `docs/`, any `.md` | the browser suite in headless Chromium |
+| `.github/workflows/ci-keep.yml` | push and PR to `main` | `forge/`, `discovery/`, `serve/`, `publish/`, `docs/`, any `.md` | ruff, mypy and the contract suite **against a Postgres service container**, with coverage |
+| `.github/workflows/ci-publish.yml` | push and PR to `main` | `forge/`, `serve/`, `keep/`, `discovery/` — **not `docs/`** | ruff, mypy and the rotation suite, with coverage |
 | `.github/workflows/weekly.yml` | Monday 06:00 UTC, and by hand | — | **all of the above, plus the coverage floor** |
 
 `.githooks/pre-push` runs everything, with coverage, on the laptop, before any push to `main`. Enable
@@ -22,7 +23,7 @@ it with `git config core.hooksPath .githooks`.
 
 ---
 
-## The order these four things run in, which is the part that matters
+## The order these five things run in, which is the part that matters
 
 **The pre-push hook is the primary runner. CI is the safety net.** That is the reversal of the usual
 arrangement and it is deliberate.
@@ -118,6 +119,22 @@ error was assuming a per-job property from a per-workflow one — and it is the 
 then. The account's per-product billing breakdown needs `gh auth refresh -h github.com -s user`, which
 only the operator can run; until it has been read, *Actions is the whole bill* is inference from the
 repository's shape rather than a measurement.
+
+---
+
+## ⚠⚠ Why `ci-publish.yml` does not ignore `docs/`, when every other workflow does
+
+**`docs/calendar.md` states `ROLLOVER_OFFSET_HOURS = -8` once, for the three trees that have to spell
+it.** §33 forbids them sharing code and `forge` must never reach the VPS at all, so the rule is shared by
+pointing at a document — and `publish`'s suite asserts its constant against that line.
+
+⚠️ **Ignoring `docs/` would leave the one check that keeps three copies in agreement silent on the only
+change that can break it.** The cost is that a documentation-only push pays for one small suite; the
+alternative is a guard that runs on everything except its own subject.
+
+**And `keep/` and `publish/` joined `ci-forge.yml`'s ignore list the same day.** Before that a
+`keep`-only change paid for the whole Python suite — §33 forbids the cross-import, so nothing in those
+trees can change what the forge job checks.
 
 ---
 

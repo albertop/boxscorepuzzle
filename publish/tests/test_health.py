@@ -1,0 +1,149 @@
+"""The check that makes a silent failure loud.
+
+⚠️⚠️ **Two failures, two questions, and neither question catches the other's.** A rotation that stops
+deleting leaves a correct today and yesterday and a growing directory; a rotation that stops running
+leaves exactly two packages, both stale. **A count passes the second and a date passes the first**, so
+the check asks both — and these cases prove each question fires on its own failure and only on its own.
+"""
+
+from datetime import date, timedelta
+from pathlib import Path
+
+from publish.health import PUBLIC_LIMIT, inspect
+from publish.rotate import TODAY, YESTERDAY, rotate
+from tests.test_rotation import _FIRST, _inventory
+
+
+def _rotated(tmp_path: Path, *, days: int = 6, offset: int = 3) -> tuple[Path, date]:
+    """A public path in the state a working rotation leaves it in."""
+    inventory = _inventory(tmp_path, days=days)
+    public = tmp_path / "public"
+    when = _FIRST + timedelta(days=offset)
+    rotate(inventory, public, when)
+    return public, when
+
+
+class TestWhatItPasses:
+    def test_a_freshly_rotated_path_is_healthy(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+
+        verdict = inspect(public, when)
+
+        assert verdict.healthy, verdict.faults
+        assert verdict.faults == ()
+
+    def test_the_first_day_is_healthy_with_only_one_package(self, tmp_path: Path) -> None:
+        """⚠️ The limit is a ceiling, not a quota. One package is the calendar's first date, not a fault."""
+        inventory = _inventory(tmp_path, days=3)
+        public = tmp_path / "public"
+        rotate(inventory, public, _FIRST)
+
+        assert inspect(public, _FIRST).healthy
+
+
+class TestTheDeleteThatDidNotHappen:
+    def test_a_planted_third_package_turns_it_red(self, tmp_path: Path) -> None:
+        """⚠️⚠️ **The case that proves the check fires at all.** Without it the health function is a
+        thing that returns `healthy` and has never been observed doing anything else — which is
+        indistinguishable from one that cannot fail."""
+        public, when = _rotated(tmp_path)
+        (public / "p20260830.json").write_text("{}", encoding="utf-8")
+
+        verdict = inspect(public, when)
+
+        assert not verdict.healthy
+        assert any("packages are public" in fault for fault in verdict.faults), verdict.faults
+
+    def test_the_fault_names_the_extra_package(self, tmp_path: Path) -> None:
+        """*Three packages* sends the operator looking. A third id tells them which run failed and when."""
+        public, when = _rotated(tmp_path)
+        (public / "p20260830.json").write_text("{}", encoding="utf-8")
+
+        assert any("p20260830" in fault for fault in inspect(public, when).faults)
+
+    def test_the_limit_is_the_documented_two(self, tmp_path: Path) -> None:
+        """⚠️ Not a number this file invents: today's and yesterday's, and a third day is the archive
+        leaking one day at a time (`docs/calendar.md`)."""
+        assert PUBLIC_LIMIT == 2
+
+        public, when = _rotated(tmp_path)
+        for extra in range(PUBLIC_LIMIT + 1):
+            (public / f"x{extra}.json").write_text("{}", encoding="utf-8")
+
+        assert not inspect(public, when).healthy
+
+
+class TestTheRunThatDidNotHappen:
+    def test_a_stale_today_pointer_turns_it_red(self, tmp_path: Path) -> None:
+        """⚠️⚠️ **The failure a count cannot see.** The job stops running, the directory keeps exactly two
+        packages, and yesterday's board is served as today's. Players notice within hours; this notices
+        first."""
+        public, when = _rotated(tmp_path)
+
+        verdict = inspect(public, when + timedelta(days=1))
+
+        assert not verdict.healthy
+        assert any("has not run" in fault for fault in verdict.faults), verdict.faults
+
+    def test_the_fault_names_both_dates(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+
+        faults = inspect(public, when + timedelta(days=2)).faults
+
+        assert any(when.isoformat() in fault and (when + timedelta(days=2)).isoformat() in fault for fault in faults)
+
+    def test_a_missing_pointer_turns_it_red(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+        (public / TODAY).unlink()
+
+        assert any("is missing" in fault for fault in inspect(public, when).faults)
+
+    def test_an_unreadable_pointer_turns_it_red_rather_than_passing(self, tmp_path: Path) -> None:
+        """⚠️ Fail closed. A pointer that will not parse must not read as *the date is fine*."""
+        public, when = _rotated(tmp_path)
+        (public / TODAY).write_text("{not json", encoding="utf-8")
+
+        assert any("no readable date" in fault for fault in inspect(public, when).faults)
+
+    def test_a_pointer_that_is_not_an_object_turns_it_red(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+        (public / TODAY).write_text('["2026-09-04"]', encoding="utf-8")
+
+        assert any("no readable date" in fault for fault in inspect(public, when).faults)
+
+
+class TestTheTwoQuestionsAreIndependent:
+    """⚠️⚠️ Each question must fire on its own failure **and stay quiet on the other's**, or one of them
+    is redundant and the pair is a single check wearing two names."""
+
+    def test_the_count_is_quiet_when_only_the_date_is_wrong(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+
+        faults = inspect(public, when + timedelta(days=1)).faults
+
+        assert not any("packages are public" in fault for fault in faults), faults
+
+    def test_the_date_is_quiet_when_only_the_count_is_wrong(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+        (public / "p20260830.json").write_text("{}", encoding="utf-8")
+
+        faults = inspect(public, when).faults
+
+        assert not any("has not run" in fault for fault in faults), faults
+
+
+class TestWhatItLooksAt:
+    def test_the_pointers_and_the_manifest_are_not_counted_as_packages(self, tmp_path: Path) -> None:
+        """⚠️ Counting them would put the total at four on a perfectly healthy path — and worse, a
+        check tuned to pass at four would then pass with two real boards too many."""
+        public, when = _rotated(tmp_path)
+
+        assert {found.name for found in public.glob("*.json")} > {TODAY, YESTERDAY}
+        assert inspect(public, when).healthy
+
+    def test_a_missing_public_directory_is_a_fault_rather_than_an_exception(self, tmp_path: Path) -> None:
+        """A health endpoint that raises reports nothing; it has to answer."""
+        verdict = inspect(tmp_path / "never-created", _FIRST)
+
+        assert not verdict.healthy
+        assert any("not a directory" in fault for fault in verdict.faults)

@@ -175,7 +175,8 @@ boxscorepuzzle/
 ├── CLAUDE.md
 ├── docs/
 ├── forge/     ← generator, cwbox, SQL, validation, calendar (never leaves the laptop)
-├── serve/     ← app, nginx, docker, endpoints (deploys to VPS)
+├── serve/     ← the client: browser engine, phone UI, static packages (deploys to VPS)
+├── publish/   ← the serving side's executables: the daily rotation (deploys to VPS)
 └── keep/      ← the data layer: devices, events, later accounts (deploys to VPS, port unpublished)
 ```
 
@@ -186,8 +187,20 @@ matters because the repository's primary job is being the backup.
 human-solvability guarantee, which is trade secret (§16). Never push any part of it to a public gist,
 issue, or paste service.
 
-**No cross-imports between `forge/`, `serve/` and `keep/`.** ⚠️ **Three trees now**, and the rule that
-kept two apart is what keeps three apart: they share no code and no deployment cycle. `keep` has **no
+**No cross-imports between `forge/`, `serve/`, `publish/` and `keep/`.** ⚠️ **Four trees now**, and the
+rule that kept two apart is what keeps four apart: they share no code and no deployment cycle.
+
+⚠⚠ **`publish/` arrived 2026-08-23 and it is the serving side's executables** — the daily rotation now,
+the health endpoints at F3, the archive endpoint at beta 3, and the ingest step `serve/data/README.md`
+already anticipates. **It is a sibling rather than a directory inside `serve/`**, and the deciding
+argument is worth keeping: inside `serve/`, the sentence *deployment ships `serve/` only* would have
+survived by wording while its meaning changed silently from *static assets* to *assets plus a service*.
+As a sibling it becomes visibly false and has to be rewritten. **A sentence that stays true by wording
+while changing in substance is worse than one that visibly needs rewriting.**
+
+⚠️ **The relationship it needs is the one `forge` already has**: `write_reference_puzzles.py` writes
+packages into `serve/data/puzzles/` from outside `serve/` and never needed to live inside it. §33
+forbids cross-*imports*; the only thing that crosses is a signed package, which is what §33 permits. `keep` has **no
 runtime dependencies at all** — three routes, no ORM, no framework — and `forge` never learns that users
 exist (§33). They share no code and no deployment cycle. The
 only thing that crosses is a signed package of validated puzzles. **Deployment ships `serve/` only** —

@@ -131,7 +131,8 @@ ROLLOVER_OFFSET_HOURS = -8
 
 The short version: the rollover must not land while people are playing, and at UTC it lands at **20:00
 Eastern** — a player who sits down at 19:45 loses the board fifteen minutes later. At UTC-8 it lands at
-03:00 Eastern and midnight Pacific, where nobody in the contiguous states is at a board.
+03:00 Eastern and midnight Pacific in winter, 04:00 and 01:00 under daylight saving — nobody in the
+contiguous states is at a board at any of the four.
 
 ⚠️ **An offset, not `America/Los_Angeles`.** A named zone buys one hour of alignment between 03:00 and
 04:00 Eastern — hours nobody is playing, so the drift it exists to prevent has nothing to prevent — and
@@ -139,7 +140,7 @@ costs a 23-hour day, a 25-hour day, an ambiguous local time twice a year, and a 
 
 ⚠⚠ **It rests on §10's premise that the audience is US baseball fans**, which already carries the
 payments decision and the English-first decision. If that premise moves, **re-derive this rather than
-carrying the conclusion across**: 03:00 Eastern is 10:00 in Madrid.
+carrying the conclusion across**: the same instant is 09:00 or 10:00 in Madrid.
 
 ⚠️ **`serve` will spell this number again when E1 builds the loader, and that is prescribed rather than
 sloppy** — §33 forbids the two trees sharing code and `CLAUDE.md` puts a decided value in one module *per

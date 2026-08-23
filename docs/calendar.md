@@ -103,9 +103,25 @@ the operator's own day — is preference; this one costs somebody their board mi
 
 | clock | when it lands in the US | |
 |---|---|---|
-| **UTC** | **20:00 Eastern**, 17:00 Pacific | ❌ The worst answer available. A player who sits down at 19:45 Eastern loses the board fifteen minutes later, every night, forever |
+| **UTC** | **19:00 Eastern** in winter, **20:00** in summer; 16:00 / 17:00 Pacific | ❌ The worst answer available. A player who sits down a quarter of an hour before it loses the board mid-game, every night, forever |
 | **Midnight US Eastern** | 00:00 Eastern, **21:00 Pacific** | ❌ Splits the West Coast evening in half |
 | **UTC−8** | **03:00 Eastern, 00:00 Pacific** (winter); 04:00 and 01:00 (summer) | ✔ Nobody in the contiguous states is at a board |
+
+### ⚠⚠ The value, stated once, because three trees have to spell it
+
+```
+ROLLOVER_OFFSET_HOURS = -8
+```
+
+**`forge` holds a copy** because it decides which dates are frozen; **`publish` holds one** because it
+runs the rotation on the VPS; **`serve` gains one** when E1 builds the loader. §33 forbids them sharing
+code — and `forge` must never reach the VPS at all — so **they share the rule by pointing here.**
+
+⚠️ **This line is load-bearing, not decoration.** Each tree asserts its constant against the number
+written above, so three spellings cannot become three answers. **No test can compare the trees to each
+other**: each CI workflow ignores the others' paths, so a change on one side would not even run the
+other's suite. The document is the only place all three can point at, which is what makes it the
+definition rather than a description of one.
 
 ### ⚠️ A fixed offset rather than a named zone, and that is deliberate
 
@@ -125,8 +141,15 @@ those two *are not independent any more — an argument for a Caribbean market w
 neither.* **This is now the third.**
 
 ⚠️ If the audience premise ever moves, this moves with it — and the rule is to **re-derive the reason in
-the new place rather than carry the conclusion across.** A rollover at 03:00 Eastern is 08:00 in Santo
-Domingo and 10:00 in Madrid: correct here, and silently wrong there.
+the new place rather than carry the conclusion across.** The same instant is **09:00 or 10:00 in
+Madrid** — the middle of the morning, and the operator's own day.
+
+⚠️ **And the Caribbean case is weaker than the first version of this sentence claimed.** It said *08:00
+in Santo Domingo*, which is simply wrong: that zone is UTC-4 with no daylight saving, so the rollover
+lands at **04:00 there, year-round** — asleep, like the mainland. **So the figure does not carry the
+argument; the reasoning does.** An offset chosen because the contiguous states span UTC-4 to UTC-8 is
+not automatically right for an audience that does not, and the check is to re-derive it rather than to
+notice whether a number looks late.
 
 ### The consequence for the two dates on the event, which is the same question asked twice
 
@@ -257,15 +280,33 @@ coexist:
 they finish it. **And two days is not an archive** — it does not compete with what the subscription
 sells.
 
-### ⚠️⚠️ The rotation is the enforcement, and it has to actually happen
+### ✔ The rotation is the enforcement, and it exists — `publish/`, built 2026-08-23
 
 When today's puzzle arrives, **the day before yesterday's must leave the public path.** A rotation that
 fails once leaves that puzzle reachable, and **the archive leaks one day at a time** — slowly enough that
 nobody notices, and permanently, since anything fetched once is gone.
 
-**So it is checked rather than trusted:** the inventory health endpoint asserts **the public path never
-holds more than two packages**, and Uptime Kuma watches it (`beta-0.md`, F3). ⚠️ A rotation is a moving
-part whose failure is silent; the check is what makes it loud.
+`publish.rotate.rotate(inventory, public, when)` is the code. **The date is an argument, never read from
+a clock inside it**, so a test controls the day without touching the machine; the 08:00 UTC boundary is
+above, and `publish.rotate.serving_date()` is what a caller uses.
+
+⚠⚠ **It is built by difference rather than by deleting a remembered third day**, and that is the
+decision inside it worth stating. *Remove the day before yesterday* leaves anything an earlier run
+failed to remove in place **forever** — so one missed run becomes a permanent leak instead of a
+recoverable one. It computes the set that should be public and removes whatever else it finds, so a
+rotation broken for a week repairs the whole week the first time it succeeds.
+
+**So it is checked rather than trusted:** `publish.health.inspect()` asserts the public path holds no
+more than two packages **and** that `today.json` names the date it actually is. ⚠⚠ **Two questions,
+because neither catches the other's failure:** a rotation that stops deleting leaves a correct pair and
+a growing directory; one that stops running leaves exactly two, both stale. A count passes the second
+and a date passes the first. Uptime Kuma watches the endpoint that exposes it (`beta-0.md`, F3), and
+**that endpoint is F** — the verdict is a function today.
+
+⚠️ **Three of the rotation's tests were checked by removing the delete and watching which went red.** The
+first version of the set-equality case pointed at an empty directory, so one run had nothing to remove
+and it passed with the delete taken out entirely. **The assertion was never the weak part; the fixture
+was.**
 
 ### ⚠️⚠️ `canAccess()` decides what the interface offers, not what the server returns
 
@@ -364,7 +405,8 @@ the newest one. `docs/runbook-inventory.md` §6c is the check.
 ways:
 
 1. **A daily job copies today's pointer into the served root** as `today.json`. Nothing served can name
-   a future date, because only one exists.
+   a future date, because only one exists. ✔ **This is what `publish/` does**, and it writes `yesterday.json`
+   beside it for the rollover-boundary window.
 2. **nginx serves `days/<date>.json` only when the date is not in the future.** No daily job, but one
    configuration rule stands between the whole calendar and the world.
 

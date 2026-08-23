@@ -389,7 +389,7 @@ untested. This rule governs **when tests are executed**, not whether they are wr
 
 **Git, with a single private repository on GitHub: `boxscorepuzzle`.**
 
-One repository containing `forge/`, `serve/`, and `docs/`. Rationale: one `git push` backs up
+One repository containing `forge/`, `serve/`, `publish/`, `keep/` and `docs/`. ⚠️ **This said *`forge/`, `serve/` and `docs/`* until 2026-08-23**, which had been missing `keep` since it was built. The Python trees these conventions govern are `forge/`, `keep/` and `publish/`. Rationale: one `git push` backs up
 everything, which matters when the repository's primary job is being the backup. The separation
 between forge and serve is enforced where it actually matters — in deployment and in the import rules
 — not by repository boundaries.

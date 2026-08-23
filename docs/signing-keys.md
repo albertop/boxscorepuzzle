@@ -1,5 +1,7 @@
 # The signing key
 
+⚠⚠ **`publish/` holds no key and signs nothing.** Every per-date pointer is signed at generation, so the daily rotation is a copy — which is what lets it run on the VPS without a private key ever being there. `docs/calendar.md` records the decision; this is the sentence that keeps it from being eroded by a future step that finds signing convenient.
+
 The forge signs every package and every manifest with an Ed25519 private key. `serve` verifies with the
 public half and **cannot sign** — that asymmetry is the point, and it is what an HMAC could not express:
 every verifier of a MAC is also a signer, so a shared secret on the VPS *was* the forge's signing

@@ -75,7 +75,7 @@ on. With the data behind its own service:
   reporting query that has to enter through the player-facing application is a reporting query that
   will one day take the player-facing application down with it.
 
-**It is called `keep`** — one syllable, a verb, and what it does, beside `forge` and `serve`. Decided
+**It is called `keep`** — one syllable, a verb, and what it does. ⚠️ **No longer the only service** — `publish/` holds the serving side's executables since 2026-08-23 — but still **the only thing that touches a database**, which is the boundary this document is about. Decided
 2026-08-22. **Its API surface is `docs/keep-api.md`**, written before the service because it decides
 everything after it.
 

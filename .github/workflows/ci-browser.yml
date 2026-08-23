@@ -16,6 +16,7 @@ on:
     paths-ignore:
       - "forge/**"
       - "discovery/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
   pull_request:
@@ -23,6 +24,7 @@ on:
     paths-ignore:
       - "forge/**"
       - "discovery/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
 

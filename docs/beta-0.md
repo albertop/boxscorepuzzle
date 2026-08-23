@@ -156,6 +156,7 @@ closed. **The group was met against the work it did, and the second run is the o
 | **The share PNG** | ⬜ **not built.** Designed in `serve-flow.md` §7b; the button exists and is `disabled` |
 | **The deployment** | ⬜ **not built.** No image, no nginx, no DNS |
 | **`/today` and `/p/<id>`** | ⬜ **not built.** The routes and the caching contract are decided in `serve-brief.md` and unimplemented |
+| **The daily rotation** | ✔ built — `publish/`, a fourth tree: today and yesterday public, everything else removed, and a health verdict with two independent questions |
 
 ---
 

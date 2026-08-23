@@ -484,7 +484,7 @@ and the forge never learns that users exist.
 ### ⚠️⚠️ Superseded 2026-08-22: it is Postgres, behind an interface, in its own service
 
 **`docs/data-layer.md` is the standing decision and this section is the record of the one before it.**
-The user data now lives behind a third service beside `serve` in the same Docker network, and `serve`
+The user data now lives behind its own service beside `serve` in the same Docker network, and `serve`
 never learns which engine is underneath.
 
 **What changed is not an argument below — it is a fact none of them had.** The operator already runs and
@@ -597,7 +597,7 @@ reasoning, so a later reading does not treat them as data kept "just in case".
   and blurred, the given cells real, carrying the time and the hints used (§7b). ⚠️ Decided and **not
   built**, and deliberately not built first: it ships after the tutorial and the landing page
 
-✔ **What time the puzzle rolls over was open here and is now decided** (2026-08-23, `docs/calendar.md`): the day rolls at **08:00 UTC**, a fixed `UTC-8` — 03:00 Eastern, midnight Pacific. It belongs beside the two dates on the event, because *which puzzle* and *when somebody sat down* are the same question asked twice and must not share a clock.
+✔ **What time the puzzle rolls over was open here and is now decided** (2026-08-23, `docs/calendar.md`): the day rolls at **08:00 UTC**, a fixed `UTC-8` — 03:00 Eastern and midnight Pacific in winter, **04:00 and 01:00 under daylight saving**. It belongs beside the two dates on the event, because *which puzzle* and *when somebody sat down* are the same question asked twice and must not share a clock.
 
 **Still open and untouched by this document:** how candidates mode
 works without hover.

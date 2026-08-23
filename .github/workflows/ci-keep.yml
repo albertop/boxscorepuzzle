@@ -10,6 +10,7 @@ on:
       - "forge/**"
       - "serve/**"
       - "discovery/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
   pull_request:
@@ -18,6 +19,7 @@ on:
       - "forge/**"
       - "serve/**"
       - "discovery/**"
+      - "publish/**"
       - "docs/**"
       - "**/*.md"
 
