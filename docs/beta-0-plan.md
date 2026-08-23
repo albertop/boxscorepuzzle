@@ -13,7 +13,7 @@ it. ⚠️ Where the two differ, this file says so.
 | | | |
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
-| **B** the hand-solve gate | **B1 ✔ mine and done** | B2–B4 are the operator's: afternoons of solving by hand |
+| **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ⬜ | **A and D are both done; nothing blocks it** |

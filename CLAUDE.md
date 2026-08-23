@@ -34,11 +34,34 @@ telling anyone. ⚠️ **And the share has to work perfectly** — it is the onl
 has, and beta 0 is the one chance to test it before a paying product rests on it.
 
 **The route there: `docs/beta-0-plan.md`.** Seven groups, A to G, against the repository as it actually
-stands — including three facts the other documents do not carry: the publication path still imports its
-loader from `discovery/`, `game.record()` has **no date** although C7 lists one, and `build_pack.py`
-still targets chain.
+stands. **It is the authority on progress; the table below is a pointer, not a second copy of it.**
 
-Status: design complete at the "what and why" level. Implementation starting.
+---
+
+## Where the work is — last checked **2026-08-23**
+
+⚠️ **The date is detection, not prevention.** This line read *"design complete at the 'what and why'
+level, implementation starting"* long after four groups were built, and a cold session reading it
+concluded nothing existed. A date does not stop that happening again; it lets the next reader tell
+whether to trust the rest of the row. **Keep it short — a paragraph per group is how it goes stale.**
+
+| | | |
+|---|---|---|
+| **A** inventory and calendar | ✔ complete | the batch, the calendar, the runbook |
+| **B** the hand-solve gate | ⬜ B1 done, **B2–B4 outstanding** | ⚠⚠ **this is what blocks beta 0** |
+| **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
+| **D** the data layer | ✔ complete | `keep/`, its own container |
+| **E** serving for real | ▶ starting, **E1b first** | the routes, the two public paths, the caching contract |
+| **F** deployment | ⬜ not begun | |
+| **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
+
+⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
+and it is the only verification of human derivability that exists: layer 3 propagates intervals to a fixed
+point over forty-odd simultaneous relations, which is stronger than any person, so a board can pass every
+check and still be underivable. **One board failing by hand stops everything**, and its N is still open.
+
+⬜ **Also the operator's, and neither blocks E:** B3's N and stratum quotas, and a plausible ceiling on a
+client-reported duration (`docs/reviews/todo.md`).
 
 ---
 
