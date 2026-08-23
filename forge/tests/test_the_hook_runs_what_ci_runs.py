@@ -156,6 +156,7 @@ class TestTheHookAndCiCheckTheSameThings:
 
         hook = _HOOK.read_text(encoding="utf-8")
         pushed = chr(10).join(path.read_text(encoding="utf-8") for path in on_push())
+
         # ⚠️⚠️ **A word boundary, because `keep` is inside `keeps`.** The first version asked
         # `tree not in text` and `ci-forge.yml` says *"the gate keeps 11% of the pool"* in a comment —
         # so deleting `ci-keep.yml` entirely left this green. **A regular expression over code cannot
@@ -165,8 +166,7 @@ class TestTheHookAndCiCheckTheSameThings:
             return re.search(rf"(?<![\w-]){re.escape(tree)}(?![\w-])", text) is not None
 
         missing = {
-            tree: [side for side, text in (("hook", hook), ("CI", pushed)) if not named(tree, text)]
-            for tree in trees
+            tree: [side for side, text in (("hook", hook), ("CI", pushed)) if not named(tree, text)] for tree in trees
         }
         unchecked = {tree: sides for tree, sides in missing.items() if sides}
 

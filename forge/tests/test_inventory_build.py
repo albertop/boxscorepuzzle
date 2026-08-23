@@ -18,10 +18,10 @@ import importlib.util
 import json
 import sys
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from itertools import pairwise
 from pathlib import Path
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -242,6 +242,160 @@ class TestTheEraQuotaIsSampledRatherThanHoped:
         with pytest.raises(SystemExit, match="repeated"):
             builder.audit(twice)
 
+    @staticmethod
+    def _draws(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, *, early: int, modern: int) -> None:
+        """A pool with a different depth on each side of 1950, and **no game repeated between calls.**
+
+        ⚠️ The default stub returns the same ids every time, so a second pass would find every one of
+        them already spent and fill nothing — the run would be short forever and the test would be
+        measuring the stub. Each call gets its own block of ids.
+        """
+        call = iter(range(1, 1000))
+
+        def draw(_limit: int, *, window: tuple[int, int] = (1910, 2029), **_kwargs: object) -> list[_Loaded]:
+            block = next(call) * 1000
+            year = window[0] + 1
+            count = early if window[0] < builder.DIVIDE else modern
+            return [_Loaded(f"CHN{year}09{block + n:04d}") for n in range(count)]
+
+        monkeypatch.setattr(builder, "load", draw)
+
+    def test_a_retry_does_not_grant_itself_a_second_historical_allowance(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️⚠️ v39-P1-02. The quota was computed from the *gaps* rather than from the window.
+
+        So the runbook's own recovery path — *re-run it if it comes up short* — was the way to exceed
+        §6's ceiling: a window that had already spent its full early allowance got a fresh
+        `floor(remaining * 5%)` on the retry. And the audit could not see it, because it reads the whole
+        calendar: an older window with unused allowance leaves room for a malformed one to pass, and
+        `_fill` has written every assignment to disk by the time it runs.
+
+        The first pass here spends the whole historical allowance and comes up short on the modern arm,
+        which is exactly the shape the runbook tells the operator to re-run. The retry must add **no**
+        further pre-1950 boards.
+        """
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        self._draws(builder, monkeypatch, early=40, modern=20)
+
+        with pytest.raises(SystemExit):
+            builder.build(150, date(2026, 9, 2), _key(), _TODAY)
+        first = builder.read(builder.CALENDAR)
+        allowed, _rest = builder.era_quota(150)
+        spent = [entry for entry in first if builder._is_early(entry)]
+        assert len(spent) == allowed, f"the premise is wrong: the first pass spent {len(spent)} of {allowed}"
+        assert len(first) < 150, "the premise is wrong: the first pass was not short"
+
+        with pytest.raises(SystemExit):
+            builder.build(150, date(2026, 9, 2), _key(), _TODAY)
+
+        after = [entry for entry in builder.read(builder.CALENDAR) if builder._is_early(entry)]
+        assert len(after) == allowed, (
+            f"the retry took the window from {len(spent)} pre-1950 boards to {len(after)}, "
+            f"against §6's ceiling of {allowed}"
+        )
+
+    def test_the_historical_slots_keep_their_original_offsets_across_a_retry(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️ The other half of v39-P1-02, and the one the ceiling cannot see.
+
+        Spacing computed over the gaps moves with them, so boards meant to arrive three weeks apart can
+        end up next to each other while the count stays perfectly legal. **Counting is not placing** —
+        which is why `spread()` exists at all.
+        """
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        # ⚠️ **The same shape as the test above, deliberately.** An earlier version of this used a deep
+        # modern pool, and under the original defect it produced *four* early boards, perfectly spaced —
+        # so it passed against the code it was written to catch. **A test that cannot fail is the same
+        # defect as a check that never fires**, and the scenario is what decides which it is: bunching
+        # needs a retry whose first gap sits next to a slot the previous pass already filled.
+        self._draws(builder, monkeypatch, early=40, modern=20)
+
+        with pytest.raises(SystemExit):
+            builder.build(150, date(2026, 9, 2), _key(), _TODAY)
+        with pytest.raises(SystemExit):
+            builder.build(150, date(2026, 9, 2), _key(), _TODAY)
+
+        cal = builder.read(builder.CALENDAR)
+        early = sorted(date.fromisoformat(entry.date) for entry in cal if builder._is_early(entry))
+        gaps = [(after - before).days for before, after in pairwise(early)]
+        assert gaps and all(gap >= builder.MINIMUM_EARLY_GAP for gap in gaps), (
+            f"pre-1950 boards landed {gaps} days apart; §6 asks for one every three weeks"
+        )
+
+    def test_an_overlapping_window_counts_the_early_boards_already_inside_it(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️⚠️ The half of the era plan the retry tests cannot reach, and it needed its own case.
+
+        A retry over the *same* window is protected by the planned offsets alone: the slots the first
+        pass filled are no longer gaps, so a second allowance has nowhere to go. Mutating the
+        reconciliation away therefore changed nothing there — **a guard defended by its neighbour is
+        indistinguishable from one that does nothing**, which is this project's named shape.
+
+        An **overlapping** window is where it is load-bearing. A top-up starting inside an existing
+        window computes its own planned offsets, and the early boards already sitting in the overlap are
+        at none of them. Without subtracting what the window already holds, the second build adds its
+        full allowance on top of theirs — and the audit reads the whole calendar, so an under-filled
+        stretch elsewhere leaves room for the overlap to pass.
+        """
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        self._draws(builder, monkeypatch, early=40, modern=20)
+
+        with pytest.raises(SystemExit):
+            builder.build(150, date(2026, 9, 2), _key(), _TODAY)
+
+        # ⚠️ **Shifted by a week, not by half the window.** A window that overlaps almost entirely has
+        # almost no gaps, so it has almost no open planned slots and the cap never binds — an earlier
+        # version of this case was exactly that, and it passed with the reconciliation removed. What
+        # makes the cap load-bearing is a window holding several early boards *and* several open slots.
+        shifted = date(2026, 9, 9)
+        overlap = {(shifted + timedelta(days=offset)).isoformat() for offset in range(150)}
+        inside = [
+            entry for entry in builder.read(builder.CALENDAR) if builder._is_early(entry) and entry.date in overlap
+        ]
+        allowed, _rest = builder.era_quota(150)
+        assert len(inside) >= allowed - 1, f"the premise is wrong: only {len(inside)} early boards in the overlap"
+
+        with pytest.raises(SystemExit):
+            builder.build(150, shifted, _key(), _TODAY)
+
+        after = [
+            entry for entry in builder.read(builder.CALENDAR) if builder._is_early(entry) and entry.date in overlap
+        ]
+        assert len(after) <= allowed, (
+            f"the 150 days from {shifted} hold {len(after)} pre-1950 boards against a ceiling of "
+            f"{allowed}; {len(inside)} of them were already there before the top-up ran"
+        )
+
+    def test_the_audit_refuses_bunched_historical_boards(self) -> None:
+        """⚠️⚠️ The count had an assertion and the placement did not.
+
+        Seven early boards on seven consecutive days meet the ceiling and defeat exactly what it is for.
+        This is the audit's own rule — any composition property the pipeline cannot see needs an
+        assertion here — turned on the one property it was missing.
+        """
+        builder = _builder()
+        bunched = tuple(
+            builder.Entry(
+                date=f"2026-09-{day:02d}",
+                puzzle_id=f"p{day}",
+                # Two adjacent pre-1950 boards among enough modern ones to stay under the ceiling.
+                game_id=f"CHN{1930 if day < 3 else 1990}09{day:04d}",
+                direction="CHN",
+                status="active",
+                assigned="gen1",
+            )
+            for day in range(1, 31)
+        )
+
+        with pytest.raises(SystemExit, match="closer than"):
+            builder.audit(bunched)
+
 
 class TestTheCalendarIsCheckpointed:
     def test_a_crash_midway_keeps_the_assignments_already_made(
@@ -324,6 +478,44 @@ class TestWhatTheClientMaySee:
 
         assert set(pointer) == {"date", "puzzle_id", "generation", "schema", "signature"}
 
+    def test_a_pointer_names_the_generation_that_owns_its_package(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """⚠️⚠️ v39-P1-01. The whole calendar was stamped with the generation currently being written.
+
+        A top-up therefore rewrote generation-A dates claiming their packages lived in B, and
+        `genB/<old-id>.json` does not exist — the second run only produced the second run's boards. The
+        runbook says several generations after a top-up are normal, so this was the *second* run rather
+        than an edge case, and the signature made the wrong pairing read as authoritative.
+        """
+        builder = _builder()
+        _stub(builder, monkeypatch, tmp_path, available=40)
+        # ⚠️ **A clock this test moves**, because the generation directory is named by the second and two
+        # builds this fast share one — which would make the premise below false and the test vacuous.
+        ticks = iter([1_700_000_000, 1_700_000_060])
+        monkeypatch.setattr(builder, "time", SimpleNamespace(time=lambda: next(ticks), monotonic=lambda: 0.0))
+        builder.build(10, date(2026, 9, 2), _key(), _TODAY)
+        builder.build(10, date(2026, 9, 12), _key(), _TODAY)
+
+        generations = sorted((tmp_path / "forge" / "inventory").iterdir())
+        assert len(generations) == 2, f"the premise of this test is wrong: {[g.name for g in generations]}"
+        cal = builder.read(builder.CALENDAR)
+        assert len({entry.assigned for entry in cal}) == 2, "both windows landed in one generation"
+
+        # ⚠️⚠️ **The newest generation, and only it, holds a complete schedule** — an older one was
+        # written before the later dates existed and has no pointer for them. That is what makes the
+        # newest generation the rotation's source, and it is why a stale pointer tree cannot be used.
+        newest = generations[-1]
+        for entry in cal:
+            pointer = json.loads((newest / builder.DAYS / f"{entry.date}.json").read_text(encoding="utf-8"))
+            assert pointer["generation"] == entry.assigned, (
+                f"{entry.date} points at {pointer['generation']} and its package was made in {entry.assigned}"
+            )
+            # ⚠️ The property the pointer exists for, not only the field it carries: the file it names
+            # has to be there. A pointer that resolves to nothing is a 404 on a legitimately assigned date.
+            package = tmp_path / "forge" / "inventory" / pointer["generation"] / f"{pointer['puzzle_id']}.json"
+            assert package.exists(), f"{entry.date} points at {package}, which does not exist"
+
     def test_a_voided_date_gets_no_pointer(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         # There is nothing to serve on a date whose puzzle was withdrawn, and writing one would make a
         # withdrawn assignment fetchable.
@@ -336,7 +528,7 @@ class TestWhatTheClientMaySee:
         # ⚠️ `void` comes from the calendar module, not through the script. Importing it into
         # `build_inventory` so a test could reach it would put a name in production code whose only
         # caller is a test — and ruff would call it unused, correctly.
-        builder.write_pointers(void(cal, gone), "gen", _generation(tmp_path), _key())
+        builder.write_pointers(void(cal, gone), _generation(tmp_path), _key())
 
         assert not (_generation(tmp_path) / builder.DAYS / f"{gone}.json").exists()
 

@@ -214,6 +214,47 @@ class TestTheHealthQuery:
             SqliteStore(connection).alive()
 
 
+class TestOneBadRowIsNotAnOutage:
+    """⚠️⚠️ v39-P2-01. A failed statement aborts the Postgres transaction, and Postgres then refuses
+    **every later statement on that connection** until somebody rolls back. `keep` reuses one
+    connection, so a single rejected row took down every upload, every error report and the health
+    check until the process was restarted.
+
+    ⚠️ **These run against Postgres and only Postgres, on purpose.** The aborted-transaction state is
+    the behaviour under test and SQLite does not have it — running them on both would produce a green
+    result on the engine that cannot exhibit the defect, which is the whole reason `keep-api.md` refuses
+    to call the cross-engine suite a compatibility guarantee.
+    """
+
+    def test_a_rejected_insert_leaves_the_connection_able_to_work(self, postgres_store: Store) -> None:
+        # Past what an INTEGER column holds: the boundary reader refuses this now, but the store must
+        # survive it whatever the reason a statement fails — a full disk and a constraint do the same.
+        too_large = replace(an_event("e-big"), duration_ms=2**31)
+
+        with pytest.raises(Exception, match=r"(?i)range|overflow|integer"):
+            postgres_store.store_events([too_large])
+
+        assert postgres_store.store_events([an_event("e-1")]) == ["e-1"], (
+            "one rejected row left the connection aborted, so nothing could be stored afterwards"
+        )
+
+    def test_a_rejected_insert_leaves_the_health_check_answering(self, postgres_store: Store) -> None:
+        # ⚠️ The endpoint that reports the outage must not be the thing extending it past its cause.
+        with pytest.raises(Exception, match=r"(?i)range|overflow|integer"):
+            postgres_store.store_events([replace(an_event("e-big"), duration_ms=2**31)])
+
+        assert postgres_store.alive() is True, "a rejected row made the health check report an outage"
+
+    def test_the_failure_is_raised_rather_than_swallowed(self, postgres_store: Store) -> None:
+        # ⚠️ Rolling back and reporting success would make a lost write look like a stored one, and the
+        # client would drop it from its queue on the strength of that. The rollback repairs the
+        # connection; what happened to the row is still an error.
+        with pytest.raises(Exception):  # noqa: B017 - the driver's own class, whatever it is
+            postgres_store.store_events([replace(an_event("e-big"), duration_ms=2**31)])
+
+        assert _count(postgres_store, "events") == 0, "a row that could not be stored was reported as stored"
+
+
 def _first(store: Store, event_id: str) -> tuple[int, int]:
     """The stored duration and hints for one event, past the interface for the same reason `_count` is."""
     reading = "SELECT duration_ms, hints FROM events WHERE event_id = "

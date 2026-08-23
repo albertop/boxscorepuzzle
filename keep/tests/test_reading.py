@@ -7,7 +7,7 @@ rule, and a boundary whose refusals are untested is one nobody has watched refus
 
 import pytest
 
-from keep.reading import MalformedError, read_batch, read_error, read_event
+from keep.reading import LARGEST_STORED_INTEGER, MalformedError, read_batch, read_error, read_event
 
 
 def an_event() -> dict[str, object]:
@@ -54,6 +54,28 @@ class TestOneRow:
     def test_a_negative_duration_is_refused(self) -> None:
         with pytest.raises(MalformedError, match="duration_ms"):
             read_event({**an_event(), "duration_ms": -1})
+
+    def test_a_number_past_what_the_column_holds_is_refused(self) -> None:
+        """⚠⚠ v39-P2-01. It was accepted here and rejected by the `INTEGER` column three layers later.
+
+        That is the shape `CLAUDE.md` names — *validate at the boundary, not downstream* — and here it
+        had a cost beyond a confusing message: the failed statement aborted the transaction, and on the
+        single reused connection **every later request failed until the process was restarted.**
+        """
+        with pytest.raises(MalformedError, match="duration_ms"):
+            read_event({**an_event(), "duration_ms": 2**31})
+
+    def test_the_ceiling_applies_to_every_number_and_not_only_the_duration(self) -> None:
+        # ⚠️ Four fields share the check, and testing one of them would leave three that could still do
+        # it. They are all `INTEGER` in the same schema.
+        for field in ("duration_ms", "hints", "errors", "failed_checks"):
+            with pytest.raises(MalformedError, match=field):
+                read_event({**an_event(), field: 2**31})
+
+    def test_the_largest_value_the_column_holds_is_still_accepted(self) -> None:
+        # ⚠️ **The other side of the boundary.** A check that refuses one value too many is a check that
+        # rejects legitimate data, and off-by-one at a limit is how that happens.
+        assert read_event({**an_event(), "duration_ms": LARGEST_STORED_INTEGER}).duration_ms == LARGEST_STORED_INTEGER
 
     def test_a_non_boolean_flag_is_refused(self) -> None:
         # `"true"` from a client that stringified its JSON twice: truthy, and not a boolean.

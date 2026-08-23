@@ -1,5 +1,50 @@
 # Review backlog
 
+## 2026-08-22 — ✔ v39: five findings, five closed — and ⬜ one number left to the operator
+
+`docs/reviews/code_review_v39.md` carries the findings. All five were reproduced in the code before
+anything was changed, and each fix was checked by reverting what its test asserts.
+
+| | what it was | closed by |
+|---|---|---|
+| v39-P1-01 | a top-up stamped **every** date with the generation being written, so generation-A dates pointed into B — where their package does not exist | the pointer reads `entry.assigned`; the parameter is **gone**, so the wrong one cannot be passed |
+| v39-P1-02 | the era quota and the spacing were computed over the **gaps**, so the runbook's own *re-run it* granted a fresh 5% each time | `_era_plan()` plans over the whole window and reconciles with what it already holds |
+| v39-P2-01 | one out-of-range integer aborted the Postgres transaction and **every later request failed until restart**, health check included | rollback on every statement, re-raised; and the column's range checked at the boundary |
+| v39-P2-02 | the line score was parsed twice and never compared, and a package with no reveal was accepted | both compared in `agreesWithTheAnswer()`; `reveal` required |
+| v39-P3-01 | `CLAUDE.md` §6 still instructed a reader to erase the per-batter footnote cells | the bullet rewritten; the correction above it left intact |
+
+### ⬜ What is not closed: a plausible ceiling on a reported duration
+
+`CLAUDE.md` says *sanity-check client-reported durations before storing, so absurd values don't corrupt
+percentiles.* **That check does not exist.** What was added is narrower and is a different thing: the
+value must fit the `INTEGER` column, which is a fact about the schema. 2³¹-1 milliseconds is **twenty-five
+days**, so a duration far past absurd is still accepted and would still skew a percentile.
+
+⚠️ **Not invented here, because it is a number that shapes the product** (§7). §27 says the puzzle stays
+open all day and the clock accumulates only while the page is visible, and yesterday's board is playable
+too — so the honest bound is somewhere between *a few hours* and *two days*, and which one is the
+operator's call. Until it exists, percentiles are what is at risk, and there are no percentiles yet.
+
+### ⚠️ Two things found while fixing, both about the instruments rather than the code
+
+**Three of the era-plan mutations survived on their own, and the pair did not.** Each half of the fix
+defends against the other — fixed offsets leave a second allowance nowhere to land, and a reconciled
+allowance leaves a drifting plan nothing to spend. So no single line has a test that goes red for it,
+and `_era_plan`'s docstring says so rather than leaving the next reader to discover it. Reverting both
+together turns two cases red with the finding's own numbers.
+
+**A mutation harness reported five live mutations as caught, twice, for two different reasons** — once
+because it spawned the wrong interpreter and read *playwright is not installed* as a dead run, once
+because a nested `uv run` could not launch chromium. Both times the tell was identical: no summary line.
+Same shape as the run that reported four survivors while `uv` was locked. **A run that did not happen is
+not a run that passed**, and a harness that only looks for failures cannot tell the two apart.
+
+⚠️ **And one restore failed with a transient `OSError` and left the working tree carrying the
+mutation.** Caught by `git diff` and not by the harness, which had already moved on. A harness that can
+leave a defect behind on its way out is worse than no harness: it retries and then *verifies* now.
+
+---
+
 ## ⚠️⚠️ 2026-08-21 — v37, and the count in this file was wrong for the third time — **mine**
 
 **v36 holds 70 findings: 1 P1, 20 P2, 49 P3.** Counted from the review file's own headings, which is

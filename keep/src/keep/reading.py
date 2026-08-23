@@ -26,6 +26,21 @@ class MalformedError(ValueError):
     """A body that cannot become a record. **Names the field**, so the fix is not a guess."""
 
 
+LARGEST_STORED_INTEGER = 2**31 - 1
+"""The biggest number the schema's `INTEGER` columns hold.
+
+⚠⚠ **A fact about the database, not a judgement about the game** (v39-P2-01). Every numeric field
+here lands in a Postgres `INTEGER`, and a larger value was accepted at the boundary and rejected by the
+column — which aborted the transaction and, on a reused connection, **took the service down until it
+was restarted.** Checking it here is `CLAUDE.md`'s own rule: validate at the boundary, so a malformed
+request is a controlled rejection rather than a failure three layers later in a different vocabulary.
+
+⚠️ **This is not the sanity check `CLAUDE.md` asks for on durations.** That one is *"absurd values
+must not corrupt percentiles"*, and 2³¹-1 milliseconds is twenty-five days — far past absurd and still
+accepted here. A ceiling on plausible play is a product decision with a number in it, so it is
+`docs/reviews/open-decisions.md` rather than a value invented in this file (§7)."""
+
+
 def _text(row: dict[str, Any], field: str, *, optional: bool = False) -> str | None:
     value = row.get(field)
     if value is None and optional:
@@ -42,6 +57,12 @@ def _whole(row: dict[str, Any], field: str) -> int:
     # duration. Rejected explicitly, the same way the pool's numeric guard does it.
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         message = f"{field} is {value!r}, expected a whole number that is not negative"
+        raise MalformedError(message)
+    if value > LARGEST_STORED_INTEGER:
+        # ⚠️ **Refused rather than clamped.** A clamped duration is a wrong number that looks like a
+        # measurement, and C7 makes it permanent. A refusal is visible: the client's outbox drops that
+        # one event, and the split retry keeps every other event in the batch (`serve/engine/outbox.js`).
+        message = f"{field} is {value!r}, above {LARGEST_STORED_INTEGER}, which is all the column holds"
         raise MalformedError(message)
     return value
 

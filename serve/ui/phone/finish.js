@@ -175,7 +175,11 @@ export function renderReveal(puzzle, record) {
   clipping.className = "clipping";
   sheet.append(clipping);
 
-  if (reveal) clipping.append(...clippingFor(puzzle, reveal));
+  // ⚠️ **Unconditional, and it was `if (reveal)` until v39-P2-02.** The reader now refuses a package
+  // without a reveal, so the guard could never be false — and a branch that cannot be taken is
+  // indistinguishable from one that is broken. It was also what made the defect quiet: an absent reveal
+  // drew an empty panel at the moment the player finished, rather than being refused at the boundary.
+  clipping.append(...clippingFor(puzzle, reveal));
 
   // ⚠️ **A row of two, which is the shape the tutorial's footer already uses.** The way out and the
   // way onward, secondary then primary, left then right.

@@ -211,6 +211,55 @@ suite("A malformed package is refused at the boundary, naming the field", () => 
     throws(() => readPackage(raw), "rows and batting has");
   });
 
+
+  test("⚠️⚠️ a line score clue that contradicts the answer is refused", () => {
+    // v39-P2-02. Both halves were parsed, independently and correctly, and then never compared — the
+    // two-places-that-should-agree shape, inside the function whose whole job is checking that they do.
+    //
+    // ⚠️ The line score is the board's anchor and is never erased (§6), so there is no *blank* case to
+    // allow: every value is a given. One edited digit made a valid daily arithmetically impossible
+    // while the checker went on grading against the untouched solution — a board nobody can solve,
+    // refusing every correct answer, with nothing to say anything was wrong.
+    const raw = good();
+    raw.puzzle.line_score.offense_runs += 1;
+    throws(() => readPackage(raw), "line_score.offense_runs");
+  });
+
+  test("⚠️ an edited inning is refused, and so is a truncated one", () => {
+    const perInning = good();
+    perInning.puzzle.line_score.offense_by_inning[0] += 1;
+    throws(() => readPackage(perInning), "offense_by_inning\\[0\\]");
+
+    // ⚠️ **Length before values.** Comparing element by element over a short array agrees about every
+    // inning it has and says nothing about the ones it does not — a check that passes on a truncation.
+    const short = good();
+    short.puzzle.line_score.defense_by_inning = short.puzzle.line_score.defense_by_inning.slice(0, 4);
+    throws(() => readPackage(short), "defense_by_inning has 4 innings");
+  });
+
+  test("⚠️ every line score scalar is compared, not a sample of them", () => {
+    // A comparison that covers most fields reads exactly like one that covers all of them, and the
+    // uncovered one is where an edit lands unnoticed.
+    for (const field of ["offense_runs", "offense_hits", "offense_errors", "defense_runs", "defense_hits", "defense_errors"]) {
+      const raw = good();
+      raw.puzzle.line_score[field] += 1;
+      throws(() => readPackage(raw), `line_score.${field}`, `${field} is not compared against the solution`);
+    }
+  });
+
+  test("⚠️⚠️ a package with no reveal is refused rather than opened", () => {
+    // v39-P2-02. From schema 5 the reveal is the complete boxscore the finished screen draws, and the
+    // publication gate will not pass a package without one — so an absent reveal is a corrupted file,
+    // not a draft the client should open. Accepting it let a player solve the whole board and reach a
+    // payoff panel with the boxscore missing, silently, on the one screen they reach once.
+    for (const missing of [undefined, null]) {
+      const raw = good();
+      if (missing === undefined) delete raw.reveal;
+      else raw.reveal = null;
+      throws(() => readPackage(raw), "reveal is missing", `a package with reveal ${missing} was accepted`);
+    }
+  });
+
   test("the served identifier is opaque and never the Retrosheet game id", () => {
     for (const { id } of packages) assert(/^[0-9a-f]{16}$/.test(id), `${id} is not an opaque sixteen-hex id`);
   });

@@ -175,6 +175,34 @@ function agreesWithTheAnswer(puzzle, solution) {
   if (puzzle.leftOnBase !== solution.leftOnBase) {
     fail(`puzzle.left_on_base is ${puzzle.leftOnBase} and the solution says ${solution.leftOnBase}`);
   }
+  // ⚠⚠ **The line score, which this compared nothing of until v39-P2-02.** Both halves were parsed,
+  // independently and correctly, and then never checked against each other — the two-places-that-should-
+  // agree shape, inside the function whose entire job is checking that they do.
+  //
+  // ⚠️ **It is the board's anchor and it is never erased** (§6), so unlike a grid cell there is no
+  // *blank* case to allow: every value is a given and any disagreement is a malformed package. One
+  // edited digit here makes a valid daily arithmetically impossible while the checker goes on grading
+  // against the untouched solution — a board nobody can solve, refusing every correct answer, with no
+  // sign that anything is wrong.
+  for (const field of LINE_SCORE_SCALARS) {
+    if (puzzle.lineScore[field] !== solution.lineScore[field]) {
+      fail(`puzzle.line_score.${field} is ${puzzle.lineScore[field]} and the solution says ${solution.lineScore[field]}`);
+    }
+  }
+  for (const field of ["offense_by_inning", "defense_by_inning"]) {
+    const given = puzzle.lineScore[field];
+    const answer = solution.lineScore[field];
+    // ⚠️ Length first: comparing element by element over a short array agrees about every inning it
+    // has and says nothing about the ones it does not, which is a check that passes on a truncation.
+    if (given.length !== answer.length) {
+      fail(`puzzle.line_score.${field} has ${given.length} innings and the solution has ${answer.length}`);
+    }
+    given.forEach((value, inning) => {
+      if (value !== answer[inning]) {
+        fail(`puzzle.line_score.${field}[${inning}] is ${value} and the solution says ${answer[inning]}`);
+      }
+    });
+  }
 }
 
 function board(raw, where, { complete = false } = {}) {
@@ -313,7 +341,18 @@ const isoDate = (raw, where) => {
 };
 
 function reveal(raw, board) {
-  if (raw === undefined || raw === null) return null;
+  // ⚠⚠ **Required, and this returned `null` for a missing one until v39-P2-02.** From schema 5 the
+  // reveal is the complete boxscore the finished screen draws, and the publication gate will not pass a
+  // package without one — so an absent reveal is not a draft the client should open, it is a corrupted
+  // file. Accepting it let a player solve the entire board and reach a payoff panel with **the boxscore
+  // missing**, silently, on the one screen they reach once and the one thing they earned.
+  //
+  // ⚠️ The optional shape was defensible while nothing drew this block. It stopped being defensible
+  // the moment something did, and nothing went red — which is the whole argument for refusing at the
+  // boundary rather than tolerating an absence downstream.
+  if (raw === undefined || raw === null) {
+    fail("reveal is missing; a published package carries the complete boxscore the finished screen draws");
+  }
   if (typeof raw !== "object" || Array.isArray(raw)) {
     fail(`reveal is ${JSON.stringify(raw)}, expected an object`);
   }

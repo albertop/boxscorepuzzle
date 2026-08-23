@@ -18,7 +18,8 @@ are most likely to differ in a way a green SQLite suite would not show.
 
 import sqlite3
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from typing import Any
 
@@ -184,13 +185,37 @@ class PostgresStore(Store):
     ⚠️ Takes a connection rather than making one: the pool belongs to the caller, and `data-layer.md` §8
     wants the reporting side on its own pool with its own `statement_timeout` so a heavy report cannot
     queue behind a player uploading a result.
+
+    ⚠⚠ **Every statement here rolls back if it fails, and the reason is specific to Postgres.**
+    (v39-P2-01) A failed statement leaves the transaction in the *aborted* state, and Postgres then
+    refuses **every later statement on that connection** until somebody rolls back. The service reuses
+    one connection, so a single rejected row — an integer past the column's range, a disk full, a
+    constraint — took down every upload, every error report **and the health check** until the process
+    was restarted. One bad row is not supposed to be an outage.
+
+    ⚠️ **The failure is re-raised, never swallowed.** Rolling back and reporting success would make a
+    lost write look like a stored one, and the client would drop it from its queue on the strength of
+    that. The rollback repairs the *connection*; what happened to the row is still an error.
     """
 
     def __init__(self, connection: Any) -> None:  # noqa: ANN401 - psycopg publishes no stubs
         self._connection = connection
 
+    @contextmanager
+    def _usable_after(self) -> Iterator[None]:
+        """Leave the connection able to answer the next request, whatever happens to this one."""
+        try:
+            yield
+        except Exception:
+            # ⚠️ **Suppressed only here.** If the rollback itself fails the connection is beyond saving
+            # and the original error is the one worth reporting — raising the second one from inside the
+            # cleanup would hide what actually went wrong.
+            with suppress(Exception):
+                self._connection.rollback()
+            raise
+
     def schema_version(self) -> int | None:
-        with self._connection.cursor() as cursor:
+        with self._usable_after(), self._connection.cursor() as cursor:
             cursor.execute("SELECT version FROM keep_schema")
             rows = cursor.fetchall()
         return int(rows[0][0]) if rows else None
@@ -206,7 +231,7 @@ class PostgresStore(Store):
         if not rows:
             return []
         placeholders = ", ".join(["%s"] * len(columns))
-        with self._connection.cursor() as cursor:
+        with self._usable_after(), self._connection.cursor() as cursor:
             # ⚠️⚠️ **`ON CONFLICT DO NOTHING`, and this is the line the whole retry story rests on.**
             # It is also where SQLite and Postgres are most likely to differ in a way a green SQLite
             # suite would not reveal, which is why the contract suite is not a compatibility guarantee.
@@ -215,11 +240,15 @@ class PostgresStore(Store):
                 f"ON CONFLICT ({columns[0]}) DO NOTHING",
                 rows,
             )
-        self._connection.commit()
+        with self._usable_after():
+            self._connection.commit()
         return [str(row[0]) for row in rows]
 
     def alive(self) -> bool:
-        with self._connection.cursor() as cursor:
+        # ⚠️ **The health check needs this as much as the writes do.** A query against a missing table
+        # aborts the transaction exactly the same way, so the endpoint that reports the outage would
+        # otherwise be the thing that extends it past its cause.
+        with self._usable_after(), self._connection.cursor() as cursor:
             cursor.execute("SELECT 1 FROM keep_schema LIMIT 1")
             cursor.fetchall()
         return True

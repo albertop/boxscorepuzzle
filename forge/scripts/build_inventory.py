@@ -49,6 +49,7 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 from datetime import date, timedelta
+from itertools import pairwise
 from math import ceil
 from pathlib import Path
 
@@ -124,6 +125,30 @@ is the right move and it is not this change. Recorded in `docs/reviews/todo.md`.
 
 DIVIDE = 1950
 """Where §6 draws the line. `SEASON_WINDOW` starts at 1910, so the eras are 1910-1949 and 1950-2029."""
+
+MINIMUM_EARLY_GAP = 14
+"""How close two pre-1950 boards may be, in days. **A bunching guard, not a second quota.**
+
+⚠⚠ **Because counting is not placing, and the count already has an assertion.** §6 asks for pre-1950
+boards *one every three weeks* so Ruth is an event; seven of them on seven consecutive days satisfies
+the ceiling and defeats the point entirely. `spread()` places them and **nothing checked that it had**,
+which is the audit's own rule — any composition property the pipeline cannot see needs an assertion
+here — applied to the one property it was missing.
+
+**Where 14 comes from, since a threshold set by eye gets loosened until it says nothing.** The quota is
+5%, so the planned spacing is one board per 20 days. The only way two planned boards land closer is at
+a seam between two build windows, and the worst seam `spread()` can produce still leaves 21 days. So 14
+is below every legitimate gap with room to spare, and far above the failure it is watching for."""
+
+
+def _is_early(entry: Entry) -> bool:
+    """Whether this board is from before §6's divide.
+
+    ⚠️ **One predicate, one place.** The season is characters 3 to 7 of a Retrosheet game id, and the
+    era plan and the audit both need to ask. Two copies of that would be the shape this project meets
+    most often — and the second copy was written the same day the first one was.
+    """
+    return int(entry.game_id[3:7]) < DIVIDE
 
 
 def era_quota(days: int) -> tuple[int, int]:
@@ -312,8 +337,19 @@ exists to close (`docs/calendar.md`). **A daily job copies one of them out**, an
 reachable. The job needs no key: every pointer is signed here, at generation."""
 
 
-def write_pointers(calendar: Calendar, generation: str, out: Path, key: Ed25519PrivateKey) -> int:
+def write_pointers(calendar: Calendar, out: Path, key: Ed25519PrivateKey) -> int:
     """One signed pointer per date: *this puzzle is this date's, and the forge says so.*
+
+    ⚠️⚠️ **The generation comes from `entry.assigned`, never from the run writing the pointers.**
+    (v39-P1-01) This took the current generation as an argument and stamped it on **every** date, so the
+    first top-up rewrote generation-A dates claiming their packages lived in B — and `gen B/<old-id>.json`
+    does not exist, because the second run only produced the second run's boards. The runbook says
+    several generations after a top-up are normal, so this was not an edge case: it was the second run.
+
+    ⚠️ **The signature is what makes it worse rather than what catches it.** A pointer signs the pairing
+    of a date to a package; a wrong pairing signed by the forge reads as authoritative, and the failure
+    surfaces as a 404 on a legitimately assigned date. The parameter is gone rather than corrected, so
+    there is no longer a way to pass the wrong one.
 
     ⚠️ **This is the client's whole set-integrity guarantee**, and it replaces a manifest listing every
     id. `sign_manifest`'s own docstring says a per-package signature proves each puzzle genuine and
@@ -336,7 +372,15 @@ def write_pointers(calendar: Calendar, generation: str, out: Path, key: Ed25519P
             (days / f"{entry.date}.json").unlink(missing_ok=True)
             continue
         pointer = sign_manifest(
-            {"date": entry.date, "puzzle_id": entry.puzzle_id, "generation": generation, "schema": MANIFEST_SCHEMA},
+            {
+                "date": entry.date,
+                "puzzle_id": entry.puzzle_id,
+                # ⚠️ **The generation that produced this package**, which after a top-up is not the one
+                # being written now. `Entry.assigned` has recorded it since the calendar existed; the
+                # defect was that nothing read it.
+                "generation": entry.assigned,
+                "schema": MANIFEST_SCHEMA,
+            },
             key,
         )
         (days / f"{entry.date}.json").write_text(json.dumps(pointer, indent=1, sort_keys=True) + "\n", encoding="utf-8")
@@ -376,10 +420,25 @@ def audit(calendar: Calendar) -> None:
         return
     faults: list[str] = []
 
-    pre = [entry for entry in calendar if int(entry.game_id[3:7]) < DIVIDE]
+    pre = [entry for entry in calendar if _is_early(entry)]
     allowed, _rest = era_quota(len(calendar))
     if len(pre) > allowed:
         faults.append(f"{len(pre)} pre-{DIVIDE} boards of {len(calendar)}, above §6's ceiling of {allowed}")
+
+    # ⚠⚠ **Placement, not only the count.** `spread()` exists because seven early boards on seven
+    # consecutive days meet the ceiling and defeat what it is for — and until now nothing asserted that
+    # it had done its job. This is the audit's own rule turned on the property it was missing.
+    early_dates = sorted(date.fromisoformat(entry.date) for entry in pre)
+    bunched = [
+        (before.isoformat(), after.isoformat())
+        for before, after in pairwise(early_dates)
+        if (after - before).days < MINIMUM_EARLY_GAP
+    ]
+    if bunched:
+        faults.append(
+            f"pre-{DIVIDE} boards closer than {MINIMUM_EARLY_GAP} days: {bunched[:5]} "
+            f"— §6 asks for one every three weeks, and the ceiling alone cannot say that"
+        )
 
     for what, seen in (
         ("games", [entry.game_id for entry in calendar]),
@@ -395,6 +454,44 @@ def audit(calendar: Calendar) -> None:
         message = f"the calendar is not what it claims:{detail}"
         raise SystemExit(message)
     _say(f"  audit: {len(pre)} pre-{DIVIDE} of {len(calendar)} (ceiling {allowed}), no repeats")
+
+
+def _era_plan(days: int, window: list[str], wanted: list[str], calendar: Calendar) -> tuple[list[str], list[str]]:
+    """Which of the window's gaps get a pre-1950 board, and which get a modern one.
+
+    ⚠⚠ **Both halves are derived from the whole window and then reconciled with what it already
+    holds** (v39-P1-02). Deriving either from the gaps is what let a retry grant itself a second
+    allowance:
+
+    - **The slots** come from `spread(days, ...)`, so their offsets are the same on every run over the
+      same window. Computed over the gaps they moved, and historical boards meant to arrive three weeks
+      apart could land next to each other.
+    - **The allowance** is the window's, minus the early boards already sitting in it. If a previous
+      pass spent the lot, this one gets none — and the open early slots fall to the modern arm rather
+      than going unfilled, because a date with no board is a failed run and a modern board there is
+      merely not the plan.
+
+    ⚠️ **The two halves defend each other, which is worth stating because it changes what the tests
+    prove.** Reverting either one alone leaves the behaviour correct: with the offsets fixed there are
+    no open early slots for a second allowance to land on, and with the allowance reconciled a drifting
+    plan has nothing left to spend. **So no test goes red for a single line here** — what the three
+    cases pin is the pair, and reverting both together (which is the code as it stood) turns two of them
+    red with the finding's own numbers: seven early boards becoming thirteen, and gaps of `[21, 1, 20,
+    1, ...]` days.
+    """
+    open_gaps = set(wanted)
+    allowance, _rest = era_quota(days)
+    planned = spread(days, allowance)
+    already_early = sum(1 for entry in calendar if entry.date in set(window) and _is_early(entry))
+    left = max(0, allowance - already_early)
+
+    early: list[str] = []
+    for offset in sorted(planned):
+        if len(early) == left:
+            break
+        if window[offset] in open_gaps:
+            early.append(window[offset])
+    return early, [when for when in wanted if when not in set(early)]
 
 
 def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
@@ -418,11 +515,8 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     #
     # §21 wants the same call to be safe twice. A window makes that exact: the gaps inside it get filled
     # and nothing outside it is touched, however many times it runs.
-    wanted = [
-        when.isoformat()
-        for offset in range(days)
-        if (when := first + timedelta(days=offset)).isoformat() not in assigned
-    ]
+    window = [(first + timedelta(days=offset)).isoformat() for offset in range(days)]
+    wanted = [when for when in window if when not in assigned]
     if not wanted:
         _say(f"nothing to do: all {days} days from {first} are already assigned")
         return
@@ -435,16 +529,26 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     # twenty. The first 150-board calendar came out **34% pre-1950** exactly this way. Asking each side
     # for its own share is what "sample with the quota applied" means — the alternative is drawing flat
     # and hoping, which is what happened.
-    pre_wanted, rest_wanted = era_quota(len(wanted))
-    # ⚠️ **Placed, not just counted.** The pre-1950 boards take evenly spaced slots so they arrive about
-    # one every three weeks, which is what §6 actually asks for.
-    early_slots = spread(len(wanted), pre_wanted)
+    #
+    # ⚠️⚠️ **The plan is over the whole window, never over the gaps.** (v39-P1-02) Both the quota and
+    # the spacing were computed from `wanted`, so **every retry granted itself a fresh 5%** and a fresh
+    # spacing plan relative to whatever was left. The runbook's own recovery path — *re-run it if it
+    # comes up short* — was therefore the way to exceed §6's ceiling: a 150-day window that had already
+    # spent all seven of its early boards would allow two more across the 43 remaining gaps.
+    #
+    # ⚠️ **And the audit could not see it**, because it reads the whole calendar: an older window with
+    # unused allowance leaves room for a malformed one to pass, and `_fill` has already checkpointed
+    # every assignment to disk by the time it runs.
+    early_dates, rest_dates = _era_plan(days, window, wanted, calendar)
     eras = (
-        ("pre-1950", (SEASON_WINDOW[0], DIVIDE - 1), [d for n, d in enumerate(wanted) if n in early_slots]),
-        ("1950 on", (DIVIDE, SEASON_WINDOW[1]), [d for n, d in enumerate(wanted) if n not in early_slots]),
+        ("pre-1950", (SEASON_WINDOW[0], DIVIDE - 1), early_dates),
+        ("1950 on", (DIVIDE, SEASON_WINDOW[1]), rest_dates),
     )
     _say(f"filling {len(wanted)} of the {days} days from {first}")
-    _say(f"  era quota (§6): {pre_wanted} pre-1950, {rest_wanted} from 1950 on")
+    _say(
+        f"  era quota (§6): {len(early_dates)} pre-1950 of the window's {era_quota(days)[0]}, "
+        f"{len(rest_dates)} from 1950 on"
+    )
 
     out = _ROOT / "forge" / "inventory" / f"gen{int(time.time()):x}"
     out.mkdir(parents=True, exist_ok=True)
@@ -474,7 +578,7 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     # ⚠️ Written after the audit, never before: a manifest over a calendar that failed its quotas would
     # be a signed statement that a wrong set is whole.
     packages = write_manifest(out.name, out, key)
-    pointers = write_pointers(calendar, out.name, out, key)
+    pointers = write_pointers(calendar, out, key)
     _say(f"  manifest: {packages} packages; {pointers} dated pointers in {DAYS}/")
 
     if filled < len(wanted):
