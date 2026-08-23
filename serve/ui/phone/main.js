@@ -16,6 +16,7 @@ import { boot } from "./shell.js";
 import { loadPuzzle } from "./daily.js";
 import { localIso, shortDate, text } from "../../engine/strings.js";
 import { applyHead } from "./head.js";
+import { startUplink } from "../../engine/uplink.js";
 
 // The tab, the bookmark and the search result, from the catalogue rather than the markup
 // (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
@@ -24,6 +25,16 @@ import { applyHead } from "./head.js";
 // than from the package, which is deliberate: the title must be right before the fetch resolves, and
 // a board that fails to load should still be `August 22 — boxscore puzzle` rather than nameless.
 applyHead("board", { date: shortDate(localIso(new Date())) });
+
+// ⚠⚠ **Before the fetch, so a failure *during* it is reported** (C4). This installs the uncaught-error
+// handlers and drains anything an earlier visit queued and could not deliver; none of it is awaited and
+// none of it can stop the board — §23 holds through the code that talks to the backend as well as through
+// the backend.
+//
+// ⚠️ **One storage object for the whole page.** `boot` is handed the uplink's rather than acquiring a
+// second: when `localStorage` refuses, two calls to `browserStorage()` answer with two different
+// do-nothing objects, so the session, the device id and the queues would forget in three separate places.
+const uplink = startUplink();
 
 try {
   const loaded = await loadPuzzle();
@@ -34,7 +45,12 @@ try {
   // import turns that test red.
   const mode = new URLSearchParams(location.search).get("test");
   const test = mode ? await import("./testmode.js") : null;
-  const shell = boot({ ...loaded, fresh: test?.startsFresh(mode) === true });
+  const shell = boot({
+    ...loaded,
+    fresh: test?.startsFresh(mode) === true,
+    storage: uplink.storage,
+    outbox: uplink.events,
+  });
   if (test) test.applyTestMode(mode, { ...shell, history });
 } catch (error) {
   const app = document.getElementById("app");

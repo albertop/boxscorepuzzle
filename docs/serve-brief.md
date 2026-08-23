@@ -194,6 +194,17 @@ verified mode* with its own path, and it does not get to make the daily puzzle d
 
 No accounts, no payments, no PWA shell, no streaks, no sharing, no archive.
 
+⚠⚠ **The upload queue and the error reporter are in the engine, and that needs the reason stated
+rather than assumed** — they are the first things here that touch a network. `outbox.js`, `report.js`
+and `uplink.js` take their storage, their window and their transport as arguments, exactly as
+`store.js` and `clock.js` do, and **nothing on the play path awaits any of them**: `add()` is
+synchronous, kicks a drain and returns. The sentence below still holds — the engine starts with a JSON
+file and nothing else, and a board with no outbox plays identically, which a test asserts.
+
+**They are here rather than in `ui/phone/` because tablet and desktop are coming.** Each would
+otherwise have had to remember to build a device id, two queues and an error watcher over *one* storage
+object, and a rule every interface has to remember is one the third will forget.
+
 Those come after, and none of them belongs in a piece that should be **runnable with a JSON file and
 nothing else**. That sentence is the test: if the engine needs a server, a session or a network call to
 start, something has been added that does not belong to it.
@@ -627,6 +638,22 @@ something on the server sets it too.
 ## Decisions taken
 
 Recorded here as they are made, with the date and the reason.
+
+**2026-08-22 — an event's id is the device and the puzzle, not a UUID.** `keep-api.md` asked only that
+the id be made when the event is created rather than when it is sent; `${device_id}:${puzzle_id}`
+satisfies that more strongly, because a board reopened after a reload produces **the same id** and the
+duplicate becomes impossible rather than deduplicated afterwards. It also removes the need for a ledger
+of what has been queued and for a new field in the saved session — two mechanisms for one problem.
+
+⚠️ **The cost is real and is recorded rather than discovered later:** a device records one event per
+puzzle, ever, so a deliberate replay of an archived board records nothing. Nothing in §27 says a replay
+should count, so the safer failure direction was taken. **If replays are ever meant to record, this is
+the line that changes.**
+
+**2026-08-22 — a refusal the client cannot fix by waiting is dropped; everything else stays queued.**
+Only 400, 413 and 422 — *the server understood the item and refused its content*. The tempting
+simplification is *any 4xx is permanent*, and it would mean a **404 discards every event recorded
+before the proxy exists**, silently, which is the one loss C7 can never recover from.
 
 **2026-08-21 — the page's own strings come from the catalogue, and the `<title>` element leaves the
 markup.** All three pages shipped an identical hardcoded `<title>boxscore</title>` — four copies of one

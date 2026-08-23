@@ -15,6 +15,17 @@ subscriptions. **`serve` never touches a database**, and nothing but `keep` does
 ⚠️ **Its port is not published** and it accepts a shared token that must be configured or the service
 does not start (`data-layer.md` §4). Every route below assumes both.
 
+### ⚠⚠ What the browser actually posts to — added 2026-08-22, when the client was built
+
+**The browser never reaches `keep`.** It posts to **`/api/events`** and **`/api/errors`** on `serve`,
+which proxies them and adds the token at the edge — the same arrangement as the health check and the
+payment webhook, and for the same reason: *a secret inside a container is a secret; an open port is
+surface.*
+
+⚠️ **Those two paths do not exist yet** (plan F1.3b), so today they 404. That is the case the client's
+retry rule was written around: **a 404 leaves the queue intact**, so everything recorded before the
+proxy exists is delivered by the first visit after it.
+
 ---
 
 ## ⚠️⚠️ The one thing that shapes the schema: a retry must not duplicate
@@ -29,11 +40,27 @@ never happened, at a duration that skews a distribution built from tens of playe
 **The answer is a client-generated id on every event, which `keep` ignores if it already holds it.**
 
 ```
-event_id   a UUID the client makes when the event is created, never when it is sent
+event_id   an id the client makes when the event is created, never when it is sent
 ```
 
 ⚠️ **Made at creation, not at send.** An id generated per *attempt* is a new id on every retry and
 deduplicates nothing — which is the shape that looks correct and does the opposite.
+
+⚠⚠ **The client makes it from the device and the puzzle, not as a UUID — and this line said "a UUID"
+until the client existed.** `${device_id}:${puzzle_id}` satisfies *made at creation* more strongly than
+a random one does: a board reopened after a reload, or a reveal shown twice, produces **the same id**,
+so the duplicate is impossible rather than deduplicated after the fact. It needs no ledger of what has
+already been queued and no extra field in the saved session, both of which would be a second mechanism
+for one problem.
+
+⚠️ **What it costs, stated because a reader will otherwise assume it costs nothing:** a device records
+exactly one event per puzzle, ever, so a deliberate replay of an archived board is silently discarded.
+Nothing in §27 says a replay should count — yesterday's board does not count for the streak either — so
+the safer direction is the one taken. **If replays are ever meant to record, this is the line that
+changes**, into a fresh id per play, and `serve/engine/outbox.js` carries the same note.
+
+**Error reports keep a random id**, because there the occurrence *is* the thing: two stack traces from
+one render loop are two events, not one retried.
 
 ⚠️⚠️ **It is in the schema from the first row because it cannot be retrofitted.** Adding it later leaves
 every event written before it undeduplicable, and C7 makes that history permanent. **This is the same

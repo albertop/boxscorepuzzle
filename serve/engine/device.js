@@ -43,6 +43,10 @@ export function deviceId(storage) {
 /**
  * A random UUID, from the platform where there is one.
  *
+ * ⚠️ **Exported for the error reporter, which needs an id per *occurrence*** — unlike the event id,
+ * which is derived from the device and the puzzle so that one game can only ever be one event
+ * (`outbox.js`). Two stack traces from one render loop are two things that happened.
+ *
  * ⚠️ `crypto.randomUUID` is not everywhere: it needs a secure context, so `http://` on a phone over the
  * local network — which is how this board gets looked at during development — does not have it. The
  * fallback is `getRandomValues`, and only if that is missing too does this fall back to `Math.random`.
@@ -52,7 +56,7 @@ export function deviceId(storage) {
  * anything worth stealing out of the row it points at. What it must be is *unlikely to collide*, and
  * 122 bits of `Math.random` is far past that for a beta with tens of devices.
  */
-function newId() {
+export function newId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
 
   const bytes = new Uint8Array(16);

@@ -14,7 +14,7 @@ it. ⚠️ Where the two differ, this file says so.
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
 | **B** the hand-solve gate | **B1 ✔ mine and done** | B2–B4 are the operator's: afternoons of solving by hand |
-| **C** client identity and events | **C1, C2 ✔** | ⬜ C3 and C4 — **D is done now, so nothing blocks them** |
+| **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; 36 browser tests, every mutation caught |
 | **D** the data layer | ✔ **met** | `keep/`, 71 tests, 100% on both engines |
 | **E** serving for real | ⬜ | **A and D are both done; nothing blocks it** |
 | **F** deployment | ⬜ | |
@@ -458,26 +458,62 @@ passed unnoticed: **a test that gives every field cannot see a wrong default.**
 alternative is the player's local date wearing the calendar's name, which is wrong for archive play and
 across every rollover.
 
-### ⬜ C3 and C4 wait for D — they need somewhere to send
+### ✔ C3. Upload, queued and offline-first — **done 2026-08-22**, `serve/engine/outbox.js`
 
-### C3. Upload, queued and offline-first
+- ✔ **C3.1 done.** ⚠⚠ **Write first, send after, and delete only on confirmation.** The item is in
+  `localStorage` before any request is made and leaves only when the server names its id, so a phone
+  swiped away mid-flight still holds it. `add()` is synchronous, kicks a drain and does not await it.
+- ✔ **C3.2 done.** `follow()` drains on `online` and on `visibilitychange` — ⚠️ **not `beforeunload`**,
+  which a phone does not fire when a tab is discarded.
+- ✔ **C3.3 done.** Every item carries the id `keep` deduplicates on. ⚠️ **For events it is the device
+  and the puzzle rather than a fresh UUID**, so a reopened board offers an id the queue already holds:
+  the duplicate is impossible rather than deduplicated afterwards. **The cost is written down where the
+  id is** — a device records one event per puzzle ever, so a deliberate replay of an archived board
+  records nothing, and that is the line to change if replays are ever meant to count.
+- ✔ **Done, and verified in a browser rather than only asserted:** solving with the endpoint absent
+  leaves one queued event; reloading reopens the board finished, sends **one** POST per queue, and the
+  event id is the same one. §23 held throughout — the 501 changed nothing about the game.
 
-- **C3.1** Write to `localStorage` first, always. **Nothing in the play path waits on the network** (§23).
-- **C3.2** A queue that drains when there is a connection and survives a reload mid-flight.
-- **C3.3** Idempotent on the receiving side: a retried upload must not double-count.
-- **Done when:** finishing with the network off, then restoring it, delivers exactly one event.
+⚠️⚠️ **Two decisions inside it that are easy to get wrong in the safe-looking direction.**
 
-### C4. Uncaught client errors
+**A refusal the client cannot fix by waiting is dropped; everything else stays**, and the line is only
+400, 413 and 422 — *the server understood the item and refused its content*. The tempting
+simplification is *any 4xx is permanent*, and it would mean **a 404 discards every event recorded
+before F wires the proxy**, silently. That is the one loss C7 can never recover from.
 
-- **C4.1** `window.onerror` and `unhandledrejection`, posted with the device UUID, message, stack, page,
-  viewport and user agent. **No IP, no geolocation** (§35).
-- **C4.2** ⚠️ **Fails silently and never blocks.** A reporter that throws or waits turns one broken
-  render into a broken game.
-- **C4.3** Rate-limit itself, so a render loop does not post ten thousand times.
-- **Done when:** a deliberately thrown error arrives at the endpoint and the board still plays with the
-  endpoint refused.
+**One malformed item must not hold the queue behind it.** `keep` refuses a batch whole — correctly —
+so a single bad record would block every good one after it forever. A refused batch is retried item by
+item, which finds the poisoned one and keeps the rest.
 
-### ▶ Deliverable C — **a client that produces a complete, identified event and survives its own failures, with no backend at all**
+⚠️ **And a bug the tests found rather than the design:** a drain arriving while another was in flight
+answered *nothing to do*, which is what "two at once must not send twice" seemed to ask for. But `add()`
+kicks — so **an event queued during a flight was never drained**, and sat until the next visit. A call
+arriving mid-flight now books one pass behind the current one.
+
+### ✔ C4. Uncaught client errors — **done 2026-08-22**, `serve/engine/report.js`
+
+- ✔ **C4.1 done.** Both handlers, carrying device id, message, stack, viewport and user agent. ⚠️ **The
+  path, never the query string** — a query is the one part of a URL that carries whatever somebody put
+  in it, and `location.href` was the obvious field and the wrong one.
+- ✔ **C4.2 done.** Every path is inside a `try`, nothing is awaited, nothing calls `preventDefault`.
+- ✔ **C4.3 done, by two measures.** A cap per page load **and** a signature, because the cap alone would
+  not stop the first five reports being five copies of one fault — which is the shape a render loop
+  actually produces.
+- ✔ **Done, and verified in a browser:** a thrown error and a rejected promise both land in the queue
+  with the right fields and no query string, and both survive a reload with the endpoint refusing.
+
+⚠⚠ **The two "never throws" cases were hollow until a mutation run said so.** An exception thrown
+inside a DOM listener does **not** propagate out of `click()` or `dispatchEvent()` — it is reported to
+the window and the caller carries on — so *press the button and assert something* stays green whatever
+the handler did. What caught the mutation was the browser runner treating any page error as fatal,
+which is a real signal and a poor one to rely on: **the suite dies with no named failure.** The cases
+now install a window error listener, mark the escape handled and assert on it by name.
+
+⚠️ **And the mutation harness read those two dead runs as survivals**, because it looked for `FAIL`
+lines and a killed suite prints none. Same shape as the run that reported four survivors while `uv` was
+locked and the suite never ran: **a run that died is not a run that passed.**
+
+### ✔ Deliverable C — **a client that produces a complete, identified event and survives its own failures, with no backend at all**
 
 A finished game yields a C7 record carrying the device UUID, an account field that is `null` and
 claimable, and **both dates**. It queues in `localStorage`, drains when there is a connection, and
@@ -620,6 +656,11 @@ deployment is moving a known-good thing rather than discovering the difference i
 - **F1.1** A Dockerfile for `serve` — ⚠️ **`serve/` only.** Generator code must never reach the VPS.
 - **F1.2** A Dockerfile for the data layer.
 - **F1.3** No secrets in images. Containers unprivileged. The data layer's port **not published**.
+- **F1.3b** ⚠⚠ **nginx proxies `/api/events` and `/api/errors` to `keep`, adding the shared token.**
+  The client posts to `serve` because the browser must never reach `keep` — its port is unpublished and
+  the token must not travel to a browser (`data-layer.md` §4). **Until this exists the two paths 404**,
+  which is exactly why a 404 leaves the queue intact: every event and error recorded before deployment
+  is waiting to be delivered by the first visit after it, and dropping them would be permanent.
 - **F1.4** ⚠️ The VPS holds the **public** signing key. The private key never leaves the laptop.
 
 ### F2. The VPS

@@ -9,9 +9,15 @@
 
 import { renderTutorial } from "./tutorial.js";
 import { applyHead } from "./head.js";
+import { startUplink } from "../../engine/uplink.js";
 
 // The tab, the bookmark and the search result, from the catalogue rather than the markup
 // (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
 applyHead("tutorial");
+
+// ⚠️ **Even here, where nothing is fetched.** The tutorial cannot fail the way the other two pages
+// can, which is an argument about *likelihood* and not about coverage: an uncaught error on the screen a
+// stranger opens first is the one there is least chance of hearing about any other way.
+startUplink();
 
 renderTutorial({ root: document.getElementById("tutorial") });

@@ -20,6 +20,7 @@ import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { browserStorage, createStore } from "../../engine/store.js";
 import { deviceId, localDate } from "../../engine/device.js";
+import { eventId } from "../../engine/outbox.js";
 import { checkBoard, renderReference, renderReveal } from "./finish.js";
 import { applySolvedTitle } from "./head.js";
 import { text } from "../../engine/strings.js";
@@ -48,6 +49,10 @@ export function boot({
   fresh = false,
   calendarDate = null,
   now = new Date(),
+  // ⚠️ **Optional, and the board plays without it** (§23). A shell handed no outbox records nothing
+  // and draws exactly the same game — which is what every test written before C3 relies on, and what a
+  // second interface does before it has wiring of its own.
+  outbox = null,
 }) {
   const app = root;
   app.replaceChildren();
@@ -79,6 +84,24 @@ export function boot({
   // reliably on a phone — a swiped-away tab is killed, not closed — so anything waiting for it is a
   // session that survives on a desktop and vanishes on the device the board was designed for.
   const remember = () => store.save(puzzle.id, game.snapshot());
+
+  /**
+   * Put this game's C7 record in the upload queue (C3).
+   *
+   * ⚠️ **Wrapped, because a queue that throws must not take the reveal with it.** §23 is the whole
+   * rule: the game works with the backend down, and *the backend being down* includes the code that
+   * talks to it being broken.
+   */
+  const queue = () => {
+    try {
+      const record = game.record();
+      // ⚠️ **Stamped here rather than inside `record()`.** The engine produces the event; the id is
+      // about *delivery*, and C4 keeps the engine ignorant of everything outside the board.
+      outbox?.add({ event_id: eventId(record), ...record });
+    } catch {
+      // Deliberately empty. There is nowhere to report an upload failure to that is not the same queue.
+    }
+  };
 
   let selected = null;
 
@@ -280,6 +303,17 @@ export function boot({
    */
   function finishedChrome() {
     markFinished();
+    // ⚠⚠ **The one place a finished game becomes an event, because there are two ways to finish and
+    // they used to differ in everything.** A board that finishes while you watch and a board that reopens
+    // finished both arrive here; queueing from the check handler would have recorded only the first.
+    //
+    // ⚠️ **A reopened board therefore queues again, and that is harmless by construction** — `eventId`
+    // is the device and the puzzle, so the second call offers the queue an id it already holds, or one
+    // already delivered and gone. The duplicate is impossible rather than deduplicated afterwards.
+    //
+    // ⚠️ **`add` is synchronous, returns immediately and is not awaited.** Nothing about drawing the
+    // reveal waits on a network that may not be there.
+    queue();
     // ⚠️ **Both paths, because there are two and they used to differ.** A board that finishes while you
     // watch and a board that reopens finished both come through here now; a title set on one of them
     // only would leave a reopened solve advertising itself as today's unplayed puzzle.

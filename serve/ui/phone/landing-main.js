@@ -12,6 +12,7 @@ import { text } from "../../engine/strings.js";
 import { loadPuzzle } from "./daily.js";
 import { renderLanding } from "./landing.js";
 import { applyHead } from "./head.js";
+import { startUplink } from "../../engine/uplink.js";
 
 // The tab, the bookmark and the search result, from the catalogue rather than the markup
 // (v36-P2-17). Before anything is fetched: a page whose puzzle fails to load still has a name.
@@ -35,7 +36,13 @@ const root = document.getElementById("landing");
  * page whose puzzle was fine. §23 says play survives a backend failure; a page that misdiagnoses its
  * own failure is worse than one that falls over, because the report sends the reader somewhere else.
  */
-const store = createStore(browserStorage());
+const storage = browserStorage();
+const store = createStore(storage);
+
+// ⚠️ **The landing page reports its own errors and drains the queue too** (C3, C4). Every visit lands
+// here, so a visitor who never opens a board is still the visit where yesterday's undelivered event goes
+// out — and an exception on this page is the one most likely to stop somebody reaching the game at all.
+startUplink({ storage });
 
 try {
   const { puzzle } = await loadPuzzle();

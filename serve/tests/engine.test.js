@@ -38,6 +38,38 @@ async function loadAll() {
 
 const packages = await loadAll();
 
+/**
+ * Run `body` and answer with whatever escaped from a listener, instead of letting it reach the page.
+ *
+ * ⚠⚠ **This exists because "assert it does not throw" is not a test in a browser.** An exception
+ * thrown inside a DOM listener does **not** propagate out of `click()` or `dispatchEvent()`: it is
+ * reported to the window as an uncaught error and the caller carries on. So a case that presses a
+ * button and then asserts something stays green whatever the handler did — and a mutation run proved
+ * it, by making two "never throws" guards escape while both cases still passed.
+ *
+ * What actually caught them was `run_browser_tests.py`, which treats any page error as fatal. That is
+ * a real signal and a poor one to rely on: **the whole suite dies with no named failure**, so the
+ * report says nothing about which guard broke. This catches the escape, marks it handled so the run
+ * survives, and hands it back to be asserted on by name.
+ */
+const escapingFrom = async (body) => {
+  const escaped = [];
+  const onError = (event) => {
+    escaped.push(String(event.error?.message ?? event.message));
+    // Marks the error handled, so playwright does not see a page error and kill the run.
+    event.preventDefault();
+  };
+  window.addEventListener("error", onError);
+  try {
+    body();
+    // The error event is delivered as a task, so a microtask turn is not enough to see it.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  } finally {
+    window.removeEventListener("error", onError);
+  }
+  return escaped;
+};
+
 // Loaded here rather than inside the suite: `suite()` takes a synchronous callback, and top-level await
 // is what this module already uses for the packages themselves.
 const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
@@ -2281,7 +2313,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
    * The boundaries are all handed in: a detached root, a clock this test moves by hand, and a store
    * backed by an object so one case cannot see another's session.
    */
-  const bootShell = async (raw, { session = null, now = { at: 7_000_000 } } = {}) => {
+  const bootShell = async (raw, { session = null, now = { at: 7_000_000 }, outbox = null, storage = null } = {}) => {
     const { boot } = await import("../ui/phone/shell.js");
     const { createClock } = await import("../engine/clock.js");
     const { createStore } = await import("../engine/store.js");
@@ -2290,17 +2322,25 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     const root = document.createElement("div");
     document.getElementById("board").append(root);
     const kept = new Map();
-    const store = createStore({
+    const backing = storage ?? {
       getItem: (key) => kept.get(key) ?? null,
       setItem: (key, value) => kept.set(key, value),
       removeItem: (key) => kept.delete(key),
-    });
+    };
+    const store = createStore(backing);
     // ⚠️ **Seeded through the store's own `save`, never by writing a key this test invents.** The
     // first version keyed it `s.<id>`; the store keys it `boxscorepuzzle.session.v1.<id>`, so nothing
     // was ever restored and two cases failed on the fixture rather than on the shell. A test that
     // spells a key the code owns is a second copy of that key.
     if (session) store.save(puzzle.id, session);
-    const shell = boot({ puzzle, root, store, clock: createClock({ now: () => now.at }) });
+    const shell = boot({
+      puzzle,
+      root,
+      store,
+      storage: backing,
+      outbox,
+      clock: createClock({ now: () => now.at }),
+    });
     return { ...shell, puzzle, root, now, kept, teardown: () => root.remove() };
   };
 
@@ -2383,6 +2423,126 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     const cells = [...shell.root.querySelectorAll("td.cell")];
     equal(cells.filter((c) => c.getAttribute("role") === "button").length, 0, "cells are still controls");
     assert(!shell.root.querySelector(".cell.selected"), "a cell is still selected on a finished board");
+
+    shell.teardown();
+  });
+
+  /** A queue that records what it was given, standing in for the real outbox. */
+  const collectingOutbox = () => {
+    const added = [];
+    return {
+      added,
+      add: (item) => {
+        // ⚠️ The real outbox refuses an id it already holds, and this stands in for it. Without that
+        // the reopen test below would pass on a queue that behaves differently from the shipped one.
+        if (added.some((each) => each.event_id === item.event_id)) return true;
+        added.push(item);
+        return true;
+      },
+    };
+  };
+
+  /**
+   * ⚠️⚠️ **The other half of this list is `keep/src/keep/reading.py::_EVENT_FIELDS`.**
+   *
+   * `keep` refuses an unknown field *and* refuses a missing one, so a record that is nearly right is a
+   * batch that never drains — and the failure appears on the server weeks later rather than here.
+   * Nothing can check the two agree from one side: `keep`'s workflow ignores `serve/**` by design, so a
+   * change here would not even run its suite. What this buys is that a change to the record goes red
+   * **here**, next to the note saying which file has to change with it.
+   */
+  const EVENT_FIELDS = [
+    "account_id",
+    "assisted",
+    "calendar_date",
+    "device_id",
+    "duration_ms",
+    "errors",
+    "event_id",
+    "failed_checks",
+    "highest_technique",
+    "hints",
+    "played_on",
+    "puzzle_id",
+    "solved",
+  ];
+
+  test("⚠️⚠️ finishing queues exactly one event, carrying the whole C7 record", async () => {
+    const outbox = collectingOutbox();
+    const shell = await bootShell(packages[0].raw, { outbox });
+    fill(shell);
+
+    press(shell.root, ".keypad button.check");
+
+    equal(outbox.added.length, 1, "finishing queued the wrong number of events");
+    equal(Object.keys(outbox.added[0]).sort(), EVENT_FIELDS, "the queued record is not the shape keep accepts");
+    equal(outbox.added[0].solved, true, "a solved board was queued as unsolved");
+    assert(outbox.added[0].event_id.endsWith(shell.puzzle.id), "the event id does not name the puzzle");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ a board that reopens finished queues the same event, not a second one", async () => {
+    // There are two ways to finish and they used to differ in everything, so the queueing sits at the
+    // single point both pass through — which means a reopened board offers the queue an event too. What
+    // makes the repeat harmless is the id: it is the device and the puzzle, so the queue already has it.
+    const outbox = collectingOutbox();
+    // ⚠⚠ **One storage across both boots, and it is the point rather than plumbing.** `bootShell`
+    // makes a fresh one per call, so two boots would be two *devices* — and the id being the device and
+    // the puzzle, the second event would legitimately be a different one. The test would then be
+    // asserting that a cleared browser looks like a new device, which is true and is not this.
+    const held = new Map();
+    const storage = {
+      getItem: (key) => held.get(key) ?? null,
+      setItem: (key, value) => held.set(key, value),
+      removeItem: (key) => held.delete(key),
+    };
+    const shell = await bootShell(packages[0].raw, { outbox, storage });
+    fill(shell);
+    press(shell.root, ".keypad button.check");
+    const first = outbox.added[0].event_id;
+    const session = shell.game.snapshot();
+    shell.teardown();
+
+    // The reload: a fresh shell over the same storage and the saved session, which is how a finished
+    // board comes back.
+    const again = await bootShell(packages[0].raw, { outbox, storage, session });
+
+    assert(again.game.isFinished(), "the session did not come back finished, so this proves nothing");
+    equal(outbox.added.length, 1, "a reopened finished board queued a second event");
+    equal(outbox.added[0].event_id, first, "the reopened board produced a different id");
+
+    again.teardown();
+  });
+
+  test("⚠️ a board with no outbox plays exactly the same", async () => {
+    // §23, and it is what every test written before C3 relies on. A shell handed nothing to send with
+    // records nothing and draws the same game.
+    const shell = await bootShell(packages[0].raw);
+    fill(shell);
+
+    press(shell.root, ".keypad button.check");
+
+    assert(shell.root.querySelector(".reveal"), "a shell with no outbox failed to finish the game");
+
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ an outbox that throws does not stop the reveal", async () => {
+    // The queue is not on the play path and must not be able to get onto it. §23 holds through the code
+    // that talks to the backend as well as through the backend itself.
+    const exploding = {
+      add: () => {
+        throw new Error("the queue is broken");
+      },
+    };
+    const shell = await bootShell(packages[0].raw, { outbox: exploding });
+    fill(shell);
+
+    const escaped = await escapingFrom(() => press(shell.root, ".keypad button.check"));
+
+    equal(escaped, [], "the queue's failure escaped into the click handler");
+    assert(shell.root.querySelector(".reveal"), "a broken queue swallowed the boxscore the player earned");
 
     shell.teardown();
   });
@@ -3797,6 +3957,610 @@ suite("⚠️ Every page agrees on where the other pages are", () => {
     for (const [name, file] of Object.entries(ROUTES)) {
       const response = await fetch(`../ui/phone/${file}`);
       assert(response.ok, `ROUTES.${name} points at ${file}, which is not served`);
+    }
+  });
+});
+
+suite("C3 — the upload queue: written down before it is sent, and deleted only when it lands", () => {
+  const fakeStorage = () => {
+    const held = new Map();
+    return {
+      getItem: (key) => held.get(key) ?? null,
+      setItem: (key, value) => held.set(key, value),
+      removeItem: (key) => held.delete(key),
+      held,
+    };
+  };
+
+  /**
+   * Let every kicked pass finish.
+   *
+   * ⚠️ **A macrotask, not `Promise.resolve()`.** `add()` kicks a drain that is not awaited, so the
+   * number of microtask turns between queueing and delivery is an implementation detail — a test that
+   * counts them asserts the shape of the code rather than the behaviour, and goes red on a refactor
+   * that is correct.
+   */
+  const settled = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  const build = async (storage, send, capacity = 10) => {
+    const { createOutbox } = await import("../engine/outbox.js");
+    return createOutbox(storage, { name: "events", path: "/api/events", idField: "event_id", capacity, send });
+  };
+
+  /** Everything in the envelope landed. What `keep` says when it is up and the batch was well formed. */
+  const accepts = async (path, body) => ({
+    ok: true,
+    status: 200,
+    stored: body.events.map((each) => each.event_id),
+  });
+
+  const anEvent = (id) => ({ event_id: id, device_id: "d-1", puzzle_id: "p-1", solved: true });
+
+  test("⚠️⚠️ the item is in storage before anything is sent", async () => {
+    // C3.1, and the whole ordering of the module. A queue that sends first and writes on success loses
+    // the item to a phone swiped away mid-request — which is the case it exists for.
+    const storage = fakeStorage();
+    const seen = [];
+    let outbox = null;
+    outbox = await build(storage, async () => {
+      // Read at the moment of the send: the only way to observe the order rather than assert it.
+      seen.push(storage.getItem(outbox.key));
+      return { ok: true, status: 200, stored: [] };
+    });
+
+    outbox.add(anEvent("e-1"));
+    await outbox.drain();
+
+    assert(seen.length > 0, "nothing was sent at all");
+    assert(String(seen[0]).includes("e-1"), "the item was sent before it was written down");
+  });
+
+  test("⚠️⚠️ finishing offline and coming back delivers exactly one event", async () => {
+    // **C3's own acceptance condition.** The first attempt throws the way a dead network does; the
+    // second succeeds. What must not happen is two events at the far end — and what must not happen
+    // either is none.
+    const storage = fakeStorage();
+    let online = false;
+    const delivered = [];
+    const outbox = await build(storage, async (path, body) => {
+      if (!online) throw new TypeError("Failed to fetch");
+      delivered.push(...body.events);
+      return { ok: true, status: 200, stored: body.events.map((each) => each.event_id) };
+    });
+
+    outbox.add(anEvent("e-1"));
+    await settled();
+    equal(delivered.length, 0, "an offline send delivered something");
+    equal(outbox.pending().length, 1, "an offline send lost the event");
+
+    online = true;
+    await outbox.drain();
+    await settled();
+
+    equal(delivered.length, 1, "the event was delivered more or fewer times than once");
+    equal(outbox.pending().length, 0, "a delivered event stayed in the queue");
+  });
+
+  test("⚠️⚠️ a reload mid-flight leaves the event queued, because deletion waits for the answer", async () => {
+    // The half of the acceptance condition one process cannot show by itself: the queue is what
+    // survives, so a request that never comes back must leave the item exactly where it was. The
+    // re-send that follows is what the server-side id is for.
+    const storage = fakeStorage();
+
+    // A send that never resolves is what a killed tab looks like from the inside.
+    const first = await build(storage, () => new Promise(() => {}));
+    first.add(anEvent("e-1"));
+    void first.drain();
+
+    // The reload: a second outbox over the same storage.
+    const delivered = [];
+    const second = await build(storage, async (path, body) => {
+      delivered.push(...body.events);
+      return { ok: true, status: 200, stored: body.events.map((each) => each.event_id) };
+    });
+    equal(second.pending().length, 1, "the event did not survive the reload");
+    await second.drain();
+
+    equal(delivered.length, 1, "the reloaded page did not deliver the event");
+  });
+
+  test("⚠️ only the ids the server names are removed", async () => {
+    // `stored` rather than a count is why `keep` answers this way: a partial success must not force the
+    // client to re-send everything, which would reintroduce the duplicate the id exists to prevent.
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: true, status: 200, stored: ["e-1"] }));
+
+    outbox.add(anEvent("e-1"));
+    outbox.add(anEvent("e-2"));
+    await settled();
+
+    equal(
+      outbox.pending().map((each) => each.event_id),
+      ["e-2"],
+      "the queue did not keep exactly what the server declined to name",
+    );
+  });
+
+  test("⚠️⚠️ a batch refused for one bad member keeps every good one", async () => {
+    // `keep` refuses a batch whole — correctly, since a client cannot be told *some of that landed*
+    // without being told which — and that makes one malformed record a permanent blockage in front of
+    // everything behind it. Retrying alone finds the poisoned one and drops only that.
+    const storage = fakeStorage();
+    const delivered = [];
+    const outbox = await build(storage, async (path, body) => {
+      if (body.events.some((each) => each.event_id === "bad")) return { ok: false, status: 400, stored: [] };
+      delivered.push(...body.events.map((each) => each.event_id));
+      return { ok: true, status: 200, stored: body.events.map((each) => each.event_id) };
+    });
+
+    outbox.add(anEvent("e-1"));
+    outbox.add(anEvent("bad"));
+    outbox.add(anEvent("e-2"));
+    await settled();
+
+    // ⚠️ **The end state, not one pass's report.** `add()` kicks, so how the three items are split
+    // across passes is timing; what has to be true is that both good events arrive and only the bad one
+    // is thrown away. A test asserting the split would be asserting the scheduler.
+    equal(delivered.sort(), ["e-1", "e-2"], "a good event was thrown away with the bad one");
+    equal(outbox.pending().length, 0, "the poisoned event stayed in the queue and blocks it forever");
+  });
+
+  test("⚠️⚠️ a 404 keeps everything, because a route can arrive with the next deploy", async () => {
+    // The dangerous simplification is *any 4xx is permanent*. Beta 0 runs against a `serve` that does
+    // not proxy these paths until F is done; dropping on 404 would discard every event recorded before
+    // deployment, silently, which is the one loss C7 can never recover from.
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: false, status: 404, stored: [] }));
+
+    outbox.add(anEvent("e-1"));
+    const outcome = await outbox.drain();
+
+    equal(outcome.dropped, [], "a 404 threw the event away");
+    equal(outbox.pending().length, 1, "a 404 emptied the queue");
+    await settled();
+  });
+
+  test("a server error keeps everything too", async () => {
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: false, status: 503, stored: [] }));
+
+    outbox.add(anEvent("e-1"));
+    await outbox.drain();
+
+    equal(outbox.pending().length, 1, "an outage emptied the queue");
+  });
+
+  test("⚠️ an ok response whose body will not parse leaves the queue alone", async () => {
+    // The alternative is assuming it landed, which drops an event on a proxy's HTML error page. The
+    // cost of this direction is a re-send the server deduplicates.
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: true, status: 200, stored: undefined }));
+
+    outbox.add(anEvent("e-1"));
+    await outbox.drain();
+
+    equal(outbox.pending().length, 1, "an unreadable answer was read as a delivery");
+  });
+
+  test("⚠️ the same id is queued once, however many times it is offered", async () => {
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: false, status: 503, stored: [] }));
+
+    outbox.add(anEvent("e-1"));
+    outbox.add(anEvent("e-1"));
+
+    equal(outbox.pending().length, 1, "one event was queued twice");
+  });
+
+  test("an item with no id is refused rather than queued", async () => {
+    // It could never be deduplicated and `keep` would refuse it forever, so it would sit at the head of
+    // the queue blocking everything behind it. A lost item is the smaller failure.
+    const storage = fakeStorage();
+    const outbox = await build(storage, accepts);
+
+    equal(outbox.add({ device_id: "d-1" }), false, "an event with no id was accepted");
+    equal(outbox.pending().length, 0);
+  });
+
+  test("⚠️ the cap drops the oldest, not the newest", async () => {
+    const storage = fakeStorage();
+    const outbox = await build(storage, async () => ({ ok: false, status: 503, stored: [] }), 2);
+
+    outbox.add(anEvent("e-1"));
+    outbox.add(anEvent("e-2"));
+    outbox.add(anEvent("e-3"));
+
+    equal(
+      outbox.pending().map((each) => each.event_id),
+      ["e-2", "e-3"],
+      "the cap dropped the wrong end of the queue",
+    );
+  });
+
+  test("⚠️⚠️ a storage that refuses everything still delivers, for as long as the tab lives", async () => {
+    // §23 again: private browsing and a denied origin must not mean a device that records nothing at
+    // all. What cannot be promised is survival of a reload, and nothing claims it.
+    const refused = {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException("QuotaExceededError");
+      },
+      removeItem: () => {},
+    };
+    const delivered = [];
+    const outbox = await build(refused, async (path, body) => {
+      delivered.push(...body.events);
+      return { ok: true, status: 200, stored: body.events.map((each) => each.event_id) };
+    });
+
+    outbox.add(anEvent("e-1"));
+    await settled();
+
+    equal(delivered.length, 1, "a blocked storage stopped the event being delivered at all");
+    equal(outbox.pending().length, 0, "the in-memory copy outlived its delivery");
+  });
+
+  test("⚠️ an item queued during a flight is not clobbered by the one that settles", async () => {
+    // The queue is re-read after the response rather than written back from a variable captured before
+    // it. Held across an await, it overwrites whatever arrived meanwhile.
+    const storage = fakeStorage();
+    let release = null;
+    let calls = 0;
+    const outbox = await build(storage, (path, body) => {
+      calls += 1;
+      // Only the first send is held open — the pass booked behind it must be able to finish, or this
+      // test would hang on the very mechanism it is checking.
+      if (calls > 1) return Promise.resolve({ ok: false, status: 503, stored: [] });
+      return new Promise((resolve) => {
+        release = () => resolve({ ok: true, status: 200, stored: body.events.map((each) => each.event_id) });
+      });
+    });
+
+    outbox.add(anEvent("e-1"));
+    const flight = outbox.drain();
+    outbox.add(anEvent("e-2"));
+    release();
+    await flight;
+
+    equal(
+      outbox.pending().map((each) => each.event_id),
+      ["e-2"],
+      "the event queued mid-flight was deleted with the one that settled",
+    );
+  });
+
+  test("⚠️ two drains at once send once", async () => {
+    // `online`, `visibilitychange` and `add` all kick. Without a single-flight guard the same items go
+    // twice — deduplicated at the far end, but a double this side chose to send.
+    const storage = fakeStorage();
+    let calls = 0;
+    const outbox = await build(storage, async (path, body) => {
+      calls += 1;
+      return accepts(path, body);
+    });
+
+    outbox.add(anEvent("e-1"));
+    await Promise.all([outbox.drain(), outbox.drain()]);
+    await settled();
+
+    // ⚠️ **One request, not one pass.** Later passes run and find the queue empty, which costs nothing
+    // — `pass()` returns before it reaches the transport. What must never happen is the same event being
+    // put on the wire twice by this side.
+    equal(calls, 1, "the same event was sent twice");
+  });
+
+  test("an empty queue sends nothing", async () => {
+    let calls = 0;
+    const outbox = await build(fakeStorage(), async (path, body) => {
+      calls += 1;
+      return accepts(path, body);
+    });
+
+    await outbox.drain();
+
+    equal(calls, 0, "an empty queue made a request");
+  });
+
+  test("a malformed queue in storage reads as empty rather than throwing", async () => {
+    const { OUTBOX_PREFIX } = await import("../engine/outbox.js");
+    const storage = fakeStorage();
+    storage.setItem(`${OUTBOX_PREFIX}events`, "{not json");
+    // ⚠️ A transport that never succeeds, so the assertion is about the queue rather than about how
+    // many microtask turns pass before a successful delivery empties it.
+    const outbox = await build(storage, async () => ({ ok: false, status: 503, stored: [] }));
+
+    equal(outbox.pending(), []);
+    outbox.add(anEvent("e-1"));
+    await settled();
+    equal(outbox.pending().length, 1, "a malformed queue stopped a new event being queued");
+  });
+
+  test("⚠️ follow() drains on a connection and on the page becoming visible, and can be stopped", async () => {
+    const storage = fakeStorage();
+    let calls = 0;
+    const outbox = await build(storage, async () => {
+      calls += 1;
+      return { ok: false, status: 503, stored: [] };
+    });
+    outbox.add(anEvent("e-1"));
+    await settled();
+    const before = calls;
+    const target = new EventTarget();
+
+    const stop = outbox.follow(target);
+    await settled();
+    const afterFollow = calls;
+    target.dispatchEvent(new Event("online"));
+    await settled();
+    target.dispatchEvent(new Event("visibilitychange"));
+    await settled();
+    const watching = calls;
+    stop();
+    target.dispatchEvent(new Event("online"));
+    await settled();
+
+    assert(afterFollow > before, "follow() did not drain when it was installed");
+    assert(watching > afterFollow, "neither event drained the queue");
+    equal(calls, watching, "the listeners were still attached after stop()");
+  });
+
+  test("⚠️⚠️ the event id is the device and the puzzle, so one game can only ever be one event", async () => {
+    // The alternative is a fresh UUID per call, which makes a reopened board a second event that
+    // percentiles would count — a game that never happened. The cost is written down where the id is:
+    // a deliberate replay records nothing.
+    const { eventId } = await import("../engine/outbox.js");
+
+    equal(eventId({ device_id: "d-1", puzzle_id: "p-1" }), eventId({ device_id: "d-1", puzzle_id: "p-1" }));
+    assert(
+      eventId({ device_id: "d-1", puzzle_id: "p-1" }) !== eventId({ device_id: "d-2", puzzle_id: "p-1" }),
+      "two devices share an event id",
+    );
+    assert(
+      eventId({ device_id: "d-1", puzzle_id: "p-1" }) !== eventId({ device_id: "d-1", puzzle_id: "p-2" }),
+      "two puzzles share an event id",
+    );
+  });
+
+  test("a device with no storage still produces an id rather than one beginning 'undefined'", async () => {
+    const { eventId } = await import("../engine/outbox.js");
+
+    equal(eventId({ device_id: null, puzzle_id: "p-1" }), "anonymous:p-1");
+  });
+
+  test("the two queues have separate keys, so neither overwrites the other", async () => {
+    const { errorOutbox, eventOutbox } = await import("../engine/outbox.js");
+    const storage = fakeStorage();
+    const dead = async () => ({ ok: false, status: 503, stored: [] });
+
+    assert(eventOutbox(storage, dead).key !== errorOutbox(storage, dead).key, "the two queues share one key");
+  });
+});
+
+suite("C4 — uncaught client errors: reported, rate-limited, and never in the way", () => {
+  const collector = () => {
+    const items = [];
+    return {
+      add: (item) => {
+        items.push(item);
+        return true;
+      },
+      items,
+    };
+  };
+
+  const aWindow = () => {
+    const target = new EventTarget();
+    target.location = { pathname: "/p/abc", search: "?secret=1", href: "https://example.test/p/abc?secret=1" };
+    target.innerWidth = 375;
+    target.innerHeight = 812;
+    target.navigator = { userAgent: "a browser" };
+    return target;
+  };
+
+  const throwAt = (target, message, stack = "at draw (board.js:1:1)") => {
+    // ⚠️ A synthetic `error` event rather than a real throw: a genuine uncaught exception inside a test
+    // fails the harness before the handler can be observed, and the handler is what is under test.
+    const event = new Event("error");
+    event.message = message;
+    event.error = { message, stack };
+    target.dispatchEvent(event);
+  };
+
+  test("⚠️ an uncaught error is queued with exactly what §35 allows", async () => {
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    const stop = watchForErrors({ outbox, deviceId: "d-1", target, id: () => "x-1" });
+
+    throwAt(target, "boom");
+    stop();
+
+    equal(outbox.items.length, 1, "the error was not reported");
+    const report = outbox.items[0];
+    // ⚠️ The field set, not a sample of it. `keep`'s reader refuses an unknown field and refuses a
+    // missing one, so a report that is nearly right is a batch that never drains.
+    equal(Object.keys(report).sort(), [
+      "device_id",
+      "error_id",
+      "message",
+      "page",
+      "stack",
+      "user_agent",
+      "viewport",
+    ]);
+    equal(report.device_id, "d-1");
+    equal(report.viewport, "375x812");
+    equal(report.page, "/p/abc");
+    assert(report.message.includes("boom"), `the message was lost: ${report.message}`);
+  });
+
+  test("⚠️⚠️ the query string never travels", async () => {
+    // §35 keeps browsing history out, and a query is the one part of a URL carrying whatever somebody
+    // put in it. `location.href` was the obvious field and is the wrong one.
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    const stop = watchForErrors({ outbox, deviceId: "d-1", target, id: () => "x-1" });
+
+    throwAt(target, "boom");
+    stop();
+
+    assert(!JSON.stringify(outbox.items[0]).includes("secret"), "the query string reached the report");
+  });
+
+  test("⚠️⚠️ a render loop reports once", async () => {
+    // C4.3. The cap alone would not stop the first five reports being five copies of one fact, which is
+    // the shape a loop actually produces.
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    let made = 0;
+    const stop = watchForErrors({
+      outbox,
+      deviceId: "d-1",
+      target,
+      id: () => `x-${(made += 1)}`,
+    });
+
+    for (let index = 0; index < 200; index += 1) throwAt(target, "boom");
+    stop();
+
+    equal(outbox.items.length, 1, "one repeated fault was reported more than once");
+  });
+
+  test("⚠️ distinct faults stop at the cap", async () => {
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    let made = 0;
+    const stop = watchForErrors({
+      outbox,
+      deviceId: "d-1",
+      target,
+      limit: 3,
+      id: () => `x-${(made += 1)}`,
+    });
+
+    for (let index = 0; index < 20; index += 1) throwAt(target, `boom ${index}`, `at frame${index} ()`);
+    stop();
+
+    equal(outbox.items.length, 3, "the per-load cap did not hold");
+  });
+
+  test("a rejected promise is reported too, whatever was thrown", async () => {
+    // A rejection's reason is often not an `Error` — a string, an object, a fetch response — and
+    // assuming `.message` gives `undefined` for exactly the cases that are hardest to diagnose.
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    const stop = watchForErrors({ outbox, deviceId: "d-1", target, id: () => "x-1" });
+
+    const event = new Event("unhandledrejection");
+    event.reason = "just a string";
+    target.dispatchEvent(event);
+    stop();
+
+    equal(outbox.items.length, 1, "a rejection was not reported");
+    assert(outbox.items[0].message.includes("just a string"), outbox.items[0].message);
+  });
+
+  test("⚠️⚠️ an outbox that throws does not take the page with it", async () => {
+    // A reporter that can break the game is worse than no reporter: one broken render would become a
+    // broken board, and the fault would be in the thing watching for faults. Dispatching runs the
+    // handler synchronously, so a throw surfaces here and fails this test.
+    const { watchForErrors } = await import("../engine/report.js");
+    const exploding = {
+      add: () => {
+        throw new Error("the queue is broken");
+      },
+    };
+    const target = aWindow();
+    const stop = watchForErrors({ outbox: exploding, deviceId: "d-1", target, id: () => "x-1" });
+
+    const escaped = await escapingFrom(() => throwAt(target, "boom"));
+    stop();
+
+    equal(escaped, [], "the reporter let its own failure out into the page");
+  });
+
+  test("⚠️ a long stack is truncated rather than sent whole", async () => {
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+    const stop = watchForErrors({ outbox, deviceId: "d-1", target, id: () => "x-1" });
+
+    throwAt(target, "boom", "x".repeat(50_000));
+    stop();
+
+    assert(outbox.items[0].stack.length <= 4000, `the stack was ${outbox.items[0].stack.length} characters`);
+  });
+
+  test("stop() detaches, so a second interface can unmount", async () => {
+    const { watchForErrors } = await import("../engine/report.js");
+    const outbox = collector();
+    const target = aWindow();
+
+    watchForErrors({ outbox, deviceId: "d-1", target, id: () => "x-1" })();
+    throwAt(target, "boom");
+
+    equal(outbox.items.length, 0, "the handlers were still attached after stop()");
+  });
+});
+
+suite("The uplink: one storage, one device, both queues, in the one place three interfaces share", () => {
+  const heldStorage = () => {
+    const held = new Map();
+    return {
+      held,
+      storage: {
+        getItem: (key) => held.get(key) ?? null,
+        setItem: (key, value) => held.set(key, value),
+        removeItem: (key) => held.delete(key),
+      },
+    };
+  };
+
+  test("⚠️ everything hangs off the one storage object it was handed", async () => {
+    // Two calls to `browserStorage()` hand back two different do-nothing objects when storage refuses,
+    // so the session, the device id and the queues would forget in three separate places.
+    const { startUplink } = await import("../engine/uplink.js");
+    const { DEVICE_KEY } = await import("../engine/device.js");
+    const { held, storage } = heldStorage();
+
+    const uplink = startUplink({
+      storage,
+      target: new EventTarget(),
+      send: async () => ({ ok: true, status: 200, stored: [] }),
+    });
+    uplink.stop();
+
+    equal(held.get(DEVICE_KEY), uplink.device, "the uplink's device id is not the one in the storage it was given");
+  });
+
+  test("⚠️⚠️ an error thrown during boot is reported, because the watcher is installed first", async () => {
+    const { startUplink } = await import("../engine/uplink.js");
+    const { storage } = heldStorage();
+    const target = new EventTarget();
+    target.location = { pathname: "/" };
+    target.navigator = { userAgent: "a browser" };
+    const uplink = startUplink({ storage, target, send: async () => ({ ok: false, status: 503, stored: [] }) });
+
+    const event = new Event("error");
+    event.message = "boom";
+    event.error = { message: "boom", stack: "at boot" };
+    target.dispatchEvent(event);
+
+    equal(uplink.errors.pending().length, 1, "an error during boot was not queued");
+    uplink.stop();
+  });
+
+  test("⚠️ the three entry points all start it, because every visit is a chance to drain", async () => {
+    // The landing page is where every visit lands (`serve-flow.md` §1), so it is where yesterday's
+    // undelivered event goes out even for somebody who never opens a board. A rule each interface has
+    // to remember is one the third will forget; this asserts all three remembered.
+    for (const file of ["main.js", "landing-main.js", "tutorial-main.js"]) {
+      const source = await (await fetch(`../ui/phone/${file}`)).text();
+      assert(/startUplink\(/.test(source), `${file} never starts the uplink, so it reports nothing`);
     }
   });
 });
