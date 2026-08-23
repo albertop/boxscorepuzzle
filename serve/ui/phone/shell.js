@@ -19,6 +19,7 @@ import { battingCell, footnoteCell, pitchingCell, sectionOf } from "../../engine
 import { createClock, followAttention } from "../../engine/clock.js";
 import { createGame } from "../../engine/game.js";
 import { browserStorage, createStore } from "../../engine/store.js";
+import { deviceId, localDate } from "../../engine/device.js";
 import { checkBoard, renderReference, renderReveal } from "./finish.js";
 import { applySolvedTitle } from "./head.js";
 import { text } from "../../engine/strings.js";
@@ -38,15 +39,32 @@ export function boot({
   puzzle,
   root = document.getElementById("app"),
   clock = createClock(),
-  store = createStore(browserStorage()),
+  // ⚠️ `storage` first, and `store` derived from it. Two calls to `browserStorage()` would probe
+  // `localStorage` twice and — when it refuses — hand back **two different** do-nothing objects, so the
+  // session and the device identity would be looking at unrelated places that both forget.
+  storage = browserStorage(),
+  store = createStore(storage),
   doc = document,
   fresh = false,
+  calendarDate = null,
+  now = new Date(),
 }) {
   const app = root;
   app.replaceChildren();
   // ⚠️ **The session is restored before the board is drawn**, so the player never sees an empty grid
   // fill itself in. §27: the puzzle stays open all day and saves itself.
-  const game = createGame(puzzle, clock);
+  // ⚠️⚠️ **The identity is assembled here because this is where the storage and the clock are.** C7's
+  // event is the engine's to produce and the engine must not reach for either: it does not know what day
+  // it is (C4) and it has no storage of its own.
+  //
+  // ⚠️ `calendarDate` comes from the loader and is **null until `/today` exists** (E1). A null is the
+  // honest value — the alternative is `localDate(now)`, which would be *the player's* date wearing the
+  // calendar's name and would be wrong for anybody playing the archive or across a rollover.
+  const game = createGame(puzzle, clock, {
+    deviceId: deviceId(storage),
+    calendarDate,
+    playedOn: localDate(now),
+  });
   // ⚠️ A refused session is discarded rather than left to be re-read on every visit. Nothing here waits
   // on it: `restore` returns false and the player gets today's board, empty, which is the outcome §23
   // asks for when anything about persistence goes wrong.

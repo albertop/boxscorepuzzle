@@ -322,12 +322,63 @@ suite("The game: state, entries and the C7 record", () => {
     // solve. Always present, `false` on every real game.
     equal(
       Object.keys(record).sort(),
-      ["assisted", "duration_ms", "errors", "failed_checks", "highest_technique", "hints", "puzzle_id", "solved"],
+      [
+        "account_id",
+        "assisted",
+        "calendar_date",
+        "device_id",
+        "duration_ms",
+        "errors",
+        "failed_checks",
+        "highest_technique",
+        "hints",
+        "played_on",
+        "puzzle_id",
+        "solved",
+      ],
     );
     equal(record.assisted, false, "an ordinary game reported itself as assisted");
+    // ⚠️ **Null rather than absent, on a game given no identity.** C7 lists these and the schema has to
+    // carry them from the first row: an event whose subject is one fixed column cannot become claimable
+    // later without rewriting history, which is what C7 exists to prevent.
+    equal(record.device_id, null, "a game with no storage invented a device");
+    equal(record.account_id, null, "there are no accounts yet");
+    equal(record.calendar_date, null, "the engine does not know what day it is (C4)");
     equal(record.failed_checks, 0, "a game nobody checked reports a failed attempt");
     equal(record.duration_ms, 3000, "duration is not measured from the injected clock");
     equal(record.puzzle_id, puzzle.id);
+  });
+
+  test("⚠️ the record carries the identity it is given, on two different clocks", async () => {
+    // ⚠️⚠️ **The two dates use two different clocks and neither is recoverable once written.**
+    // `calendar_date` is the system's — August 22nd's puzzle is August 22nd's everywhere — and comes
+    // from the loader. `played_on` is the **player's**: stored in UTC, somebody in California playing at
+    // eleven at night is recorded as having played the next day, and every question about when people
+    // play stops being answerable rather than merely wrong.
+    const game = createGame(puzzle, undefined, {
+      deviceId: "d-1",
+      calendarDate: "2026-09-01",
+      playedOn: "2026-08-31",
+    });
+
+    const record = game.record();
+    equal(record.device_id, "d-1");
+    equal(record.calendar_date, "2026-09-01");
+    equal(record.played_on, "2026-08-31", "the player's date was replaced by the calendar's");
+    equal(record.account_id, null, "an account appeared before there are accounts");
+  });
+
+  test("⚠️⚠️ a missing played-at date is null, never the calendar's", async () => {
+    // **The mutation that found this test missing:** `identity.playedOn ?? identity.calendarDate`. It
+    // looks like a sensible fallback and it is the exact confusion the two fields exist to prevent —
+    // the player's clock silently replaced by the system's, in a row nothing can correct afterwards.
+    //
+    // ⚠️ The earlier test always supplied both, so the fallback was never reached and the mutation
+    // passed. **A test that gives every field cannot see a wrong default.**
+    const game = createGame(puzzle, undefined, { calendarDate: "2026-09-01" });
+
+    equal(game.record().played_on, null, "the calendar's date was recorded as when somebody played");
+    equal(game.record().calendar_date, "2026-09-01");
   });
 
   test("⚠️⚠️ a full board that does not balance is one try, and an incomplete one is none", () => {
@@ -405,6 +456,87 @@ suite("The game: state, entries and the C7 record", () => {
     fresh.restore(saved);
     equal(fresh.value(name), 3, "the entry did not survive the round trip");
     equal(fresh.snapshot().entries["batting[99].hits"], undefined, "a stale cell was restored");
+  });
+});
+
+suite("The device identity: its own key, its own lifetime, and a storage that may refuse", () => {
+  const fakeStorage = () => {
+    const held = new Map();
+    return {
+      getItem: (key) => held.get(key) ?? null,
+      setItem: (key, value) => held.set(key, value),
+      removeItem: (key) => held.delete(key),
+      held,
+    };
+  };
+
+  test("the same browser gets the same id twice", async () => {
+    const { deviceId } = await import("../engine/device.js");
+    const storage = fakeStorage();
+
+    equal(deviceId(storage), deviceId(storage), "a second call invented a new device");
+  });
+
+  test("⚠️ it lives under its own key, not inside a puzzle session", async () => {
+    // The per-puzzle session is disposable — cleared when a board is finished with, rewritten on every
+    // entry. A device identity inside it would be thrown away with whichever board it happened to sit in.
+    const { deviceId, DEVICE_KEY } = await import("../engine/device.js");
+    const { PREFIX } = await import("../engine/store.js");
+    const storage = fakeStorage();
+    deviceId(storage);
+
+    equal([...storage.held.keys()], [DEVICE_KEY]);
+    equal(DEVICE_KEY.startsWith(PREFIX), false, "the device id is filed under the session prefix");
+  });
+
+  test("⚠️⚠️ a storage that refuses everything still plays, anonymously", async () => {
+    // §23: `browserStorage()` answers with something that accepts and remembers nothing when
+    // `localStorage` is blocked. The device then looks new on every call, which is the honest outcome —
+    // there is nothing to tie its events to — and the game must not care.
+    const { deviceId } = await import("../engine/device.js");
+    const refused = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
+
+    const first = deviceId(refused);
+    const second = deviceId(refused);
+
+    equal(typeof first, "string", "a refused storage stopped the id being made at all");
+    equal(first === second, false, "a storage that remembers nothing returned a stable id");
+  });
+
+  test("the id looks like a UUID whatever made it", async () => {
+    // `crypto.randomUUID` needs a secure context and `http://` on the local network is how this board
+    // gets looked at during development, so the fallback path has to produce the same shape.
+    const { deviceId } = await import("../engine/device.js");
+
+    const shape = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+    equal(shape.test(deviceId(fakeStorage())), true, "the id is not a version 4 UUID");
+  });
+
+  test("⚠️⚠️ the played-at date is the player's, never UTC", async () => {
+    // Stored in UTC, somebody in California playing at eleven at night is recorded as having played the
+    // following day. **The information is gone once the row is written**, not merely wrong: nothing in
+    // the row says which way to correct it.
+    //
+    // ⚠️⚠️ **The obvious assertion here — that `localDate` differs from `toISOString()` — passes or
+    // fails on the machine's timezone**, which is a test that reports the environment rather than the
+    // code. On a UTC runner the two agree and nothing is wrong. So this asserts the local calendar
+    // components always, and only checks the divergence where the offset guarantees one.
+    const { localDate } = await import("../engine/device.js");
+    const lateEvening = new Date(2026, 7, 22, 23, 30);
+
+    equal(localDate(lateEvening), "2026-08-22", "the date was not read from the local calendar");
+
+    // West of UTC, 23:30 on the 22nd is already the 23rd in UTC. This is where the loss happens.
+    if (lateEvening.getTimezoneOffset() > 0) {
+      equal(lateEvening.toISOString().slice(0, 10), "2026-08-23", "the premise of this test is wrong");
+      equal(localDate(lateEvening) === lateEvening.toISOString().slice(0, 10), false);
+    }
+  });
+
+  test("single digits are padded, so the date sorts as a string", async () => {
+    const { localDate } = await import("../engine/device.js");
+
+    equal(localDate(new Date(2026, 0, 5)), "2026-01-05");
   });
 });
 

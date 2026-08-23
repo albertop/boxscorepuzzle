@@ -194,9 +194,25 @@ read as a result.
 | Are boards solvable by people who are not the author | **Yes**, and it is the only way to find out |
 | Does the shared image survive WhatsApp, iMessage and X intact | **Yes.** Pure engineering, and the sample size is irrelevant |
 | Does anyone come back at all | **Yes**, as a yes-or-no |
+| How many distinct **people** played | **No** — a cleared browser is a new device, and the gap runs one way |
 | Do people choose to share | **Weakly.** Friends share out of support |
 | Does a recipient become a player | **No.** The recipients are also friends of friends |
 | The retention curve | **No** |
+
+### ⚠️⚠️ Recorded before the first number arrives: **a cleared browser is a new device**
+
+A player who clears their browser data comes back with a **new device id**, and their earlier games are
+orphaned. **That is unavoidable and fine** — §35 stores a random UUID and nothing derived from the
+machine, precisely so there is nothing to recognise somebody by.
+
+**What it does is inflate the unique-device count**, and beta 0 exists to read numbers off these events.
+Devices are not people, and the gap runs one way: **more devices than players, never fewer.**
+
+⚠️ **Same class as the retention caveat below, and worth naming as such: a correct measurement that means
+something narrower than it appears.** Nothing is broken — the count is exactly right about devices — and
+reading it as *players* is the error, which no amount of care in computing it prevents. Written down
+before the first number arrives, because afterwards it reads as an excuse for a figure somebody did not
+like.
 
 ### ⚠️⚠️ Recorded before the first number arrives: **beta 0 does not produce a retention curve**
 

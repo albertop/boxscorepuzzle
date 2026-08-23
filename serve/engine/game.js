@@ -142,7 +142,7 @@ export const HINTS_PER_GAME = 3;
  * say whether it is right.
  */
 
-export function createGame(puzzle, clock = createClock()) {
+export function createGame(puzzle, clock = createClock(), identity = {}) {
   const cells = new Map(describeCells(puzzle).map((cell) => [cell.name, cell]));
   const entries = new Map();
   /** Cells whose first entry was wrong. A set, not a counter: entering the same wrong value twice is
@@ -375,6 +375,27 @@ export function createGame(puzzle, clock = createClock()) {
     record() {
       return {
         puzzle_id: puzzle.id,
+        // ⚠️⚠️ **Two dates on two different clocks, and neither is recoverable once the row is written.**
+        //
+        // `calendar_date` is **the system's**: August 22nd's puzzle is August 22nd's for everyone,
+        // everywhere. It comes from the loader rather than from here — C4 says the engine does not know
+        // what day it is — and it is what a streak hangs from.
+        //
+        // `played_on` is **the player's**, from `localDate()`. Stored in UTC, somebody in California
+        // playing at eleven at night is recorded as having played the following day, and **every
+        // question about when people play becomes unanswerable** — not wrong, *gone*, because the row
+        // does not carry what it would take to correct it.
+        //
+        // ⚠️ They differ for archive play too: the puzzle's date and the day somebody sat down are two
+        // questions, and one clock cannot answer both.
+        calendar_date: identity.calendarDate ?? null,
+        played_on: identity.playedOn ?? null,
+        // ⚠️ **Both present from the first row, and `account_id` is null rather than absent.** The event
+        // is claimable (`data-layer.md` §6): registering attaches an account to the device's history.
+        // A subject that is one fixed column cannot become claimable later without rewriting history,
+        // which is the thing C7 exists to prevent — so the shape is here before there are accounts.
+        device_id: identity.deviceId ?? null,
+        account_id: null,
         duration_ms: finishedAt ?? clock.elapsed(),
         hints: hinted.size,
         errors: firstWrong.size,
