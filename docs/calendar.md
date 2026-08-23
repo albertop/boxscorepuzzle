@@ -146,15 +146,38 @@ those two *are not independent any more — an argument for a Caribbean market w
 neither.* **This is now the third.**
 
 ⚠️ If the audience premise ever moves, this moves with it — and the rule is to **re-derive the reason in
-the new place rather than carry the conclusion across.** The same instant is **09:00 or 10:00 in
-Madrid** — the middle of the morning, and the operator's own day.
+the new place rather than carry the conclusion across.**
 
-⚠️ **And the Caribbean case is weaker than the first version of this sentence claimed.** It said *08:00
-in Santo Domingo*, which is simply wrong: that zone is UTC-4 with no daylight saving, so the rollover
-lands at **04:00 there, year-round** — asleep, like the mainland. **So the figure does not carry the
-argument; the reasoning does.** An offset chosen because the contiguous states span UTC-4 to UTC-8 is
-not automatically right for an audience that does not, and the check is to re-derive it rather than to
-notice whether a number looks late.
+### ⚠⚠ One constituency decides this, and the other zones are informative
+
+**US Eastern and Pacific decide it, and nothing else does.** The argument above is a US argument and
+should be read as one: 19:00 or 20:00 Eastern takes the board from somebody who sat down a quarter of an
+hour earlier, and 03:00 or 04:00 Eastern catches almost nobody mid-board. **`UTC-8` is chosen because
+the contiguous states span UTC-4 to UTC-8.** That is the whole of it.
+
+The zones below are **translations, not constituencies.** A future reader weighing a clock change should
+find one interest here, not three.
+
+| zone | when the rollover lands | weight |
+|---|---|---|
+| **US Eastern / Pacific** | 03:00 / 00:00 winter, 04:00 / 01:00 summer | ✔ **decides it** |
+| Madrid | 09:00 or 10:00 | informative — the operator's own morning, and he is not the audience |
+| Santo Domingo | **04:00, year-round** (UTC-4, no daylight saving) | informative — see below |
+
+### ⚠️ Santo Domingo was a target market at conception and is not one now — settled 2026-08-23
+
+**Baseball is king there, and that is why it was considered.** The target is the United States. **A
+player from Santo Domingo is welcome; Santo Domingo does not weigh on a decision.**
+
+**The figure stays and is correct at 04:00.** Keeping it records that the market was once considered,
+which is the same reason the superseded package-format documents are kept rather than deleted — a
+history that is erased cannot be re-examined, and this one is exactly what a future argument for a
+Caribbean market would need to pick up.
+
+⚠️ **What was corrected on the way**: an earlier version of this section said *08:00 in Santo Domingo*,
+which is simply wrong — that zone is UTC-4 and the rollover lands at 04:00, asleep like the mainland. **So
+the figure never carried the argument even when the market was a target.** The reasoning does, and the
+check is to re-derive it rather than to notice whether a number looks late.
 
 ### The consequence for the two dates on the event, which is the same question asked twice
 
