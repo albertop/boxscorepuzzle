@@ -16,6 +16,7 @@ server* and *needs rows* is not *touches the database*. This file is its helpers
 
 import pytest
 
+from boxscore_domain import ZERO_DENSITY_GATE
 from boxscore_forge.pool import (
     _a_number,
     _batting_labels,
@@ -55,9 +56,16 @@ class TestNumbersThatReachSql:
         assert _a_number("max_batters", 13, low=0, high=100) == 13.0
 
     def test_the_clause_carries_the_gate_and_no_lint_directive(self) -> None:
-        clause = zero_density_clause(0.30)
+        """⚠️ **The gate is imported, and this file spelled it `0.30` until the hook refused the push.**
 
-        assert clause.strip().endswith("< 0.3")
+        `test_constants_are_not_copied.py` caught it — the guard extended earlier the same day to watch
+        for exactly this, firing on a file written hours later by the person who extended it. **A value
+        that carries a decision has one home**, and a *test* spelling it is the worst copy of all: it
+        would keep passing after the decision changed, and assert the old number while doing it.
+        """
+        clause = zero_density_clause(ZERO_DENSITY_GATE)
+
+        assert clause.strip().endswith(f"< {ZERO_DENSITY_GATE}")
         assert "noqa" not in clause, "a suppression written inside the string would be sent to the server"
 
 
