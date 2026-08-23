@@ -114,8 +114,13 @@ ROLLOVER_OFFSET_HOURS = -8
 ```
 
 **`forge` holds a copy** because it decides which dates are frozen; **`publish` holds one** because it
-runs the rotation on the VPS; **`serve` gains one** when E1 builds the loader. §33 forbids them sharing
+runs the rotation on the VPS; ⬜ **`serve` gains one** when E1 builds the loader. §33 forbids them sharing
 code — and `forge` must never reach the VPS at all — so **they share the rule by pointing here.**
+
+⚠️ **Two of the three assertions exist today** (`forge/tests/test_inventory_build.py`,
+`publish/tests/test_rotation.py`), and both were verified by changing the number above and watching them
+go red. **`serve` owes the third**, recorded at E1.2 in the plan — and `forge`'s was a hardcoded `== -8`
+until 2026-08-23, which is a third copy of the number wearing the clothes of a pointer.
 
 ⚠️ **This line is load-bearing, not decoration.** Each tree asserts its constant against the number
 written above, so three spellings cannot become three answers. **No test can compare the trees to each

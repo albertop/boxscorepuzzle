@@ -700,8 +700,11 @@ event carries **both dates** already (C2), so nothing new has to be stored for t
   a fixed `UTC-8` — **03:00 Eastern and midnight Pacific in winter, 04:00 and 01:00 under daylight saving.** §36 carried this open as *local
   midnight or UTC* and **UTC is the worst answer available**: it lands at 20:00 Eastern, so a player who
   sits down at 19:45 loses the board fifteen minutes later. The forge already computes the same date
-  (`serving_date()`); `serve` spells the offset again, which §33 prescribes and no test can check across
-  the two trees.
+  (`serving_date()`) and `publish` spells it for the rotation. ⚠⚠ **E1 owes the third spelling *and its
+  assertion*.** `docs/calendar.md` states `ROLLOVER_OFFSET_HOURS = -8` once and each tree asserts its
+  constant against that line — verified on 2026-08-23 by changing the document and watching both existing
+  ones go red. **A shared-by-pointing rule with two of three pointers is worse than three honest copies**,
+  because it reads as covered: the missing pointer is the one nobody checks.
 - **E1.3** Everyone gets the same puzzle on the same date — **never derived from device-local state.**
 
 ### E2. The caching contract

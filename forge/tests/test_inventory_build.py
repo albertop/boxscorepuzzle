@@ -16,6 +16,7 @@ the bookkeeping and a test that needs a DSN is a test that never runs in CI.
 
 import importlib.util
 import json
+import re
 import sys
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta, timezone
@@ -618,11 +619,34 @@ class TestWhichDateIsBeingServed:
         with pytest.raises(ValueError, match="names no zone"):
             builder.serving_date(datetime(2026, 8, 23, 12, 0))  # noqa: DTZ001 - the point of the case
 
-    def test_the_offset_is_spelled_once_and_the_function_uses_it(self) -> None:
-        # ⚠️ Not a tautology: it asserts the constant is *load-bearing*, so a hardcoded 8 inside the
-        # function would go red. `CLAUDE.md` — a decided value is spelled in one place.
+    def test_the_offset_matches_the_document_that_owns_it(self) -> None:
+        """⚠⚠ **Against `docs/calendar.md`, not against a literal — and it was a literal.**
+
+        This read `== -8`, which is a **third copy of the number** wearing the clothes of a check. The
+        rule is shared by *pointing at a document* because §33 forbids the trees sharing code and `forge`
+        must never reach the VPS at all; a pointer that is really a copy makes the arrangement read as
+        covered while adding one more place to drift.
+
+        `publish` asserts the same line. ⬜ **`serve` will spell it a third time when E1 builds the
+        loader, and owes the same assertion** — recorded in the plan at E1.2, because a shared-by-pointing
+        rule with two of three pointers is worse than three honest copies.
+        """
         builder = _builder()
-        assert builder.ROLLOVER_OFFSET_HOURS == -8
+        calendar = _SCRIPTS.parents[1] / "docs" / "calendar.md"
+        stated = re.search(r"ROLLOVER_OFFSET_HOURS = (-?\d+)", calendar.read_text(encoding="utf-8"))
+
+        assert stated, "docs/calendar.md no longer states ROLLOVER_OFFSET_HOURS, which the trees point at"
+        assert int(stated[1]) == builder.ROLLOVER_OFFSET_HOURS
+
+    def test_the_function_uses_the_constant_rather_than_a_literal(self) -> None:
+        # ⚠️ The other half, and the reason the case above is not a tautology: a hardcoded 8 inside
+        # `serving_date` would leave the constant correct and unread.
+        builder = _builder()
+        moment = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
+        shifted = moment - timedelta(hours=builder.ROLLOVER_OFFSET_HOURS)
+
+        assert builder.serving_date(moment) == date(2026, 8, 23)
+        assert builder.serving_date(shifted - timedelta(minutes=1)) == date(2026, 8, 23)
 
         moment = datetime(2026, 8, 23, 8, 0, tzinfo=UTC)
         shifted = moment - timedelta(hours=builder.ROLLOVER_OFFSET_HOURS)
