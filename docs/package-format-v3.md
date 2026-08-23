@@ -1,5 +1,8 @@
 # Puzzle package, schema version 3
 
+⚠️ **Superseded by schema 4, and kept as the record of its own version rather than as a description of today — `docs/package-format-v5.md` is what ships.** Its present tense is the tense of the day it was written. What it says about what did not exist yet was **true then**, and is what the decision was taken against. Rewriting it would destroy the reason and leave the conclusion.
+
+
 **Version 2 is not amended.** A version is replaced, never extended: a board that cannot name its sides
 is not a version 2 package with one field missing, it is a package that renders a **false statement**.
 

@@ -8,7 +8,9 @@ it. ⚠️ Where the two differ, this file says so.
 
 ---
 
-## Where it stands — 2026-08-22
+## Where it stands — last checked **2026-08-23**
+
+⚠️ **`CLAUDE.md` carries a pointer to this table and a test asserts the two call the same groups complete** — in both directions, because the front page overstating sends a session past work still to be done and understating sends it looking for code that already exists. **This one is the authority.**
 
 | | | |
 |---|---|---|
@@ -845,12 +847,20 @@ everything — and G, which cannot be dropped for time.
 
 ---
 
-## What is open now — 2026-08-22, after v39
+## What is open now — last checked **2026-08-23**
+
+⚠️ **Only genuinely open items belong in this table.** A ✔ row under a heading that says *open* is the
+same defect one level down, and there was one here.
 
 | | whose call |
 |---|---|
-| ⬜ **B3's N and stratum quotas** | the operator's. It gates beta 0 |
-| ⬜ **Whether yesterday's puzzle counts for the streak** | decided — *it does not* — and E1b carries it; the code does not exist yet |
+| ⬜ **B3's N and stratum quotas** | the operator's. **It gates beta 0** |
 | ⬜ **A plausible ceiling on a reported duration** | the operator's (§7). `CLAUDE.md` asks for the sanity check and it does not exist; what `keep` has is the column's range, which is twenty-five days. `docs/reviews/todo.md` |
 | ⬜ **Event retention** | indefinite because nobody has decided otherwise, recorded so the absence is not read as a decision (`docs/keep-api.md`) |
 | ⬜ **A second payment processor** | undecided, not rejected: *none until there is evidence of a blocked customer* |
+
+✔ **Closed since this list was written**, and recorded so neither is reopened by someone reading an old
+copy: **what clock defines the day** — the day rolls at 08:00 UTC, a fixed `UTC-8` (`docs/calendar.md`,
+§36) — and **whether yesterday counts for the streak** — it does not. ⚠️ The second is *decided and not
+built*: E1b.5 is the code and it is not written. **Decided and built are different columns**, and
+collapsing them is how a plan starts describing itself instead of the tree.

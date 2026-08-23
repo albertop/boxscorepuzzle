@@ -1,5 +1,8 @@
 # Puzzle package, schema version 1 — frozen
 
+⚠️ **Superseded by schema 2, and kept as the record of its own version rather than as a description of today — `docs/package-format-v5.md` is what ships.** Its present tense is the tense of the day it was written. What it says about what did not exist yet was **true then**, and is what the decision was taken against. Rewriting it would destroy the reason and leave the conclusion.
+
+
 The only contract between the forge and `serve`. They are separate systems with separate deployment
 cycles (§33), and this file is what `serve` is built against — **not** the forge's source.
 

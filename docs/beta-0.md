@@ -274,11 +274,15 @@ from a retired design.** Found while writing this document down.
 | **Pack A** | does the difficulty ordering correspond to felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | **stalls** | designed 2026-08-21, not built |
 | **The stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | designed, not built |
 
-**Where *fifty* comes from, and why it is stale.** `build_pack.py`'s `audit()` asserts fifty boards with
-**every rung at its quota on the chain axis** — and the generator stopped targeting chain. `todo.md` item
-13 already records that the producer is the last chain-targeted one. **So the fifty carries a number and
-an axis, and the axis is retired.** `CLAUDE.md`, the design document and five package-format documents all
-repeat the phrase.
+**Where *fifty* came from, and why it was stale.** `build_pack.py`'s `audit()` asserted fifty boards with
+**every rung at its quota on the chain axis** — and the generator had stopped targeting chain. **So the
+fifty carried a number and an axis, and the axis was retired.**
+
+✔ **The producer was re-axed onto stalls in B1** (2026-08-22), so the chain-targeted code is gone and the
+number no longer has a source. ⚠️ **That closes where fifty came from and does not answer what the gate's
+N should be** — which is the paragraph below, and is still open. Removing the wrong number is not the
+same as having the right one, and a reader who sees the fix and stops looking has been misled by a true
+result.
 
 ⚠️ **And sixteen is not the answer either, because it was never sized for this job.** Pack A is a
 *calibration instrument*: four boards per rung tells you about a rung. **The gate is a confidence

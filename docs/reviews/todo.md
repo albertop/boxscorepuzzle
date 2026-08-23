@@ -626,11 +626,20 @@ the code rather than only with this page.
 
 ## Where everything stands
 
-**Twenty-nine reviews (five passes on the last), 135 findings, none rejected — including the first
-two **P1**s, and both were in the instrument built to check a decision rather than in the product. v28 was a full-tree review rather than a delta:
-six findings, all six closed — and the sixth was in my repair of the second.** Two more are open below, plus several found without a reviewer —
-which is the point of the sweep. Two are **declined on the environment**, each with its reason and its reactivation condition in
-`non-issue.md`.
+**39 reviews**, the last of them v39. ⚠⚠ **The finding total is deliberately not stated any more.**
+
+This paragraph read *"twenty-nine reviews, 135 findings"* for ten reviews after it stopped being true, and
+the section below already records that **the count in this file has been wrong three times — mine.** A
+number nothing checks, restated by hand, in a document about checking things.
+
+**So the two halves are separated.** The review count is asserted and checked: `test_the_review_count_is_the_number_of_reviews.py`
+reads `docs/reviews/` and compares. **The finding total is dropped rather than re-derived**, because
+re-deriving it produces a fourth number nobody can verify either — and a wrong count in a backlog is worse
+than no count, since it reads as a measurement.
+
+**What is true and is worth keeping:** no finding has been rejected outright; the first two **P1**s were
+both in an instrument built to check a decision rather than in the product; and two are **declined on the
+environment**, each with its reason and its reactivation condition in `non-issue.md`.
 
 ### ⚠️⚠️ The standing observation: seven findings, one piece of work, five distinct shapes
 
