@@ -80,6 +80,23 @@ class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
         assert _calls(tree, "erase_with_lineup_fallback"), "the production core no longer uses the retry"
         assert not _calls(tree, "erase"), "the production core calls erase() directly, bypassing the retry"
 
+    def test_the_hand_solve_pack_builds_through_the_production_path(self) -> None:
+        """⚠️⚠️ **The pack is the launch gate, and it called `erase()` directly.**
+
+        Production goes through `erase_with_lineup_fallback`, and **39% of the boards in the live
+        inventory needed that fallback to reach their target**. A pack built without it evaluates a
+        population the player never meets — and it is the artefact that decides whether the boards are
+        humanly derivable at all.
+
+        `CLAUDE.md`: *a sample that evaluates the board is rendered with the board's renderer; if a
+        variant is needed it is a parameter of the real one, never a copy.* The same applies to
+        producing, and this is where it matters most.
+        """
+        tree = _modules(ROOT.parent / "discovery" / "hand-solve")["build_pack"]
+
+        assert _calls(tree, "erase_with_lineup_fallback"), "the pack no longer builds through production"
+        assert not _calls(tree, "erase"), "the pack erases directly, so it grades boards nobody ships"
+
     def test_no_producer_reaches_erase_without_going_through_the_core(self) -> None:
         """The other half: a script that stopped using `produce()` and called the erasure itself.
 

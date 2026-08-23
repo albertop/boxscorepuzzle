@@ -40,7 +40,7 @@ from reportlab.lib.units import mm  # noqa: E402
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # noqa: E402
 
 from boxscore_domain import HAND_SOLVE_ZERO_DENSITY_GATE  # noqa: E402
-from boxscore_forge.erasure import erase  # noqa: E402
+from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
 from boxscore_forge.publish import (  # noqa: E402
     slot_references,
     to_board,
@@ -50,13 +50,23 @@ from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
 from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
 
-TARGETS = (5, 7, 9, 11)
-QUOTAS = {5: 8, 7: 11, 9: 14, 11: 17}
-"""Every rung present, weighted towards the hard end.
+TARGETS = (5, 8, 11, 12)
+QUOTAS = {5: 4, 8: 4, 11: 4, 12: 4}
+"""**Pack A: stall rungs, four boards each** — decided 2026-08-21, built 2026-08-22.
 
-⚠️ **These are chain targets and the target variable is now stalls.** Chain counts how long a solve
-is; the operator solved a chain-10 board in under a minute. **This pack must not be printed until
-`erase` can take a stall target** — a pack that says stalls and means chain would repeat the mistake
+⚠️⚠️ **These were chain targets `(5, 7, 9, 11)` with quotas summing to fifty**, and the file's own
+docstring said so: *"the target variable is now stalls… this pack must not be printed until `erase` can
+take a stall target."* It can, and has since the generator moved. **The pack was the last chain-targeted
+thing in the tree**, and correcting the documents while leaving it would have been the visible half of a
+fix with the working half untouched.
+
+⚠️ **On the pack's own axis 8 is already the 87th percentile and 12 is near the reachable maximum**, so
+the rungs are not the ceiling measurement's range: the ceiling takes the best of nine seeds per board
+and the pack is what one ordinary attempt produces. Reading one as the other compares two different
+questions.
+
+⚠️ **Only about 20% of boards reach 12.** If that rung does not fill, **that is the finding** — reported,
+never quietly substituted with a lower target
 it exists to correct.
 
 Explicit quotas rather than weighted sampling. A first version drew by weight and produced no chain-5
@@ -64,7 +74,7 @@ boards at all — with one board per game, the hard targets took every game befo
 reached, and a pack missing a rung cannot say anything about that rung.
 """
 
-WANTED = 50
+WANTED = 16
 UNCERTIFIED_SHARE = 1 / 3
 PRE_1950_ALLOWANCE = 2
 """§5's pre-1950 preference, applied so the pack looks like what will actually ship."""
@@ -149,7 +159,15 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
     for loaded in sample:
         source = to_board(loaded.direction, None)
         for target in TARGETS:
-            produced = erase(loaded.direction, target_chain=target, seed=SEED)
+            # ⚠️⚠️ **Through the production path, not `erase()` directly.** This called
+            # `erase(direction, target_chain=...)` — a different producer from the one that ships, which
+            # goes through `erase_with_lineup_fallback`. **39% of the boards in the live inventory
+            # needed that fallback**, so a pack built without it evaluates a population the player never
+            # meets. `CLAUDE.md`: a sample that evaluates the board is built with the board's own
+            # producer, never a copy of it — and this is the launch gate, where that matters most.
+            produced, _why = erase_with_lineup_fallback(
+                loaded.direction, tuple(loaded.slots), target_stalls=target, seed=SEED
+            )
             if produced is None:
                 continue
             board = to_board(loaded.direction, produced.erased)
@@ -185,7 +203,7 @@ def candidates(sample: list[Loaded]) -> list[Candidate]:
 
 
 def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
-    """Fifty boards: a third uncertified, every chain target present, era quota respected.
+    """Sixteen boards: a third uncertified, every stall rung present, era quota respected.
 
     One board per game, so no solver sees the same lineup twice and recognises it.
     """
@@ -362,7 +380,7 @@ def audit(chosen: list[Candidate]) -> None:
     for target, quota in QUOTAS.items():
         at_target = sum(1 for item in chosen if item.target == target)
         if at_target != quota:
-            problems.append(f"chain {target} has {at_target} boards against a quota of {quota}")
+            problems.append(f"stall rung {target} has {at_target} boards against a quota of {quota}")
     uncertified = sum(1 for item in chosen if not item.certified)
     if abs(uncertified - wanted_uncertified) > 2:
         problems.append(f"{uncertified} uncertified boards, wanted about {wanted_uncertified}")
@@ -382,7 +400,7 @@ def audit(chosen: list[Candidate]) -> None:
     by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
     for target, count in by_rung.items():
         if count and count == QUOTAS[target]:
-            problems.append(f"chain {target} is entirely uncertified, so nothing at that rung compares")
+            problems.append(f"stall rung {target} is entirely uncertified, so nothing at that rung compares")
 
     # ⚠️ Folded in from a second `audit()` that had been defined below this one. Python kept the
     # later definition, so the strict uncertified share this function enforces was not running and a

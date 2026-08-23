@@ -73,15 +73,20 @@ class TestTheAuditPasses:
 
 
 class TestTheAuditRejects:
-    def test_a_missing_chain_rung(self) -> None:
+    def test_a_missing_stall_rung(self) -> None:
         # The failure that already happened: every board at the hard end and none at the easy one.
         # Found by target rather than by index: the pack is shuffled now, so position 0 is not the
         # easiest rung and a test that assumed it was would pass for the wrong reason.
+        #
+        # ⚠️ **Renamed from `chain` on 2026-08-22**, with the rungs. The pack targeted chain while the
+        # generator targeted stalls — the last chain-targeted thing in the tree — and this test named
+        # the axis in its own title, so leaving it would have kept the retired word alive in the one
+        # place a reader checks what the pack measures.
         pack = a_valid_pack()
         victim = next(index for index, item in enumerate(pack) if item.target == 5)
         pack[victim] = board(11, 900)
 
-        with pytest.raises(SystemExit, match="chain 5 has"):
+        with pytest.raises(SystemExit, match="stall rung 5 has"):
             audit(pack)
 
     def test_too_few_boards(self) -> None:
@@ -113,9 +118,9 @@ class TestTheAuditRejects:
             audit(pack)
 
     def test_a_rung_that_is_entirely_uncertified(self) -> None:
-        # ⚠️ The confound the real pack fell into: layer 3b certifies every chain-5 board and 91% of
-        # chain-11 ones, so filling the hardest rung first made all seventeen uncertified boards
-        # chain 11 — and every chain-11 board uncertified. Uncertified and hard would have been the
+        # ⚠️ The confound the real pack fell into: layer 3b certifies every easy board and 91% of the
+        # hard ones, so filling the hardest rung first made every uncertified board land at the top rung
+        # — and every board at that rung uncertified. Uncertified and hard would have been the
         # same variable and the afternoon would have measured difficulty.
         pack = [board(item.target, index, certified=item.target != 5) for index, item in enumerate(a_valid_pack())]
 

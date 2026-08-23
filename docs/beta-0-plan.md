@@ -72,14 +72,14 @@ pack producer is the last chain-targeted code in the tree. Group B cannot start 
 
 ### ✔ A1. Promote the loader out of `discovery/` — **done 2026-08-22**
 
-- **A1.1** Move `Loaded` and `load()` into `forge/src/boxscore_forge/` (a `pool` module), with the SQL,
-  the era windows, the provenance predicate and the caps.
-- **A1.2** Fix the signature that lies: `gated: bool = False` while the gate always applied. It is
-  recorded in the docstring; make the parameter mean what it says or delete it.
-- **A1.3** Bring it under `mypy --strict` and un-ratchet those lines from the discovery baseline.
-- **A1.4** Leave `discovery/` importing the promoted module, **not a copy.** Every discovery script that
-  calls `load()` must keep working — that is the regression surface.
-- **Done when:** `write_reference_puzzles.py` has no `sys.path` insert into `discovery/`, the suite is
+- ✔ **A1.1** Move `Loaded` and `load()` into `forge/src/boxscore_forge/` (a `pool` module), with the SQL,
+  the era windows, the provenance predicate and the caps. ✔ *Done: `boxscore_forge.pool`.*
+- ✔ **A1.2** Fix the signature that lies: `gated: bool = False` while the gate always applied. It is
+  recorded in the docstring; make the parameter mean what it says or delete it. ✔ *Done: the default is `True`; deleting it recorded as a deferral with its price.*
+- ✔ **A1.3** Bring it under `mypy --strict` and un-ratchet those lines from the discovery baseline. ✔ *Done: `mypy --strict` clean; ratchet 168 -> 156.*
+- ✔ **A1.4** Leave `discovery/` importing the promoted module, **not a copy.** Every discovery script that
+  calls `load()` must keep working — that is the regression surface. ✔ *Done: `measure.py` re-exports and `test_the_shim_exports_what_is_imported.py` asserts every name resolves.*
+- ✔ **Met.** **Done when:** `write_reference_puzzles.py` has no `sys.path` insert into `discovery/`, the suite is
   green, and the discovery scripts that load still run.
 
 ✔ **Done.** `boxscore_forge.pool`; `measure.py` re-exports and 33 scripts are untouched;
@@ -121,7 +121,7 @@ need a database), not as an oversight.
   the calendar as it goes.**
 - ✔ **A2.4 done.** The same slice built into two calendars must produce the same ids in the same order. *Previously:* ⬜ **not asserted.** §21 needs the same game to yield the same puzzle id, and nothing runs a slice
   twice and compares. Trusting `puzzle_id()` is the thing the item says not to do.
-- **Done when:** one command produces N validated packages with a recorded survival rate, and running it
+- ✔ **Met** — two samples at 100% yield, 150 boards in 24 min, and running the window twice adds nothing. **Done when:** one command produces N validated packages with a recorded survival rate, and running it
   twice produces no duplicates.
 
 ### ✔ A3 (core). The calendar module — **done 2026-08-22**
@@ -140,8 +140,8 @@ pre-1950 allowance, and the quota assertions.
 
 ### A3. The calendar
 
-- **A3.1** The date → puzzle assignment, persisted, **extends and never rewrites** (§21). A played date
-  cannot change; a future defective puzzle is replaced, a past one is marked void and left in place.
+- ✔ **A3.1** The date → puzzle assignment, persisted, **extends and never rewrites** (§21). A played date
+  cannot change; a future defective puzzle is replaced, a past one is marked void and left in place. ✔ *Done: `boxscore_forge.calendar`, 100% covered.*
 - ⬜ **A3.2 deferred — operator's decision 2026-08-22: build the calendar with no curve.** Nobody knows
   which rung is Monday until the hand-solve pack comes back, and §21 makes applying a curve later a
   *reordering of future dates* rather than a rebuild. The `difficulty` field is absent rather than
@@ -166,16 +166,16 @@ pre-1950 allowance, and the quota assertions.
 - ✔ **A3.5 done.** `audit()` refuses a calendar over the era ceiling or carrying a repeated game, date or puzzle id, and it runs before the manifest is written. *Previously:* ⬜ **not implemented, and its absence is exactly why A3.4 went unnoticed.** The item says assert
   the quotas after construction rather than print them and believe them. There is no assertion, so the
   run reported `assigned 150 of 150` and was wrong about what it had assigned.
-- **Done when:** five months of dates are assigned **within every quota**, the guard rejects a second
+- ✔ **Met** — 150 dates, 150 games, 7 pre-1950 at 21 and 22 days apart, `audit()` clean. **Done when:** five months of dates are assigned **within every quota**, the guard rejects a second
   direction of a published game, and re-running the builder changes nothing.
 
 ### A4. Packaging in bulk
 
-- **A4.1** Generation directory and manifest at 150+ puzzles. The manifest is schema 1 and lists every
-  id; check that shape still makes sense at scale, since the client fetches it uncached on every load.
-- **A4.2** ⚠️ **The manifest must not leak the future.** It currently lists every published puzzle. With
+- ✔ **A4.1** Generation directory and manifest at 150+ puzzles. The manifest is schema 1 and lists every
+  id; check that shape still makes sense at scale, since the client fetches it uncached on every load. ✔ *Done: `write_manifest()` over the files on disk, 150 packages.*
+- ✔ **A4.2** ⚠️ **The manifest must not leak the future.** It currently lists every published puzzle. With
   a calendar, listing tomorrow's id is handing out tomorrow's puzzle — the file is public and
-  unauthenticated (§23). **Decide what the client is allowed to see.**
+  unauthenticated (§23). **Decide what the client is allowed to see.** ✔ *Done: decided and reframed: today's and yesterday's are public, everything else is not (`docs/calendar.md`).*
 - ✔ **A4.3 done.** 150 packages signed with the pinned key; `boxscore_forge.publication_key` refuses to
   return a key `serve` would not accept, and never prints private material.
 - ⚠️ **A4 was reframed on 2026-08-22 and its output survives.** The question it answered — *what may the
@@ -184,9 +184,10 @@ pre-1950 allowance, and the quota assertions.
   server-side rather than browser-facing, and the per-date pointers were already decided not to be
   deployed. **What changes is the daily step**, which copies **two** days out rather than one, and the
   public manifest, which lists those two.
-- ⬜ **A4.1 partial.** The generation directory exists (`forge/inventory/<gen>`, 1.4 MB, median 9.7 KB a
-  package). **No manifest is written**, and A4.2 has to be decided before one can be.
-- **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
+- ✔ **A4.1 done.** The generation directory (`forge/inventory/<gen>`, 1.4 MB, median 9.7 KB a package),
+  a signed `manifest.json` over the files **on disk**, and 150 signed per-date pointers in `days/`.
+  *Previously:* ⬜ **partial — no manifest is written**, which stopped being true once A4.2 was decided.
+- ✔ **Met** — 150 packages signed with the pinned key, manifest and pointers written after the audit. **Done when:** a generation of five months is written, signed, and verifies from a clean checkout.
 
 ⚠️ **A4 is not the end of group A.** What A1–A4 produce is one batch, built by whoever had the whole
 pipeline in their head that week. **A5 is what makes it a process.**
@@ -198,10 +199,10 @@ three months later, having forgotten all of it.** That is not a rhetorical frami
 three months of runway, so **the interval between two runs is measured in months by design**, and
 whatever is obvious today will not be obvious then.
 
-- **A5.1 Preconditions**, each one checkable before anything starts: the Retrosheet database reachable,
+- ✔ **A5.1 Preconditions**, each one checkable before anything starts: the Retrosheet database reachable,
   the signing key present (⚠️ and **where it is not** — never in the repository), a clean working tree,
-  and how much runway is left right now.
-- **A5.2 The commands, in order**, with **what each one prints when it is working.** A step whose success
+  and how much runway is left right now. ✔ *Done: run as written.*
+- ✔ **A5.2 The commands, in order**, with **what each one prints when it is working.** A step whose success
   looks like silence is a step nobody can tell failed.
 
   ⚠️ **Three instances of exactly that, all from the first measurement run, all before it produced a
@@ -215,14 +216,14 @@ whatever is obvious today will not be obvious then.
      is the same defect as `gated: bool = False`: read far more often than it is passed.*
   3. **Piping a live run through `tail` withholds all of it until the process exits.** An instrumentation
      mistake rather than a script one, and the runbook has to say *do not pipe this* or the operator will
-     conclude the command hangs.
-- **A5.3 What to check before publishing**: the survival rate, the era share, the weekday spread, and
-  ⚠️ **the one-game-one-puzzle guard's report** — the check no package can perform on itself.
-- **A5.4 What to do when the yield is short.** The likely outcome, not the exceptional one: the gate keeps
+     conclude the command hangs. ✔ *Done: run as written; three silences recorded.*
+- ✔ **A5.3 What to check before publishing**: the survival rate, the era share, the weekday spread, and
+  ⚠️ **the one-game-one-puzzle guard's report** — the check no package can perform on itself. ✔ *Done: run as written.*
+- ✔ **A5.4 What to do when the yield is short.** The likely outcome, not the exceptional one: the gate keeps
   11% of the pool. Say whether to widen the era window, lower the target, or run again — and ⚠️ **what
-  must never be done, which is quietly dropping a rung to fill a quota.**
-- **A5.5 How to deploy the new generation**, and **how to roll back.** ⚠️ Not near the daily rollover.
-- **A5.6 Why re-running is safe.** §21: puzzle ids derive from the game, the calendar extends and never
+  must never be done, which is quietly dropping a rung to fill a quota.** ✔ *Done: written from the real refusal message.*
+- ✔ **A5.5 How to deploy the new generation**, and **how to roll back.** ⚠️ Not near the daily rollover. ✔ *Done: **corrected by following it** - it would have published the archive.*
+- ✔ **A5.6 Why re-running is safe.** §21: puzzle ids derive from the game, the calendar extends and never
   rewrites, so a run that half-finished is resumed rather than cleaned up. **State it explicitly** —
   somebody who is unsure whether a second run will duplicate things will hesitate at exactly the moment
   the runway is short.
@@ -240,6 +241,31 @@ wrong. **The same rule as every other instrument here: the version that has not 
 ⚠️ **And it will drift from the code**, because prose and commands are two places saying one thing. The
 cheapest defence is that the commands it names are the ones a test invokes; at minimum, the runbook names
 the scripts by path so a rename breaks a grep rather than nothing.
+
+### ✔ Status 2026-08-22: **Deliverable A is met**
+
+**Every A item is done except A3.2, which is deferred by the operator's decision**, and A3.2 is the
+difficulty curve — it waits for the hand-solve pack and §21 makes applying it later a reordering of
+future dates rather than a rebuild.
+
+| | |
+|---|---|
+| **A1** loader out of `discovery/`, under `mypy --strict` | ✔ |
+| **A2** shared producer, yield measured, resumable, deterministic | ✔ |
+| **A3** calendar: extends, one game one puzzle, era quota sampled and asserted | ✔ (A3.2 deferred) |
+| **A4** generation manifest and signed per-date pointers, access model decided | ✔ |
+| **A5** the runbook, written **and followed literally** | ✔ |
+
+**The inventory:** 150 dates, 2026-09-01 to 2027-01-28, 150 distinct games, 7 pre-1950 at 4.7% spaced 21
+and 22 days apart, `audit()` clean, 24.1 minutes. Stalls 1–13 with a median of 9 across all twelve rungs,
+so a later curve has material to reorder. **The runbook produces the next five months.**
+
+⚠️ **What is still true and is not an A item:** the hand-solve gate has not run, so *these boards are
+solvable by a person* remains an assumption. That is group B, and B3 is a gate on beta 0.
+
+---
+
+<details><summary>The earlier status, kept because the era finding is a shape worth finding again</summary>
 
 ### ⚠️⚠️ Status 2026-08-22: the batch ran and **Deliverable A is not met**
 
@@ -264,6 +290,8 @@ answerable at all, since `FAMILY_OF` gained the fifth family the day before.
 replaced, so reweighting the eras replaces entries rather than rebuilding the file — and the calendar is
 the one artefact here that cannot be recomputed, so having it on disk and in Git beats having it correct
 and only in memory.
+
+</details>
 
 ### ▶ Deliverable A — **five months of dated, signed inventory, and the runbook that produces the next five**
 
@@ -291,7 +319,7 @@ say the numbers agree with each other. **That is group B, and it is a gate rathe
 
 ---
 
-## Group B — the hand-solve gate
+ ✔ *Done: written.*## Group B — the hand-solve gate
 
 **Depends on A.** It draws from the shipping inventory. **It is a gate on beta 0** (`beta-0.md`), and it
 is pass-or-stop rather than a rate.
