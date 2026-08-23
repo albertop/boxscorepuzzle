@@ -185,14 +185,20 @@ It runs in the browser, over files the browser can already fetch. What it decide
 it lives in the deployment rather than in the code. C8 in `CLAUDE.md` calls it *a single decision point*,
 which is true about presentation and would be a dangerous thing to believe about access.
 
-### ⬜ Open: does yesterday count for the streak?
+### ⚠️⚠️ Yesterday is playable and does **not** count for the streak — decided 2026-08-22
 
-A puzzle still playable the next day means somebody can keep a streak alive a day late. **That is
-consistent with §27's grace day and it is a different decision** — *playable* and *counts* are not the
-same thing, and one of them can be true without the other.
+**Playable and counting are not the same thing.** Yesterday's board can be opened and solved; solving it
+does not keep a streak alive. §27 carries the same decision beside the grace day, and **the two rules
+have to be read together** — this window is meaningless without knowing what it does to a streak, and the
+grace day is meaningless if the window quietly provides a second one.
 
-**Not decided here.** It is a product call, it belongs with the streak rules, and leaving it implicit is
-how a grace day gets granted by accident.
+**Two forgiveness mechanisms stacked make the streak nearly unbreakable, and an unbreakable streak means
+nothing.** §27 already provides one: a free grace day each month. *"Yesterday is always available and it
+counts"* on top removes the last way to lose.
+
+⚠️ **The second day answers a different question.** It exists so somebody who starts at eleven at night
+can finish — **a rollover boundary, not a second grace day.** From outside they look identical, and that
+resemblance is why leaving it implicit would have granted a grace day nobody decided to give.
 
 ---
 

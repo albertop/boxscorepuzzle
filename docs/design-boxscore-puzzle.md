@@ -2253,6 +2253,24 @@ They're effective, but they have a known effect: **when someone breaks a long st
 
 That's why streak insurance isn't only a paid feature — it's **protection against your own mechanism**. There must also be **a free grace day**, even if only one per month.
 
+#### ⚠️⚠️ Yesterday's puzzle is playable and does **not** count for the streak — decided 2026-08-22
+
+`docs/calendar.md` puts **two** puzzles on the public path, today's and yesterday's. **Read that rule
+and this one together; neither makes sense alone.**
+
+**Playable and counting are not the same thing**, and naming the distinction is the whole decision.
+Yesterday's board can be opened and solved. **Solving it does not keep a streak alive.**
+
+**Two forgiveness mechanisms stacked would make the streak nearly unbreakable, and an unbreakable streak
+means nothing.** The grace day above is the one this section argues for and it is deliberate — one a
+month, free. *"Yesterday is always available and it counts"* on top of it removes the last way to lose,
+which empties the thing the grace day exists to protect.
+
+⚠️ **And the second day exists for a different purpose entirely.** It is there so somebody who starts at
+eleven at night can finish their game: **a fix for a rollover boundary, not a second grace day.** The
+two look alike from outside — both let you play after the day ended — and they answer different
+questions, which is exactly why leaving it implicit would have granted a grace day by accident.
+
 **Principle:** a game people return to out of enjoyment retains better than one they return to out of fear of losing something.
 
 ---

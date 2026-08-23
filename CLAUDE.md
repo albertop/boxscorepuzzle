@@ -437,6 +437,18 @@ attempted was about *which row deserves the number*, and the question was whethe
 be on a row at all: move the footnote reference off the label and the suffix has no reason to exist.
 **When a mechanism collides with something new, ask what it was for before asking how to reconcile it.**
 
+**⚠️⚠️ A partial fix reads exactly like a complete one, and the 2026-08-22 instance is the clearest yet.**
+Asked what the client may see, I closed the *forward* half: a public manifest listing every id hands out
+tomorrow's puzzle, so the manifest stopped listing the future. True, and the smaller half. **The past is
+the product** — §9 sells the archive — and it was entirely public, as static files, with a list pointing
+at every one of them. **Fixing only the forward half would have left the business model unenforceable
+while looking fixed**, which is worse than not fixing it, because a closed finding stops being looked at.
+
+⚠️ **What distinguishes this instance:** the partial fix was not a shortcut or an oversight. It was a
+complete answer *to the question I had framed*, and the framing was the defect. **Ask what the mechanism
+is protecting before asking whether the protection holds** — the manifest was guarding a schedule, and
+the thing worth guarding was the inventory.
+
 **A fix that solves most of a problem reads like one that solves all of it.** The slot column was
 proposed to kill three things at once: positions repeated across different slots, the lost
 slot-grouping relationship, and footnote ambiguity. It kills the first two. It does nothing for rows
