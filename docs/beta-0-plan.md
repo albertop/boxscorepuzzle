@@ -962,7 +962,7 @@ is written and then left unchecked. **F2 inherits named holes:**
 | **`keep` reachable only on the internal network** | a property of the VPS's network. The image `EXPOSE`s its port and **no compose file may publish it** — that is a line F2 writes and this cannot check |
 | **IPs not persisted anywhere** | `access_log off` is one line and is checkable; *nowhere on the host* is not. It is deliberately absent |
 | **the rate limit** | a limit tuned against a laptop is a number with no measurement behind it (§7). No `limit_req_zone` is written |
-| **the production compose file** | it is F2's, and writing it here would be guessing at a host |
+| ~~the production compose file~~ | ✔ **written 2026-08-24.** It was a guess only while the host was unknown; the operator runs **Portainer** and the VPS's **Postgres already exists**, which is exactly the information that was missing. `deploy/compose.yaml` is one stack, two services, against a database that is there. ⬜ What still needs the VPS: the `KEEP_DATABASE_URL` value and which network reaches that Postgres |
 
 ### F2. The VPS
 
