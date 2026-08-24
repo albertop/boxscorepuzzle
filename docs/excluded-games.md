@@ -32,11 +32,11 @@ these exclusions. Measured 2026-08-23 against the dataset then loaded.
 | 6 | **Completed on a later date** | **0 in the pool** | `CompletionInfo` | not reachable today — see below |
 | 7 | **Partial game accounts** | **5,177** | `AcquisitionInfo` | ⚠️⚠️ **PUBLISHES — 6 of 6 tested** |
 | 8 | **Home club batted first** | **30** | event rows | already excluded before today |
-| 9 | **Negro Leagues (`EVR`)** | **1,872** | source type | excluded **twice**; the rule's own bite is **zero** |
-| 10 | **Postseason before 1969** | **384** | `POSTSEASON_SEASON_FLOOR` | real bite: **158 gated directions** |
-| 11a | **No `retroGameLogs` row** | **2,901** | an inner `JOIN` | ⚠️ **incidental** — nobody asked for it; the block costs **6,060 gated** |
+| 9 | **Negro Leagues (`EVR`)** | **1,872** | source type | ✔ **settled 2026-08-17.** Not a question — see §9 |
+| 10 | **Postseason before 1950** | **268** | `POSTSEASON_SEASON_FLOOR` | ✔ **floor lowered from 1969 on 2026-08-24**: +116 games, +50 gated directions |
+| 11a | **No `retroGameLogs` row** | **2,901** | an inner `JOIN` | **1,872 are §9's, settled.** ⚠️ the other **1,029 are Kansas City Athletics home games** and look like a gap in the load |
 | 11b | **Deduced reconstructions (`ED*`)** | **3,465** | `is_deduced` | deliberate, **redundant** — §7 removes them first |
-| 11c | **No line score** | **17,282** | `VisLineScore` | incidental: no line score, no board |
+| 11c | **No line score** | **17,282** | `VisLineScore` | 19th-century coverage: **200 from 1910 on**, and the pool starts at 1910 |
 | 11d | **Seasons outside 1910–2029** | **0** | season window | ⚠️ **removes nobody** — the data runs 1910–2025 |
 
 ⚠️ The classes overlap. `PHA194309240` is a tie **and** sixteen innings; `DET193208010` is a forfeit
@@ -291,64 +291,95 @@ asks the event rows. The two are not known to disagree and nothing checks that t
 
 ---
 
-## 9. Negro Leagues games — `EVR`
+## ✔ 9. Negro Leagues games — `EVR` — **SETTLED 2026-08-17. CLOSED. NOT A QUESTION.**
 
-**1,872 games, 1913–1961. Excluded, and excluded twice.** §32 states the rule: only `dbo.retro*`, and
-only the three accepted source types.
+**1,872 games, 1913–1961. Excluded. Decided by the operator on 2026-08-17** (`5354e69`, *exclude Negro
+Leagues games from the pool, and record why*), and **the reasoning is `docs/design-boxscore-puzzle.md`
+§32** — *Negro Leagues games are excluded, and that is a position rather than housekeeping.* It is a
+provenance decision, weighed and written up at length: transcribed newspaper box scores rather than
+scored scoresheets, **93.7% of batter rows carrying K = 0 against 74.2% in contemporary play**, and the
+cost of losing Gibson and Paige named rather than overlooked.
+
+⚠️⚠️ **The acceptance-list clause stays, whether or not it bites.** That is settled with the exclusion
+and is not contingent on measurement.
+
+**How it is excluded, for completeness only — this changes nothing above:**
 
 | | |
 |---|---|
-| **Deliberately** | the acceptance list `('EVA', 'EVN', 'EVF')` in `REGULAR.admission`. `EVR` is not in it, and it is an **acceptance** list, so a game escapes only by having one of the three |
-| **Incidentally** | **not one of the 1,872 has a row in `dbo.retroGameLogs`**, and the cohort `JOIN`s that table inner |
-| **Marginal bite of the rule** | **zero directions**, gated and ungated |
+| the rule | `('EVA', 'EVN', 'EVF')` in `REGULAR.admission`; `EVR` is not in it |
+| in fact | none of the 1,872 has a `dbo.retroGameLogs` row, and the cohort joins that table inner |
+| the rule's own bite | **zero** — recorded on **2026-08-20** in `38470b9`, *the Negro League clause has never excluded a game* |
 
-### ⚠️⚠️ The deliberate exclusion never exercises, and that is what is worth recording
+**Re-admitting would need both pieces changed, not one.** Noted so nobody makes the one-line change,
+sees no effect, and starts removing whatever else is in the way.
 
-Accepting `EVR` and changing nothing else admits **0 games** — measured, both cohorts. The games are
-gone before the acceptance list is consulted, because the game-log join removed them.
+### ⚠️⚠️ Why this section is headed the way it is
 
-**So the presence of `EVR`-not-in-the-list must not be read as a tested guarantee.** It has never
-rejected a game, and *a check that never fires is indistinguishable from a check that is broken.* It is
-correct, it is the right shape, and nothing has ever demonstrated it working.
+**This settled exclusion was put back in front of the operator on 2026-08-24, in a list of things to
+decide.** It got there because a *redundancy* question — "these clauses bite zero: keep, remove, or
+document at zero?" — swept it up with two unrelated clauses that genuinely had no ruling. The question
+being only about redundancy did not matter: **the operator had to read a list and see this on it, and
+say again what he had said a week earlier.**
 
-⚠️ **Re-admitting needs both pieces changed, not one.** Adding `'EVR'` to `PROVENANCE_SOURCES` does
-nothing on its own; the game-log join would have to go too. **Stated so a future reader who makes the
-one-line change and sees no effect does not go looking for what else is in the way and remove it.**
+⚠️ **Worse, the zero-bite fact was not new.** `38470b9` recorded it on 2026-08-20, four days before it
+was presented as a discovery. **The sweep re-derived something already written down and then attached a
+question to it.**
 
-⚠️ **Where the exposure actually is:** if Retrosheet ever publishes game logs for these games, the
-acceptance list becomes the only thing standing — and it will be doing, for the first time, a job
-nothing has ever confirmed it does.
+**The rule that follows, and it is not about this exclusion:**
+
+> **A clause implementing a settled exclusion never appears in a list of things to decide — not even
+> when the question is only about redundancy, coverage, or tidiness.**
+
+A settled decision has one status and it is *settled*. A list headed *decide these* re-opens everything
+on it, whatever the column next to it says, and the cost lands on the person who already decided. **If
+a sweep finds a settled exclusion, the finding is recorded under that exclusion — as above — and does
+not travel to any list.**
 
 ---
 
-## 10. Postseason before 1969
+## ✔ 10. Postseason before 1950 — **the floor was lowered from 1969 on 2026-08-24**
 
-**384 games, 1903–1968. A real filter with real bite: 669 ungated directions, 158 gated.** These are
-boards that would otherwise be built.
+**`POSTSEASON_SEASON_FLOOR = 1950`.** The operator's decision. It admits **116 games, 1950–1968 — 222
+ungated directions and 50 gated.** All nineteen seasons are present, so the era does not arrive through
+a hole in coverage. **268 games remain excluded below 1950**, 1903–1949.
 
-`POSTSEASON_SEASON_FLOOR = 1969`, a `WHERE g.SEASON >= 1969` inside `POSTSEASON.admission`. ⚠️ **Not the
-same mechanism as §9 and not the same SELECT** — a season predicate in one `Season`, an acceptance list
-in the other.
+### ⚠️⚠️ The justification changed with the number rather than surviving it
 
-### The declared reason, which is the provenance one rather than the taxonomic one
+**What 1969 rested on was provenance, not divisional play.** The postseason has no provenance table, so
+a floor set above **the last deduced game in the whole database, which is 1968** was a blunt stand-in
+for the per-game check the regular season gets from `dbo.retroGameProvenance`.
 
-**The postseason has no provenance table**, and none is needed for what exists: every postseason event
-file is `.EVE`, none deduced, no league letter. **So the floor is a blunt stand-in for a per-game check
-that does not exist there** — and it is set where **the last deduced game in the whole database, regular
-season included, is 1968.**
+**1950 gives that up deliberately.** Nineteen of the admitted seasons sit inside the deduced era, so the
+floor **no longer asserts that nothing above it came from a reconstruction.**
 
-⚠️ **That is the reason. The divisional-play boundary is context, not the argument.** From the data:
-**5.9 postseason games per season before 1969 against 26.7 from 1969** — the World Series alone against a
-multi-round postseason. 65 of the 66 seasons from 1903 to 1968 are present; the one missing is **1904**,
-when no World Series was played. It makes the line explicable to a player, and it is not why the line is
-there.
+**What it rests on now is narrower, and it is a fact about these 116 games rather than about the era.**
+Every one was checked against every other rule before the floor moved:
 
-⚠️ **A floor is a weaker guarantee than a provenance table.** The table asserts *this game came from a
-scored file*; a floor asserts *no game in this era came from one that was not*, which is a claim about
-Retrosheet's future behaviour rather than about a row.
+| checked | trips it |
+|---|---|
+| a deduced provenance row | **0** |
+| no game-log row | **0** |
+| more than `MAX_INNINGS` | **0** |
+| forfeit · protest · completed later · partial account · tie | **0 each** |
+| home club batted first | **0** |
+| extra innings | 9 — and the automatic-runner rule cannot reach them: §2 is **regular season only**, from 2020 |
 
-**What would re-admit them:** lowering `POSTSEASON_SEASON_FLOOR`. One constant, and the 158 gated
-directions come back.
+⚠️ **So the floor is now a bound, not a guarantee.** Below it nothing is admitted; above it,
+admissibility is whatever the per-game rules say and nothing more. That is weaker than what 1969
+claimed, and it is the choice that was made — against 268 games below 1950 where Retrosheet's
+transcription thins and this same check has not been run.
+
+⚠️ **`discovery/retrosheet-coverage/check_postseason_sources.ps1` now covers nineteen more seasons than
+it did.** It is what re-establishes *every postseason file is `.EVE`, none deduced* against a new
+download. Without it that claim ages silently, and the floor is no longer standing in front of it.
+
+**Context, and not the reason:** **5.9 postseason games per season before 1969 against 26.7 from 1969** —
+the World Series alone against a multi-round postseason. 65 of the 66 seasons from 1903 to 1968 are
+present; the missing one is **1904**, when no World Series was played.
+
+**What would change it again:** the constant. Lowering it further reaches the 268, raising it gives the
+116 back.
 
 ---
 
@@ -356,20 +387,58 @@ directions come back.
 
 ⚠️⚠️ **Two of these are exclusions nobody asked for, and one is a clause that removes nobody.**
 
-### 11a. Games with no `retroGameLogs` row — **incidental, 2,901 games**
+### 11a. Games with no `retroGameLogs` row — **2,901, and they are exactly two populations**
 
-The cohort does `JOIN dbo.retroGameLogs l`, inner. **Nobody wrote that as a rule**; it is there because
+The cohort does `JOIN dbo.retroGameLogs l`, inner. **Nobody wrote that as a rule**: it is there because
 the line score, the forfeit, the protest, the completion and the account all come from that table.
+Dropping the join with every clause that depends on it admits **21,461 more ungated directions and
+6,060 more gated**.
 
-**Dropping the join and every clause that depends on it admits 21,461 more ungated directions and
-6,060 more gated ones.**
+**Investigated 2026-08-24, and the 2,901 split cleanly with no remainder and no overlap:**
 
-⚠️⚠️ **This is §6's `CompletionInfo` shape at fifteen times the size** — an exclusion that exists by
-consequence, that no document asked for, and that a join change would undo silently. §6 is registered
-because somebody noticed it; this is larger and was not.
+| | | |
+|---|---|---|
+| **1,872** | Negro Leagues, `EVR`, 1913–1961 | ✔ **already excluded on purpose** — §9, settled 2026-08-17 |
+| **1,029** | **Kansas City Athletics home games, `KC1`, 1955–1967** | ⬜ nobody has ever decided anything about these |
 
-**What re-admits it:** changing the join to `LEFT`, or moving any of the five dependent facts to another
-source. Either does it **without the word *exclusion* appearing in the diff.**
+The Negro League clubs account for the rest of the prefixes — `KCM` Monarchs 276, `PH5` Stars 180,
+`HOM` Grays 163, `NW2` Eagles 158, `CAG` American Giants 151, `BLG` Elite Giants 149, and so on.
+
+### ⚠️⚠️ The Athletics half does not look like a Retrosheet gap. It looks like a gap in the load.
+
+| | |
+|---|---|
+| `KC1` home games in `retroGamesReg`, 1955–1967 | **1,029** |
+| of those with a `retroGameLogs` row | **0** |
+| **`KC1`-prefixed rows in `retroGameLogs`, any era** | **0** |
+| `KC1` **away** games with a log, same seasons | **1,031** |
+| of the 1,029: accepted provenance (`EVA`) | 1,015 |
+| of the 1,029: deduced (`EDA`) | 14 |
+| do they have `retroDailyReg` rows? | **all 2,901 do** |
+| do they have `retroEventsReg` rows? | **all 2,901 do** |
+
+**A game-log row is keyed by the home club, so what is missing is every row whose `GAME_ID` begins
+`KC1` — the entire home half of one major-league club's thirteen seasons, and nothing else.** The away
+half is present, under the other club's identifier. The same games are present in the games table, the
+daily table and the events table.
+
+**Named, so this is checkable rather than asserted:** `KC1195504120` (DET at KC, opening day 1955),
+`KC1195504130`, `KC1195504180`, `KC1195504190`, `KC1195504220`.
+
+⚠️⚠️ **That is this project's signature failure shape** — two places that should say the same thing
+saying different things, with nothing checking they agree — and it is silently keeping **1,015
+American League games** out of the pool. **Whether Retrosheet publishes those game logs has not been
+checked here; what is established is that this database does not have them while having everything else
+about the same games.**
+
+**Not a rule, and no rule is proposed.** §32's rules are about what may be *admitted*; this is about
+whether a table is complete. **What re-admits the population:** changing the join to `LEFT`, moving any
+of the five dependent facts to another source, or **loading the missing rows** — and only the third is
+about the actual question.
+
+⚠️ **Stated because the first version of this section did not know:** it called all 2,901 an incidental
+exclusion and put them in front of the operator as one question. **They are two populations with two
+completely different statuses**, and one of them was settled a week earlier.
 
 ### 11b. Deduced reconstructions — `ED*`, **deliberate but redundant**
 
@@ -377,10 +446,23 @@ source. Either does it **without the word *exclusion* appearing in the diff.**
 (§32). **Marginal bite: zero** — all 3,451 carry `AcquisitionInfo = 'D'`, so §7's complete-account rule
 removes them first. Same standing as §9: correct, deliberate, and never the clause that does the work.
 
-### 11c. Game logs with a NULL `VisLineScore` — **incidental, 17,282 rows**
+### 11c. Game logs with a NULL `VisLineScore` — **17,282 rows, and 17,082 of them are the 19th century**
 
-`l.VisLineScore IS NOT NULL` is a construction requirement — no line score, no board — rather than a
-product decision. **Marginal bite zero**, for the same interlock reason.
+`l.VisLineScore IS NOT NULL` is a construction requirement: no line score, no board. **Not a product
+decision, and now measured rather than assumed.**
+
+| decade | NULL | of | |
+|---|---|---|---|
+| 1870s | 1,489 | 2,025 | **73.5%** |
+| 1880s | 8,759 | 8,759 | **100%** |
+| 1890s | 6,829 | 9,468 | **72.1%** |
+| **1900s onward** | **5 or fewer per decade**, except 34 in the 1950s and 34 in the 1970s | | **≈0.1%** |
+
+**It is a coverage artefact of one era, and that era is outside the pool's window anyway** — the sampler
+draws from 1910. **From 1910 on there are 200 NULL line scores in the entire database.**
+
+⚠️ So this clause is a construction fact with an almost-empty population, not an exclusion anybody needs
+to rule on. Recorded with the numbers so the next sweep does not have to ask again.
 
 ### 11d. ⚠️⚠️ The season window `1910–2029` — **excludes nobody**
 
@@ -435,28 +517,24 @@ itself.
 
 - ⬜ **Batting out of order.** No column found that marks it. **Named as unknown rather than guessed.**
 
-### ⬜ What the sweep put in front of the operator — four rulings, none of them taken here
+### ⬜ What the sweep left for the operator — **one question, and it is not about a clause**
 
-**None of these is a defect and none is urgent.** They are places where *what the code does* and *what
-anybody decided* are different sentences, and only he can close that gap. **Nothing has been changed in
-the query, and none of these proposes admitting a game.**
+⚠️⚠️ **This list had four rows and three of them should never have been on it.**
 
-| | the question | if he says nothing |
-|---|---|---|
-| **11a** | **`retroGameLogs` — does the exclusion become asked-for?** 2,901 games are out because five needed facts live in one table and the join is inner. **Nobody decided this**; it costs 6,060 gated directions | it stays, undecided, and a future join change undoes it without the word *exclusion* in the diff |
-| **11c** | **A missing line score** — almost certainly a construction fact rather than a product decision, but it has never been written as either | same |
-| **9, 11b, 11d** | **The three dead clauses — stay, go, or documented at zero?** Negro Leagues, deduced files and the season window each remove **nothing on the margin.** They are correct and none has ever fired | they stay and this register records the bite as zero, which is the state as written today |
-| **10** | **Is 1969 the floor he wants?** It is a real filter costing 158 gated directions, resting on *the last deduced game is 1968* — a claim about Retrosheet rather than about a row | it stays at 1969 |
+| | why it is gone |
+|---|---|
+| **Negro Leagues** | **settled 2026-08-17.** It reached a decision list because a redundancy sweep did not distinguish *a clause with no ruling* from *a clause implementing a ruling.* §9 carries the rule that stops it happening again |
+| **Deduced files, and the season window** | not decisions either. Both are **documented at zero bite** in §11b and §11d, which is a fact about them and not a question. Deleting a clause that removes nothing today is the only option with a cost — it is also the only thing that would do the work if the data changed |
+| **The postseason floor** | ✔ **decided: 1950** — see §10 |
 
-⚠️⚠️ **The recommendation on the three dead clauses is that deleting them is the one option with a
-cost.** A clause that removes nothing today is doing no work and is also the only thing that would do
-the work if the data changed — §9 says exactly where that could happen. **Documented-at-zero is what
-this register now does**, and it is the state that survives somebody measuring them again and finding
-zero.
+**What is actually left:**
 
-⚠️ **11a is the one worth an actual answer**, because it is the largest exclusion in this document, it
-was nobody's decision, and it is the only one that can be reversed by a change whose subject is
-something else entirely.
+| | the question |
+|---|---|
+| ⬜ **11a — the 1,029 Kansas City Athletics games** | Once he knows what they are, does their exclusion become explicit? ⚠️ **The other 1,872 of the 2,901 are the Negro Leagues and are already settled**, so this question is only ever about the Athletics. **And it is very likely not an exclusion question at all** — see §11a: no `KC1`-prefixed row exists in `retroGameLogs` at all, which looks like a gap in the load rather than in Retrosheet |
+
+⚠️ **§11c is not on this list.** A missing line score means no board can be drawn; and from 1910 on it
+is **200 rows in the whole database**. It is a construction fact and §11c now says so.
 
 - ✔ **The automatic-runner boundary was settled by the operator on 2026-08-24** (§2 above): **2020, regular season only, never the postseason in any season.** ⚠️ It stayed marked open here after he had answered it and was raised with him again as a result — **the cost of a stale marking lands on the person who already decided.**
 - ⬜ **`audit()` cannot see the postseason exemption** (§2 above). Engineering, not a decision, and not live until the batch draws postseason games.

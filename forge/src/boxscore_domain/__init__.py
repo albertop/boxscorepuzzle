@@ -138,48 +138,50 @@ decade describes that decade's roster habits rather than the board. The specific
 # Which games the pool may draw from (§32)
 # ---------------------------------------------------------------------------------------------------
 
-POSTSEASON_SEASON_FLOOR: Final = 1969
-"""Earliest postseason season the pool admits. **Measured, and it arrives from two directions.**
+POSTSEASON_SEASON_FLOOR: Final = 1950
+"""Earliest postseason season the pool admits. **Set to 1950 by the operator on 2026-08-24.**
 
-The postseason is a second source of boards. It needs a floor because the pool's source rule (§32)
-excludes deduced reconstructions and Negro Leagues games, and the regular season establishes that per
-game through `dbo.retroGameProvenance`. **No such table exists for the postseason and none is needed**
-— all 121 `events-post` zips hold 403 files and every one is `.EVE`: 1,878 games, not one deduced, no
-league letter. There is nothing there to exclude.
+⚠️⚠️ **It was 1969 and the reason has changed with the number, not survived it.** The old floor rested
+on two facts meeting: the first LCS is 1969, and **the last deduced game in the whole database is
+1968**. The second was the real argument — the postseason has no provenance table, so a floor above
+every deduced game was a blunt stand-in for the per-game check that exists in the regular season.
 
-So the floor is not doing the work the provenance table does. It is protection against Retrosheet
-publishing something later that would need excluding — a Negro Leagues postseason, a reconstruction —
-and it is set where two independent facts meet:
+**1950 gives that up deliberately.** It admits nineteen seasons that sit inside the deduced era, so the
+floor no longer says *no game here came from a reconstruction*. **What it rests on now is narrower and
+is a fact about these games rather than about the era:**
 
-  the first LCS is 1969        before it the postseason was the World Series alone, and a
-                               multi-round postseason is what makes a modern one
-  the last deduced game is 1968  across the whole database, regular season included
+* **Every one of the 116 games from 1950 to 1968 was checked, one rule at a time, before the floor
+  moved.** None carries a deduced provenance row, none is missing a game log, none is a forfeit, a
+  protest, a tie, completed later or a partial account, none has the home club batting first, and none
+  runs past `MAX_INNINGS`. Nine go to extra innings and the automatic-runner rule cannot reach them —
+  it is regular-season only, from 2020.
+* **All nineteen seasons are present**, so the era is not admitted through a hole in coverage.
 
-Neither was derived from the other: one is about how baseball was organised, the other about how
-Retrosheet reconstructed missing scoresheets. Divisional play begins and the mound is lowered the same
-year, so the line is explicable to a player as well.
+⚠️ **So the floor is now a *bound*, not a *guarantee*.** Below it nothing is admitted; above it,
+admissibility is what the per-game rules say and nothing else. **That is weaker than what 1969 claimed
+and it is what the operator chose**, against 268 games still excluded below 1950 — where Retrosheet's
+transcription thins and the same one-rule-at-a-time check has not been run.
 
-⚠️ **A floor is a weaker guarantee than the provenance table, and the difference is the reason this
-docstring exists.** The table asserts *this game came from a scored file*. A floor asserts *no game in
-this era came from one that was not*, which is a claim about Retrosheet's future behaviour rather than
-about a row. `discovery/retrosheet-coverage/check_postseason_sources.ps1` is what re-establishes it
-against a new download; without that it is an assumption that ages silently.
+**What it admits over 1969:** **116 games, 222 ungated directions, 50 gated.** Measured 2026-08-24.
+`docs/excluded-games.md` §10 carries the check that none of them trips another rule.
 
-**What it admits:** 572 directions — LCS 233, DVS 179, WS 141, WCG 19 — against the regular season's
-102,228. ⚠️ **The postseason is not a pool argument at 0.6%**, and it was not adopted as one: postseason
-boards survive §5's gate *worse* than regular boards of the same decade (14.1% against 23.2% in the
-2010s), because October means deeper bullpens and less scoring. It is here for §7's reveal, where a
-board resolving to a World Series game is a different payoff from a Tuesday in June.
+⚠️ **A floor is a weaker guarantee than the provenance table, and lowering it widens the gap rather
+than closing it.** The table asserts *this game came from a scored file*. A floor asserts *no game below
+this line is admitted*, which says nothing about the ones above. `discovery/retrosheet-coverage/
+check_postseason_sources.ps1` is what re-establishes the source claim against a new download; without
+it the claim ages silently, and it now covers nineteen more seasons than it did.
+
+**What the postseason admits in total:** 622 gated directions against the regular season's ~94,000.
+⚠️ **The postseason is not a pool argument at well under one percent**, and it was not adopted as one:
+postseason boards survive §5's gate *worse* than regular boards of the same decade (14.1% against 23.2%
+in the 2010s), because October means deeper bullpens and less scoring. It is here for §7's reveal, where
+a board resolving to a World Series game is a different payoff from a Tuesday in June — and 1950 buys
+nineteen more Octobers of exactly that.
 
 **⚠️ The regular season is untouched by this.** It keeps every game it has, back to 1910, and keeps the
 provenance table that admits them. The floor applies to the postseason and nowhere else — a change
 here must never become a change to what the pool already contains.
-
 """
-
-# ---------------------------------------------------------------------------------------------------
-# Operations (§33)
-# ---------------------------------------------------------------------------------------------------
 
 FORWARD_INVENTORY_MONTHS: Final = 5
 """Months of published puzzles the VPS holds at all times. **PROVISIONAL.**
