@@ -222,11 +222,20 @@ class TestTheSlotReferenceHasOneSource:
             pitching_totals=(3, 0, 0, 0, 0, 0),
             line_score=LineScore((0,), (0,), 0, 0, 0, 0, 0, 0),
         )
-        loaded = SimpleNamespace(
-            offense_is_home=True, labels=("P", "P"), pitcher_labels=("SP",), slots=slots, direction=None
+        # ⚠⚠ **A `Candidate`, not a `Loaded`.** The pack reads shipped packages now, so what it draws
+        # from is `candidate.package` and `candidate.slots` -- and a stub of the old shape fails as an
+        # `AttributeError` rather than as a wrong board, which is the good direction.
+        candidate = SimpleNamespace(
+            slots=slots,
+            package=SimpleNamespace(
+                offense_is_home=True,
+                labels=("P", "P"),
+                pitcher_labels=("SP",),
+                slot_references=("9a", "9b"),
+            ),
         )
 
-        drawn = [str(cell) for cell in pack.board_table(board, loaded, solved=False)._cellvalues[3]]
+        drawn = [str(cell) for cell in pack.board_table(board, candidate, solved=False)._cellvalues[3]]
         printed = pack.footnote_line(board, slots)
 
         assert drawn[0] == "9b", f"the table drew {drawn[0]!r} for the second row of slot 9"

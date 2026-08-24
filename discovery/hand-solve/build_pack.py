@@ -1,4 +1,10 @@
-"""Fifty boards to solve by hand, as a printable pack — and an experiment inside it.
+"""Pack A: sixteen boards to solve by hand, as a printable pack — and an experiment inside it.
+
+⚠⚠ **Sixteen at stall rungs 5, 8, 11 and 12.** This said *fifty* and *chain* until 2026-08-23, four
+days after `ba49413` re-axed the code, so the file described the retired design while behaving as the
+current one. **The behaviour was right and the text was the artefact** — and this text is not only a
+comment: the same words reached `key.csv`'s header and the run summary, which are the record of the
+experiment rather than a description of it.
 
 §22 promotes the hand-solve from sanity check to launch gate, because it is the only real
 verification of human derivability that exists and the only check the same-author risk does not
@@ -7,32 +13,32 @@ touch. This builds the pack.
 **It is also an experiment with a hypothesis.** Layer 3 certifies that a propagator holding every
 relation at once needs no guess; layer 3b asks the same of a solver reading one relation at a time,
 and **29% of Saturday boards fail it**. A player sits between the two and nothing automated says
-where. So a third of these fifty come from the uncertified 29%, interleaved at random and unlabelled:
+where. So a third of these sixteen come from the uncertified 29%, interleaved at random and unlabelled:
 
   * solved with no more difficulty than the rest → 3b is too conservative and stays reported
   * stuck systematically on them → 3b becomes a gate
 
 **Which board is which is in `key.csv`, which must not be opened until the solving is finished.**
-Nothing on a puzzle page identifies the game, the date, the teams, the chain target, the difficulty
+Nothing on a puzzle page identifies the game, the date, the teams, the stall target, the difficulty
 or the certification status. The board reference is a sequential number and encodes nothing.
 
 Read-only against DGL. Run from `forge/`.
 """
 
 import csv
+import json
 import random
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
-sys.path.insert(0, str(_ROOT / "discovery" / "difficulty-metrics"))
 sys.path.insert(0, str(_ROOT / "discovery" / "verifier"))
 
 from collections.abc import Sequence  # noqa: E402
 
-from measure import Loaded, load  # noqa: E402
 from reportlab.lib import colors  # noqa: E402
 from reportlab.lib.pagesizes import A4  # noqa: E402
 from reportlab.lib.styles import ParagraphStyle  # noqa: E402
@@ -40,16 +46,19 @@ from reportlab.lib.units import mm  # noqa: E402
 from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle  # noqa: E402
 
 from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
-from boxscore_forge.calendar import read  # noqa: E402
-from boxscore_forge.lineup_fallback import erase_with_lineup_fallback  # noqa: E402
-from boxscore_forge.publish import (  # noqa: E402
-    slot_references,
-    to_board,
+from boxscore_forge.calendar import read as read_calendar  # noqa: E402
+from boxscore_forge.publication_key import PINNED_PUBLIC_KEY  # noqa: E402
+from boxscore_forge.publish import slot_references  # noqa: E402
+from boxscore_package.format import (  # noqa: E402
+    FOOTNOTE_COLUMNS,
+    Board,
+    read,
 )
-from boxscore_package.format import FOOTNOTE_COLUMNS, Board  # noqa: E402
 from boxscore_package.format import Package as PuzzlePackage  # noqa: E402
 from boxscore_package.innings import to_display  # noqa: E402
-from boxscore_verify.verify import UNSIGNED, derivable_in_view, verify  # noqa: E402
+from boxscore_package.signing import verify as verify_signature  # noqa: E402
+from boxscore_package.signing import verifying_key  # noqa: E402
+from boxscore_verify.verify import derivable_in_view  # noqa: E402
 
 TARGETS = (5, 8, 11, 12)
 QUOTAS = {5: 4, 8: 4, 11: 4, 12: 4}
@@ -96,7 +105,12 @@ to afford it. **The reason and the number now live together in `boxscore_domain`
 with its reason attached is not the defect a bare literal is.
 """
 
-SEED = 50
+PICK_SEED = 50
+"""Only the *choice* among equally eligible boards. ⚠⚠ **It was `SEED`, and it seeded an erasure.**
+
+The pack re-derived each board with this seed and one attempt, so a board entered the pool only if that
+attempt reproduced it — 2 boards at rung 11 where the inventory holds 23. **There is no erasure here any
+more**, so the seed decides which of several eligible boards is printed and nothing about difficulty."""
 SAMPLE_PER_DECADE = 8
 
 BATTING_HEADS = ("PA", "AB", "R", "H", "BB", "SO")
@@ -111,13 +125,27 @@ FOOTNOTE_LABELS = (
 
 @dataclass(frozen=True, slots=True)
 class Candidate:
-    loaded: Loaded
+    """One shipped board, read from its signed package. **Nothing here is re-derived.**"""
+
+    game_id: str
+    puzzle_id: str
+    generation: str
+    season: int
     target: int
-    puzzle: Board
-    solution: Board
+    package: PuzzlePackage
     certified: bool
     has_substitution: bool
     has_live_footnote: bool
+
+    @property
+    def slots(self) -> tuple[int, ...]:
+        """The lineup slot of each batting row, recovered from the package's own references.
+
+        ⚠️ **From `slot_references`, not from a second source.** `9`, `9a` and `9b` are all slot nine;
+        stripping the letter is exact and it keeps one definition of which row sits where.
+        """
+        references = self.package.slot_references or ()
+        return tuple(int("".join(ch for ch in reference if ch.isdigit())) for reference in references)
 
 
 def footnote_line(board: Board, slots: "Sequence[int]") -> str:
@@ -162,51 +190,68 @@ def footnote_line(board: Board, slots: "Sequence[int]") -> str:
     return "   ".join(parts)
 
 
-def candidates(sample: list[Loaded]) -> list[Candidate]:
+def shipped(assigned: dict[str, str], generations: set[str]) -> list[Candidate]:
+    """The boards that will actually be served, read from their signed packages.
+
+    ⚠️⚠️ **It re-derived them until 2026-08-23, and that was the whole of the 3% finding.** The pack
+    called `erase_with_lineup_fallback(..., seed=SEED)` once per target and kept whatever came back, so
+    a board only entered the pool if **one ordinary attempt at one fixed seed** reproduced it. The
+    shipped board came from `_hardest_target()` working down from the ceiling. The pool it built held
+    **2 boards at rung 11 and 3 at rung 12**; the inventory on disk holds **23 and 31**.
+
+    ⚠️⚠️ **And the axis argument survived while the instrument stopped being valid, which is the shape
+    worth naming.** *The ceiling is the best of nine seeds; the pack is what an ordinary attempt
+    produces* is true, was deliberate, and is written down. **What nobody checked is whether an ordinary
+    attempt recovers a board the producer found working down from the ceiling.** It does not — and the
+    justification stayed true the whole time, so nothing about it read as wrong.
+
+    **B's gate asks whether what ships is derivable by a person.** A re-derived board shares the game id
+    and nothing else, so the question it answers is a near neighbour of the one being asked. That is not
+    an acceptable substitution at a launch gate.
+
+    ⚠️ **No database, no seed, no erasure.** Everything comes from the package and the calendar.
+    """
     found: list[Candidate] = []
-    for loaded in sample:
-        source = to_board(loaded.direction, None)
-        for target in TARGETS:
-            # ⚠️⚠️ **Through the production path, not `erase()` directly.** This called
-            # `erase(direction, target_chain=...)` — a different producer from the one that ships, which
-            # goes through `erase_with_lineup_fallback`. **39% of the boards in the live inventory
-            # needed that fallback**, so a pack built without it evaluates a population the player never
-            # meets. `CLAUDE.md`: a sample that evaluates the board is built with the board's own
-            # producer, never a copy of it — and this is the launch gate, where that matters most.
-            produced, _why = erase_with_lineup_fallback(
-                loaded.direction, tuple(loaded.slots), target_stalls=target, seed=SEED
+    verifying = verifying_key(PINNED_PUBLIC_KEY.read_text(encoding="utf-8").strip())
+    for game_id, wanted_id in sorted(assigned.items()):
+        path = next(
+            (INVENTORY / generation / f"{wanted_id}.json" for generation in sorted(generations)
+             if (INVENTORY / generation / f"{wanted_id}.json").is_file()),
+            None,
+        )
+        if path is None:
+            message = f"{wanted_id} is in the calendar and in no generation under {INVENTORY}"
+            raise SystemExit(message)
+        package = read(path)
+
+        # ⚠️⚠️ **The signature is checked, and a failure is a refusal rather than a warning.** The pack
+        # prints boards straight from files on disk; `serve` refuses an unsigned or altered package, so
+        # printing one without checking would put a board in front of the operator that the product
+        # itself would reject — and the gate would be measuring something that will never be served.
+        # `format.read()` parses and does not verify; that is why this is here rather than assumed.
+        verify_signature(package, verifying)
+
+        target = package.metadata.get("target_stalls")
+        if not isinstance(target, int) or target not in TARGETS:
+            continue
+        found.append(
+            Candidate(
+                game_id=game_id,
+                puzzle_id=package.puzzle_id,
+                generation=path.parent.name,
+                # ⚠️ From the game id's characters, exactly as `build_inventory._is_early` reads it. The
+                # package strips season, date and teams (§7), so this is where it lives.
+                season=int(game_id[3:7]),
+                target=target,
+                package=package,
+                certified=derivable_in_view(package),
+                # ⚠️ A substitution is two rows sharing a lineup slot. `slot_references` puts a letter on
+                # a reference **only** where the slot is shared, so a letter anywhere is the signal —
+                # never a hyphen in a label, which is what this read before the suffix was removed.
+                has_substitution=any(not reference.isdigit() for reference in package.slot_references or ()),
+                has_live_footnote=any(any(row) for row in package.solution.footnotes),
             )
-            if produced is None:
-                continue
-            board = to_board(loaded.direction, produced.erased)
-            package = PuzzlePackage(
-                labels=("C",) * len(board.batting),
-                pitcher_labels=("C",) * len(board.pitching),
-                offense_is_home=True,
-                puzzle_id="pack",
-                puzzle=board,
-                solution=source,
-            )
-            if not verify(package, secret=UNSIGNED, source=source).accepted:
-                continue
-            found.append(
-                Candidate(
-                    loaded=loaded,
-                    target=target,
-                    puzzle=board,
-                    solution=source,
-                    certified=derivable_in_view(package),
-                    # ⚠️ A substitution is two rows sharing a lineup slot, not a hyphen in a label. This
-                    # read `"-" in label` and broke silently the moment the suffix was removed — the pool
-                    # reported that no board carries a substitution, which is false of 12% of them. Third
-                    # instance today of something derived from the label's formatting instead of the slot.
-                    has_substitution=len(set(loaded.slots)) < len(loaded.slots),
-                    has_live_footnote=any(
-                        note.hit_by_pitch or note.sacrifice_flies or note.sacrifice_hits or note.catcher_interference
-                        for note in loaded.direction.batter_footnotes
-                    ),
-                )
-            )
+        )
     return found
 
 
@@ -221,28 +266,38 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
     pre_1950 = [0]
 
     def take(candidate: Candidate) -> bool:
-        if candidate.loaded.game_id in used_games:
+        if candidate.game_id in used_games:
             return False
-        if candidate.loaded.season < 1950 and pre_1950[0] >= PRE_1950_ALLOWANCE:
+        if candidate.season < 1950 and pre_1950[0] >= PRE_1950_ALLOWANCE:
             return False
-        used_games.add(candidate.loaded.game_id)
-        pre_1950[0] += candidate.loaded.season < 1950
+        used_games.add(candidate.game_id)
+        pre_1950[0] += candidate.season < 1950
         chosen.append(candidate)
         return True
 
     def shuffled(items: list[Candidate]) -> list[Candidate]:
-        ordered = sorted(items, key=lambda item: item.loaded.game_id)
+        ordered = sorted(items, key=lambda item: item.game_id)
         rng.shuffle(ordered)
         return ordered
 
-    # ⚠️ Uncertified boards are capped **per rung**, not only overall. Layer 3b certifies 100% of
-    # chain-5 boards and 91% of chain-11 ones, so the uncertified candidates all live at the hard
-    # end — and filling the hardest rung with them made every chain-11 board uncertified and every
-    # other board certified. That is a perfectly confounded experiment: uncertified and hard would
-    # be the same variable, and any difference the solver felt would be difficulty.
+    # ⚠️ Uncertified boards are capped **per rung**, not only overall. The reason is a confound: if the
+    # uncertified candidates all live at the hard end, filling the hardest rung with them makes
+    # *uncertified* and *hard* the same variable, and any difference the solver feels is difficulty.
     #
-    # Each rung therefore gets at most half its quota uncertified, which keeps the comparison inside
-    # a rung where the boards are the same difficulty by construction.
+    # ⚠️⚠️ **The population this was sized against no longer exists, and the figure behind it is from a
+    # retired axis.** It read *layer 3b certifies 100% of the easiest boards and 91% of the hardest* —
+    # measured at **chain** 11 and 13, and the generator stopped targeting chain. Measured over the
+    # shipping inventory on 2026-08-23, at stall rungs: **71 of 75 boards are uncertified**, 100% at
+    # rung 5, 75% at rung 8, 96% at rung 11, 100% at rung 12.
+    #
+    # **So the cap now binds in the opposite direction and stops the pack being built at all.**
+    # `UNCERTIFIED_SHARE` caps the pack at five uncertified boards where four certified ones exist in
+    # the whole pool, which is a ceiling of nine against a `WANTED` of sixteen — and nine is exactly
+    # what the run produced. ⚠️ It also inverts the instrument's purpose: a pack that is two thirds
+    # certified samples a 5% corner of what ships.
+    #
+    # ⬜ **The share is the operator's** (§7: a number shaping the experiment is not invented here), and
+    # `docs/reviews/todo.md` carries the finding. **Nothing is lowered to make the pack build.**
     for target in sorted(TARGETS, reverse=True):
         wanted = QUOTAS[target]
         ceiling_here = wanted // 2
@@ -264,7 +319,7 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
 
     # The two cases the tutorial has to teach must appear somewhere in the pack. If one is missing a
     # board is *swapped* rather than appended: the replacement takes the place of one at the same
-    # chain target, the same certification and the same side of 1950, so every quota survives the
+    # stall target, the same certification and the same side of 1950, so every quota survives the
     # substitution. An earlier version appended and then dropped `chosen[-2]`, which removed an
     # arbitrary board and could silently empty a rung.
     for trait_name, trait in (
@@ -274,7 +329,7 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
         if any(trait(item) for item in chosen):
             continue
         for candidate in shuffled([item for item in pool if trait(item)]):  # pragma: no cover - rare
-            if candidate.loaded.game_id in used_games:
+            if candidate.game_id in used_games:
                 continue
             victims = [
                 item
@@ -282,13 +337,13 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
                 if item.target == candidate.target
                 and item.certified == candidate.certified
                 and not trait(item)
-                and (item.loaded.season < 1950) == (candidate.loaded.season < 1950)
+                and (item.season < 1950) == (candidate.season < 1950)
             ]
             if not victims:
                 continue
             chosen.remove(victims[0])
-            used_games.discard(victims[0].loaded.game_id)
-            pre_1950[0] -= victims[0].loaded.season < 1950
+            used_games.discard(victims[0].game_id)
+            pre_1950[0] -= victims[0].season < 1950
             take(candidate)
             break
         else:  # pragma: no cover - only if the pool cannot supply the trait at all
@@ -296,7 +351,14 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
             raise SystemExit(message)
 
     rng.shuffle(chosen)
-    audit(chosen)
+    # ⚠️⚠️ **The audit was here and it defeated the fix that moved it.** `main()` calls `report()` and
+    # *then* `audit()`, with a comment explaining that a refusal which does not say what it drew from is
+    # half a check — and this line raised one level down, before `report()` was ever reached. **The
+    # repair was made in the caller while the thing being repaired sat in the callee**, so the terminal
+    # showed a bare refusal on 2026-08-23 exactly as it had before.
+    #
+    # ⚠️ It cost a diagnosis by hand: *nine boards, wanted sixteen* with no pool distribution beside it
+    # cannot distinguish a pack that filtered badly from an inventory with nothing to give.
     return chosen
 
 
@@ -312,25 +374,25 @@ FORMULAS = (
 to go and find it.
 
 It doubles as the first real test of §8's permanent reference sheet. If this works on paper across
-fifty boards the reference sheet is about right, and if it does not, that is worth knowing now.
+sixteen boards the reference sheet is about right, and if it does not, that is worth knowing now.
 """
 
 
 def survey_box() -> Table:
-    """The three categories stay separate, and the 1-6 scale is what validates the chain.
+    """The three categories stay separate, and the 1-6 scale is what validates the rung.
 
-    ⚠️ **The scale is the only thing that can test whether chain length measures difficulty at all.**
-    Chain length is a solver measurement; that it corresponds to what a person experiences is an
-    assumption nobody has checked. If the marked 1-6 tracks chain, the scale is validated. If it does
-    not, chain is measuring something else and the generator's control variable is wrong — which is
+    ⚠️ **The scale is the only thing that can test whether the stall count measures difficulty at all.**
+    A stall count is a solver measurement; that it corresponds to what a person experiences is an
+    assumption nobody has checked. If the marked 1-6 tracks the rung, the scale is validated. If it does
+    not, the count is measuring something else and the generator's control variable is wrong — which is
     worth knowing before a calendar is built on it.
 
     It is deliberately not tied to the day of the week. A 5 marked on a board the system calls Monday
     says that board is misclassified, and that is exactly the signal wanted.
 
-    Two conditions or it measures nothing, both enforced elsewhere: **the chain target never appears
-    on the page**, since seeing "chain 8" anchors the rating to the number, and **the pages are not
-    ordered by chain**, since the early boards become the reference for everything after them.
+    Two conditions or it measures nothing, both enforced elsewhere: **the stall target never appears
+    on the page**, since seeing "8 stalls" anchors the rating to the number, and **the pages are not
+    ordered by target**, since the early boards become the reference for everything after them.
 
     Only **had to guess** bears on layer 3b. **Tedious** and **boring** bear on the difficulty curve
     and the quality filter, and merging them loses both answers.
@@ -360,7 +422,7 @@ def survey_box() -> Table:
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
                 ("BOX", (0, 0), (-1, -1), 0.6, colors.HexColor("#666666")),
                 # The four feelings sit two by two rather than one per line: it is a shorter box and
-                # a tick grid reads faster than a list when the same four choices repeat fifty times.
+                # a tick grid reads faster than a list when the same four choices repeat on every page.
                 ("SPAN", (0, 1), (1, 1)),
                 ("SPAN", (0, 3), (1, 3)),
                 ("SPAN", (0, 4), (1, 4)),
@@ -392,17 +454,21 @@ def audit(chosen: list[Candidate]) -> None:
     uncertified = sum(1 for item in chosen if not item.certified)
     if abs(uncertified - wanted_uncertified) > 2:
         problems.append(f"{uncertified} uncertified boards, wanted about {wanted_uncertified}")
-    pre_1950 = sum(1 for item in chosen if item.loaded.season < 1950)
+    pre_1950 = sum(1 for item in chosen if item.season < 1950)
     if pre_1950 > PRE_1950_ALLOWANCE:
         problems.append(f"{pre_1950} pre-1950 boards against an allowance of {PRE_1950_ALLOWANCE}")
-    games = [item.loaded.game_id for item in chosen]
+    games = [item.game_id for item in chosen]
     if len(set(games)) != len(games):
         problems.append("the same game appears twice")
     if not any(item.has_substitution for item in chosen):
         problems.append("no board carries a suffixed label, and the tutorial has to teach one")
     if not any(item.has_live_footnote for item in chosen):
         problems.append("no board carries a live footnote, and the tutorial has to teach one")
-    # ⚠️ Also folded in: layer 3b certifies every easy board and 91% of the hard ones, so the
+    # ⚠️ Also folded in — ⬜ **and its figure is the retired chain-axis one; see `choose()`.** The
+    # observed share over the shipping inventory is 5% certified, not 91%. The tolerance below is what
+    # made the discrepancy legible rather than fatal, and it does not make the pack buildable: the
+    # arithmetic ceiling is eleven boards against sixteen. As written: layer 3b certified every easy
+    # board and 91% of the hard ones, so the
     # uncertified candidates all live at the hard end. A rung entirely uncertified makes
     # "uncertified" and "hard" the same variable, and any difference the solver feels is difficulty.
     by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
@@ -445,26 +511,26 @@ def substitutes(slots: "Sequence[int]") -> list[bool]:
     return flags
 
 
-def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
+def board_table(board: Board, candidate: "Candidate", *, solved: bool) -> Table:
     # ⚠️ Eight columns, not seven. The first carries the lineup slot, and it is the cell a footnote
     # reference points at: `SH: 9b` is useless if nothing on the board says `9b`. Its header is left
     # blank on purpose — no boxscore has a slot column, so any symbol there is our invention asking to
     # be interpreted, while `1, 2, 3...` in order explains itself.
     rows: list[list[str]] = [["", "", *BATTING_HEADS]]
     spans: list[tuple[str, tuple[int, int], tuple[int, int], object]] = []
-    batting_team = "HOME" if loaded.offense_is_home else "AWAY"
-    pitching_team = "AWAY" if loaded.offense_is_home else "HOME"
+    batting_team = "HOME" if candidate.package.offense_is_home else "AWAY"
+    pitching_team = "AWAY" if candidate.package.offense_is_home else "HOME"
 
     rows.append([f"{batting_team} BATTING", *([""] * 7)])
     section_rows = [len(rows) - 1]
-    sub = substitutes(loaded.slots)
-    references = slot_references(loaded.slots)
+    sub = substitutes(candidate.slots)
+    references = candidate.package.slot_references or ()
     first_batting_row = len(rows)
     for index, line in enumerate(board.batting):
         rows.append(
             [
                 references[index],
-                indented(loaded.labels[index], substitute=sub[index]),
+                indented(candidate.package.labels[index], substitute=sub[index]),
                 *("" if value is None else str(value) for value in line),
             ]
         )
@@ -478,7 +544,11 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     rows.append(["", "", *PITCHING_HEADS])
     head_rows = [0, len(rows) - 1]
     for index, line in enumerate(board.pitching):
-        label = loaded.pitcher_labels[index] if index < len(loaded.pitcher_labels) else f"P{index + 1}"
+        label = (
+            candidate.package.pitcher_labels[index]
+            if index < len(candidate.package.pitcher_labels)
+            else f"P{index + 1}"
+        )
         cells = ["" if value is None else str(value) for value in line]
         if line[0] is not None:
             cells[0] = to_display(line[0])
@@ -538,12 +608,12 @@ def board_table(board: Board, loaded: Loaded, *, solved: bool) -> Table:
     return table
 
 
-def line_score_table(loaded: Loaded) -> Table:
-    score = loaded.direction.line_score
+def line_score_table(board: Board, *, offense_is_home: bool) -> Table:
+    score = board.line_score
     innings = max(len(score.offense_by_inning), len(score.defense_by_inning))
     away, home = (
         (score.defense_by_inning, score.offense_by_inning)
-        if loaded.offense_is_home
+        if offense_is_home
         else (score.offense_by_inning, score.defense_by_inning)
     )
     away_rhe, home_rhe = (
@@ -551,7 +621,7 @@ def line_score_table(loaded: Loaded) -> Table:
             (score.defense_runs, score.defense_hits, score.defense_errors),
             (score.offense_runs, score.offense_hits, score.offense_errors),
         )
-        if loaded.offense_is_home
+        if offense_is_home
         else (
             (score.offense_runs, score.offense_hits, score.offense_errors),
             (score.defense_runs, score.defense_hits, score.defense_errors),
@@ -599,15 +669,19 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
         story.append(Paragraph(f"Board {index:02d}{' — solution' if answers else ''}", reference))
         story.append(Paragraph(FORMULAS, formulas))
         story.append(Spacer(1, 2 * mm))
-        story.append(line_score_table(candidate.loaded))
+        story.append(line_score_table(candidate.package.puzzle, offense_is_home=candidate.package.offense_is_home))
         story.append(
             Paragraph(
-                footnote_line(candidate.solution if answers else candidate.puzzle, candidate.loaded.slots),
+                footnote_line(candidate.package.solution if answers else candidate.package.puzzle, candidate.slots),
                 footnotes,
             )
         )
         story.append(Spacer(1, 2 * mm))
-        story.append(board_table(candidate.solution if answers else candidate.puzzle, candidate.loaded, solved=answers))
+        story.append(
+            board_table(
+                candidate.package.solution if answers else candidate.package.puzzle, candidate, solved=answers
+            )
+        )
         if not answers:
             story.append(Spacer(1, 3 * mm))
             story.append(survey_box())
@@ -616,18 +690,65 @@ def build_pdf(path: Path, chosen: list[Candidate], *, answers: bool) -> None:
     document.build(story)
 
 
+def write_provenance(path: Path, chosen: list[Candidate], assigned: dict[str, str], generations: set[str]) -> None:
+    """Which data these boards were drawn against. **`docs/reloading-retrosheet.md` §8.**
+
+    ⚠⚠ **The pack takes `game_id`s from the calendar and reloads them from the database**, so a reload
+    between the generation and the pack changes the board underneath the id. `main()` notices the game
+    that stops qualifying; it cannot notice **the one that changed and still qualifies** — and a wrong
+    key does not fail loudly, it produces a wrong measurement of the one thing no test can check.
+
+    ⚠⚠ **Beside the key, never inside it, and that is the point.** The key must not be opened until the
+    solving is finished; provenance that lived in it could only be checked by spoiling the experiment.
+    **A future reader can compare this file against the calendar without opening an answer.**
+
+    ⚠️ **It records rather than verifies**, which is the honest scope. Regenerating each `game_id` and
+    comparing the produced solution against the shipping package would *detect* a reload rather than
+    merely make it detectable; that is a stronger check and it is not built here.
+    """
+    document = {
+        "built": datetime.now(tz=UTC).isoformat(),
+        "calendar": str(CALENDAR),
+        "generations": sorted(generations),
+        "boards": [
+            {
+                "board": f"{index:02d}",
+                "game_id": candidate.game_id,
+                # The id the calendar assigned to this game. Puzzle ids derive from the game and never
+                # from the date (§21), so regenerating it and getting a different id is a changed dataset.
+                "calendar_puzzle_id": assigned.get(candidate.game_id, ""),
+            }
+            for index, candidate in enumerate(chosen, start=1)
+        ],
+    }
+    path.write_text(json.dumps(document, indent=1, sort_keys=True) + chr(10), encoding="utf-8")
+
+
 def write_key(path: Path, chosen: list[Candidate]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["board", "game_id", "season", "chain_target", "certified_by_3b", "substitution", "live_footnote"]
+            [
+                "board",
+                "game_id",
+                "season",
+                # ⚠⚠ **`stall_target`, and it read `chain_target` until 2026-08-23.** The column always
+                # held a stall target after `ba49413`; the header named the retired axis. **A key is the
+                # record of what the experiment measured**, so a mislabelled column there is not a stale
+                # comment — it is the measurement described wrongly, permanently, in the one file that
+                # outlives the run.
+                "stall_target",
+                "certified_by_3b",
+                "substitution",
+                "live_footnote",
+            ]
         )
         for index, candidate in enumerate(chosen, start=1):
             writer.writerow(
                 [
                     f"{index:02d}",
-                    candidate.loaded.game_id,
-                    candidate.loaded.season,
+                    candidate.game_id,
+                    candidate.season,
                     candidate.target,
                     "yes" if candidate.certified else "NO",
                     "yes" if candidate.has_substitution else "",
@@ -644,7 +765,7 @@ def write_sheet(path: Path, count: int) -> None:
             writer.writerow([f"{index:02d}", "", "", "", "", "", "", ""])
 
 
-def shipping_games() -> tuple[str, ...]:
+def shipping_games() -> tuple[dict[str, str], set[str]]:
     """The games behind the boards that will actually ship, from the calendar.
 
     ⚠️⚠️ **The pack drew its own sample until 2026-08-22, and at a different gate.** It called
@@ -660,51 +781,75 @@ def shipping_games() -> tuple[str, ...]:
     **So the pack draws from the calendar**, through `load(also=...)` — which exists for exactly this:
     naming the boards to be examined rather than hoping a draw contains them.
     """
-    calendar = read(CALENDAR)
+    calendar = read_calendar(CALENDAR)
     generations = {entry.assigned for entry in calendar}
-    by_game: dict[str, str] = {}
+    # ⚠️ **The puzzle id is kept, not discarded.** This built the same map and returned only its keys,
+    # so the one fact that ties a board to the data it came from was read off disk and thrown away.
+    # `write_provenance` needs it (`docs/reloading-retrosheet.md` §8).
+    assigned: dict[str, str] = {}
     for entry in calendar:
         for generation in generations:
             package = INVENTORY / generation / f"{entry.puzzle_id}.json"
             if package.exists():
-                by_game[entry.game_id] = package.read_text(encoding="utf-8")
+                assigned[entry.game_id] = entry.puzzle_id
                 break
-    if not by_game:
+    if not assigned:
         message = f"no packages found for {len(calendar)} calendar entries under {INVENTORY}"
         raise SystemExit(message)
-    return tuple(by_game)
+    return assigned, generations
 
 
 def main() -> None:
-    rng = random.Random(SEED)
-    named = shipping_games()
-    # ⚠️ `limit=0` with `also`: no stratified draw at all, only the named games. The caps, the gate and
-    # the provenance rule still apply to them — `also` cannot smuggle in a board the pool would refuse —
-    # so a calendar board that no longer qualifies comes back missing rather than silently different.
-    sample = load(0, gated=True, gate=ZERO_DENSITY_GATE, also=named)
-    if len(sample) < len(named):
-        print(f"  {len(named) - len(sample)} calendar games no longer pass the pool rules")
-    pool = candidates(sample)
+    rng = random.Random(PICK_SEED)
+    assigned, generations = shipping_games()
+    # ⚠⚠ **No `load()`, and therefore no database.** The boards are read from the signed packages the
+    # calendar names. The pack used to reload every game and erase it again, which is the whole of the
+    # 3% finding — see `shipped()`. What is left needs the inventory directory and nothing else.
+    pool = shipped(assigned, generations)
     chosen = choose(pool, rng)
+
+    # ⚠⚠ **Before the audit, and it was after it.** A refusal reported the unmet quota and **not the
+    # population it drew from** — which is the one datum needed to tell a pack that filtered badly from
+    # an inventory that has no hard boards. It cost a second run to learn what the first already knew.
+    #
+    # ⚠️ **A check that refuses without saying what it saw is half a check.** The audit still raises;
+    # what changed is that everything it looked at is on the terminal before it does.
+    report(pool, len(assigned), chosen)
     audit(chosen)
 
     out = Path(__file__).resolve().parent
     build_pdf(out / "boards.pdf", chosen, answers=False)
     build_pdf(out / "solutions.pdf", chosen, answers=True)
     write_key(out / "key.csv", chosen)
+    # ⚠️ Written beside the key rather than inside it, so provenance can be checked without opening
+    # an answer. See `write_provenance`.
+    write_provenance(out / "provenance.json", chosen, assigned, generations)
     write_sheet(out / "recording-sheet.csv", len(chosen))
 
+    print(f"wrote {out / 'boards.pdf'}, solutions.pdf, key.csv, recording-sheet.csv, provenance.json")
+
+
+def report(pool: list[Candidate], calendar_size: int, chosen: list[Candidate]) -> None:
+    """What the run saw, printed **before** the audit decides.
+
+    ⚠️ **Includes the pool's own rung distribution, not only the chosen one.** *Rung 12 has 3 boards
+    against a quota of 4* does not say whether the pool held four; the two lines together do, and that
+    is the difference between *the pack filtered badly* and *the inventory has no hard boards*.
+    """
     uncertified = sum(1 for candidate in chosen if not candidate.certified)
+    available: dict[int, int] = {}
+    for candidate in pool:
+        available[candidate.target] = available.get(candidate.target, 0) + 1
     by_target: dict[int, int] = {}
     for candidate in chosen:
         by_target[candidate.target] = by_target.get(candidate.target, 0) + 1
-    print(f"pool: {len(pool)} verified puzzles from {len(sample)} directions")
+    print(f"pool: {len(pool)} shipped boards at a target rung, from {calendar_size} calendar entries")
+    print(f"pool by stall rung: {dict(sorted(available.items()))}")
     print(f"chosen: {len(chosen)} boards, {uncertified} of them uncertified by layer 3b")
-    print(f"by chain target: {dict(sorted(by_target.items()))}")
-    print(f"pre-1950: {sum(1 for c in chosen if c.loaded.season < 1950)} (allowance {PRE_1950_ALLOWANCE})")
+    print(f"chosen by stall rung: {dict(sorted(by_target.items()))}")
+    print(f"pre-1950: {sum(1 for c in chosen if c.season < 1950)} (allowance {PRE_1950_ALLOWANCE})")
     print(f"with a substitution: {sum(1 for c in chosen if c.has_substitution)}")
     print(f"with a live footnote: {sum(1 for c in chosen if c.has_live_footnote)}")
-    print(f"wrote {out / 'boards.pdf'}, solutions.pdf, key.csv, recording-sheet.csv")
 
 
 if __name__ == "__main__":

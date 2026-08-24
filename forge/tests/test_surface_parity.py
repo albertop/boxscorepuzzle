@@ -120,22 +120,28 @@ class TestTheGridShowsTheErasedBoard:
     a tautology, and the third one written in a day. It calls the renderer now and reads what the table
     actually holds."""
 
-    def _drawn(self, board: Board, direction: Direction) -> list[list[str]]:
+    def _drawn(self, board: Board) -> list[list[str]]:
         pack = _pack()
-        loaded = SimpleNamespace(
-            offense_is_home=True,
-            labels=tuple("C" for _ in board.batting),
-            pitcher_labels=tuple("SP" for _ in board.pitching),
-            slots=tuple(range(1, len(board.batting) + 1)),
-            direction=direction,
+        slots = tuple(range(1, len(board.batting) + 1))
+        # ⚠⚠ **A `Candidate`, not a `Loaded`.** The pack reads shipped packages now, so what it draws
+        # from is `candidate.package` and `candidate.slots` -- and a stub of the old shape fails as an
+        # `AttributeError` rather than as a wrong board, which is the good direction.
+        candidate = SimpleNamespace(
+            slots=slots,
+            package=SimpleNamespace(
+                offense_is_home=True,
+                labels=tuple("C" for _ in board.batting),
+                pitcher_labels=tuple("SP" for _ in board.pitching),
+                slot_references=tuple(str(slot) for slot in slots),
+            ),
         )
-        return [[str(cell) for cell in row] for row in pack.board_table(board, loaded, solved=False)._cellvalues]
+        return [[str(cell) for cell in row] for row in pack.board_table(board, candidate, solved=False)._cellvalues]
 
     def test_every_erased_cell_draws_nothing_and_every_given_one_draws_its_value(
         self, cubs_at_braves_1968: Direction
     ) -> None:
         board, _, _ = _erased_board(cubs_at_braves_1968)
-        drawn = self._drawn(board, cubs_at_braves_1968)
+        drawn = self._drawn(board)
         flat = " ".join(cell for row in drawn for cell in row)
         blanks = [
             (index, column) for index, row in enumerate(board.batting) for column, v in enumerate(row) if v is None
@@ -169,7 +175,7 @@ class TestTheGridShowsTheErasedBoard:
             (index, column) for index, row in enumerate(board.batting) for column, v in enumerate(row) if v is None
         ]
 
-        drawn = self._drawn(source, cubs_at_braves_1968)
+        drawn = self._drawn(source)
 
         for index, column in blanks:
             assert drawn[2 + index][2 + column] == str(source.batting[index][column])

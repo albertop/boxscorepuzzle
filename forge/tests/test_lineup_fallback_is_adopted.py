@@ -94,8 +94,19 @@ class TestProductionGoesThroughTheFallbackRatherThanAroundIt:
         """
         tree = _modules(ROOT.parent / "discovery" / "hand-solve")["build_pack"]
 
-        assert _calls(tree, "erase_with_lineup_fallback"), "the pack no longer builds through production"
-        assert not _calls(tree, "erase"), "the pack erases directly, so it grades boards nobody ships"
+        # ⚠⚠ **The requirement got stronger on 2026-08-23 and this test says so rather than being
+        # deleted.** It asserted the pack *produced* through the fallback, because a pack that erased
+        # directly graded a population the player never meets. The pack now **produces nothing**: it
+        # reads the shipped packages off disk and verifies their signatures, so the boards it prints are
+        # the boards that will be served, byte for byte.
+        #
+        # That subsumes the old property -- there is no erasure left to route correctly -- and it closes
+        # the residual the old one could not see: **an ordinary attempt does not recover a board the
+        # producer found working down from the ceiling**, so even a correctly-routed re-derivation was a
+        # near neighbour of the board being graded. At a launch gate a near neighbour is not the thing.
+        assert not _calls(tree, "erase"), "the pack erases, and a re-derived board is not the shipped one"
+        assert not _calls(tree, "erase_with_lineup_fallback"), "the pack produces; it must only read"
+        assert _calls(tree, "verify_signature"), "the pack prints packages it has not verified"
 
     def test_no_producer_reaches_erase_without_going_through_the_core(self) -> None:
         """The other half: a script that stopped using `produce()` and called the erasure itself.

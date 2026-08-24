@@ -42,12 +42,17 @@ def board(target: int, index: int, **changes: object) -> SimpleNamespace:
         certified=fields["certified"],
         has_substitution=fields["has_substitution"],
         has_live_footnote=fields["has_live_footnote"],
-        loaded=SimpleNamespace(season=fields["season"], game_id=fields["game_id"]),
+        # ⚠️ **Flat, not nested under `loaded`.** A `Candidate` is read from a shipped package now, and
+        # §7 strips the season from one -- so `season` comes from the calendar's game id and both live
+        # on the candidate itself. The old stub carried them one level down and no longer stands in for
+        # anything.
+        season=fields["season"],
+        game_id=fields["game_id"],
     )
 
 
 def a_valid_pack() -> list[SimpleNamespace]:
-    """Fifty boards that satisfy every quota, so the failures below differ by one thing each."""
+    """`WANTED` boards satisfying every quota, so the failures below differ by one thing each."""
     pack: list[SimpleNamespace] = []
     index = 0
     uncertified_left = round(WANTED / 3)
@@ -104,7 +109,7 @@ class TestTheAuditRejects:
     def test_the_era_allowance_exceeded(self) -> None:
         pack = a_valid_pack()
         for item in pack[: PRE_1950_ALLOWANCE + 1]:
-            item.loaded.season = 1930
+            item.season = 1930
 
         with pytest.raises(SystemExit, match="pre-1950 boards"):
             audit(pack)
@@ -112,7 +117,7 @@ class TestTheAuditRejects:
     def test_the_same_game_twice(self) -> None:
         # One board per game, so no solver meets the same lineup twice and recognises it.
         pack = a_valid_pack()
-        pack[1].loaded.game_id = pack[0].loaded.game_id
+        pack[1].game_id = pack[0].game_id
 
         with pytest.raises(SystemExit, match="the same game appears twice"):
             audit(pack)
