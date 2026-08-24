@@ -1,0 +1,127 @@
+# The production stack. **One Portainer stack, two services, and the Postgres that already exists.**
+#
+#     docker compose -f deploy/compose.yaml up -d
+#
+# ⚠️⚠️ **`name:` is what Portainer shows as the stack**, and it is why the containers appear together:
+# compose stamps `com.docker.compose.project` on each one and Portainer groups by that label. Deploying
+# this through Portainer's *Stacks → Add stack* with the name `bxcpze` produces the same grouping; the
+# `name:` here keeps a command-line deploy identical to a UI one instead of leaving two conventions.
+#
+# ⚠️ **The test containers are deliberately NOT in this stack.** `docker run` creates no project label,
+# so `bxcpze-nginx-…`, `bxcpze-db-…` and friends appear ungrouped and disappear when the suite ends.
+# They share the prefix so a stray one is findable; they are not part of the deployment.
+#
+# ⚠️⚠️ **No Postgres here: the VPS already has one** (`docs/beta-0.md`). `keep` is pointed at it, and
+# **the schema is applied by hand before the stack starts** — `data-layer.md` §7: nothing migrates on
+# boot, because a deploy that alters the database at three in the morning is the one failure a rollback
+# does not undo. `keep` asks the schema version and refuses if it is not what it expects.
+
+name: bxcpze
+
+services:
+  # The site. nginx over the baked `serve/` tree, with the routes and the cache rule.
+  serve:
+    build:
+      context: ..
+      dockerfile: deploy/serve.Dockerfile
+    image: bxcpze-serve
+    container_name: bxcpze-serve
+    restart: unless-stopped
+    init: true
+
+    environment:
+      # ⚠️⚠️ **`:?` and no default.** Compose refuses to start the stack when this is unset rather than
+      # substituting an empty string — the config would then send `Authorization: Bearer ` and `keep`
+      # would refuse every request, which is a working deployment that quietly drops every event.
+      # `docs/signing-keys.md`'s precedent: an exported variable is an instruction, and a default is
+      # what reaches production by omission.
+      KEEP_SHARED_TOKEN: ${KEEP_SHARED_TOKEN:?set it in the stack's environment; there is no default}
+      # Keeps the substitution to that one name, so nginx's own `$host` and `$1` survive it.
+      NGINX_ENVSUBST_FILTER: "^KEEP_"
+
+    volumes:
+      # ⚠️⚠️⚠️ **The public path is a volume, not what the image baked.** The image carries the
+      # development tree — two packages dated 2026-09-02, fixed on purpose so a committed tree does not
+      # go stale. **Production's public path is whatever the rotation last wrote**, and mounting over it
+      # is what makes the image's copy irrelevant rather than a thing that can be served by accident.
+      #
+      # ⬜ **Nothing writes this yet.** `publish` does the rotation and needs a scheduler; that is F3 and
+      # is deliberately not invented here. Until it runs, this volume is empty and the site has no
+      # puzzle — which the health check is built to say out loud.
+      - puzzles:/srv/serve/data/puzzles
+
+    ports:
+      # ⚠️⚠️ **Bound to loopback, because the VPS already runs an nginx** (`docs/beta-0.md`) and that one
+      # terminates TLS and proxies here. Publishing on every interface would put this container on the
+      # internet beside the reverse proxy that is supposed to be in front of it, on plain HTTP.
+      #
+      # ⚠️ The host's nginx needs `proxy_pass http://127.0.0.1:8080;` and nothing else: the routes, the
+      # cache headers and the `/api/` block all live in this container's config, which is the one place
+      # `forge/tests/` checks them. **Putting any of them in the host block would be a second copy.**
+      - "127.0.0.1:8080:8080"
+
+    depends_on:
+      keep:
+        condition: service_started
+
+    # ⚠⚠ **Two networks, and one was not enough.** `inside` is `internal: true`, which leaves a
+    # container with **no route out and no published ports** — the first version put `serve` only there
+    # and the publish silently did nothing: `docker port` was empty while nginx answered perfectly
+    # inside. `edge` is an ordinary bridge and is what makes `127.0.0.1:8080` reachable.
+    #
+    # ⚠️ **`keep` is deliberately not on `edge`.** That is what *the port is not published* means as a
+    # fact about the network rather than as a line somebody could add.
+    networks: [edge, inside]
+
+  # The data layer. **Its port is never published** — that is the first line of defence and the token is
+  # the second (`docs/data-layer.md` §4).
+  keep:
+    build:
+      context: ../keep
+      dockerfile: ../deploy/keep.Dockerfile
+    image: bxcpze-keep
+    container_name: bxcpze-keep
+    restart: unless-stopped
+    init: true
+
+    environment:
+      # ⚠️ Both `:?` for the same reason. `keep` also refuses to start without either, so this is the
+      # second of two refusals rather than the only one — the container would not come up regardless,
+      # and compose failing first says why in one line instead of in a traceback.
+      KEEP_SHARED_TOKEN: ${KEEP_SHARED_TOKEN:?set it in the stack's environment; there is no default}
+      # ⚠️⚠️ **Points at the Postgres that already exists.** Which host to use depends on where it runs:
+      #
+      #   * a container in another stack → put its network in `networks:` below as `external` and use
+      #     that container's name here;
+      #   * listening on the VPS itself → `host.docker.internal` with the `extra_hosts` line below.
+      #
+      # **Neither is guessed here**: the value is supplied with the stack and the shape follows from it.
+      KEEP_DATABASE_URL: ${KEEP_DATABASE_URL:?the existing Postgres, e.g. postgresql://user:pass@host:5432/keep}
+
+    # ⚠️ Uncomment when Postgres listens on the VPS rather than in a container. `host-gateway` is what
+    # makes `host.docker.internal` resolve on Linux; it is a no-op on Docker Desktop.
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+    networks: [inside]
+
+networks:
+  # An ordinary bridge, and **only `serve` is on it**. This is what a published port needs.
+  edge:
+
+  # ⚠⚠ **`internal: true` — no route out and none in.** `serve` reaches `keep` by name here and
+  # nothing outside can reach `keep` at all. It is what makes *the port is not published* a property
+  # of the network rather than a convention.
+  #
+  # ⚠⚠ **`keep` needs a route to the existing Postgres and it will not come from this network.** Add
+  # the one that reaches it — the other stack's network as `external: true`, or a bridge plus the
+  # `extra_hosts` line above when Postgres listens on the VPS itself — and put it in `keep`'s list.
+  # **Do not relax this one**: the moment `inside` stops being internal, *unpublished* becomes a
+  # convention instead of a property.
+  inside:
+    internal: true
+
+volumes:
+  # ⚠️ Named, so it survives `docker compose down` and a redeploy. What is in it is two public packages
+  # and two dated pointers; the private inventory never comes near this host path.
+  puzzles:
