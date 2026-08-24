@@ -451,6 +451,28 @@ habit.
 malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
 the absence of a check reading as the presence of a passing one.
 
+**⚠️⚠️ A rule that acts on arrival cannot say anything about what is already there.** A filter in a
+`WHERE` clause and a refusal in a producer both stop a bad thing entering, and **neither leaves anything
+behind that can be asked afterwards**. So a rule discovered later — which is the ordinary case, since the
+inventory always predates the register — has no way to reach the inventory built before it. A
+seventeen-inning board sat in the published calendar for a week, signed, certified and dated, and was
+found **by accident** when a different tool tried to read it.
+
+**Every rule about what may exist needs a third place: something that asks the population.**
+`docs/excluded-games.md` names all three — the query avoids work, `produce()` is the narrowest place
+nothing can walk around, and `audit()` is the only one that can read what is on disk and say whether the
+set is clean. ⚠️ **And it must refuse a board that carries no answer**, not skip it: *the absence of the
+evidence must not read as the evidence.*
+
+**⚠️⚠️ An open decision must not be enforced as though the answer were always yes.** The automatic-runner
+boundary is a rulebook fact nobody here may invent, so the code was wired to fail loudly when it was
+reached — and the first version reached on **every** extra-inning game, aborting a production run on a
+1964 board. That is not failing closed on the case in question; it is halting everything for a question
+about a different era. **Scope the loud failure to where the answer could actually differ**, and say what
+the scope rests on: here, the last season anybody has measured. ⚠️ And check whether the open decision is
+load-bearing at all — the placed runner is caught **per game** by the global identity, so the boundary
+buys work avoided, not correctness. *A question that blocks everything is worth asking what it is for.*
+
 **Never propose pausing, stopping for the day, continuing tomorrow, or deferring to a later session
 — in any form, including softened ones.** The operator decides when work stops; nobody else raises the
 question. A true technical fact about the work is welcome — "an incomplete publication gate looks like

@@ -158,6 +158,36 @@ need a database), not as an oversight.
 - ✔ **Met** — two samples at 100% yield, 150 boards in 24 min, and running the window twice adds nothing. **Done when:** one command produces N validated packages with a recorded survival rate, and running it
   twice produces no duplicates.
 
+### ✔ A2b. The games that may not be in the pool — **done 2026-08-23**, `docs/excluded-games.md`
+
+**Eight classes, a register, and the rules implemented as guarantees rather than as filters.** The
+operator's framing: *a filter removes what it is asked about; a guarantee is something that fails loudly
+when violated.* So the clauses live in three places that answer different questions.
+
+| where | what it can say |
+|---|---|
+| the pool's `WHERE` | avoid the work — never the rule, because a `Loaded` built by hand never passed through it |
+| `produce.inadmissible()` | **the narrowest place nothing can walk around**: every published board comes through it, and it names the cause |
+| `build_inventory.audit()` | the only one that can ask the **population** — the register over what is *there*, read from disk |
+
+⚠️⚠️ **The third one is why a seventeen-inning board sat in the calendar for a week.** A filter and a
+refusal both act on arrival and leave nothing behind that can be asked afterwards. `a74a6230760c872b`
+was signed, certified and dated **2026-11-01**, and the failure appeared only when something happened to
+*read* it back — by accident, in a different tool.
+
+- ✔ **Five classes were entirely silent and four of them publish.** Forfeits, protests and ties produce
+  boards §22's four layers accept, and **partial game accounts did so six times out of six.** The layers
+  ask whether the numbers agree with each other; for these games they do. What lies is the reveal (§29).
+- ✔ **`LineScore` enforces `MAX_INNINGS` at construction**, closing the write/read asymmetry that let the
+  forge sign a package **its own reader refuses**. The sixth recorded instance of that shape.
+- ✔ **The automatic-runner rule is wired and dormant**, and the loud failure is scoped to
+  `AUTOMATIC_RUNNER_FLOOR = 2014` — the last season measured clean, plus one. ⚠️ **The first version
+  raised on every extra-inning game and aborted a production run on a 1964 board**: *unknown* applied as
+  *always*, which halts production rather than failing closed on the case in question.
+- ✔ **The five affected boards were replaced** — all future dates, §21 — and **the 145 that predate the
+  metadata were restamped**: same game, same target, every field asserted identical, written back with the
+  facts. ⬜ **The season boundary is still the operator's** and is a rulebook fact, not a measurement.
+
 ### ✔ A3 (core). The calendar module — **done 2026-08-22**
 
 `boxscore_forge.calendar`, written test-first, 26 tests, **100% coverage**, and every rule tested by its
@@ -421,6 +451,13 @@ at all**: it would have produced boards against a retired axis, or failed its ow
   board per game. Footnote line given. A final ranking sheet.
 - ⚠️ **If rung 12 does not yield four boards, that is the finding** — reported, never quietly
   substituted with a lower target.
+- ⬜⬜ **It did not build on 2026-08-23, and that is the finding.** Nine boards of sixteen, and the cause
+  is arithmetic rather than luck: `UNCERTIFIED_SHARE = 1/3` caps the pack at five uncertified boards and
+  **the whole pool holds four certified ones**, so the ceiling is eleven. The share was sized against
+  *layer 3b certifies 91% of the hardest boards* — a **chain**-axis figure. On stall rungs the shipping
+  inventory is **71 of 75 uncertified**. `docs/reviews/todo.md` carries the numbers and the larger
+  result inside them: layer 3b's own question — *do nearly all passing boards survive the weak solver* —
+  now has an answer, and it is no. **Nothing was lowered; the share is the operator's** (§7).
 - ⚠️ **Not built at the end of a long run.** It gets a fresh session: the instrument is a person, the key
   is sealed, and a board printed wrong is an afternoon spent on the wrong thing.
 

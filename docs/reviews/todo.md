@@ -909,9 +909,142 @@ the code rather than only with this page.
 
 ---
 
+## 2026-08-23 — ✔ v40: three findings, three closed
+
+`docs/reviews/code_review_v40.md` carries them. ⚠️ **All three are in the tree that is three days old**,
+which is where a full static pass would be expected to land and is the reason the review was asked for.
+
+| | what | closed by |
+|---|---|---|
+| **v40-P1-01** | `inspect()` never read `today.json`'s `puzzle_id`, so **zero packages was healthy** as long as a current-dated pointer survived — the one state F3 exists for | `_pointer()` returns date **and** id, both pointers are followed to their package, and five cases cover it including the empty public path |
+| **v40-P2-01** | the rotation wrote public files in place, so a failed write **destroyed the pointer it was replacing** | `_place()` writes a `.pending` sibling and `replace()`s it; four fault-injected cases assert the old bytes survive |
+| **v40-P3-01** | `weekly.yml` omitted `publish/`, and the completeness guard compares **tool names**, which `keep` already supplies | the weekly run installs and checks `publish`; the tree guard now asks the **scheduled** workflow as well as the hook and the push workflows |
+
+⚠️⚠️ **P3-01 is the failure shape this project keeps meeting**, and it is worth naming as a shape rather
+than as a missing workflow step: **a guard that asserts *which tools run* cannot answer *which trees they
+run over*,** and it reports success either way. It is the same defect as a check that never fires — and
+it is the *second* time this exact guard had it, after `keep` arrived in August and was checked by
+neither side while the tool sets agreed.
+
+⚠️ **Both repairs were verified by breaking them.** The tree guard was re-run with `publish` renamed out
+of `weekly.yml` and went red naming the tree and the side; the rotation cases inject an `OSError` inside
+the write rather than reasoning about truncation.
+
+⚠️ **And the P2 fix contained a fresh instance of the same class, caught by its own test.** The sweep for
+leftover pending files was first folded into the loop that globs `*.json` — which cannot match a name
+ending in `.pending`, so the branch could never run. **A check that cannot fire, inside the fix for a
+check that did not exist.** It is a separate sweep now, and the test that found it is the one asserting
+a leftover is actually removed.
+
+---
+
+## 2026-08-23 — ⬜⬜ Pack A cannot be built, and the reason is a result about the inventory
+
+**The pack refused itself: nine boards against a `WANTED` of sixteen.** The audit did exactly what it
+exists for — `CLAUDE.md`: *anything acting as a launch gate is asserted, not printed* — and the refusal
+is the finding rather than an obstacle to it.
+
+### The arithmetic, which settles it without judgement
+
+`derivable_in_view` is layer 3b, the weak solver: one relation in view at a time, never carrying a
+narrowed range from one to the next. Measured over the **shipping** inventory, at stall rungs:
+
+| rung | boards | certified | uncertified |
+|---|---|---|---|
+| 5 | 5 | **0** | 5 |
+| 8 | 16 | 4 | 12 |
+| 11 | 24 | 1 | 23 |
+| 12 | 30 | **0** | 30 |
+| | **75** | **4** | **71** |
+
+`UNCERTIFIED_SHARE = 1/3` caps the pack at five uncertified boards, the audit tolerates ±2, and the
+pool holds **four** certified boards in total. **The ceiling is eleven and `WANTED` is sixteen** — so no
+seed, no ordering and no re-run reaches it. The nine the run produced is that ceiling minus the per-rung
+half-quota cap.
+
+### The number the constraint was sized against came from a retired axis
+
+`choose()` said *layer 3b certifies 100% of the easiest boards and 91% of the hardest*. **That figure is
+chain 11 and chain 13**, and the generator stopped targeting chain in August. This file already records
+the fifty-board pack aborting on the *opposite* symptom — *0 uncertified where it wanted about 17* — on
+the same axis, which is the same constant meeting the same stale population from the other side.
+
+⚠️⚠️ **A justification is scoped and it does not travel.** The cap exists to stop *uncertified* and
+*hard* becoming one variable. In this population certification barely varies at all — 100%, 75%, 96%,
+100% uncertified across the four rungs — so **there is no correlation left to confound**, and the cap
+now does the damage it was written to prevent: a pack two-thirds certified samples a 5% corner of what
+ships.
+
+### ⬜ The share is the operator's, and nothing was lowered
+
+§7: a number that shapes the experiment is not invented in a source file. `TARGETS`, `QUOTAS` and
+`WANTED` were not touched either. The pack producer now **reports the pool before it refuses**, which is
+what made this diagnosable at all.
+
+### ⚠️⚠️ And the larger half is not about the pack
+
+`derivable_in_view`'s own docstring states the question it was built to answer: *whether it should
+become a gate is a question about how many currently-passing boards survive it — if nearly all do, the
+concern was theoretical; if many fail, the gap between the two solvers is real.*
+
+**Many fail. 71 of 75.** That is the measurement, and it has been sitting in the inventory unread.
+
+⚠️ **Do not read it as "95% of shipping boards are unsolvable by a person."** The weak solver is a
+*lower* bound on a person and a deliberately harsh one — it never carries a narrowed range between
+relations. What the number says is that **the bracket between the two solvers is wide**, where the
+chain-axis measurement suggested it was narrow. Checked before believing it: the weak solver deduces 31
+of 36 blanks, 36 of 40, 43 of 47 and stalls a handful short — it is working, not returning an empty
+result that reads as a real zero.
+
+**B3, the hand-solve gate, is the only instrument that can settle this**, and this raises how much rests
+on it.
+
+### The two defects found on the way, both fixed
+
+- ⚠️⚠️ **`choose()` called `audit()` and defeated the fix that moved it.** `main()` calls `report()` and
+  then `audit()`, with a comment saying that a refusal which does not name its population is half a
+  check. The raise sat one level down, so the terminal printed a bare refusal exactly as before. **The
+  repair was made in the caller while the thing being repaired sat in the callee.** It cost a diagnosis
+  by hand.
+- ⚠️ **The stale 91% is corrected in both comments that carried it**, with the axis named, rather than
+  deleted — the fifty-board history is what makes the inversion legible.
+---
+
+## 2026-08-23 — ⬜ The replacement draw is not randomised, and four of five came from one club
+
+**Noticed while checking the calendar diff, recorded before continuing.** The five replaced dates are
+spread across five months and the era quota holds; what is concentrated is the *source*:
+
+| date | withdrawn | replacement |
+|---|---|---|
+| 2026-09-01 | `WS1191310032` (1913) | `WS1191306130` |
+| 2026-11-01 | `BAL197409111` (1974) | `BOS195408111` |
+| 2026-11-04 | `SLN192310072` (1923) | `WS1191306140` |
+| 2026-11-26 | `SLN192310071` (1923) | `WS1191306201` |
+| 2027-01-08 | `WS1193305312` (1933) | `WS1191306070` |
+
+**All four pre-1950 replacements are Washington, June 1913.** Each is a different game and *one game,
+one puzzle* holds; the era was inherited on purpose, which is why they are all pre-1950. What was not
+intended is that they are all from one club in one month.
+
+**The cause is in `replace_dates` and it is structural, not luck.** It draws per date and takes the
+**first** board that produces. `load()` returns the same ordering for the same window, so every
+replacement walks the same head of the same list and differs only by which games are already spent.
+**N replacements therefore come from one corner of the pool**, and the more dates are replaced at once
+the more concentrated it gets.
+
+⚠️ **Not fixed here, deliberately.** The five boards are produced, verified and signed; re-running the
+draw to improve a variety property would discard a validated state for something nothing has decided.
+The fix is a seeded shuffle of the sample before the loop, the way `build_pack.choose()` does it.
+
+⬜ **And whether it matters is a product question, not a bug.** §31 asks for variety in *techniques*;
+nothing anywhere says a calendar may not repeat a club. A player reaching four reveals from Washington
+1913 across five months is the thing to have an opinion about, and it is the operator's.
+---
+
 ## Where everything stands
 
-**39 reviews**, the last of them v39. ⚠⚠ **The finding total is deliberately not stated any more.**
+**40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**
 
 This paragraph read *"twenty-nine reviews, 135 findings"* for ten reviews after it stopped being true, and
 the section below already records that **the count in this file has been wrong three times — mine.** A
