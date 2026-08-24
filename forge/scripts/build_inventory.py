@@ -52,14 +52,20 @@ from datetime import UTC, date, datetime, timedelta
 from itertools import pairwise
 from math import ceil
 from pathlib import Path
+from string import ascii_lowercase
 
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "forge" / "src"))
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey  # noqa: E402
 
-from boxscore_domain import ZERO_DENSITY_GATE  # noqa: E402
-from boxscore_forge.calendar import Calendar, Entry, extend, games, read, write  # noqa: E402
+from boxscore_domain import (  # noqa: E402
+    AUTOMATIC_RUNNER_FROM,
+    MAX_INNINGS,
+    REGULATION_INNINGS,
+    ZERO_DENSITY_GATE,
+)
+from boxscore_forge.calendar import Calendar, Entry, extend, games, read, replace, write  # noqa: E402
 from boxscore_forge.pool import SEASON_WINDOW, Loaded, load  # noqa: E402
 from boxscore_forge.produce import produce  # noqa: E402
 from boxscore_forge.publication_key import publication_key  # noqa: E402
@@ -377,6 +383,10 @@ def _fill(
     return calendar
 
 
+MANIFEST = "manifest.json"
+"""The generation manifest's filename. ⚠️ Named once so `write_manifest` can exclude it from its own
+listing -- a literal spelled twice is how it came to list itself."""
+
 MANIFEST_SCHEMA = 1
 
 DAYS = "days"
@@ -451,9 +461,16 @@ def write_manifest(generation: str, out: Path, key: Ed25519PrivateKey) -> int:
     was *assigned* and this says what was *written*. Generating both from one list would make the
     manifest agree with the calendar by construction and check nothing about the deployment.
     """
-    ids = sorted(path.stem for path in out.glob("*.json"))
+    # ⚠⚠ **The manifest is excluded from its own listing, and it was not.** `out.glob("*.json")` finds
+    # `manifest.json` too, so the document listed **`manifest` as a puzzle id**. It could not show up on
+    # a first write -- the file does not exist yet -- and appeared the first time a generation was
+    # signed twice, which `--republish` made possible on 2026-08-23.
+    #
+    # ⚠️ **A signed claim about the set, wrong about the set**, and wrong in a way that only a second
+    # run produces: exactly the shape that survives every test written against a fresh directory.
+    ids = sorted(path.stem for path in out.glob("*.json") if path.name != MANIFEST)
     document = sign_manifest({"generation": generation, "puzzles": ids, "schema": MANIFEST_SCHEMA}, key)
-    (out / "manifest.json").write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    (out / MANIFEST).write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return len(ids)
 
 
@@ -504,6 +521,8 @@ def audit(calendar: Calendar) -> None:
             repeated = sorted({item for item in seen if seen.count(item) > 1})
             faults.append(f"{what} repeated: {repeated[:5]}")
 
+    faults.extend(_inadmissible_boards(calendar))
+
     if faults:
         detail = "".join(f"\n  {fault}" for fault in faults)
         message = f"the calendar is not what it claims:{detail}"
@@ -549,6 +568,329 @@ def _era_plan(days: int, window: list[str], wanted: list[str], calendar: Calenda
     return early, [when for when in wanted if when not in set(early)]
 
 
+def _inadmissible_boards(calendar: Calendar) -> list[str]:
+    """Ask the **shipped population** whether it is clean, from disk and without a database.
+
+    ⚠⚠ **This is what a rule living in a `WHERE` clause does not have.** The pool excludes these games
+    and `produce()` refuses them, but neither leaves anything behind that can be asked afterwards —
+    which is exactly how a seventeen-inning board reached 2026-11-01, signed and dated, and stayed there
+    until something tried to read it. **`docs/excluded-games.md` is the register of what may not be here.**
+
+    **What each fact is read from**, and the split is not arbitrary:
+
+    - **innings, account, disposition** — `metadata`, written by `produce()` for this purpose.
+    - **season** — the calendar's `game_id`, because §7 strips it from the published package. The same
+      read `_is_early` does.
+
+    ⚠️ **A package with no admissibility metadata is a fault, not a pass.** Those are boards produced
+    before the facts were recorded, and *the absence of a check must not read as the check passing*.
+    """
+    faults: list[str] = []
+    inventory = _ROOT / "forge" / "inventory"
+    for entry in calendar:
+        package = inventory / entry.assigned / f"{entry.puzzle_id}.json"
+        where = f"{entry.date} {entry.puzzle_id}"
+        if not package.is_file():
+            # ⚠⚠ **A missing package is a fault, never a skip**, and skipping was the first version of
+            # this line. There is no ordering that produces one legitimately: `_fill` writes the package
+            # *before* it extends the calendar, so an entry always postdates its file. A skip would have
+            # made every unreadable board audit clean -- the absence of the evidence reading as the
+            # evidence passing, one more time, in the check written to stop exactly that.
+            faults.append(f"{where} has no package under {entry.assigned}/")
+            continue
+        metadata = json.loads(package.read_text(encoding="utf-8")).get("metadata", {})
+        innings, account = metadata.get("innings"), metadata.get("account")
+        if innings is None or account is None:
+            faults.append(f"{where} carries no admissibility metadata")
+            continue
+        if innings > MAX_INNINGS:
+            faults.append(f"{where} is {innings} innings and the board draws {MAX_INNINGS}")
+        if account != "Y":
+            faults.append(f"{where} has a {account!r} game account, not a complete one")
+        if metadata.get("disposition"):
+            faults.append(f"{where} is {metadata['disposition']!r}: forfeit, protest or completed later")
+        if (
+            AUTOMATIC_RUNNER_FROM is not None
+            and innings > REGULATION_INNINGS
+            and int(entry.game_id[3:7]) >= AUTOMATIC_RUNNER_FROM
+        ):
+            faults.append(f"{where} is an extra-inning game from the automatic-runner era")
+    return faults
+
+
+def _publish(calendar: Calendar, out: Path, key: Ed25519PrivateKey) -> None:
+    """Audit the calendar, then sign the two documents that make a generation servable.
+
+    ⚠⚠ **The order is the point and it is why this is one function.** The manifest and the pointers
+    are signed statements that a set is whole and that a date names a package; writing either over a
+    calendar that failed its quotas would be the forge asserting a wrong set is right. `build()` and
+    `replace_dates()` both end here so there is no second ordering to get wrong.
+    """
+    audit(calendar)
+    packages = write_manifest(out.name, out, key)
+    pointers = write_pointers(calendar, out, key)
+    _say(f"  manifest: {packages} packages; {pointers} dated pointers in {DAYS}/")
+
+
+def republish(key: Ed25519PrivateKey) -> None:
+    """Re-sign the newest generation's manifest and the whole calendar's pointers. **Writes no board.**
+
+    ⚠⚠ **For the run that produced boards and then failed its audit**, which is not hypothetical: the
+    2026-08-23 replacement wrote five packages and five calendar entries, then `audit()` refused the run
+    because 145 *other* boards carried no admissibility metadata. Correct refusal, and it left a
+    generation on disk with no manifest and no pointers -- servable content nothing points at.
+
+    ⚠️ **Recovery is a command rather than a repair by hand.** The alternative was writing the two
+    documents from a shell, which signs them outside the one place that audits first.
+    """
+    inventory = _ROOT / "forge" / "inventory"
+    generations = sorted(path for path in inventory.iterdir() if path.is_dir())
+    if not generations:
+        message = f"no generation under {inventory}"
+        raise SystemExit(message)
+
+    calendar = read(CALENDAR)
+    audit(calendar)
+
+    # ⚠⚠ **Every generation's manifest, not only the newest one.** A manifest says *this generation is
+    # whole* and is built from the files on disk, so a generation that **lost** a package -- which is
+    # what `--replace` leaves behind, since the withdrawn board is deleted -- carries a signed document
+    # naming a file that is not there. Re-signing only the newest one would leave that standing.
+    for generation in generations:
+        _say(f"  {generation.name}: {write_manifest(generation.name, generation, key)} packages")
+
+    # ⚠️ **The pointers go in the newest**, because that is where the daily job looks and because
+    # `write_pointers` writes the whole calendar's worth: each entry names its own generation, so one
+    # complete set in one place is correct and several partial sets are not.
+    pointers = write_pointers(calendar, generations[-1], key)
+    _say(f"  {generations[-1].name}: {pointers} dated pointers in {DAYS}/")
+
+
+ADMISSIBILITY = ("innings", "account", "disposition")
+"""The facts `produce()` records so the population can be audited from disk (`docs/excluded-games.md`).
+Named once, because `restamp()` has to subtract exactly this set to compare an old package with a new
+one and a second spelling of it would compare the wrong thing."""
+
+
+def restamp(key: Ed25519PrivateKey) -> None:
+    """Record the admissibility facts on boards produced before there were any. **Same board, resigned.**
+
+    ⚠⚠ **The rules arrived after 150 dates were assigned, which is the ordinary case.** A register of
+    what may not ship (`docs/excluded-games.md`) is written when somebody notices, and the inventory
+    always predates it. `audit()` refuses a package with no admissibility metadata -- correctly, because
+    *the absence of the evidence must not read as the evidence* -- so every existing board has to be
+    asked the question rather than assumed to pass it.
+
+    ⚠⚠ **This is not a regeneration and §21 is not in play.** `produce()` is deterministic: the same
+    game at the same target yields the same board, so no date changes its assignment and no puzzle id
+    moves. What changes is that the package now carries the facts and is signed over them.
+
+    ** ⚠⚠ And it is asserted, not assumed.** Every field of the rebuilt package is compared against the
+    one on disk before it is written. A board that came back **different** is not restamped and not
+    quietly replaced: it is a finding about determinism, and it stops the run. Writing it either way
+    would turn a re-signing pass into an unlogged regeneration of the artefact §21 calls irreproducible.
+
+    ⚠️ **A game the rules now refuse stops the run too**, naming the date, because that date needs
+    `--replace` rather than a stamp -- and deciding that here would be this function replacing boards
+    under the name of a metadata pass.
+    """
+    calendar = read(CALENDAR)
+    inventory = _ROOT / "forge" / "inventory"
+    stale: list[tuple[Entry, Path, dict[str, object]]] = []
+    for entry in calendar:
+        path = inventory / entry.assigned / f"{entry.puzzle_id}.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        if all(fact in document.get("metadata", {}) for fact in ADMISSIBILITY):
+            continue
+        stale.append((entry, path, document))
+    _say(f"{len(stale)} of {len(calendar)} packages carry no admissibility metadata")
+    if not stale:
+        return
+
+    wanted = {(entry.game_id, entry.direction): (entry, path, document) for entry, path, document in stale}
+    sample = load(0, gated=True, gate=ZERO_DENSITY_GATE, also=tuple(sorted({key_[0] for key_ in wanted})))
+    found = {(item.game_id, item.offense_team): item for item in sample}
+
+    counts: Counter[str] = Counter()
+    refusals: Counter[str] = Counter()
+    done = 0
+    for (game_id, direction), (entry, path, document) in sorted(wanted.items()):
+        item = found.get((game_id, direction))
+        if item is None:
+            # ⚠⚠ **The pool refusing to hand the game back is the answer, not a gap.** The clauses that
+            # exclude a forfeit, a protest, a tie or a partial account live in the query, so a board
+            # already published from one of those games simply stops being loadable -- which is this
+            # pass discovering exactly what it was written to discover.
+            message = (
+                f"{entry.date} {entry.puzzle_id}: the pool no longer offers {game_id} ({direction}), so it is "
+                f"a game the rules now exclude (docs/excluded-games.md). Replace the date: "
+                f"--replace {entry.date}"
+            )
+            raise SystemExit(message)
+        package = _hardest_target(item, key, counts, refusals)
+        if package is None:
+            message = f"{entry.date} {entry.puzzle_id}: {game_id} ({direction}) no longer produces a board at all"
+            raise SystemExit(message)
+        rebuilt = json.loads(json.dumps(_as_document(package, path)))
+        _refuse_a_different_board(entry, document, rebuilt)
+        write_package(path, package)
+        done += 1
+        if done % 25 == 0:
+            _say(f"  {done} of {len(stale)}")
+    _say(f"restamped {done} packages, every one identical to what it replaced")
+    _say(f"  attempts by outcome: {dict(counts)}")
+    audit(read(CALENDAR))
+
+
+def _as_document(package: Package, path: Path) -> dict[str, object]:
+    """The package as it will be written, read straight back off disk. **Never a second serialiser.**
+
+    ⚠️ Comparing an in-memory object against a parsed file compares two shapes, and the difference
+    that matters -- what `write()` actually puts in the file -- is exactly what such a comparison cannot
+    see. So this writes it and reads it, to a scratch name beside the original.
+    """
+    scratch = path.with_suffix(".restamp")
+    write_package(scratch, package)
+    document: dict[str, object] = json.loads(scratch.read_text(encoding="utf-8"))
+    scratch.unlink()
+    return document
+
+
+def _metadata(document: dict[str, object]) -> dict[str, object]:
+    """A package's metadata block, typed. `json.loads` hands back `object` and mypy is strict here."""
+    block = document.get("metadata", {})
+    return dict(block) if isinstance(block, dict) else {}
+
+
+def _refuse_a_different_board(entry: Entry, before: dict[str, object], after: dict[str, object]) -> None:
+    """Assert the rebuilt package is the published one plus the facts, and nothing else.
+
+    ⚠⚠ **`signature` is excluded and that is the point of the exclusion being named.** The signature
+    is over the content, so a package that gained a field must carry a different one; comparing it would
+    make every board look changed and the check would be dropped as noisy. Everything the signature is
+    *over* is compared instead, field by field, which is the stronger statement.
+    """
+    old_metadata = _metadata(before)
+    new_metadata = {name: value for name, value in _metadata(after).items() if name not in ADMISSIBILITY}
+    differing = sorted(
+        name
+        for name in set(before) | set(after)
+        if name not in ("signature", "metadata") and before.get(name) != after.get(name)
+    )
+    if old_metadata != new_metadata:
+        differing.append("metadata")
+    if differing:
+        message = (
+            f"{entry.date} {entry.puzzle_id}: rebuilding {entry.game_id} produced a different board "
+            f"({', '.join(differing)}). Production is meant to be deterministic, so this is a finding "
+            f"about the producer and not something to write over the published package."
+        )
+        raise SystemExit(message)
+
+
+def _generation() -> Path:
+    """A directory nothing has used yet, under `forge/inventory/`.
+
+    ⚠⚠ **`gen{time():x}` alone collides at one-second resolution**, and a replacement run immediately
+    after a build is exactly when that happens. Two runs sharing a directory are not a name clash: the
+    manifest is built from *the files on disk*, so the second run would sign a document claiming the
+    first run's packages are its own, and `Entry.assigned` would point two generations at one place. The
+    suffix keeps the identity, which is the whole of what a generation is.
+    """
+    inventory = _ROOT / "forge" / "inventory"
+    stamp = f"gen{int(time.time()):x}"
+    for suffix in ("", *ascii_lowercase):
+        out = inventory / f"{stamp}{suffix}"
+        if not out.exists():
+            out.mkdir(parents=True)
+            return out
+    message = f"{stamp} and every suffix of it already exist under {inventory}"
+    raise SystemExit(message)
+
+
+def _era_of(entry: Entry) -> tuple[int, int]:
+    """The era window a replacement must be drawn from, so swapping a board does not move the mix.
+
+    ⚠️ Four of the five boards withdrawn on 2026-08-23 were pre-1950 and §6 allows seven in a
+    150-day calendar. Replacing them from the modern half would satisfy the *ceiling* while quietly
+    spending the early allowance on nothing -- and `spread()` had already placed those four where the
+    gap rule wanted them. **A replacement inherits its predecessor's era**, which keeps both properties
+    without re-deriving either.
+    """
+    return (SEASON_WINDOW[0], DIVIDE - 1) if _is_early(entry) else (DIVIDE, SEASON_WINDOW[1])
+
+
+def replace_dates(dates: list[str], key: Ed25519PrivateKey, today: date) -> None:
+    """Withdraw a future date's board and put another in its place (§21).
+
+    ⚠⚠ **Replacement, not voiding, and the difference is the date.** §21 splits on whether the
+    puzzle has been played: a past date keeps its assignment and stops counting, a future one is simply
+    swapped, because nobody has seen it. `calendar.replace()` refuses today and every day before it, so
+    the distinction is enforced rather than remembered.
+
+    ⚠⚠ **Nothing here says why a board is being withdrawn**, deliberately. The reasons live in
+    `docs/excluded-games.md` and the *guarantee* lives in `produce()` and in `audit()` -- so a board
+    withdrawn here cannot come back, whatever it was withdrawn for. If the pool still offered it, this
+    would draw it again on the next line.
+    """
+    calendar = read(CALENDAR)
+    by_date = {entry.date: entry for entry in calendar}
+    missing = [when for when in dates if when not in by_date]
+    if missing:
+        message = f"not assigned, so there is nothing to replace: {missing}"
+        raise SystemExit(message)
+
+    out = _generation()
+    batch = Batch(key, out, Counter(), Counter())
+    done = 0
+    for when in sorted(dates):
+        going = by_date[when]
+        era = _era_of(going)
+        _say(f"{when}: withdrawing {going.puzzle_id} ({going.game_id}), drawing from {era[0]}-{era[1]}")
+        # ⚠️ **A fresh draw per date**, not one sample spread across them: the eras differ board by
+        # board here, where a build's two draws each cover many dates.
+        for item in load(REPLACEMENT_DRAW, gated=True, gate=ZERO_DENSITY_GATE, window=era):
+            if item.game_id in games(calendar):
+                batch.counts["duplicate game"] += 1
+                continue
+            package = _hardest_target(item, batch.key, batch.counts, batch.refusals)
+            if package is None:
+                continue
+            write_package(out / f"{package.puzzle_id}.json", package)
+            calendar = replace(
+                calendar,
+                Entry(
+                    date=when,
+                    puzzle_id=package.puzzle_id,
+                    game_id=item.game_id,
+                    direction=item.offense_team,
+                    status="active",
+                    assigned=out.name,
+                ),
+                today=today,
+            )
+            write(CALENDAR, calendar)
+            _say(f"  {when}: {package.puzzle_id} ({item.game_id}), {item.season}")
+            done += 1
+            break
+        else:
+            message = f"{when}: {REPLACEMENT_DRAW} directions from {era[0]}-{era[1]} and none produced a board"
+            raise SystemExit(message)
+
+    _say("")
+    _say(f"replaced {done} of {len(dates)} dates")
+    _say(f"  attempts by outcome: {dict(batch.counts)}")
+    _say(f"  refusals by check: {dict(batch.refusals) or 'none'}")
+    _publish(calendar, out, key)
+
+
+REPLACEMENT_DRAW = 40
+"""Directions drawn per date being replaced. ⚠️ **Per decade**, which is what `load()` takes: an era
+window spans four decades or eight, so this is a floor on the draw rather than its size. Sized to make a
+refusal mean *the pool has nothing here* rather than *the draw was small*, which is the distinction a
+`SystemExit` on this path has to carry."""
+
+
 def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     """Cover the `days`-day window starting at `first`, producing a board for each unassigned date.
 
@@ -572,6 +914,12 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     # and nothing outside it is touched, however many times it runs.
     window = [(first + timedelta(days=offset)).isoformat() for offset in range(days)]
     wanted = [when for when in window if when not in assigned]
+    # ⚠⚠ **The population is audited before the work, not only after it**, and the early return below
+    # is the reason. A window that is already full does no building, writes no manifest and reaches no
+    # `audit()` -- so over a finished calendar, which is the state an inventory spends most of its life
+    # in, the register would never be asked. It is also the cheap ordering: an inadmissible board stops
+    # the run in a second rather than after twenty minutes of signing.
+    audit(calendar)
     if not wanted:
         _say(f"nothing to do: all {days} days from {first} are already assigned")
         return
@@ -605,8 +953,7 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
         f"{len(rest_dates)} from 1950 on"
     )
 
-    out = _ROOT / "forge" / "inventory" / f"gen{int(time.time()):x}"
-    out.mkdir(parents=True, exist_ok=True)
+    out = _generation()
     batch = Batch(key, out, Counter(), Counter())
     started = time.monotonic()
     drawn = 0
@@ -628,13 +975,7 @@ def build(days: int, first: date, key: Ed25519PrivateKey, today: date) -> None:
     _say(f"  {building / 60:.1f} min building ({building / max(filled, 1):.1f}s per board)")
     _say(f"  attempts by outcome: {dict(batch.counts)}")
     _say(f"  refusals by check: {dict(batch.refusals) or 'none'}")
-    audit(calendar)
-
-    # ⚠️ Written after the audit, never before: a manifest over a calendar that failed its quotas would
-    # be a signed statement that a wrong set is whole.
-    packages = write_manifest(out.name, out, key)
-    pointers = write_pointers(calendar, out, key)
-    _say(f"  manifest: {packages} packages; {pointers} dated pointers in {DAYS}/")
+    _publish(calendar, out, key)
 
     if filled < len(wanted):
         # ⚠️⚠️ **The work is kept and the run still fails.** (v38-P2-01) This printed a warning and exited
@@ -666,6 +1007,21 @@ def main() -> None:
     # `test_reports_survive_a_redirected_stream.py`.
     parser = argparse.ArgumentParser(description="Produce daily puzzles and assign them to dates.")
     parser.add_argument("--measure", action="store_true", help="report the yield and build nothing")
+    parser.add_argument(
+        "--republish",
+        action="store_true",
+        help="re-sign the newest generation's manifest and every date's pointer; produces nothing",
+    )
+    parser.add_argument(
+        "--restamp",
+        action="store_true",
+        help="record the admissibility facts on boards produced before they were recorded",
+    )
+    parser.add_argument(
+        "--replace",
+        default="",
+        help="comma-separated future dates whose board is withdrawn and drawn again (§21)",
+    )
     parser.add_argument("--days", type=int, default=150, help="how many dates to fill; five months of runway")
     parser.add_argument("--from", dest="first", default="", help="first date to fill, ISO; default tomorrow")
     # ⚠️ `--per-decade`, because that is what `load()` takes. See `measure()`.
@@ -686,6 +1042,18 @@ def main() -> None:
         return
 
     today = serving_date()
+    if args.republish:
+        republish(publication_key())
+        return
+
+    if args.restamp:
+        restamp(publication_key())
+        return
+
+    if args.replace:
+        replace_dates([when.strip() for when in args.replace.split(",") if when.strip()], publication_key(), today)
+        return
+
     first = date.fromisoformat(args.first) if args.first else today + timedelta(days=1)
     build(args.days, first, publication_key(), today)
 

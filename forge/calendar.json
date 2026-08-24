@@ -1,10 +1,10 @@
 [
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8b8fed",
   "date": "2026-09-01",
   "direction": "WS1",
-  "game_id": "WS1191310032",
-  "puzzle_id": "540c14cba5fb0d37",
+  "game_id": "WS1191306130",
+  "puzzle_id": "409fad7a93cd8267",
   "status": "active"
  },
  {
@@ -488,11 +488,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8b8fed",
   "date": "2026-11-01",
-  "direction": "BAL",
-  "game_id": "BAL197409111",
-  "puzzle_id": "a74a6230760c872b",
+  "direction": "BOS",
+  "game_id": "BOS195408111",
+  "puzzle_id": "fbd34576c4e3f15d",
   "status": "active"
  },
  {
@@ -512,11 +512,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8b8fed",
   "date": "2026-11-04",
-  "direction": "SLN",
-  "game_id": "SLN192310072",
-  "puzzle_id": "1dc57470b44caded",
+  "direction": "WS1",
+  "game_id": "WS1191306140",
+  "puzzle_id": "e309ea26aab71afc",
   "status": "active"
  },
  {
@@ -688,11 +688,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8b8fed",
   "date": "2026-11-26",
-  "direction": "SLN",
-  "game_id": "SLN192310071",
-  "puzzle_id": "4f0744440236caef",
+  "direction": "NYA",
+  "game_id": "WS1191306201",
+  "puzzle_id": "52a5a586443bfa68",
   "status": "active"
  },
  {
@@ -1032,11 +1032,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8b8fed",
   "date": "2027-01-08",
-  "direction": "NYA",
-  "game_id": "WS1193305312",
-  "puzzle_id": "2326abc48337a444",
+  "direction": "DET",
+  "game_id": "WS1191306070",
+  "puzzle_id": "00773538d2a34ecd",
   "status": "active"
  },
  {

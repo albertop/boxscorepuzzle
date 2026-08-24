@@ -242,6 +242,40 @@ date whose puzzle turns out defective is replaced, because nobody has played it.
 command from the builder, it refuses any date at or before today, and it records the replacement rather
 than overwriting silently.
 
+### ✔ The three commands beside `--days`, built 2026-08-23
+
+All three live in `build_inventory.py` rather than beside it. **One producer, one audit, one manifest
+path** — a second script would be a second ordering to get wrong, and the ordering *audit, then sign* is
+the one thing that must not have two versions.
+
+| | what it does | when |
+|---|---|---|
+| `--replace <dates>` | withdraws a future date's board and draws another | a rule found later disqualifies a board already assigned |
+| `--restamp` | rebuilds every package that predates a fact the audit now needs, **asserts it is identical**, and writes it back | new metadata the population has to carry |
+| `--republish` | re-signs the newest generation's manifest and every date's pointer; produces nothing | a run wrote boards and then failed its audit |
+
+⚠️⚠️ **`--replace` inherits the era of the board it withdraws.** Four of the five boards withdrawn on
+2026-08-23 were pre-1950, and §6 allows seven in a 150-day calendar. Drawing their replacements from the
+modern half would satisfy the *ceiling* while spending the early allowance on nothing — and `spread()`
+had already placed those four where the gap rule wanted them. Inheriting the era keeps both properties
+without re-deriving either.
+
+⚠️⚠️ **`--restamp` is a re-signing pass and must never become a regeneration.** `produce()` is
+deterministic, so the same game at the same target yields the same board: no date changes, no puzzle id
+moves. **Every field of the rebuilt package is compared against the published one before it is written**,
+and a board that came back different stops the run as a finding about the producer. Writing it either way
+would be an unlogged regeneration of the artefact this document opens by calling irreproducible.
+
+⚠️ **`--republish` exists because the failure it recovers from actually happened.** The 2026-08-23
+replacement wrote five packages and five calendar entries and was then refused — correctly — because 145
+*other* boards carried no admissibility metadata. That left a generation on disk with no manifest and no
+pointers: servable content nothing points at. **Recovery is a command rather than a repair by hand**,
+because the alternative signs those two documents outside the one place that audits first.
+
+⚠️ **A generation directory is `gen<hex seconds>` with a letter appended if that is taken.** Two runs in
+one second is not a name clash: the manifest is built from *the files on disk*, so the second run would
+sign a document claiming the first run's packages are its own.
+
 ---
 
 ## ⚠️⚠️ One game, one puzzle — the check the calendar exists to make possible
