@@ -2,14 +2,23 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="stylesheet" href="fonts.css">
+<!-- ⚠️⚠️ **Absolute asset paths, and relative ones left this page blank at `/p/<id>`.**
+     A page served at more than one address cannot name its own files relatively: `main.js` from
+     `/p/409f...` resolves to `/p/main.js`, which is not where it is. The dev server's prefix rewrite
+     answered that with `play.html` itself, so the browser was handed HTML where it asked for a module
+     and refused it on MIME — **`#app` empty, no stylesheet, a blank screen on the canonical URL.**
+     ⚠️ **The route test passed throughout**, because it compared the served bytes against `play.html`
+     and they matched. It asked *does this address serve the board page* and never *does the board page
+     work here* — a working instrument aimed one question short. `daily.js` made its data path absolute
+     for exactly this reason at E1 and the HTML was not carried with it. -->
+<link rel="stylesheet" href="/ui/phone/fonts.css">
 <!-- Tokens before the rules that spend them: the cascade needs the custom properties defined first. -->
-<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="/ui/phone/tokens.css">
 <!-- ⚠️ `board.css` too, and not only `landing.css`. The example on this page is drawn with the board's
      own renderers — the real line score and the real batting section — so it needs the board's rules.
      A hand-drawn imitation would drift from the thing it advertises the first time the board changes,
      and nothing would notice. -->
-<link rel="stylesheet" href="board.css">
-<link rel="stylesheet" href="landing.css">
+<link rel="stylesheet" href="/ui/phone/board.css">
+<link rel="stylesheet" href="/ui/phone/landing.css">
 <div id="landing"></div>
-<script type="module" src="landing-main.js"></script>
+<script type="module" src="/ui/phone/landing-main.js"></script>

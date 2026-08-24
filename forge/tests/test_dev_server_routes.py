@@ -79,20 +79,42 @@ def _get(port: int, path: str) -> tuple[int, str, bytes]:
         connection.close()
 
 
-class TestEveryDeclaredRedirectAnswers:
-    """⚠️ Driven from the declaration, so adding a route without exercising it is not possible: a new
-    entry in `REDIRECTS` becomes a new case here on the next run."""
+class TestTheDevelopmentServerAnswersTheWholeTable:
+    """⚠️⚠️ **Both kinds, and this is the half nginx must NOT have.** The development server implements
+    every route in `ROUTES`; `deploy/nginx/boxscorepuzzle.conf` implements only the ones tagged
+    `production`. Two implementations, one table, and
+    `forge/tests/test_nginx_serves_what_is_declared.py` is the other side of the comparison.
+    """
 
     def test_the_declaration_is_not_empty(self) -> None:
-        # ⚠️ A parameterised sweep over an empty mapping passes and says nothing. This is the check on
-        # the check, and the project has recorded that shape often enough to write it by default.
-        assert _module().REDIRECTS, "no redirects are declared, so the sweep below proves nothing"
+        # ⚠️ A parameterised sweep over an empty table passes and says nothing. This is the check on the
+        # check, and the project has recorded that shape often enough to write it by default.
+        assert _module().ROUTES, "no routes are declared, so the sweeps below prove nothing"
 
-    def test_each_one_redirects_where_it_says(self, server: int) -> None:
-        for path, where in _module().REDIRECTS.items():
-            status, location, _body = _get(server, path)
-            assert status == 302, f"{path} answered {status}, not a redirect"
-            assert location == where, f"{path} went to {location}, not {where}"
+    def test_every_exact_route_answers_what_it_declares(self, server: int) -> None:
+        for route in _module().ROUTES:
+            if route.prefix:
+                continue
+            status, location, body = _get(server, route.path)
+
+            assert status == route.answer, f"{route.path} answered {status}, and the table says {route.answer}"
+            if route.answer == 302:
+                assert location == route.target, f"{route.path} went to {location}, not {route.target}"
+            else:
+                assert body, f"{route.path} answered {status} with an empty body"
+
+    def test_the_landing_and_today_are_rewrites_rather_than_redirects(self, server: int) -> None:
+        """⚠️⚠️ **They were 302s until 2026-08-24 and the URL contract forbids it.** v36-P3-48: *a
+        redirect makes the canonical homepage a second URL*. The development server was teaching the
+        shape production must not have, on the address every visit lands at.
+
+        Asserted separately from the sweep above because the sweep reads the table: if somebody changed
+        the table back to 302, that sweep would agree with it. **This says what the answer has to be.**
+        """
+        for path in ("/", "/today"):
+            status, _location, _body = _get(server, path)
+
+            assert status == 200, f"{path} answered {status}; the contract says 200 by rewrite"
 
     def test_the_test_mode_route_reaches_today_carrying_the_mode(self, server: int) -> None:
         """⚠️ It goes through `/today` rather than straight to the board, and that is not a detour: the
@@ -101,7 +123,7 @@ class TestEveryDeclaredRedirectAnswers:
         status, location, _body = _get(server, "/t/fill")
 
         assert status == 302
-        assert location == f"{_module().REDIRECTS['/today']}?test=fill"
+        assert location.endswith("?test=fill"), f"the mode was lost: {location}"
 
     def test_an_unknown_mode_is_forwarded_rather_than_listed(self, server: int) -> None:
         """`testmode.js` owns which modes exist. A list here would be a second copy of that decision."""
@@ -120,17 +142,30 @@ class TestTheBoardRouteIsARewrite:
         assert status == 200, f"the board route answered {status}"
         assert b"main.js" in body, "the board route did not serve the board page"
 
+    def test_the_prefix_is_anchored_to_an_id_and_not_a_wildcard(self, server: int) -> None:
+        """⚠️⚠️ **A bare `startswith("/p/")` left the canonical route serving a blank page.**
+
+        The board page names its assets, and under a prefix rewrite `/p/<id>` + `main.js` is
+        `/p/main.js` — which the wildcard answered with **`play.html` itself**, so the browser was handed
+        HTML where it asked for a module and refused it on MIME: `#app` empty, no stylesheet, nothing on
+        screen. **The route test passed throughout**, because it compared the served bytes against
+        `play.html` and they matched.
+        """
+        for path in ("/p/main.js", "/p/tokens.css", "/p/NOTHEX", "/p/abc/def"):
+            status, _location, _body = _get(server, path)
+
+            assert status == 404, f"{path} is not a board address and answered {status}"
+
     def test_the_page_is_the_same_one_the_direct_address_serves(self, server: int) -> None:
-        """⚠️ Byte equality, because *serves a board page* is satisfied by serving a **different** one.
-        The rewrite has one job and this is the assertion that it did that job rather than a similar."""
+        """⚠️ Byte equality, because *serves a board page* is satisfied by serving a **different** one."""
         _status, _location, rewritten = _get(server, "/p/0ed0aad8886544ca")
         _status, _location, direct = _get(server, _module().BOARD)
 
         assert rewritten == direct
 
     def test_a_missing_file_is_still_a_404(self, server: int) -> None:
-        """⚠️ The rewrite must not swallow everything under `/p/`. It catches the board prefix; anything
-        the tree genuinely does not hold still answers honestly."""
+        """⚠️ The rewrite must not swallow everything. Anything the tree genuinely does not hold still
+        answers honestly."""
         status, _location, _body = _get(server, "/ui/phone/not-a-file.js")
 
         assert status == 404

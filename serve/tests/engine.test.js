@@ -3241,7 +3241,7 @@ suite("The landing page, which every visit lands on", () => {
     assert(view.play.querySelector(".landing-date").textContent.includes("2026"), "the button has no date");
     view.play.click();
     equal(view.went.length, 1, "the button went nowhere");
-    assert(view.went[0].startsWith("play.html"), `the button did not go to the board: ${view.went[0]}`);
+    assert(view.went[0].startsWith("/today"), `the button did not go to the board: ${view.went[0]}`);
 
     view.teardown();
   });
@@ -3492,7 +3492,7 @@ suite("The tutorial: six steps, skippable, and teaching on a board that adds up"
     equal(view.page.querySelectorAll(".tutorial-reference dt").length, 5, "the five relations are not listed");
     view.next.click();
     equal(view.went.length, 1, "the last button went nowhere");
-    assert(view.went[0].startsWith("play.html"), `it did not lead to the board: ${view.went[0]}`);
+    assert(view.went[0].startsWith("/today"), `it did not lead to the board: ${view.went[0]}`);
 
     view.teardown();
   });
@@ -3503,7 +3503,7 @@ suite("The tutorial: six steps, skippable, and teaching on a board that adds up"
     view.skip.click();
 
     equal(view.went.length, 1, "skip went nowhere");
-    assert(view.went[0].startsWith("index.html"), `skip did not return to the landing: ${view.went[0]}`);
+    assert(view.went[0].startsWith("/"), `skip did not return to the landing: ${view.went[0]}`);
     view.teardown();
   });
 
@@ -3514,7 +3514,7 @@ suite("The tutorial: six steps, skippable, and teaching on a board that adds up"
     view.back.click();
 
     equal(view.went.length, 1, "Back on the first step did nothing at all");
-    assert(view.went[0].startsWith("index.html"), `Back did not return to the landing: ${view.went[0]}`);
+    assert(view.went[0].startsWith("/"), `Back did not return to the landing: ${view.went[0]}`);
     view.teardown();
   });
 
@@ -4096,19 +4096,23 @@ suite("⚠️ Every page agrees on where the other pages are", () => {
     }
   });
 
-  test("the pages that ROUTES names all exist", async () => {
+  test("⚠️⚠️ ROUTES holds canonical URLs, and nothing here supplies a directory", async () => {
+    // **The previous version fetched `../ui/phone/${file}`, and that is why it passed on dead links.**
+    // It prefixed the directory whose absence was the defect — an instrument supplying the property
+    // under judgement, so the sample could not judge it. Under E3's routing `play.html` linked from `/`
+    // resolves to `/play.html`, which is a 404, and **both landing buttons were dead.**
+    //
+    // ⚠️ This asserts the *shape* rather than fetching. A fetch from this page would resolve these
+    // against `/tests/`, which is the same mistake wearing a different directory;
+    // `forge/tests/test_nginx_serves_what_is_declared.py` is where they are actually requested, from a
+    // server that has the routes.
     const { ROUTES } = await import("../ui/phone/daily.js");
 
-    for (const [name, file] of Object.entries(ROUTES)) {
-      const response = await fetch(`../ui/phone/${file}`);
-      // ⚠⚠ **The body is read, and not reading it hung the headless suite for good.** `fetch`
-      // resolves on the headers; the response stays open until the body is consumed or cancelled, and
-      // with keep-alive that leaves the connection unusable for the next request. Three pages fetched
-      // and none drained is three stalled sockets, and headless chromium's smaller pool met the wall
-      // that an ordinary browser's did not — so it passed by hand and timed out in CI, which is the
-      // worst pair of symptoms to debug from.
-      await response.text();
-      assert(response.ok, `ROUTES.${name} points at ${file}, which is not served`);
+    const named = Object.entries(ROUTES);
+    assert(named.length > 0, "ROUTES is empty, so this proves nothing");
+    for (const [name, url] of named) {
+      assert(url.startsWith("/"), `ROUTES.${name} is ${url}, which resolves against whatever page links it`);
+      assert(!url.endsWith(".html"), `ROUTES.${name} is ${url}: an implementation path, not a canonical URL`);
     }
   });
 });

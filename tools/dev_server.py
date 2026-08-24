@@ -19,8 +19,10 @@ boundary is what the directory means, not what the file is called.
     python tools/dev_server.py [port]
 """
 
+import re
 import socket
 import sys
+from dataclasses import dataclass
 from functools import partial
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -31,29 +33,74 @@ ROOT = Path(__file__).resolve().parents[1] / "serve"
 BOARD = "/ui/phone/play.html"
 LANDING = "/ui/phone/index.html"
 TODAY = "/ui/phone/today.html"
+TUTORIAL = "/ui/phone/tutorial.html"
 PORT = 8137
 
-REDIRECTS = {
-    # ⚠️ `/` opens the LANDING page, not the board, and that changed on 2026-08-20. Every visit lands
-    # there (`docs/serve-flow.md` §1) because the archive, the streak and the subscription live on it.
-    "/": LANDING,
-    # C6's second half. `/today` is a page that reads the pointer and replaces itself with `/p/<id>`.
-    "/today": TODAY,
-    # ⚠️ **`/p` goes to `/today` now, not straight to a board.** It was the handset shortcut to
-    # `play.html`, and a bare board with no id in the path has no puzzle to load since E1. Sending it
-    # through `/today` keeps the shortcut and makes it honest — one tap, today's board.
-    "/p": "/today",
-    "/p/": "/today",
-}
-"""Every address that answers with a redirect. **Declared once so a test can drive all of them.**"""
+PRODUCTION = "production"
+DEVELOPMENT = "development"
+"""Which environment a route belongs to. **⚠️⚠️ The tag is the whole of what makes a comparison
+possible.**
 
-BOARD_PATH = "/p/"
-"""The canonical board prefix (C6). `/p/<id>` serves the board page and the id stays in the path."""
+nginx must implement **everything tagged production and nothing tagged development**. That is not
+equality, and a test that checked only the first half would pass an nginx that also answered
+`/t/<mode>` — a development affordance reachable by players, which is the thing tagging exists to
+prevent. `serve/nginx/boxscorepuzzle.conf` is the other implementation and
+`forge/tests/test_nginx_serves_what_is_declared.py` asserts both halves against this table.
 
-TEST_PATH = "/t/"
-"""`/t/<mode>` — today's board with a development mode. ⚠️ One rule rather than a list of modes:
-`serve/ui/phone/testmode.js` owns which exist, this forwards whatever it is given, and an unknown one
-lands on a page that ignores it. A list here would be a second copy of that decision."""
+⚠️ **One table rather than two lists.** Two lists is exactly the defect the comparison exists to close:
+they agree until somebody edits one."""
+
+
+@dataclass(frozen=True, slots=True)
+class Route:
+    """One address, what it answers with, and where it belongs.
+
+    `answer` is the **status** the URL contract requires (`docs/serve-brief.md`, v36-P3-48). A rewrite
+    answers 200 with the page's own body and leaves the address in the bar; a redirect answers 302.
+    """
+
+    path: str
+    answer: int
+    target: str
+    environment: str
+    prefix: bool = False
+
+
+ROUTES = (
+    # ⚠️⚠️ **200 by rewrite, not 302, and this was a redirect until 2026-08-24.** v36-P3-48: *a redirect
+    # makes the canonical homepage a second URL*. The dev server was teaching the shape the production
+    # contract forbids, on the address every visit lands at (`docs/serve-flow.md` §1).
+    Route("/", 200, LANDING, PRODUCTION),
+    # ⚠️ Also a rewrite now. C6 says `/today` redirects and it still does — **from the page**, since E1
+    # built it as a static page rather than a server redirect: §23 keeps a process off the play path.
+    Route("/today", 200, TODAY, PRODUCTION),
+    # C6's canonical board URL. The id stays in the address, so the page can read it.
+    Route("/p/", 200, BOARD, PRODUCTION, prefix=True),
+    # ⚠️⚠️ **The tutorial had no URL at all until 2026-08-24.** `docs/serve-flow.md` §1b makes it
+    # reachable from the landing page at any time, and the landing linked `tutorial.html` — which from
+    # `/` is `/tutorial.html`, a 404. **A page the product documents as reachable, unreachable.**
+    Route("/tutorial", 200, TUTORIAL, PRODUCTION),
+    # ⚠️ **Development.** A handset shortcut: one tap to today's board without typing an id. It is a
+    # redirect on purpose — it has no page of its own — and nginx must not answer it.
+    Route("/p", 302, "/today", DEVELOPMENT),
+    # ⚠️ **Development, and the reason tagging is not decoration.** `/t/<mode>` reaches the board with a
+    # development mode. Answering it in production hands players `?test=solved`.
+    Route("/t/", 302, TODAY, DEVELOPMENT, prefix=True),
+)
+"""Every address this server answers specially. **Declared once so both implementations are checked
+against the same table.**"""
+
+BOARD_PATTERN = re.compile(r"^/p/([0-9a-f]+)/?$")
+"""⚠️⚠️ **Anchored, and a bare `startswith("/p/")` left the canonical route serving a blank page.**
+
+The board page names its assets, and under a prefix rewrite `/p/<id>` + `main.js` is `/p/main.js` —
+which `startswith` answered with **`play.html` itself**, so the browser was handed HTML where it asked
+for a module and refused it on MIME. `#app` empty, no stylesheet, nothing on screen.
+
+**Both halves were wrong and both are fixed**: the pages name their assets absolutely now, and this
+matches only what `daily.js`'s `idInPath` matches. A pattern that swallows everything under a prefix is
+the same shape as a soft-404 — every wrong address answering 200 with something that is not what was
+asked for."""
 
 
 class NoCache(SimpleHTTPRequestHandler):
@@ -107,17 +154,23 @@ class NoCache(SimpleHTTPRequestHandler):
         #
         # ⚠️ **And this server can never reach a player.** It is `tools/`, which deployment does not
         # ship — the same boundary that keeps `forge/` off the VPS.
-        if self.path in REDIRECTS:
-            self._redirect(REDIRECTS[self.path])
-            return
-        if self.path.startswith(TEST_PATH):
-            mode = self.path[len(TEST_PATH):].strip("/")
+        for route in ROUTES:
+            if route.prefix:
+                continue
+            if self.path == route.path:
+                if route.answer == 302:  # noqa: PLR2004 - the status is the subject
+                    self._redirect(route.target)
+                else:
+                    self.path = route.target
+                break
+        if self.path.startswith("/t/"):
+            mode = self.path[len("/t/"):].strip("/")
             # Through `/today`, which then carries the mode into `/p/<id>`. Routing straight to the
             # board is no longer possible: the board takes its id from the path and this does not know
             # what today's is — only the pointer does.
-            self._redirect(f"{REDIRECTS['/today']}?test={quote(mode, safe='')}")
+            self._redirect(f"{TODAY}?test={quote(mode, safe='')}")
             return
-        if self.path.startswith(BOARD_PATH):
+        if BOARD_PATTERN.match(self.path):
             # ⚠️⚠️ **A rewrite, not a redirect: `/p/<id>` is canonical (C6) and must stay in the bar.**
             # The page reads its own id from `location.pathname`, so redirecting to `play.html` would
             # take the id away and leave the loader with nothing to ask for. nginx does this with

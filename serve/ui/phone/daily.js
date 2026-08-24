@@ -183,13 +183,25 @@ export async function loadPuzzle(pathname = location.pathname) {
 }
 
 /**
- * Where the board lives, named once.
+ * Where the pages live, named once — **canonical URLs, not filenames.**
  *
- * ⚠️ Both the landing page and the tutorial send the player here, and a page that spells a sibling's
- * filename is a link that breaks silently when the file is renamed — the browser shows a 404 and no
- * test is watching. `serve/tests/engine.test.js` asserts every navigation target is one of these.
+ * ⚠️⚠️ **These were `play.html`, `index.html` and `tutorial.html`, and under E3's routing both landing
+ * buttons were dead.** A relative filename resolves against the *page's* address: from `/`, `play.html`
+ * is `/play.html`, which is not a route and which nginx answers with 404. **The entire way into the
+ * game, on the address every visit lands at.**
+ *
+ * ⚠️⚠️ **And the test could not see it, because the test supplied the missing part.** It fetched
+ * `../ui/phone/${file}` — prefixing the directory whose absence *is* the defect. That is the shape
+ * `CLAUDE.md` records from the text dump that padded its own columns: an instrument supplying the
+ * property under judgement, so the sample cannot judge it.
+ *
+ * ⚠️ **`board` is `/today` rather than `/p/<id>`**, because a link cannot know today's id — the pointer
+ * does. `/today` resolves it and replaces itself with the canonical board URL.
+ *
+ * These are the addresses `tools/dev_server.py`'s `ROUTES` and `deploy/nginx/boxscorepuzzle.conf` both
+ * serve, and `forge/tests/test_nginx_serves_what_is_declared.py` requires every one of them to answer.
  */
-export const ROUTES = { board: "play.html", landing: "index.html", tutorial: "tutorial.html" };
+export const ROUTES = { board: "/today", landing: "/", tutorial: "/tutorial" };
 
 /**
  * Carry `?test=` across a navigation.

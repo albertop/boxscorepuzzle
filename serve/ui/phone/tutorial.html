@@ -2,12 +2,21 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="stylesheet" href="fonts.css">
+<!-- ⚠️⚠️ **Absolute asset paths, and relative ones left this page blank at `/p/<id>`.**
+     A page served at more than one address cannot name its own files relatively: `main.js` from
+     `/p/409f...` resolves to `/p/main.js`, which is not where it is. The dev server's prefix rewrite
+     answered that with `play.html` itself, so the browser was handed HTML where it asked for a module
+     and refused it on MIME — **`#app` empty, no stylesheet, a blank screen on the canonical URL.**
+     ⚠️ **The route test passed throughout**, because it compared the served bytes against `play.html`
+     and they matched. It asked *does this address serve the board page* and never *does the board page
+     work here* — a working instrument aimed one question short. `daily.js` made its data path absolute
+     for exactly this reason at E1 and the HTML was not carried with it. -->
+<link rel="stylesheet" href="/ui/phone/fonts.css">
 <!-- Tokens before the rules that spend them: the cascade needs the custom properties defined first. -->
-<link rel="stylesheet" href="tokens.css">
-<link rel="stylesheet" href="landing.css">
+<link rel="stylesheet" href="/ui/phone/tokens.css">
+<link rel="stylesheet" href="/ui/phone/landing.css">
 <!-- ⚠️ No `board.css`. The tutorial's board is a made-up four-batter, three-column illustration and
      not the board, so it carries its own small rules in `landing.css` rather than borrowing the real
      board's and then fighting them. See the note at the top of `tutorial.js`. -->
 <div id="tutorial"></div>
-<script type="module" src="tutorial-main.js"></script>
+<script type="module" src="/ui/phone/tutorial-main.js"></script>

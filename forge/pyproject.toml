@@ -79,7 +79,12 @@ select = [
 # everything carries no information, exactly like one that never fires.
 "../discovery/**/*.py" = ["T201", "S105"]
 "../tools/*.py" = ["T201"]   # a dev server that says nothing on start looks like one that did not start
-"tests/**" = ["S101", "PLR2004"]   # asserts and magic numbers are fine in tests
+"tests/**" = ["S101", "PLR2004"]
+# ⚠️ S603/S607 are `subprocess` with a partial executable path, and ARG002 is a fixture a case takes
+# only to inherit its skip. This one shells out to `docker` by name on purpose: the whole
+# point is to use whatever container runtime the machine has, and an absolute path would be a second
+# copy of a fact the operating system already holds. The argument list is fixed and no shell is used.
+"tests/test_nginx_serves_what_is_declared.py" = ["S101", "PLR2004", "S603", "S607", "ARG002"]   # asserts and magic numbers are fine in tests
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
