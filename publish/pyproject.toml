@@ -41,6 +41,11 @@ select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM", "RUF", "S", "T20", "
 [tool.ruff.lint.per-file-ignores]
 # S101 is pytest's assert. PLR2004 is a magic number in a test, where the number is the subject.
 "tests/**" = ["S101", "PLR2004"]
+# ⚠️ T201 is `print`, and this module's entire job is talking to a terminal: it is the command the
+# daily job runs, and a step whose success looks like silence is a step nobody can tell failed
+# (`docs/beta-0-plan.md` A5.2). The ban is right everywhere else in `src/` -- a library that prints is
+# a library that cannot be used -- so it is lifted here by name rather than switched off.
+"src/publish/__main__.py" = ["T201"]
 
 [tool.coverage.run]
 branch = true

@@ -1,32 +1,36 @@
 {
  "labels": [
   "RF",
-  "LF",
-  "1B",
+  "PH",
+  "2B",
   "CF",
+  "1B",
   "3B",
-  "3B",
+  "LF",
   "SS",
   "C",
-  "2B",
   "P"
  ],
  "metadata": {
+  "account": "Y",
   "batters": 10,
-  "blanks": 21,
-  "chain_length": 8,
+  "blanks": 34,
+  "chain_length": 22,
   "difficulty_model": "stalls",
+  "disposition": "",
   "families": [
    "column_sum",
    "cross_team",
+   "global_identity",
    "row_identity"
   ],
+  "innings": 9,
   "lineup": "plain",
   "note": "reference data for serve, not inventory",
   "pitchers": 2,
   "seed": 6,
-  "stalls": 2,
-  "target_stalls": 2
+  "stalls": 8,
+  "target_stalls": 8
  },
  "offense_is_home": true,
  "pitcher_labels": [
@@ -36,57 +40,41 @@
  "puzzle": {
   "batting": [
    [
-    5,
+    4,
     null,
+    1,
+    1,
     null,
-    0,
-    0,
     null
    ],
    [
-    5,
+    1,
     null,
-    1,
-    1,
     0,
-    1
+    null,
+    null,
+    0
    ],
    [
     null,
     null,
-    1,
-    2,
     0,
+    2,
+    1,
     0
    ],
    [
     4,
-    4,
+    null,
+    0,
     1,
-    3,
     null,
-    1
-   ],
-   [
-    2,
-    2,
-    0,
-    0,
-    null,
-    1
-   ],
-   [
-    2,
-    null,
-    0,
-    0,
-    0,
     1
    ],
    [
     4,
     null,
-    2,
+    0,
     1,
     null,
     1
@@ -101,49 +89,53 @@
    ],
    [
     4,
-    4,
     null,
-    2,
-    0,
-    1
+    1,
+    null,
+    null,
+    0
    ],
    [
     4,
+    null,
+    0,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
+    null,
+    null,
+    2,
+    null,
+    1
+   ],
+   [
+    null,
     4,
     0,
     null,
-    0,
-    null
+    null,
+    1
    ]
   ],
   "batting_totals": [
-   38,
    null,
-   6,
-   12,
    null,
-   6
+   4,
+   9,
+   null,
+   null
   ],
   "footnote_totals": [
-   1,
+   2,
    0,
-   0,
+   2,
    0
   ],
   "footnotes": [
    [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
     1,
     0,
     0,
@@ -164,7 +156,7 @@
    [
     0,
     0,
-    0,
+    1,
     0
    ],
    [
@@ -177,6 +169,18 @@
     0,
     0,
     0,
+    0
+   ],
+   [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
     0
    ],
    [
@@ -192,175 +196,166 @@
     0
    ]
   ],
-  "left_on_base": 8,
+  "left_on_base": 7,
   "line_score": {
    "defense_by_inning": [
     1,
     0,
+    4,
     0,
     0,
     0,
-    2,
     0,
-    0,
+    1,
     0
    ],
-   "defense_errors": 1,
-   "defense_hits": 6,
-   "defense_runs": 3,
+   "defense_errors": 0,
+   "defense_hits": 8,
+   "defense_runs": 6,
    "offense_by_inning": [
     0,
     0,
+    2,
+    0,
     0,
     2,
-    4,
     0,
     0,
     0
    ],
-   "offense_errors": 4,
-   "offense_hits": 12,
-   "offense_runs": 6
+   "offense_errors": 3,
+   "offense_hits": 9,
+   "offense_runs": 4
   },
   "pitching": [
    [
-    12,
-    6,
-    2,
     null,
-    1,
+    8,
+    4,
+    null,
+    3,
     null
    ],
    [
-    12,
     6,
     null,
-    4,
+    null,
+    null,
     null,
     2
    ]
   ],
   "pitching_totals": [
-   24,
-   12,
-   6,
-   6,
-   2,
-   6
+   27,
+   9,
+   4,
+   4,
+   3,
+   5
   ]
  },
- "puzzle_id": "1dc57470b44caded",
+ "puzzle_id": "409fad7a93cd8267",
  "reveal": {
   "batter_names": [
-   "Max Flack",
-   "Taylor Douthit",
-   "Jim Bottomley",
-   "Heinie Mueller",
-   "Milt Stock",
-   "Jake Flowers",
-   "Les Bell",
-   "Harry McCurdy",
-   "Howard Freigau",
-   "Johnny Stuart"
+   "Danny Moeller",
+   "Rip Williams",
+   "Ray Morgan",
+   "Clyde Milan",
+   "Chick Gandil",
+   "Frank LaPorte",
+   "Howie Shanks",
+   "George McBride",
+   "John Henry",
+   "George Mullin"
   ],
   "boxscore": {
    "defense": {
     "batting": [
      {
-      "ab": 1,
-      "bb": 0,
-      "h": 0,
-      "name": "Jigger Statz",
-      "position": "CF",
-      "r": 0,
-      "rbi": 0,
-      "so": 0
-     },
-     {
-      "ab": 2,
-      "bb": 0,
-      "h": 0,
-      "name": "Tony Murray",
-      "position": "CF",
-      "r": 0,
-      "rbi": 0,
-      "so": 0
-     },
-     {
-      "ab": 4,
+      "ab": 3,
       "bb": 0,
       "h": 1,
-      "name": "Pete Turgeon",
-      "position": "SS",
-      "r": 1,
-      "rbi": 0,
-      "so": 0
-     },
-     {
-      "ab": 4,
-      "bb": 0,
-      "h": 1,
-      "name": "John Kelleher",
+      "name": "Morrie Rath",
       "position": "2B",
-      "r": 1,
-      "rbi": 0,
-      "so": 0
-     },
-     {
-      "ab": 4,
-      "bb": 0,
-      "h": 1,
-      "name": "Allen Elliott",
-      "position": "1B",
-      "r": 1,
-      "rbi": 1,
-      "so": 0
-     },
-     {
-      "ab": 4,
-      "bb": 0,
-      "h": 1,
-      "name": "Otto Vogel",
-      "position": "3B",
-      "r": 0,
+      "r": 2,
       "rbi": 0,
       "so": 1
      },
      {
-      "ab": 4,
+      "ab": 2,
+      "bb": 2,
+      "h": 1,
+      "name": "Harry Lord",
+      "position": "3B",
+      "r": 1,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 5,
       "bb": 0,
       "h": 2,
-      "name": "Denver Grigsby",
-      "position": "LF",
-      "r": 0,
-      "rbi": 1,
+      "name": "Hal Chase",
+      "position": "1B",
+      "r": 1,
+      "rbi": 2,
       "so": 0
      },
      {
       "ab": 3,
       "bb": 1,
       "h": 0,
-      "name": "Cliff Heathcote",
+      "name": "Shano Collins",
       "position": "RF",
       "r": 0,
       "rbi": 0,
-      "so": 1
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Ping Bodie",
+      "position": "LF",
+      "r": 2,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 1,
+      "bb": 2,
+      "h": 0,
+      "name": "Wally Mattick",
+      "position": "CF",
+      "r": 0,
+      "rbi": 1,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "Buck Weaver",
+      "position": "SS",
+      "r": 0,
+      "rbi": 1,
+      "so": 0
      },
      {
       "ab": 3,
       "bb": 0,
       "h": 0,
-      "name": "Kettle Wirts",
+      "name": "Ray Schalk",
       "position": "C",
       "r": 0,
       "rbi": 0,
       "so": 0
      },
      {
-      "ab": 1,
+      "ab": 3,
       "bb": 0,
-      "h": 0,
-      "name": "Tiny Osborne",
+      "h": 1,
+      "name": "Ed Walsh",
       "position": "P",
       "r": 0,
       "rbi": 0,
@@ -370,44 +365,34 @@
       "ab": 1,
       "bb": 0,
       "h": 0,
-      "name": "George Grantham",
+      "name": "Ted Easterly",
       "position": "PH",
       "r": 0,
       "rbi": 0,
       "so": 1
-     },
-     {
-      "ab": 1,
-      "bb": 0,
-      "h": 0,
-      "name": "Nick Dumovich",
-      "position": "P",
-      "r": 0,
-      "rbi": 0,
-      "so": 0
      }
     ],
     "city": "Chicago",
-    "code": "CHN",
-    "nickname": "Cubs",
+    "code": "CHA",
+    "nickname": "White Sox",
     "pitching": [
      {
-      "bb": 1,
-      "er": 2,
-      "h": 6,
-      "name": "Tiny Osborne",
-      "outs": 12,
-      "r": 2,
+      "bb": 3,
+      "er": 4,
+      "h": 8,
+      "name": "Ed Walsh",
+      "outs": 21,
+      "r": 4,
       "role": "SP",
-      "so": 4
+      "so": 3
      },
      {
-      "bb": 1,
-      "er": 4,
-      "h": 6,
-      "name": "Nick Dumovich",
-      "outs": 12,
-      "r": 4,
+      "bb": 0,
+      "er": 0,
+      "h": 1,
+      "name": "Reb Russell",
+      "outs": 6,
+      "r": 0,
       "role": "RP-1",
       "so": 2
      }
@@ -416,141 +401,151 @@
    "offense": {
     "batting": [
      {
-      "ab": 5,
-      "bb": 0,
-      "h": 0,
-      "name": "Max Flack",
-      "position": "RF",
-      "r": 0,
-      "rbi": 0,
-      "so": 0
-     },
-     {
-      "ab": 5,
+      "ab": 3,
       "bb": 0,
       "h": 1,
-      "name": "Taylor Douthit",
-      "position": "LF",
+      "name": "Danny Moeller",
+      "position": "RF",
       "r": 1,
       "rbi": 0,
       "so": 1
      },
      {
+      "ab": 1,
+      "bb": 0,
+      "h": 0,
+      "name": "Rip Williams",
+      "position": "PH",
+      "r": 0,
+      "rbi": 0,
+      "so": 0
+     },
+     {
+      "ab": 4,
+      "bb": 1,
+      "h": 2,
+      "name": "Ray Morgan",
+      "position": "2B",
+      "r": 0,
+      "rbi": 1,
+      "so": 0
+     },
+     {
       "ab": 3,
       "bb": 0,
-      "h": 2,
-      "name": "Jim Bottomley",
+      "h": 1,
+      "name": "Clyde Milan",
+      "position": "CF",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 4,
+      "bb": 0,
+      "h": 1,
+      "name": "Chick Gandil",
       "position": "1B",
+      "r": 0,
+      "rbi": 0,
+      "so": 1
+     },
+     {
+      "ab": 3,
+      "bb": 1,
+      "h": 1,
+      "name": "Frank LaPorte",
+      "position": "3B",
       "r": 1,
       "rbi": 1,
       "so": 0
      },
      {
-      "ab": 4,
+      "ab": 3,
       "bb": 0,
-      "h": 3,
-      "name": "Heinie Mueller",
-      "position": "CF",
+      "h": 0,
+      "name": "Howie Shanks",
+      "position": "LF",
       "r": 1,
       "rbi": 0,
-      "so": 1
+      "so": 0
      },
      {
       "ab": 2,
-      "bb": 0,
-      "h": 0,
-      "name": "Milt Stock",
-      "position": "3B",
-      "r": 0,
-      "rbi": 0,
-      "so": 1
-     },
-     {
-      "ab": 2,
-      "bb": 0,
-      "h": 0,
-      "name": "Jake Flowers",
-      "position": "3B",
-      "r": 0,
-      "rbi": 0,
-      "so": 1
-     },
-     {
-      "ab": 3,
       "bb": 1,
       "h": 1,
-      "name": "Les Bell",
+      "name": "George McBride",
       "position": "SS",
-      "r": 2,
+      "r": 0,
       "rbi": 0,
-      "so": 1
+      "so": 0
      },
      {
-      "ab": 3,
-      "bb": 1,
-      "h": 1,
-      "name": "Harry McCurdy",
+      "ab": 4,
+      "bb": 0,
+      "h": 2,
+      "name": "John Henry",
       "position": "C",
       "r": 1,
       "rbi": 2,
-      "so": 0
-     },
-     {
-      "ab": 4,
-      "bb": 0,
-      "h": 2,
-      "name": "Howard Freigau",
-      "position": "2B",
-      "r": 0,
-      "rbi": 2,
       "so": 1
      },
      {
       "ab": 4,
       "bb": 0,
-      "h": 2,
-      "name": "Johnny Stuart",
+      "h": 0,
+      "name": "George Mullin",
       "position": "P",
       "r": 0,
       "rbi": 0,
-      "so": 0
+      "so": 1
      }
     ],
-    "city": "St. Louis",
-    "code": "SLN",
-    "nickname": "Cardinals",
+    "city": "Washington",
+    "code": "WS1",
+    "nickname": "Senators",
     "pitching": [
      {
-      "bb": 1,
+      "bb": 2,
       "er": 2,
-      "h": 6,
-      "name": "Johnny Stuart",
-      "outs": 27,
-      "r": 3,
+      "h": 4,
+      "name": "Tom Hughes",
+      "outs": 8,
+      "r": 5,
       "role": "SP",
-      "so": 3
+      "so": 0
+     },
+     {
+      "bb": 3,
+      "er": 1,
+      "h": 4,
+      "name": "George Mullin",
+      "outs": 19,
+      "r": 1,
+      "role": "RP-1",
+      "so": 2
      }
     ]
    }
   },
   "card": "",
-  "defense_team": "CHN",
-  "offense_team": "SLN",
+  "defense_team": "CHA",
+  "offense_team": "WS1",
   "pitcher_names": [
-   "Tiny Osborne",
-   "Nick Dumovich"
+   "Ed Walsh",
+   "Reb Russell"
   ],
-  "played_on": "1923-10-07"
+  "played_on": "1913-06-13"
  },
  "schema": 5,
- "signature": "fc577ba7a53e7a55766fcdb2afd9e34c221b32abacc6c8524e8fa2e72a5425af3d94d55da1995b73aaca0f20dee909442689a2656796ac82dc079afcf47cc70d",
+ "signature": "06c4d1d15486bf8861c6fcaaebf371508c55b2814831de07d3a75542853386c50391c8843f78ccd1fccf3fa9c086a8e0f3d8b605e5980f836005c9a8a0646b00",
  "slot_references": [
-  "1",
+  "1a",
+  "1b",
   "2",
   "3",
   "4",
-  "5a",
-  "5b",
+  "5",
   "6",
   "7",
   "8",
@@ -559,8 +554,16 @@
  "solution": {
   "batting": [
    [
-    5,
-    5,
+    4,
+    3,
+    1,
+    1,
+    0,
+    1
+   ],
+   [
+    1,
+    1,
     0,
     0,
     0,
@@ -568,50 +571,26 @@
    ],
    [
     5,
-    5,
-    1,
-    1,
-    0,
-    1
-   ],
-   [
     4,
-    3,
-    1,
-    2,
     0,
+    2,
+    1,
     0
    ],
    [
     4,
-    4,
-    1,
     3,
     0,
-    1
-   ],
-   [
-    2,
-    2,
-    0,
-    0,
-    0,
-    1
-   ],
-   [
-    2,
-    2,
-    0,
-    0,
+    1,
     0,
     1
    ],
    [
     4,
-    3,
-    2,
+    4,
+    0,
     1,
-    1,
+    0,
     1
    ],
    [
@@ -624,8 +603,24 @@
    ],
    [
     4,
-    4,
+    3,
+    1,
     0,
+    0,
+    0
+   ],
+   [
+    4,
+    2,
+    0,
+    1,
+    1,
+    0
+   ],
+   [
+    4,
+    4,
+    1,
     2,
     0,
     1
@@ -634,39 +629,27 @@
     4,
     4,
     0,
-    2,
     0,
-    0
+    0,
+    1
    ]
   ],
   "batting_totals": [
    38,
-   35,
-   6,
-   12,
-   2,
-   6
+   31,
+   4,
+   9,
+   3,
+   5
   ],
   "footnote_totals": [
-   1,
+   2,
    0,
-   0,
+   2,
    0
   ],
   "footnotes": [
    [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
-    0,
-    0,
-    0,
-    0
-   ],
-   [
     1,
     0,
     0,
@@ -687,7 +670,7 @@
    [
     0,
     0,
-    0,
+    1,
     0
    ],
    [
@@ -700,6 +683,18 @@
     0,
     0,
     0,
+    0
+   ],
+   [
+    1,
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    0,
+    1,
     0
    ],
    [
@@ -715,61 +710,62 @@
     0
    ]
   ],
-  "left_on_base": 8,
+  "left_on_base": 7,
   "line_score": {
    "defense_by_inning": [
     1,
     0,
+    4,
     0,
     0,
     0,
-    2,
     0,
-    0,
+    1,
     0
    ],
-   "defense_errors": 1,
-   "defense_hits": 6,
-   "defense_runs": 3,
+   "defense_errors": 0,
+   "defense_hits": 8,
+   "defense_runs": 6,
    "offense_by_inning": [
     0,
     0,
+    2,
+    0,
     0,
     2,
-    4,
     0,
     0,
     0
    ],
-   "offense_errors": 4,
-   "offense_hits": 12,
-   "offense_runs": 6
+   "offense_errors": 3,
+   "offense_hits": 9,
+   "offense_runs": 4
   },
   "pitching": [
    [
-    12,
-    6,
-    2,
-    2,
-    1,
-    4
+    21,
+    8,
+    4,
+    4,
+    3,
+    3
    ],
    [
-    12,
     6,
-    4,
-    4,
     1,
+    0,
+    0,
+    0,
     2
    ]
   ],
   "pitching_totals": [
-   24,
-   12,
-   6,
-   6,
-   2,
-   6
+   27,
+   9,
+   4,
+   4,
+   3,
+   5
   ]
  }
 }
