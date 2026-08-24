@@ -36,8 +36,18 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = ROOT / "tools" / "dev_server.py"
-READY_TIMEOUT_MS = 120_000
-"""Long enough for a cold chromium on a slow runner, short enough to fail rather than hang a job."""
+READY_TIMEOUT_MS = 900_000
+"""Long enough for a cold chromium on a slow runner, short enough to fail rather than hang a job.
+
+⚠⚠ **Raised from 120s on 2026-08-23, because it fired on a suite that was passing.** E1 added tests
+and the run crossed two minutes on this laptop; the runner then reported *the browser suite never
+finished* with an empty console — which reads exactly like a module that failed to load, and sent the
+diagnosis in the wrong direction until the page was opened by hand and found to be **1 failed, 282
+passed**.
+
+⚠️ **A timeout that fires on a healthy run is worse than a long one**, because its message names a
+different fault. The suite grows; this is sized for a slow CI runner with room, not for the current
+count, so it does not need raising again every time a test is added."""
 
 
 def free_port() -> int:
@@ -124,11 +134,37 @@ def main() -> int:
                     "window.__results !== undefined || window.__fatal !== undefined",
                     timeout=READY_TIMEOUT_MS,
                 )
-            except Exception:  # noqa: BLE001
+            except Exception:
                 trouble = True
                 print("the browser suite never finished — no window.__results after "
                       f"{READY_TIMEOUT_MS // 1000}s. The console said:")
                 print("\n".join(console) or "  (nothing)")
+                # ⚠️⚠️ **Where it stopped, because *it did not finish* names no test.** On 2026-08-23
+                # this reported a silent timeout on a suite that ran to completion in an ordinary
+                # browser, and with an empty console the message reads exactly like a module that
+                # failed to load — which sent the diagnosis in the wrong direction for an hour. The
+                # page renders a line per test; the last of them is the one that hung, and printing it
+                # is the difference between a diagnosis and a bisect.
+                # ⚠⚠ **Every one of these is guarded, because a wedged page makes `page.evaluate` block
+                # with no timeout of its own.** The first version was not, and on a page whose JavaScript
+                # thread never yielded the *reporter* hung -- so a fifteen-minute timeout produced no
+                # output at all and looked like a run that was still going. **An instrument that can hang
+                # on the failure it exists to describe is worse than no instrument**, because it removes
+                # the timeout's own signal.
+                for what, expression in (
+                    ("still running", "window.__running"),
+                    (
+                        "rendered, last first",
+                        (
+                            "document.body.innerText.split(String.fromCharCode(10))"
+                            ".map(s => s.trim()).filter(Boolean).slice(-6).reverse()"
+                        ),
+                    ),
+                ):
+                    try:
+                        print(f"  {what}: {page.evaluate(expression, timeout=10_000)}")
+                    except Exception:
+                        print(f"  {what}: the page did not answer, so its JavaScript thread is blocked")
                 return 1
 
             if page.evaluate("window.__results === undefined"):

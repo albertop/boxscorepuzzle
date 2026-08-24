@@ -30,7 +30,30 @@ from urllib.parse import quote
 ROOT = Path(__file__).resolve().parents[1] / "serve"
 BOARD = "/ui/phone/play.html"
 LANDING = "/ui/phone/index.html"
+TODAY = "/ui/phone/today.html"
 PORT = 8137
+
+REDIRECTS = {
+    # ⚠️ `/` opens the LANDING page, not the board, and that changed on 2026-08-20. Every visit lands
+    # there (`docs/serve-flow.md` §1) because the archive, the streak and the subscription live on it.
+    "/": LANDING,
+    # C6's second half. `/today` is a page that reads the pointer and replaces itself with `/p/<id>`.
+    "/today": TODAY,
+    # ⚠️ **`/p` goes to `/today` now, not straight to a board.** It was the handset shortcut to
+    # `play.html`, and a bare board with no id in the path has no puzzle to load since E1. Sending it
+    # through `/today` keeps the shortcut and makes it honest — one tap, today's board.
+    "/p": "/today",
+    "/p/": "/today",
+}
+"""Every address that answers with a redirect. **Declared once so a test can drive all of them.**"""
+
+BOARD_PATH = "/p/"
+"""The canonical board prefix (C6). `/p/<id>` serves the board page and the id stays in the path."""
+
+TEST_PATH = "/t/"
+"""`/t/<mode>` — today's board with a development mode. ⚠️ One rule rather than a list of modes:
+`serve/ui/phone/testmode.js` owns which exist, this forwards whatever it is given, and an unknown one
+lands on a page that ignores it. A list here would be a second copy of that decision."""
 
 
 class NoCache(SimpleHTTPRequestHandler):
@@ -47,43 +70,59 @@ class NoCache(SimpleHTTPRequestHandler):
         self.send_header("Expires", "0")
         super().end_headers()
 
+    protocol_version = "HTTP/1.1"
+    """⚠⚠ **Keep-alive, and HTTP/1.0 without it hung the headless browser suite.**
+
+    `BaseHTTPRequestHandler` defaults to 1.0, so every response closed its connection and every fetch
+    opened a new one. An ordinary browser hides that behind its cache; the headless suite caches nothing
+    and made a fresh TCP connection for each of several hundred requests, and somewhere past the last
+    test the next one simply never completed. **It moved when tests were added or removed**, which is
+    the signature of a limit rather than a defect in any one test -- and it cost an afternoon of
+    bisecting because it looked like whichever test happened to be standing on the line.
+
+    ⚠️ **`Content-Length` is mandatory on every response now**, including the redirects below: under
+    1.1 a client keeps the connection open waiting for a body it was not told the length of.
+    `SimpleHTTPRequestHandler` already sends one for files.
+    """
+
+    def _redirect(self, where: str) -> None:
+        self.send_response(HTTPStatus.FOUND)
+        self.send_header("Location", where)
+        # ⚠️ Zero, said out loud. Under HTTP/1.1 a bodyless response with no length is a connection the
+        # client holds open forever -- the same hang this class was just fixed for, one layer up.
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
     def do_GET(self) -> None:
-        # ⚠⚠ **Short addresses, because typing a URL on a phone is the actual cost.** The board lives at
-        # `/ui/phone/index.html` and the development modes hang off `?test=`, which is fine to type on a
-        # laptop and miserable on a handset — and the whole point of the test mode is checking a change
-        # on the device it was designed for.
+        # ⚠⚠ **Short addresses, because typing a URL on a phone is the actual cost.** The pages live
+        # under `/ui/phone/`, which is fine to type on a laptop and miserable on a handset — and the
+        # whole point of the test mode is checking a change on the device it was designed for.
         #
-        # ⚠️ **`/` opens the LANDING page, not the board, and that changed on 2026-08-20.** Every visit
-        # lands there (`docs/serve-flow.md` §1) because the archive, the streak and the subscription
-        # live on it — a player routed past it would never meet any of them. `/p` is the short way
-        # straight to a board for someone who is working on the board.
+        # ⚠️⚠️ **These are the routes F has to write again, in nginx, and nothing checks that the two
+        # agree.** `REDIRECTS` and the board rewrite below are the whole set; an nginx server block is a
+        # second implementation of them and the project's oldest defect is two places that should say
+        # the same thing and do not. `forge/tests/test_dev_server_routes.py` asserts *this* side against
+        # the declaration — it cannot see the other one. **F must copy from the declaration rather than
+        # from memory**, and this paragraph is here so F finds the problem rather than rediscovering it.
         #
-        # `/t/<mode>` still goes straight to the board with that mode: it exists for checking a change
-        # on a handset, and routing a development mode through the landing page would add a tap to
-        # every single check.
-        #
-        # ⚠️ **One rule rather than a list of modes.** `serve/ui/phone/testmode.js` owns which modes
-        # exist; this forwards whatever it is given, and an unknown one lands on a page that ignores it.
-        # A list here would be a second copy of that decision, and the two would drift.
-        #
-        # ⚠️ **And this can never reach a player.** It is `tools/`, which deployment does not ship — the
-        # same boundary that keeps this whole server out of production.
-        if self.path == "/":
-            self.send_response(HTTPStatus.FOUND)
-            self.send_header("Location", LANDING)
-            self.end_headers()
+        # ⚠️ **And this server can never reach a player.** It is `tools/`, which deployment does not
+        # ship — the same boundary that keeps `forge/` off the VPS.
+        if self.path in REDIRECTS:
+            self._redirect(REDIRECTS[self.path])
             return
-        if self.path in ("/p", "/p/"):
-            self.send_response(HTTPStatus.FOUND)
-            self.send_header("Location", BOARD)
-            self.end_headers()
+        if self.path.startswith(TEST_PATH):
+            mode = self.path[len(TEST_PATH):].strip("/")
+            # Through `/today`, which then carries the mode into `/p/<id>`. Routing straight to the
+            # board is no longer possible: the board takes its id from the path and this does not know
+            # what today's is — only the pointer does.
+            self._redirect(f"{REDIRECTS['/today']}?test={quote(mode, safe='')}")
             return
-        if self.path.startswith("/t/"):
-            mode = self.path[len("/t/"):].strip("/")
-            self.send_response(HTTPStatus.FOUND)
-            self.send_header("Location", f"{BOARD}?test={quote(mode, safe='')}")
-            self.end_headers()
-            return
+        if self.path.startswith(BOARD_PATH):
+            # ⚠️⚠️ **A rewrite, not a redirect: `/p/<id>` is canonical (C6) and must stay in the bar.**
+            # The page reads its own id from `location.pathname`, so redirecting to `play.html` would
+            # take the id away and leave the loader with nothing to ask for. nginx does this with
+            # `try_files $uri /ui/phone/play.html`; here it is one assignment.
+            self.path = BOARD
 
         # ⚠️ **The validators are dropped before the parent sees them.** `no-store` tells the browser
         # not to keep a copy; it does not stop one it already has from being revalidated, and a 304
