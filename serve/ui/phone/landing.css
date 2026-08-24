@@ -101,19 +101,36 @@ body {
   margin: 20px 0 0;
 }
 
-.landing-play {
+/* ⚠️⚠️ **One rule for both, because they are one button.** `.landing-share` was written as an outline
+   control at its own width — the reasoning being that two filled buttons of equal weight give a player
+   no first move. **On a finished day there is no first move to give**: the puzzle is done, and *read
+   what you built* and *tell somebody* are two things of exactly equal standing. A quieter, narrower
+   Share made the only growth mechanism the product has read as an afterthought.
+
+   ⚠️ **Shared here rather than restated**, and `board.css` records why at length: this look already has
+   four spellings across two stylesheets with nothing checking they agree, and it is the most-repeated
+   defect in this project. A fifth was not going to be added to fix a mismatch caused by the fourth. */
+.landing-play,
+.landing-share {
   display: block;
   margin: 0;
   padding: 15px 12px;
   min-height: 56px;
   box-sizing: border-box;
+  /* ⚠️ An `<a>` and a `<button>` in one rule. The anchor needs the underline removed and the button
+     needs its user-agent border, font and background overridden; neither inherits what the other has,
+     so both sides are spelled and the pair renders identically. */
+  border: 0;
   border-radius: 12px;
   background: var(--header-ground);
   color: var(--header-ink);
+  font-family: inherit;
   font-size: 18px;
   font-weight: 700;
   text-align: center;
   text-decoration: none;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 /* ⚠️⚠️ **The finished day's two controls, side by side, where the single button sits otherwise.**
@@ -126,36 +143,26 @@ body {
   align-items: stretch;
 }
 
-.landing-way-row .landing-play {
-  flex: 1;
-  /* ⚠️ The button centres its own label with `text-align`, and that leaves the label at the top of a
-     stretched box once it is a flex item beside a shorter control. It has to centre both ways here. */
+/* ⚠️⚠️ **Equal halves, and `flex: 1` alone is not enough.** A flex item's base size is its content, so
+   `See the board` — which carries the date on a second line — took more than half the row against a
+   one-word neighbour. `flex-basis: 0` makes the row split by the rule rather than by the labels.
+
+   ⚠️ And `text-align` leaves a label at the top of a stretched box once the item is taller than its
+   content, so both centre vertically as well. */
+.landing-way-row .landing-play,
+.landing-way-row .landing-share {
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-/* ⚠️⚠️ **Same height and same weight as the button beside it, in the outline treatment.** The share is
-   the only growth mechanism the product has (`docs/beta-0.md`), and a quieter or shorter control beside
-   the primary one reads as an afterthought. It is outlined rather than filled because two filled
-   buttons of equal weight give a player no first move. */
+/* ⚠️ Disabled only *during* a send, never before one. If this button is on screen the game is over and
+   the result can always be shared — the reveal's share carries the same rule and the same reason. */
 .landing-share {
-  flex: 0 0 auto;
-  min-height: 56px;
-  padding: 0 18px;
-  box-sizing: border-box;
-  border: 2px solid var(--header-ground);
-  border-radius: 12px;
-  background: var(--paper);
-  color: var(--header-ground);
-  font-family: inherit;
-  font-size: 17px;
-  font-weight: 700;
   cursor: pointer;
 }
 
-/* ⚠️ Disabled only *during* a send, never before one. If this button is on screen the game is over and
-   the result can always be shared — the reveal's share carries the same rule and the same reason. */
 .landing-share:disabled {
   opacity: 0.55;
   cursor: default;
