@@ -19,7 +19,27 @@ import { BATTING_COLUMNS, FOOTNOTE_COLUMNS, PITCHING_COLUMNS, PRINTED_BATTING, P
 
 export class PackageError extends Error {}
 
-const READABLE = [5];
+/**
+ * Retrosheet's game id: `WS1191306130` — home club, date, and the game's number that day.
+ *
+ * ⚠️ **The trailing digit is not decoration.** `0` is a game played alone; `1` and `2` are the halves
+ * of a doubleheader. Accepting an id without it would produce a link to whichever game Baseball
+ * Reference has first, which for a fifth of the published boards is **the other game** — a boxscore
+ * that contradicts the one the player just rebuilt.
+ */
+function retrosheetId(raw, where) {
+  if (typeof raw !== "string" || !/^[A-Z0-9]{3}\d{8}[012]$/.test(raw)) {
+    fail(`${where} ${JSON.stringify(raw)}, expected a Retrosheet game id like "WS1191306130"`);
+  }
+  return raw;
+}
+
+const READABLE = [6];
+// ⚠️ **6, because the reveal gained the game's own id.** Version 5's reveal names both clubs and the
+// date, which is everything the Baseball Reference link needs except the trailing digit that separates
+// the two halves of a doubleheader — and **29 of 150 published boards are doubleheaders**. A version-5
+// file cannot say which game it is, so it is not a version-6 file with a field missing: it is one whose
+// reveal cannot answer the question the reveal is for.
 // ⚠️ **5, because the reveal became a boxscore and version 4 cannot carry one.** Its `reveal` held the
 // names of the rows the board drew, so the finished screen could only redraw the board the player had
 // just filled in with names attached. A printed boxscore has both clubs, runs batted in, and the
@@ -373,6 +393,14 @@ function reveal(raw, board) {
     // board. A controlled rejection at the boundary is what `reveal()` promises; an exception at the
     // payoff is the opposite of it.
     playedOn: isoDate(raw.played_on, "reveal.played_on"),
+    // ⚠️⚠️ **Checked for shape, not merely for being a string.** It becomes a URL the player is invited
+    // to follow at the one moment they have finished, so a malformed id is a 404 handed over as the
+    // payoff. `text()` would accept `"yesterday"` exactly as `playedOn` used to — the defect one line
+    // up, which reached `renderReveal` and threw on the success path.
+    //
+    // The shape is Retrosheet's: three characters for the **home** club, `YYYYMMDD`, and a trailing
+    // `0`, `1` or `2`. The digit is the whole reason this field exists.
+    gameId: retrosheetId(raw.game_id, "reveal.game_id"),
     // ⚠️ **Validated even though nothing reads it.** (v36-P3-25) `raw.card ?? ""` accepted an object,
     // an array, anything — and this function's own header tells the story of `raw.reveal` one field
     // up, where a pass-through incubated until something rendered `undefined` as a heading. A field

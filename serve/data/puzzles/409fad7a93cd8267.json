@@ -530,6 +530,7 @@
   },
   "card": "",
   "defense_team": "CHA",
+  "game_id": "WS1191306130",
   "offense_team": "WS1",
   "pitcher_names": [
    "Ed Walsh",
@@ -537,8 +538,8 @@
   ],
   "played_on": "1913-06-13"
  },
- "schema": 5,
- "signature": "06c4d1d15486bf8861c6fcaaebf371508c55b2814831de07d3a75542853386c50391c8843f78ccd1fccf3fa9c086a8e0f3d8b605e5980f836005c9a8a0646b00",
+ "schema": 6,
+ "signature": "86749f0d527ef634eafb1d709cb53e7ced6e9cf31ba631cf72a749fc322a61de9d1428ed96080f7505f9ffa58c5ea68211b748ef717b0f2911c1a6144aa1ef0a",
  "slot_references": [
   "1a",
   "1b",

@@ -81,7 +81,7 @@ from boxscore_forge.publication_key import publication_key  # noqa: E402
 # ⚠️ **Two lessons, and the second is the useful one.** A suppression does not survive a tool that
 # rewrites the line it sits on. And **re-run the linter after `--fix`, never before**: the run that said
 # *all checks passed* was describing the file as it was, and the fix is what broke it.
-from boxscore_package.format import Package  # noqa: E402
+from boxscore_package.format import SCHEMA_VERSION, Package  # noqa: E402
 from boxscore_package.format import write as write_package  # noqa: E402
 from boxscore_package.signing import sign_manifest  # noqa: E402
 
@@ -678,6 +678,20 @@ def republish(key: Ed25519PrivateKey) -> None:
 
 
 ADMISSIBILITY = ("innings", "account", "disposition")
+
+ADDED_BY_SCHEMA_6 = ("game_id",)
+"""What schema 6 adds to `reveal`, named so `restamp` can tell an addition from a different board.
+
+⚠️⚠️ **Without this the restamp refuses all 150.** `_refuse_a_different_board` compares field by field
+and treats any difference as a finding about determinism — correctly, because writing over a package
+that came back different would turn a re-signing pass into an unlogged regeneration of the artefact §21
+calls irreproducible. **A schema addition is the one difference that is expected**, so it is named here
+rather than the check being loosened.
+
+⚠️ It is a tuple and not a boolean for the same reason `ADMISSIBILITY` is: the next schema adds its own
+fields, and a check that asked *is the schema different* would wave through a board that changed for
+some other reason at the same time.
+"""
 """The facts `produce()` records so the population can be audited from disk (`docs/excluded-games.md`).
 Named once, because `restamp()` has to subtract exactly this set to compare an old package with a new
 one and a second spelling of it would compare the wrong thing."""
@@ -711,10 +725,17 @@ def restamp(key: Ed25519PrivateKey) -> None:
     for entry in calendar:
         path = inventory / entry.assigned / f"{entry.puzzle_id}.json"
         document = json.loads(path.read_text(encoding="utf-8"))
-        if all(fact in document.get("metadata", {}) for fact in ADMISSIBILITY):
+        # ⚠️⚠️ **Two reasons to be stale, and the schema one was missing.** This asked only whether the
+        # admissibility facts were recorded, so once they were, the pass reported `0 of 150` and
+        # returned — **a re-signing tool that could never be used again.** A package written under an
+        # older schema is exactly as stale as one written before the facts existed: the reader in
+        # `serve` refuses it, so it is a board that cannot be played.
+        recorded = all(fact in document.get("metadata", {}) for fact in ADMISSIBILITY)
+        current = document.get("schema") == SCHEMA_VERSION
+        if recorded and current:
             continue
         stale.append((entry, path, document))
-    _say(f"{len(stale)} of {len(calendar)} packages carry no admissibility metadata")
+    _say(f"{len(stale)} of {len(calendar)} packages are missing facts or written under an older schema")
     if not stale:
         return
 
@@ -748,7 +769,7 @@ def restamp(key: Ed25519PrivateKey) -> None:
         done += 1
         if done % 25 == 0:
             _say(f"  {done} of {len(stale)}")
-    _say(f"restamped {done} packages, every one identical to what it replaced")
+    _say(f"restamped {done} packages, every one identical to what it replaced but for the schema's additions")
     _say(f"  attempts by outcome: {dict(counts)}")
     audit(read(CALENDAR))
 
@@ -783,10 +804,19 @@ def _refuse_a_different_board(entry: Entry, before: dict[str, object], after: di
     """
     old_metadata = _metadata(before)
     new_metadata = {name: value for name, value in _metadata(after).items() if name not in ADMISSIBILITY}
+    # ⚠️ The rebuilt reveal minus what schema 6 adds, so an addition is not read as a different board.
+    # Everything else in the block is still compared, including the printed boxscore.
+    trimmed = dict(after)
+    reveal = trimmed.get("reveal")
+    if isinstance(reveal, dict):
+        trimmed["reveal"] = {name: value for name, value in reveal.items() if name not in ADDED_BY_SCHEMA_6}
     differing = sorted(
         name
-        for name in set(before) | set(after)
-        if name not in ("signature", "metadata") and before.get(name) != after.get(name)
+        # ⚠️ `schema` joins `signature` and `metadata` in the exclusions **because bumping it is the
+        # point of the pass**. It is not unchecked: `write_package` stamps `SCHEMA_VERSION` and the
+        # reader refuses anything else, so a wrong value cannot reach disk in the first place.
+        for name in set(before) | set(trimmed)
+        if name not in ("signature", "metadata", "schema") and before.get(name) != trimmed.get(name)
     )
     if old_metadata != new_metadata:
         differing.append("metadata")

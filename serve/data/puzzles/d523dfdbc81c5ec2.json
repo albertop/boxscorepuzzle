@@ -490,14 +490,15 @@
   },
   "card": "",
   "defense_team": "WS1",
+  "game_id": "WS1191305301",
   "offense_team": "BOS",
   "pitcher_names": [
    "Bob Groom"
   ],
   "played_on": "1913-05-30"
  },
- "schema": 5,
- "signature": "b0ffbdf25368ce45bba3ba0e9ba9c0b66d7001af62dbecbb6d184a7fdc437fc78d008578d551a27b1fab872fa5091cd6e41b6ea0f6d25f87653919ad66c0f706",
+ "schema": 6,
+ "signature": "82ca43e6af5c8461081d73dac8aaa22aeba9510f46a8828369a44ae134dfdac567a77ea5f8699d69d06d87fd31257e0ddeba66c9ae1fa8949bac170d2d072609",
  "slot_references": [
   "1",
   "2",

@@ -843,6 +843,7 @@ td.label.substitute { padding-left: 14px; }
 }
 
 .reveal-close,
+.reveal-reference,
 .reveal-share {
   flex: 1;
   min-height: 50px;
@@ -875,11 +876,23 @@ td.label.substitute { padding-left: 14px; }
   color: var(--header-ink);
 }
 
-/* ⚠️ Not yet wired to anything, and it says so. The mark and the label dim together because the icon
-   is drawn in `currentColor`; a full-strength icon over faded text is the tell of a button that was
-   disabled by editing one rule. */
-.reveal-share:disabled {
-  opacity: 0.45;
+/* ⚠️⚠️ **There is no `:disabled` rule for this button, and its absence is the decision.** It had one
+   while the share was drawn and inert. **The state cannot occur now**: the reveal is only shown on a
+   finished game and a finished game is always shareable, so a dim treatment would describe something
+   the product has no way to reach — and would be there for somebody to reach for. `renderReveal`
+   throws when it is given no action rather than rendering a quieter screen.
+
+   ⚠️ Re-entry while the image builds is a flag in `finish.js`, not the attribute: a button that greys
+   out for a second with no explanation reads as broken. */
+
+/* ⚠️ **An `<a>` drawn as a button, so the two at the foot read as one row.** `display: flex` with the
+   centring is what a `<button>` gets from the user agent and an anchor does not; without it the label
+   sits at the top left of a 50px box. */
+.reveal-reference {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .reveal-share svg {

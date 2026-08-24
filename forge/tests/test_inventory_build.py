@@ -27,6 +27,7 @@ from types import ModuleType, SimpleNamespace
 import pytest
 
 from boxscore_forge.calendar import CalendarError, void
+from boxscore_package.format import SCHEMA_VERSION
 
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 _TODAY = date(2026, 9, 1)
@@ -97,11 +98,26 @@ def _stub(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, 
     # ⚠⚠ **An admissible package, because `audit()` now reads these back.** A stub writing `{}` would
     # make every board in every test look like one produced before the facts were recorded, and the
     # honest reading of that is a refusal -- so the stub has to write what `produce()` writes.
+    #
+    # ⚠️⚠️ **And it fell behind anyway, one field later.** `schema` was missing here when the format
+    # moved to 6, so `restamp` read every stubbed board as written under an older schema and tried to
+    # rebuild boards that were never stale. **The comment above predicted this exact failure and did
+    # not prevent it** -- a stub that mirrors a writer is two places holding one shape, and the stub is
+    # the half nobody edits when the writer changes.
+    #
+    # ⚠️ `SCHEMA_VERSION` from the format, never the number: spelling it here is how it falls behind
+    # the next time.
     monkeypatch.setattr(
         builder,
         "write_package",
         lambda path, package: path.write_text(
-            json.dumps({"puzzle_id": package.puzzle_id, "metadata": {"target_stalls": 8, **_FACTS}}),
+            json.dumps(
+                {
+                    "puzzle_id": package.puzzle_id,
+                    "schema": SCHEMA_VERSION,
+                    "metadata": {"target_stalls": 8, **_FACTS},
+                }
+            ),
             encoding="utf-8",
         ),
     )

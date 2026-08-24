@@ -113,6 +113,10 @@ const en = {
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
   "reveal.close": "Back to the board",
+  // ⚠️ **The destination is named, not the act.** *See the full game* would describe what any link
+  // does; a reader deciding whether to leave the page wants to know where to. §29 delegates the
+  // narrative to whoever already has it, and this is the name of whoever that is.
+  "reveal.reference": "Baseball Reference",
   // ⚠️ **Live since G.** It was drawn and inert for weeks so the shape of the finished screen would be
   // the shape it keeps — the reveal is where a player decides whether to show anyone, and discovering
   // that decision late would have moved every other control. What it does now is `share-send.js`.

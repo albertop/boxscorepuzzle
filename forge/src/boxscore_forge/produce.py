@@ -63,6 +63,9 @@ def reveal_for(loaded: Loaded) -> Reveal:
         offense_team=loaded.offense_team,
         defense_team=loaded.defense_team,
         played_on=f"{loaded.game_id[3:7]}-{loaded.game_id[7:9]}-{loaded.game_id[9:11]}",
+        # ⚠️ The id itself from schema 6. `played_on` above is derived from it rather than the other way
+        # round, so the two cannot disagree about the date of the same game.
+        game_id=loaded.game_id,
         # ⚠️ **From the loader and never assembled here.** The printed sheet restates the board's own
         # numbers for the half they share, and `check_reveal_agrees` refuses a package where the two
         # disagree — so a second assembly here would be a second definition of the boxscore with a

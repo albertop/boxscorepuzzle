@@ -1,6 +1,6 @@
 # Puzzle package, schema version 2
 
-⚠️ **Superseded by schema 3, and kept as the record of its own version rather than as a description of today — `docs/package-format-v5.md` is what ships.** Its present tense is the tense of the day it was written. Statements like *`serve` does not exist* and *nothing has been published* were **true then and are false now**, and they are what the decision was taken against. Rewriting it would destroy the reason and leave the conclusion.
+⚠️ **Superseded by schema 3, and kept as the record of its own version rather than as a description of today — `docs/package-format-v6.md` is what ships.** Its present tense is the tense of the day it was written. Statements like *`serve` does not exist* and *nothing has been published* were **true then and are false now**, and they are what the decision was taken against. Rewriting it would destroy the reason and leave the conclusion.
 
 
 **Version 1 is not amended.** It is append-only by contract, and slot references are not an addition:

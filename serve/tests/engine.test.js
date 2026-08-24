@@ -2896,7 +2896,7 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
     const game = createGame(puzzle);
     const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
     for (const name of game.blanks()) game.enter(name, answers.get(name));
-    return { puzzle, panel: renderReveal(puzzle, game.finish()) };
+    return { puzzle, panel: renderReveal(puzzle, game.finish(), { onShare: async () => {} }) };
   };
 
   /** The clubs in printing order — visitor first, which is what a line score and a boxscore both use. */
@@ -3139,7 +3139,7 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
     for (const name of blanks) game.enter(name, answers.get(name));
     equal(game.check().state, "solved");
     const record = game.finish();
-    const panel = renderReveal(puzzle, record);
+    const panel = renderReveal(puzzle, record, { onShare: async () => {} });
 
     equal(record.errors, 3, "the event record lost the mistakes");
     assert(!panel.querySelector(".reveal-errors"), "the reveal shows a mistake count");
@@ -4856,5 +4856,68 @@ suite("The share: what leaves the device, and what must not", () => {
       raised = error;
     }
     assert(raised instanceof TypeError, "a genuine failure was swallowed as a cancellation");
+  });
+});
+
+
+suite("The reveal's share button is never disabled, because the state cannot occur", () => {
+  const puzzle = readPackage(packages[0].raw);
+
+  const finished = () => {
+    const game = createGame(puzzle);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+    return game.finish();
+  };
+
+  test("⚠️⚠️ the button is live the moment the panel exists", async () => {
+    // **If this panel is on screen the game is finished, and a finished game can always be shared.**
+    // The button was drawn and `disabled` for weeks while there was nothing behind it; what retires
+    // that is not that the feature arrived, it is that there is no state left where the reveal exists
+    // and sharing is impossible.
+    const { renderReveal } = await import("../ui/phone/finish.js");
+    const panel = renderReveal(puzzle, finished(), { onShare: async () => {} });
+
+    equal(panel.querySelector(".reveal-share").disabled, false, "the share button rendered disabled");
+  });
+
+  test("⚠️⚠️ a caller with no action is refused rather than given a quieter screen", async () => {
+    // A dead button that looks deliberate hides a bug in the caller. **The absence of a check must not
+    // read as the presence of a passing one** -- so this throws by name instead of degrading.
+    const { renderReveal } = await import("../ui/phone/finish.js");
+
+    throws(() => renderReveal(puzzle, finished()), "needs onShare");
+    throws(() => renderReveal(puzzle, finished(), { onShare: "not a function" }), "needs onShare");
+  });
+
+  test("⚠️ a second press while the first is still building is ignored, and nothing greys out", async () => {
+    // The guard is a flag rather than the `disabled` attribute: a button that greys out for a second
+    // with no explanation reads as broken, and on the clipboard path the player would watch it die and
+    // come back for no visible reason.
+    const { renderReveal } = await import("../ui/phone/finish.js");
+    let started = 0;
+    let release = () => {};
+    const held = new Promise((resolve) => {
+      release = resolve;
+    });
+    const panel = renderReveal(puzzle, finished(), {
+      onShare: async () => {
+        started += 1;
+        await held;
+      },
+    });
+    const button = panel.querySelector(".reveal-share");
+
+    button.click();
+    button.click();
+    equal(started, 1, "a second press started a second share");
+    equal(button.disabled, false, "the button greyed out while sharing");
+
+    release();
+    await held;
+    // One more turn so the `finally` runs before the last press is judged.
+    await Promise.resolve();
+    button.click();
+    equal(started, 2, "the button did not come back after the first share finished");
   });
 });

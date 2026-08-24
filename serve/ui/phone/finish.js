@@ -80,7 +80,15 @@ export function checkBoard(game) {
  * ⚠️ **No aged-paper texture and no newsprint ground.** At 375px there is no room for decoration, and a
  * textured background lowers contrast exactly where the player wants to read names.
  */
-export function renderReveal(puzzle, record, { onShare = null } = {}) {
+export function renderReveal(puzzle, record, { onShare } = {}) {
+  // ⚠️⚠️ **Required, and a missing one is an error rather than a quieter screen.** If this panel is on
+  // screen the game is finished, and a finished game can always be shared — **there is no state where
+  // the reveal exists and sharing is impossible.** So a caller without an action is a bug in the
+  // caller, and rendering a dead button instead of saying so hides it behind something that looks
+  // deliberate. The absence of a check must not read as the presence of a passing one.
+  if (typeof onShare !== "function") {
+    throw new TypeError("renderReveal needs onShare: the reveal is only shown on a finished game");
+  }
   const reveal = puzzle.reveal;
   const panel = document.createElement("div");
   panel.className = "reveal";
@@ -200,40 +208,56 @@ export function renderReveal(puzzle, record, { onShare = null } = {}) {
   close.className = "reveal-close";
   close.textContent = text("reveal.close");
 
-  // ⚠️⚠️ **Live since G.** It was `disabled` for weeks with a comment saying a control that looks
-  // pressable and does nothing is worse than one plainly not ready — that was right then and the
-  // reason it is gone is that the thing behind it exists, not that the argument changed.
+  // ⚠️⚠️ **Live since G, and it is never `disabled`.** It was drawn and disabled for weeks while there
+  // was nothing behind it, with a comment arguing that a control which looks pressable and does nothing
+  // is worse than one plainly not ready. That was right then. **What retires it is not that the feature
+  // arrived — it is that the state cannot occur:** this panel is only shown on a finished game, and a
+  // finished game is always shareable.
   //
-  // ⚠️ **Disabled while a share is in flight, and re-enabled in a `finally`.** Building the image
-  // fetches three stylesheets and three faces; a second press during that starts a second build and,
-  // on the native path, a second sheet. A failure must still give the button back or the player is
-  // left with a dead control and no way to retry.
+  // ⚠️ **Re-entry is guarded by a flag, not by the `disabled` attribute.** Building the image fetches
+  // three stylesheets and three faces, and a second press during that would start a second build and,
+  // on the native path, a second sheet. But a button that greys out for a second with no explanation
+  // reads as broken, and on the fallback path the player would watch it die and come back for no
+  // visible reason. The guard is invisible and the control stays live.
   const share = document.createElement("button");
   share.type = "button";
   share.className = "reveal-share";
   // ⚠️ The icon is decorative and the label carries the meaning, so it is hidden from the accessibility
   // tree — a screen reader announcing "image, Share" reads the same thing twice.
   share.append(shareIcon(), document.createTextNode(text("reveal.share")));
-  // ⚠️ **No handler and no enabled button when the caller supplies no action.** A second interface, or
-  // a test that renders the reveal on its own, gets the control it had before rather than one that
-  // throws on the first press.
-  share.disabled = !onShare;
-  if (onShare) {
-    share.addEventListener("click", async () => {
-      share.disabled = true;
-      try {
-        await onShare();
-      } finally {
-        share.disabled = false;
-      }
-    });
-  }
+  let sharing = false;
+  share.addEventListener("click", async () => {
+    // ⚠️ A second press while the first is still building is ignored, not queued and not refused
+    // visibly. Nothing about the button changes, because nothing about what it offers has changed.
+    if (sharing) return;
+    sharing = true;
+    try {
+      await onShare();
+    } finally {
+      sharing = false;
+    }
+  });
 
-  // ⚠️ **The share goes under the verdict; only the way back is at the foot.** A row of two at the
-  // bottom is what this used to be, and `.reveal-close` is on its own now — see the note on
-  // `.reveal-actions`, whose equal-halves rule was written for a row that no longer exists.
+  // ⚠️⚠️ **A link, not a button, and that is not a style choice.** It leaves the site: a middle click,
+  // a long press and *open in new tab* all have to work, and every one of them is something a browser
+  // gives an `<a href>` for free and nothing gives a `<button>` at all. Drawn to match `close` so the
+  // pair reads as a row.
+  //
+  // ⚠️ **`rel="noopener"` with `target="_blank"`.** Without it the opened page gets a handle on this
+  // one through `window.opener` and can navigate it — a page the player left could replace the game
+  // behind them.
+  const reference = document.createElement("a");
+  reference.className = "reveal-reference";
+  reference.href = referenceUrl(reveal.gameId);
+  reference.target = "_blank";
+  reference.rel = "noopener noreferrer";
+  reference.textContent = text("reveal.reference");
+
+  // ⚠️ **The share goes under the verdict; the foot carries the two ways out.** The share was here,
+  // beside `Back to the board`, and moving it left this row for what it should have held all along:
+  // the way back to the board and the way on to the game itself.
   verdict.append(share);
-  actions.append(close);
+  actions.append(close, reference);
   sheet.append(actions);
   // ⚠️ **Built here, wired by the shell.** This used to call `panel.remove()` itself, which closes the
   // panel and nothing else — it cannot restore the focus the shell moved, cannot un-inert what the
@@ -241,6 +265,27 @@ export function renderReveal(puzzle, record, { onShare = null } = {}) {
   // `dismiss()` in `shell.js`; v34-P2-01.
 
   return panel;
+}
+
+/**
+ * Baseball Reference's page for this exact game.
+ *
+ * ⚠️⚠️ **Built from the id and never from the date and the clubs**, which is why schema 6 carries it.
+ * The path is `/boxes/<home club>/<game id>.shtml`, and the id ends in the game's number that day —
+ * `0` alone, `1` and `2` for the halves of a doubleheader. **29 of the 150 published boards are
+ * doubleheaders**, so an id assembled from teams and date would send a fifth of players to the other
+ * game: a boxscore that contradicts the one they just rebuilt, offered as the reward for rebuilding it.
+ *
+ * ⚠️ **`gameId[0..3]` is the HOME club.** Not the offence — `offenseIsHome` says which side batted, and
+ * reading the first three characters as the offence is how four early packages claimed a lineup for a
+ * team that never played for it.
+ *
+ * ⚠️ No validation here: `package.js` refuses an id that is not Retrosheet-shaped at the boundary, so
+ * a check in this function would be a second place enforcing one rule — and the one that runs later,
+ * where a failure lands on the finished screen instead of on the load.
+ */
+function referenceUrl(gameId) {
+  return `https://www.baseball-reference.com/boxes/${gameId.slice(0, 3)}/${gameId}.shtml`;
 }
 
 /**

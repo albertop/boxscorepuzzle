@@ -8,7 +8,7 @@ A daily puzzle where the player reconstructs the boxscore of a real Major League
 
 **Player flow: `docs/serve-flow.md`. Read it with the brief.** The brief says how the engine is shaped; this says **what the game does** — the landing page, what happens on an error, why there are no hints, what the clock counts and when it is visible, what persists and where, the reveal at the end, and what gets measured. It closes the §36 items that had been open for months rather than deciding beside them. ⚠️ **Its §9 is superseded** — the SQLite decision was overturned on 2026-08-22 and the section is now the record of it, not the direction.
 
-**Package format: `docs/package-format-v5.md`, and read it before changing anything either tree
+**Package format: `docs/package-format-v6.md`, and read it before changing anything either tree
 serialises.** ⚠⚠ **It is the only contract between `forge` and `serve`**, which share no code and no
 deployment cycle (§33) — a signed package is the one thing that crosses. `forge/tests/verify/test_schema_document.py`
 checks it against the code field by field, **keyed off `SCHEMA_VERSION` rather than a typed number**, so

@@ -107,6 +107,16 @@ def _printed_from(
     )
 
 
+GAME_ID = f"BBB{PLAYED_ON.replace('-', '')}0"
+"""The fixture's Retrosheet id, built from `PLAYED_ON` so the two cannot disagree.
+
+⚠️ `BBB` is the **defence** here, because `reveal_for`'s default board has the home side pitching —
+`game_id[:3]` is the home club and reading it as the offence is the mistake schema 6's own docstring
+warns about. The trailing `0` is a game played alone; the doubleheader case is covered by a vector in
+`package-vectors.json` rather than by moving the fixture off the ordinary shape.
+"""
+
+
 def reveal_for(
     solution: Board,
     *,
@@ -124,6 +134,10 @@ def reveal_for(
         offense_team=offense,
         defense_team=defense,
         played_on=PLAYED_ON,
+        # ⚠️ Derived from `PLAYED_ON` and the home club rather than written out, so a fixture cannot
+        # carry a date and an id that disagree — which is the shape the real producer avoids by
+        # deriving `played_on` from the id and not the other way round.
+        game_id=GAME_ID,
         boxscore=_printed_from(solution, labels, pitcher_labels, (batter_names, pitcher_names), (offense, defense)),
     )
 

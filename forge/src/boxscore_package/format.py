@@ -35,7 +35,7 @@ from typing import Any, Final, Self
 
 from boxscore_domain import MAX_INNINGS
 
-SCHEMA_VERSION: Final = 5
+SCHEMA_VERSION: Final = 6
 """What this code writes.
 
 ⚠️ **Version 5 exists because the reveal became a boxscore instead of a legend.** Version 4's
@@ -677,6 +677,28 @@ class Reveal:
     offense_team: str
     defense_team: str
     played_on: str
+    game_id: str
+    """Retrosheet's own id for the game. **Required from schema 6, for the Baseball Reference link.**
+
+    ⚠️⚠️ **In `reveal` and never in `metadata`, and that distinction is the whole of §7.**
+    `LEAKING_METADATA` strips `game_id` from metadata because metadata travels beside an opaque puzzle
+    id whose entire purpose is that nothing names the teams or the date. **The reveal is the opposite
+    kind of block: it *is* the answer**, and it already carries both clubs and the date. Putting the id
+    here adds one fact to a block that exists to give the game away; putting it in metadata would
+    contradict the reason the puzzle id is opaque.
+
+    ⚠️⚠️ **The game number is why this exists, and it is not derivable.** The id is the home club, the
+    date, and a trailing `0`, `1` or `2`. Teams and date are already in this block; the digit is not.
+    **29 of the 150 published boards are doubleheaders** — a link built by assuming `0` sends a fifth of
+    players to the other game of the same day, showing a boxscore that contradicts the one they just
+    rebuilt. **That is worse than no link**, which is why the field was added rather than the digit
+    guessed.
+
+    ⚠️ `game_id[:3]` is the **home** club, which is what the Baseball Reference path needs. It is not
+    the offence: `offense_is_home` says which side batted, and reading this as the offence is how four
+    of the first six packages claimed a lineup for a team it never played for.
+    """
+
     boxscore: PrintedBoxscore
     """The complete printed sheet, both clubs. **Required from schema 5.**
 
@@ -698,6 +720,7 @@ class Reveal:
             "offense_team": self.offense_team,
             "defense_team": self.defense_team,
             "played_on": self.played_on,
+            "game_id": self.game_id,
             "boxscore": self.boxscore.as_json(),
             "card": self.card,
         }
@@ -713,6 +736,10 @@ class Reveal:
             offense_team=_text(raw.get("offense_team"), "reveal.offense_team"),
             defense_team=_text(raw.get("defense_team"), "reveal.defense_team"),
             played_on=_text(raw.get("played_on"), "reveal.played_on"),
+            # ⚠️ `_required`, not `.get(..., "")`. A default would let a package with no id parse, and
+            # the client would then draw a link to `/boxes//.shtml` — a 404 handed to the player at the
+            # moment they finished. **The absence of the evidence must not read as the evidence.**
+            game_id=_text(_required(raw, "game_id"), "reveal.game_id"),
             boxscore=PrintedBoxscore.from_json(_required(raw, "boxscore")),
             card=_text(raw.get("card", ""), "reveal.card"),
         )

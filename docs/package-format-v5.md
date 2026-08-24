@@ -1,3 +1,12 @@
+> ## ⚠️⚠️ HISTORY. This version is no longer produced or read.
+>
+> **`docs/package-format-v6.md` is the contract.** Schema 6 adds `reveal.game_id`, and this reader
+> refuses a version-6 file exactly as that one refuses a version-5 file.
+>
+> ⚠️ **It is kept unedited on purpose.** A document tested against code that no longer produces it has
+> to be changed to stay green, which is how history gets rewritten to match the present. Nothing here
+> is checked against anything, and nothing here should be corrected.
+
 # Puzzle package, schema version 5
 
 **Version 4 is not amended.** A version is replaced, never extended — the fourth time that rule has
