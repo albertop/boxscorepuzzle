@@ -41,10 +41,19 @@ htmlcov/
 Thumbs.db
 desktop.ini
 
-# The hand-solve answer key. Committing it is harmless to the repository and fatal to the
-# experiment — the fifty boards only measure anything if they are met blind.
-discovery/hand-solve/key.csv
-discovery/hand-solve/ceiling-key.csv
+# The hand-solve answer keys. Committing one is harmless to the repository and fatal to the
+# experiment — the boards only measure anything if they are met blind.
+#
+# ⚠️⚠️ A GLOB, NOT A LIST, and that is the whole point. This was three hand-maintained lines and
+# `fifty-key.csv` was never added to them, so the pack built in August sat untracked and unignored
+# for weeks: one `git add -A` away from being spoiled permanently. Two places that should say the
+# same thing saying different things, with nothing checking they agree — this project's signature
+# defect, in the file that exists to prevent one class of it.
+#
+# ⚠️ `*key.csv` rather than `*-key.csv` so the unprefixed `key.csv` is covered by the same rule.
+# `forge/tests/test_hand_solve_keys_are_ignored.py` asserts the class, so a fourth key added next
+# year is protected by having the name rather than by somebody remembering this line.
+discovery/hand-solve/*key.csv
 discovery/**/run.log
 
 # The forge private key, if it is ever written inside the tree by accident. It belongs in the home

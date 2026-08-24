@@ -63,3 +63,33 @@ different animal from one that stalled everywhere. Note the cell if you can.
 
 **A board solved by guessing counts as underivable even if the guess was right.** That is the failure
 §22 calls the worst, and it does not announce itself — it feels like solving.
+
+---
+
+## ⚠️⚠️ What is tracked here, what is ignored, and why they are opposite
+
+Two kinds of artefact live in this directory and the rule for each is the reverse of the other. Both
+are enforced by `forge/tests/test_hand_solve_keys_are_ignored.py` rather than by this paragraph.
+
+| | | |
+|---|---|---|
+| `*key.csv` | **ignored, never committed** | it maps board → game, and the boards only measure anything if they are met blind |
+| `pack-a-difficulty.csv` | **tracked, must stay tracked** | it is the answers *out*, not the answers *in* |
+
+**The results file is safe to track precisely because the key is not.** Its columns are
+`board,how_hard,solved,had_to_guess` — a board number and three verdicts. Without the key it names no
+game, no season, no team and no cell, so committing it discloses nothing that would spoil a future
+solve.
+
+⚠️⚠️ **And it must not be swept up by a broader rule.** `.gitignore` names `discovery/hand-solve/*key.csv`
+and not `*.csv`, and the difference is load-bearing: sixteen boards solved by a person is the one thing
+in this directory that **no process can regenerate**. The packs rebuild from the inventory, the PDFs
+rebuild from the packs, the keys rebuild with them — the verdicts exist once. `CLAUDE.md` §33 names the
+laptop as the single point of failure and the repository as the backup, and this is the same argument
+that keeps `docs/calendar.md` in Git while every generated package stays out of it.
+
+⚠️ **It sat untracked and unignored for a day** and was found by comparing two `git status` outputs by
+eye. The ignore rule for the keys was three hand-maintained lines at the time and `fifty-key.csv` had
+never been added to them, so the same afternoon produced both halves of the failure: a key one
+`git add -A` from being disclosed, and a finding one disk failure from being lost. Neither was
+detectable by anything the repository ran.

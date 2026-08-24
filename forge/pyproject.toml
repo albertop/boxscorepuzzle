@@ -87,6 +87,9 @@ select = [
 "tests/test_nginx_serves_what_is_declared.py" = ["S101", "PLR2004", "S603", "S607", "ARG002"]
 "tests/test_the_proxy_reaches_keep.py" = ["S101", "PLR2004", "S603", "S607", "S310", "PLR0913", "PLR0915"]
 "tests/test_the_images_build.py" = ["S101", "PLR2004", "S603", "S607", "S310", "PLR0913"]   # asserts and magic numbers are fine in tests
+# Same reason, one step smaller: `git` by name, a fixed argument list and no shell. An absolute
+# path here would be a second copy of a fact the operating system already holds.
+"tests/test_hand_solve_keys_are_ignored.py" = ["S101", "PLR2004", "S603", "S607"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
