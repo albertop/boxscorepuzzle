@@ -1374,6 +1374,28 @@ production the two agree for most players most of the time and disagree across t
 the window `yesterday.json` exists for, so it is exactly when somebody is looking.
 ---
 
+## 2026-08-24 — ✔ The nginx test was flaky in CI on its first run, and the probe asked the wrong question
+
+**`ConnectionResetError: [Errno 104] Connection reset by peer`**, on the first request, on a server that
+was seconds from being fine. The local hook had just passed.
+
+**The readiness loop waited for `socket.create_connection` to succeed.** That succeeds the moment
+**Docker's** port forwarder binds — before nginx inside the container is accepting anything. The
+forwarder accepts the TCP connection and then resets it.
+
+⚠⚠ **It asked *is the port open* when the question is *does nginx answer*.** That is the near-neighbour
+shape, in code written the same day as two other instances of it, by somebody who had just written the
+rule down twice. **Knowing the rule does not apply it** — the same sentence this file already carries
+about the fourth regex instance.
+
+⚠️ **And it is exactly what CI buys.** A warm image on the laptop starts in a blink; a cold runner does
+not. `docs/ci.md`: what CI still buys is the thing the laptop cannot test.
+
+**Fixed by making the probe a real HTTP request**, retried on `OSError` and `HTTPException`, with the
+budget raised to 60s for a cold pull. ⚠️ The failure message says *never answered an HTTP request*
+rather than *never started*, because those are different facts.
+---
+
 ## Where everything stands
 
 **40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**

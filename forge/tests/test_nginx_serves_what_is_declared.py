@@ -119,15 +119,24 @@ def _serve(conf: Path) -> Iterator[int]:
         timeout=180,
     )
     try:
-        deadline = time.monotonic() + 30
+        # ⚠⚠ **A real request, and a socket connecting is not one.** The first version waited for
+        # `create_connection` to succeed — which it does the moment **Docker's** port forwarder binds,
+        # before nginx inside the container is accepting anything. The forwarder then accepts the TCP
+        # connection and resets it, so the first case failed with `ConnectionResetError` on a server that
+        # was seconds from being fine.
+        #
+        # ⚠️ **It passed on the laptop and failed in CI**, because a warm image starts in a blink and a
+        # cold runner does not. That is what CI buys and it is the second time today an instrument
+        # answered the near neighbour of its question: *is the port open* instead of *does nginx answer*.
+        deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             try:
-                with closing(socket.create_connection(("127.0.0.1", port), timeout=0.5)):
-                    break
-            except OSError:
-                time.sleep(0.1)
+                get(port, "/")
+                break
+            except (OSError, http.client.HTTPException):
+                time.sleep(0.2)
         else:
-            message = f"nginx never answered on {port}"
+            message = f"nginx never answered an HTTP request on {port} within 60s"
             raise AssertionError(message)
         yield port
     finally:
