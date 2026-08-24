@@ -451,13 +451,18 @@ at all**: it would have produced boards against a retired axis, or failed its ow
   board per game. Footnote line given. A final ranking sheet.
 - ⚠️ **If rung 12 does not yield four boards, that is the finding** — reported, never quietly
   substituted with a lower target.
-- ⬜⬜ **It did not build on 2026-08-23, and that is the finding.** Nine boards of sixteen, and the cause
-  is arithmetic rather than luck: `UNCERTIFIED_SHARE = 1/3` caps the pack at five uncertified boards and
-  **the whole pool holds four certified ones**, so the ceiling is eleven. The share was sized against
-  *layer 3b certifies 91% of the hardest boards* — a **chain**-axis figure. On stall rungs the shipping
-  inventory is **71 of 75 uncertified**. `docs/reviews/todo.md` carries the numbers and the larger
-  result inside them: layer 3b's own question — *do nearly all passing boards survive the weak solver* —
-  now has an answer, and it is no. **Nothing was lowered; the share is the operator's** (§7).
+- ✔ **Built 2026-08-23: sixteen boards, four at each rung, 0 of 16 certified by 3b, 12 with a
+  substitution and 10 with a live footnote.** `audit()` passed every quota it asserts — count, per-rung
+  quota, era allowance, one board per game, both tutorial traces, and a non-monotonic page order — and
+  `check_pdf.py` confirms no page names a difficulty.
+- ⚠️⚠️ **It refused itself first, at nine of sixteen, and the first explanation of the nine was wrong in
+  a way the number confirmed.** Two caps existed: `UNCERTIFIED_SHARE` and a per-rung `wanted // 2`.
+  Raising the share alone stalls at eleven. The operator removed the certification filter entirely —
+  against a pool that is 5 certified of 75, the quota **created** the confound it was written to prevent,
+  by making rung 8 the certified rung. `docs/reviews/todo.md` carries the arithmetic and the shape.
+- ⬜ **The larger result inside it:** layer 3b's own question — *do nearly all passing boards survive the
+  weak solver* — now has an answer, and it is no, 5 of 75. It is a statement about the width of the
+  bracket, not about the boards: `check_derivability` proves every shipped board needs no search.
 - ⚠️ **Not built at the end of a long run.** It gets a fresh session: the instrument is a person, the key
   is sealed, and a board printed wrong is an afternoon spent on the wrong thing.
 

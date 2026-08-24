@@ -1042,6 +1042,89 @@ nothing anywhere says a calendar may not repeat a club. A player reaching four r
 1913 across five months is the thing to have an opinion about, and it is the operator's.
 ---
 
+## 2026-08-23 — ✔ Pack A built: sixteen boards, and the cap that actually held it was not the one blamed
+
+**The operator removed the certification quota.** `choose()` fills each rung to quota without
+consulting `certified`; `report()` prints the count so the mix is *observed* rather than assumed.
+
+| | |
+|---|---|
+| boards | **16**, four at each of rungs 5, 8, 11, 12 |
+| certified by 3b | **0 of 16** (pool: 5 of 75) |
+| pre-1950 | 0, against an allowance of 2 |
+| substitution / live footnote | 12 / 10 — both traces the tutorial needs |
+
+### ⚠️⚠️ A false explanation the outcome appeared to validate
+
+The pack came out at nine of sixteen and the first account of it — mine, and repeated to the operator
+— was *five uncertified allowed plus four certified available equals nine*. **The pool holds five
+certified, not four.** The arithmetic was wrong and it produced the right number, which is why nobody
+looked further.
+
+**There were two caps.** `UNCERTIFIED_SHARE` was the overall one; a per-rung `ceiling_here = wanted // 2`
+sat inside `choose()` and allowed two uncertified boards per rung whatever the share said. Raising the
+share alone stalls at **eleven** — measured at 0.50, 0.67, 0.75, 0.90 and 1.00, all eleven, the same
+rungs every time. From 0.50 upward the per-rung ceiling is what binds.
+
+⚠️ **This is a third relative of the shapes already in `CLAUDE.md`** — an instrument measuring its own
+output, and a metric pointed at the wrong thing. This one is neither: **the reasoning was wrong and its
+prediction matched.** No amount of re-reading the result distinguishes it, because the result agrees.
+Only enumerating the mechanisms separately — both caps, and the actual certified count — separated them.
+**A number that comes out right is not evidence that the reason is right.**
+
+### Why the quota had to go rather than move
+
+It protected against *uncertified* and *hard* becoming one variable. Against this population it
+**creates** that confound: 5 certified in the pool, **4 of them at rung 8**, so at 1/3 the pack came out
+rung 8 = 3 certified, rung 11 = 1, rung 12 = 0 — rung 8 is the certified rung. Unfiltered, every rung is
+uncertified, certification stops varying, and there is nothing left to confound. It is also the mix that
+ships, which is what B3 has to sample.
+
+Two audit assertions went with it — the ~1/3 share and the refusal of a wholly-uncertified rung — and
+three tests now assert the opposite, including that a **wholly certified** pack still passes. A check
+that only accepted today's mix would be asserting the pool's composition under the name of a property of
+the pack.
+
+### ⚠️ `check_pdf.py` had been refusing every pack on a stale column name
+
+It required a `stalls` column in the key; `write_key` renamed it `stall_target` when the generator left
+the chain axis. So it exited with *the key has no 'stalls' column* — **true about a column that no longer
+exists**, from a checker whose own docstring is about failing closed.
+
+**Failing closed on a stale expectation is still not running the check.** The leak scan never executed,
+and a pack could have gone to print unexamined because the instrument was complaining about a name. Fixed
+to `stall_target`; it now reads 16 streams, 16 board pages, and confirms every page carries the three
+required items and names no difficulty.
+
+⚠️ The two places that must agree are `write_key`'s header and that tuple, and **nothing asserts they
+do**. Recorded, not solved.
+
+### Verified by looking at it
+
+Board 01 and its solution were rendered and read by eye, not asserted about. The board is legible: slot
+column with `2a`/`2b`/`8a`/`8b`, twelve-inning line score, footnote line, formula strip, survey box, and
+no stall count, teams, date or game id anywhere. The solution's arithmetic checks: PA 61 = Outs 36 +
+Runs 10 + LOB 15, and H/BB/SO/R cross 18/10/10/10 against the pitching half.
+
+⬜ **One observation for the operator:** on paper the footnote line is small grey text under the line
+score. §6 requires live footnotes to be *visually prominent*, and that rule is about the phone board
+rather than this sheet — but the pack is where a person first meets a live footnote, and nine rows in ten
+have every term at zero.
+
+### Where the artefacts are
+
+`discovery/hand-solve/` — `boards.pdf`, `solutions.pdf`, `key.csv`, `recording-sheet.csv`,
+`provenance.json`.
+
+⚠️⚠️ **`key.csv` is the only one not in Git**, by `.gitignore` line 42, alongside `ceiling-key.csv`. It
+holds the stall target per board and it is the whole point of the experiment that it stays shut until the
+sheets are done. **It exists only on the laptop**, which §33 names a single point of failure — losing it
+loses the pack's calibration, though not the boards.
+
+The `fifty-` artefacts were not touched: `fifty-boards.pdf`, `fifty-solutions.pdf`, `fifty-key.csv`,
+`fifty-recording-sheet.csv` and `fifty-pack-run.log` still carry their August 18 and 20 timestamps.
+---
+
 ## Where everything stands
 
 **40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**

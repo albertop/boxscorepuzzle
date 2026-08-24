@@ -85,7 +85,28 @@ reached, and a pack missing a rung cannot say anything about that rung.
 """
 
 WANTED = 16
-UNCERTIFIED_SHARE = 1 / 3
+
+# ⚠️⚠️ **`UNCERTIFIED_SHARE = 1/3` stood here and is removed, 2026-08-23. The reason it existed is
+# also the reason it had to go.**
+#
+# It capped how many layer-3b-uncertified boards a pack could hold, and the danger it named is real:
+# if the uncertified boards all live at the hard end, filling the hard rung with them makes
+# **uncertified and hard the same variable**, and any difference the solver feels is difficulty
+# wearing certification's clothes.
+#
+# It was sized against *3b certifies 100% of the easiest boards and 91% of the hardest* — measured on
+# the **chain** axis, which the generator abandoned. Measured over the shipping inventory at stall
+# rungs: **5 certified of 75**, and **4 of those 5 sit at rung 8.**
+#
+# **So against this population the quota creates the confound it was written to prevent.** At 1/3 the
+# pack came out rung 8 = 3 certified, rung 11 = 1, rung 12 = 0 — *rung 8 is the certified rung and the
+# others are not*, which is precisely the variable being confounded, relocated. Unfiltered, 15 of 16
+# boards are uncertified: certification stops varying, and there is nothing left to confound.
+#
+# ⚠️ **The count is reported, never assumed.** `report()` prints how many certified came out, so a
+# future reader knows the mix was *observed* rather than chosen. Removing a filter silently is how a
+# later reader concludes a property was designed.
+
 PRE_1950_ALLOWANCE = 2
 """§5's pre-1950 preference, applied so the pack looks like what will actually ship."""
 
@@ -260,7 +281,6 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
 
     One board per game, so no solver sees the same lineup twice and recognises it.
     """
-    wanted_uncertified = round(WANTED * UNCERTIFIED_SHARE)
     chosen: list[Candidate] = []
     used_games: set[str] = set()
     pre_1950 = [0]
@@ -280,42 +300,32 @@ def choose(pool: list[Candidate], rng: random.Random) -> list[Candidate]:
         rng.shuffle(ordered)
         return ordered
 
-    # ⚠️ Uncertified boards are capped **per rung**, not only overall. The reason is a confound: if the
-    # uncertified candidates all live at the hard end, filling the hardest rung with them makes
-    # *uncertified* and *hard* the same variable, and any difference the solver feels is difficulty.
+    # ⚠️⚠️ **Each rung is filled to quota and certification is not consulted.** Decided 2026-08-23; the
+    # constant that stood at the top of this file carries the argument.
     #
-    # ⚠️⚠️ **The population this was sized against no longer exists, and the figure behind it is from a
-    # retired axis.** It read *layer 3b certifies 100% of the easiest boards and 91% of the hardest* —
-    # measured at **chain** 11 and 13, and the generator stopped targeting chain. Measured over the
-    # shipping inventory on 2026-08-23, at stall rungs: **71 of 75 boards are uncertified**, 100% at
-    # rung 5, 75% at rung 8, 96% at rung 11, 100% at rung 12.
+    # ⚠️⚠️ **And there were TWO caps, which is the part nobody could see without measuring.** The
+    # overall `UNCERTIFIED_SHARE` was blamed for the pack coming out at nine of sixteen. It was not the
+    # binding one: a per-rung `ceiling_here = wanted // 2` stood right here and allowed **two**
+    # uncertified boards per rung whatever the share said. Raising the share alone stalls at **eleven**
+    # — measured at 0.50, 0.67, 0.75, 0.90 and 1.00, all eleven, the same rungs every time — because
+    # from 0.50 upward the per-rung ceiling is what holds.
     #
-    # **So the cap now binds in the opposite direction and stops the pack being built at all.**
-    # `UNCERTIFIED_SHARE` caps the pack at five uncertified boards where four certified ones exist in
-    # the whole pool, which is a ceiling of nine against a `WANTED` of sixteen — and nine is exactly
-    # what the run produced. ⚠️ It also inverts the instrument's purpose: a pack that is two thirds
-    # certified samples a 5% corner of what ships.
-    #
-    # ⬜ **The share is the operator's** (§7: a number shaping the experiment is not invented here), and
-    # `docs/reviews/todo.md` carries the finding. **Nothing is lowered to make the pack build.**
+    # ⚠️⚠️ **A false explanation that the outcome appears to validate.** The first account of the nine
+    # was *five uncertified allowed plus four certified available equals nine*. The pool holds **five**
+    # certified, not four, so the arithmetic was wrong — and it produced the right number, which is why
+    # it was believed. `CLAUDE.md` records instruments that measure their own output and metrics
+    # pointed at the wrong thing; this is a third relative: **a wrong cause whose prediction happens to
+    # match, which no amount of re-reading the result can detect.** Only enumerating the mechanisms —
+    # both caps, and the actual certified count — separated them. *A number that comes out right is not
+    # evidence that the reason is right.*
     for target in sorted(TARGETS, reverse=True):
         wanted = QUOTAS[target]
-        ceiling_here = wanted // 2
         at_target = len([item for item in chosen if item.target == target])
-        for prefer_uncertified in (True, False):
-            for candidate in shuffled([item for item in pool if item.target == target]):
-                if at_target >= wanted:
-                    break
-                if candidate.certified == prefer_uncertified:
-                    continue
-                if prefer_uncertified:
-                    if len([c for c in chosen if not c.certified]) >= wanted_uncertified:
-                        break
-                    here = len([c for c in chosen if c.target == target and not c.certified])
-                    if here >= ceiling_here:
-                        break
-                if take(candidate):
-                    at_target += 1
+        for candidate in shuffled([item for item in pool if item.target == target]):
+            if at_target >= wanted:
+                break
+            if take(candidate):
+                at_target += 1
 
     # The two cases the tutorial has to teach must appear somewhere in the pack. If one is missing a
     # board is *swapped* rather than appended: the replacement takes the place of one at the same
@@ -443,7 +453,6 @@ def audit(chosen: list[Candidate]) -> None:
     invalidates that experiment silently. It has happened once already: weighted sampling produced
     zero boards at the easiest rung and only the printed summary showed it.
     """
-    wanted_uncertified = round(WANTED * UNCERTIFIED_SHARE)
     problems: list[str] = []
     if len(chosen) != WANTED:
         problems.append(f"{len(chosen)} boards, wanted {WANTED}")
@@ -451,9 +460,6 @@ def audit(chosen: list[Candidate]) -> None:
         at_target = sum(1 for item in chosen if item.target == target)
         if at_target != quota:
             problems.append(f"stall rung {target} has {at_target} boards against a quota of {quota}")
-    uncertified = sum(1 for item in chosen if not item.certified)
-    if abs(uncertified - wanted_uncertified) > 2:
-        problems.append(f"{uncertified} uncertified boards, wanted about {wanted_uncertified}")
     pre_1950 = sum(1 for item in chosen if item.season < 1950)
     if pre_1950 > PRE_1950_ALLOWANCE:
         problems.append(f"{pre_1950} pre-1950 boards against an allowance of {PRE_1950_ALLOWANCE}")
@@ -464,17 +470,20 @@ def audit(chosen: list[Candidate]) -> None:
         problems.append("no board carries a suffixed label, and the tutorial has to teach one")
     if not any(item.has_live_footnote for item in chosen):
         problems.append("no board carries a live footnote, and the tutorial has to teach one")
-    # ⚠️ Also folded in — ⬜ **and its figure is the retired chain-axis one; see `choose()`.** The
-    # observed share over the shipping inventory is 5% certified, not 91%. The tolerance below is what
-    # made the discrepancy legible rather than fatal, and it does not make the pack buildable: the
-    # arithmetic ceiling is eleven boards against sixteen. As written: layer 3b certified every easy
-    # board and 91% of the hard ones, so the
-    # uncertified candidates all live at the hard end. A rung entirely uncertified makes
-    # "uncertified" and "hard" the same variable, and any difference the solver feels is difficulty.
-    by_rung = {target: sum(1 for c in chosen if c.target == target and not c.certified) for target in TARGETS}
-    for target, count in by_rung.items():
-        if count and count == QUOTAS[target]:
-            problems.append(f"stall rung {target} is entirely uncertified, so nothing at that rung compares")
+    # ⚠️⚠️ **The two certification assertions are gone with the quota that made them meaningful, and
+    # this paragraph is why rather than a blank space.**
+    #
+    # One required the pack to hold roughly a third uncertified boards; the other refused a rung that
+    # was *entirely* uncertified, because that makes "uncertified" and "hard" one variable. Both were
+    # correct about a population where certification varied. It does not vary any more: **5 of 75
+    # shipped boards are certified**, so a pack drawn without filtering is ~15 of 16 uncertified and
+    # every rung is uncertified — which the second assertion would refuse, and which is now the honest
+    # description of what ships rather than a defect.
+    #
+    # ⚠️ **What replaces them is not another assertion but a printed count.** `report()` states how
+    # many certified came out. There is no target to assert against, and asserting a number nobody
+    # chose would be a check that only says the pool has not changed — dressed as a property of the
+    # pack.
 
     # ⚠️ Folded in from a second `audit()` that had been defined below this one. Python kept the
     # later definition, so the strict uncertified share this function enforces was not running and a
@@ -836,7 +845,8 @@ def report(pool: list[Candidate], calendar_size: int, chosen: list[Candidate]) -
     against a quota of 4* does not say whether the pool held four; the two lines together do, and that
     is the difference between *the pack filtered badly* and *the inventory has no hard boards*.
     """
-    uncertified = sum(1 for candidate in chosen if not candidate.certified)
+    certified = sum(1 for candidate in chosen if candidate.certified)
+    uncertified = len(chosen) - certified
     available: dict[int, int] = {}
     for candidate in pool:
         available[candidate.target] = available.get(candidate.target, 0) + 1
@@ -845,7 +855,15 @@ def report(pool: list[Candidate], calendar_size: int, chosen: list[Candidate]) -
         by_target[candidate.target] = by_target.get(candidate.target, 0) + 1
     print(f"pool: {len(pool)} shipped boards at a target rung, from {calendar_size} calendar entries")
     print(f"pool by stall rung: {dict(sorted(available.items()))}")
-    print(f"chosen: {len(chosen)} boards, {uncertified} of them uncertified by layer 3b")
+    # ⚠️⚠️ **Both halves, and the pool's share beside them.** The certification quota was removed on
+    # 2026-08-23, so this number is **observed rather than chosen** — and a reader who meets a pack that
+    # is 15/16 uncertified must be able to tell that from a pack that was *built* that way. The pool
+    # line says whether the pack's mix is the inventory's mix.
+    in_pool = sum(1 for candidate in pool if candidate.certified)
+    print(
+        f"chosen: {len(chosen)} boards, {certified} certified and {uncertified} uncertified by layer 3b "
+        f"(pool: {in_pool} of {len(pool)} certified) -- not filtered on, reported"
+    )
     print(f"chosen by stall rung: {dict(sorted(by_target.items()))}")
     print(f"pre-1950: {sum(1 for c in chosen if c.season < 1950)} (allowance {PRE_1950_ALLOWANCE})")
     print(f"with a substitution: {sum(1 for c in chosen if c.has_substitution)}")

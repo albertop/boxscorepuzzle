@@ -104,7 +104,18 @@ def check(pdf: Path, key: Path | None) -> None:
             if header is None:
                 problems.append(f"the key {key} is empty, so the ratings cannot be compared")
             else:
-                for column in ("stalls", "board"):
+                # ⚠⚠ **`stall_target`, and this read `stalls` until 2026-08-23.** The key's column was
+                # renamed when the generator moved off the chain axis and this checker was not, so it
+                # refused every pack with *the key has no 'stalls' column* -- a true statement about a
+                # column that no longer exists, from a checker whose own docstring is about failing
+                # closed. **Failing closed on a stale expectation is still not running the check**: the
+                # leak scan below never ran, and a pack could have gone to print unexamined because the
+                # instrument was complaining about a name.
+                #
+                # ⚠️ The two places that must agree are `write_key`'s header and this tuple, and nothing
+                # asserts they do. Recorded rather than solved here: the fix is one name, the shape is
+                # the project's oldest.
+                for column in ("stall_target", "board"):
                     if column not in header:
                         problems.append(f"the key has no {column!r} column, so the ratings cannot be compared")
 

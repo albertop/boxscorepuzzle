@@ -55,15 +55,13 @@ def a_valid_pack() -> list[SimpleNamespace]:
     """`WANTED` boards satisfying every quota, so the failures below differ by one thing each."""
     pack: list[SimpleNamespace] = []
     index = 0
-    uncertified_left = round(WANTED / 3)
     for target, quota in QUOTAS.items():
-        # Spread across rungs, and never a whole rung. Layer 3b's uncertified boards concentrate at
-        # the hard end, and a pack where one rung is entirely uncertified compares that rung against
-        # the rest — difficulty wearing certification's clothes.
-        here = min(uncertified_left, quota // 2)
-        uncertified_left -= here
-        for position in range(quota):
-            pack.append(board(target, index, certified=position >= here))
+        # ⚠️ **Certification is not arranged here any more.** The fixture used to spread uncertified
+        # boards across rungs to satisfy a quota the audit enforced; that quota was removed on
+        # 2026-08-23 and the audit asks nothing about certification, so arranging it would be the
+        # fixture describing a rule that no longer exists.
+        for _position in range(quota):
+            pack.append(board(target, index))
             index += 1
     # Shuffled, because the audit now rejects a pack ordered by chain — an ascending sequence
     # produces an ascending rating whatever the boards are like. A fixture built in rung order was
@@ -75,6 +73,39 @@ def a_valid_pack() -> list[SimpleNamespace]:
 class TestTheAuditPasses:
     def test_a_pack_that_meets_every_quota(self) -> None:
         audit(a_valid_pack())
+
+
+class TestCertificationIsReportedRatherThanRequired:
+    """⚠⚠ **Two assertions were removed here on 2026-08-23 and this is what stands in their place.**
+
+    The audit used to require about a third of the pack uncertified, and to refuse a rung that was
+    *entirely* uncertified. Both were right about a population where certification varied. It does not:
+    **5 of 75 shipped boards are certified**, so an unfiltered pack is ~15 of 16 uncertified and every
+    rung is uncertified — which the second assertion would have refused, and which is the honest
+    description of what ships.
+
+    ⚠️ **Removing an assertion needs a test saying so**, or the next reader cannot tell a rule that
+    was retired from one that was never written. `report()` prints the certified count; nothing asserts
+    a target, because nobody chose one.
+    """
+
+    def test_a_wholly_uncertified_pack_passes(self) -> None:
+        pack = [board(item.target, index, certified=False) for index, item in enumerate(a_valid_pack())]
+
+        audit(pack)
+
+    def test_a_wholly_certified_pack_passes_too(self) -> None:
+        """⚠️ The other direction. A check that only accepted the *current* mix would be asserting the
+        pool's composition under the name of a property of the pack."""
+        pack = [board(item.target, index, certified=True) for index, item in enumerate(a_valid_pack())]
+
+        audit(pack)
+
+    def test_a_rung_that_is_entirely_uncertified_passes(self) -> None:
+        """The exact shape the removed assertion refused."""
+        pack = [board(item.target, index, certified=item.target != 5) for index, item in enumerate(a_valid_pack())]
+
+        audit(pack)
 
 
 class TestTheAuditRejects:
@@ -98,14 +129,6 @@ class TestTheAuditRejects:
         with pytest.raises(SystemExit, match=f"wanted {WANTED}"):
             audit(a_valid_pack()[:-1])
 
-    def test_the_uncertified_share_drifting(self) -> None:
-        # The experiment needs about a third from the set 3b cannot certify. Without them the pack
-        # measures nothing about whether 3b should become a gate.
-        pack = [board(item.target, index, certified=True) for index, item in enumerate(a_valid_pack())]
-
-        with pytest.raises(SystemExit, match="uncertified boards"):
-            audit(pack)
-
     def test_the_era_allowance_exceeded(self) -> None:
         pack = a_valid_pack()
         for item in pack[: PRE_1950_ALLOWANCE + 1]:
@@ -120,16 +143,6 @@ class TestTheAuditRejects:
         pack[1].game_id = pack[0].game_id
 
         with pytest.raises(SystemExit, match="the same game appears twice"):
-            audit(pack)
-
-    def test_a_rung_that_is_entirely_uncertified(self) -> None:
-        # ⚠️ The confound the real pack fell into: layer 3b certifies every easy board and 91% of the
-        # hard ones, so filling the hardest rung first made every uncertified board land at the top rung
-        # — and every board at that rung uncertified. Uncertified and hard would have been the
-        # same variable and the afternoon would have measured difficulty.
-        pack = [board(item.target, index, certified=item.target != 5) for index, item in enumerate(a_valid_pack())]
-
-        with pytest.raises(SystemExit, match="entirely uncertified"):
             audit(pack)
 
     def test_no_board_with_a_suffixed_label(self) -> None:
