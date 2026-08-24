@@ -20,6 +20,7 @@ shape this project keeps closing.
 """
 
 import json
+import re
 import subprocess
 import time
 import urllib.error
@@ -183,3 +184,42 @@ class TestTheDataLayerImage:
             assert found.returncode == 0, f"the healthcheck runs `{executable}`, which the image does not have"
         finally:
             _docker("image", "rm", "-f", image, check=False, timeout=300)
+
+
+class TestTheRotationCanWriteWhatTheSiteServes:
+    """⚠️⚠️ **The uid that writes the published path is spelled in two Dockerfiles, and they must agree.**
+
+    `serve` is nginx over the published tree and only reads it. `publish` is the daily rotation and is
+    its only writer. **Docker takes a new named volume's ownership from the image path it populates it
+    from**, and that path is `serve`'s -- so if the two name different uids, the rotation fails with
+    `PermissionError` the first time it runs, on a deployment that looks completely healthy until then.
+
+    ⚠️ **Found by running the rotation, not by reading either file.** `publish.Dockerfile` said in a
+    comment that the public path was *"mounted writable and owned by this uid"* and nothing made it so.
+    A comment asserting a property nothing establishes is this project's most-recorded defect, and it
+    survived being written by the person who had just written the same warning three files away.
+    """
+
+    def _dockerfile(self, name: str) -> str:
+        return (_ROOT / "deploy" / f"{name}.Dockerfile").read_text(encoding="utf-8")
+
+    def test_publish_runs_as_a_uid_it_states(self) -> None:
+        """⚠️ Assert the subject is there before judging it: a regex over a file that stopped naming a
+        uid would otherwise find nothing and pass."""
+        assert re.search(r"--uid\s+(\d+)\s+publish", self._dockerfile("publish")), (
+            "deploy/publish.Dockerfile no longer creates a user with an explicit uid"
+        )
+
+    def test_serve_hands_the_published_path_to_the_uid_that_writes_it(self) -> None:
+        writer = re.search(r"--uid\s+(\d+)\s+publish", self._dockerfile("publish"))
+        assert writer is not None
+        owner = re.search(r"chown -R (\d+):(\d+) /srv/serve/data/puzzles", self._dockerfile("serve"))
+
+        assert owner is not None, (
+            "deploy/serve.Dockerfile does not chown the published path. A new named volume inherits its "
+            "ownership from this image, so the rotation would be unable to write to it."
+        )
+        assert owner.group(1) == writer.group(1), (
+            f"serve hands the published path to uid {owner.group(1)} and publish runs as "
+            f"{writer.group(1)}. The rotation cannot write, and nothing says so until it runs."
+        )

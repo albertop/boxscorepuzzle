@@ -1,5 +1,44 @@
 # Review backlog
 
+## ⬜ 2026-08-24 - event retention is unbounded, on a Postgres four other sites share
+
+**Raised by the operator while the stack was being deployed, asking whether anything in it grows until
+the disk is full.** Everything in the containers is capped; this is the one thing that is not, and it is
+not in a container.
+
+`docs/keep-api.md`: *Event retention: indefinite because nobody has decided otherwise.* That is a
+recorded non-decision rather than an oversight, and the effect is the same either way -- `events` and
+`shares` grow for ever in `bxcpze_keep`, inside `postgres-postgres-1`, which also carries dglweb,
+sabertables, sixdegrees and revive.
+
+### What is capped, so the open item is not read as wider than it is
+
+| | |
+|---|---|
+| container logs | `json-file`, `max-size 10m`, `max-file 3` -- **30 MB per container**, both services |
+| nginx's own logs | never touch disk: the image links `access.log` to `/dev/stdout` and `error.log` to `/dev/stderr`, so the cap above is the only place they live |
+| proxy cache | there is none. The template configures no `proxy_cache`; the `Cache-Control` headers are instructions to a browser, not a store of ours |
+| temp files | bounded by request size -- nginx's default `client_max_body_size` of 1 MB inside, and the host caps at 5 MB before that |
+| the puzzles volume | the rotation's rule is exactly two packages, today's and yesterday's (`docs/calendar.md`). ⚠️ **Its risk is the opposite one**: a rotation that fails once leaks the archive a day at a time, permanently, which is what the inventory health endpoint asserts against |
+
+### The size, so the decision is not taken blind
+
+**A row is roughly 200 bytes.** Beta 0 is friends and family: 50 players at one game a day is **50 rows a
+day, about 3.6 MB a year.** ⚠️ **This is not a beta 0 problem and should not be treated as one** -- acting
+on it now would be building a retention policy against a number nobody has measured, which §7 forbids.
+
+**It becomes one at paid scale**, and by then it is not a configuration change: §35 requires events to
+reference an **unlinkable** identifier precisely so that deleting an account breaks the link while the
+aggregate percentiles survive. A retention rule interacts with that, and with the archive §9 sells.
+
+### ⚠️ Why it is written down rather than acted on
+
+**The cost of finding this later is that it is found by the shared Postgres filling up**, which takes
+four other sites down with it. The cost of writing it down now is a paragraph. What is owed is a
+decision about retention -- the operator's, alongside the plausible-duration ceiling that is already
+open in this file -- and until then the honest statement is that it grows and nothing trims it.
+
+
 ## ⚠️⚠️ 2026-08-24 - the teardown kept its own list of tables, and the hook is what said so
 
 **`shares` went into `001-initial.sql` and not into the Postgres fixture's `DROP TABLE IF EXISTS

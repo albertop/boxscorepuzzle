@@ -3,11 +3,16 @@
 #   .\tools\create_docker_image.ps1 -Image serve                     asks for the version
 #   .\tools\create_docker_image.ps1 -Image keep -Version 1.2026.1    receives it
 #
-# ⚠️ **One image per run, and the two carry independent version numbers.** `serve` is the client --
-# pages, engine, fonts, nginx config -- and `keep` is the data layer. Most changes touch one of them,
-# and rebuilding the other to bump a shared number is work that changes nothing. The contract between
-# them is two `/api/` routes and a bearer token; it moves rarely, and when it does **both are built and
-# both version numbers change**, which is a decision to take rather than a coupling to enforce here.
+# ⚠️ **One image per run, and the three carry independent version numbers.** `serve` is the client,
+# `keep` is the data layer, and `publish` is the daily rotation. Most changes touch one of them, and
+# rebuilding the others to bump a shared number is work that changes nothing. What `serve` and `keep`
+# share is two `/api/` routes and a bearer token; when that moves, both are built and both versions
+# change -- a decision to take rather than a coupling to enforce here.
+#
+# ⚠️⚠️ **`publish`'s version is spelled in `deploy/ofelia/rotation.ini` as well**, because ofelia does
+# not interpolate environment variables. A deploy that loads a new one and does not edit that line keeps
+# running the old rotation, successfully and silently. It is the one thing in this deployment that can
+# fall behind without any signal.
 #
 # ⚠️⚠️ THIS RUNS ON THE LAPTOP AND THAT IS THE POINT, not a convenience.
 #
@@ -20,7 +25,7 @@
 
 param(
     [Parameter(Mandatory = $true)]
-    [ValidateSet("serve", "keep")]
+    [ValidateSet("serve", "keep", "publish")]
     [string]$Image,
 
     [string]$Version
@@ -58,8 +63,11 @@ $dockerImagesDir = Join-Path $rootDir "docker_images"
 
 # name, dockerfile, build context -- each Dockerfile documents its own pair in its header.
 $builds = @{
-    serve = @{ Dockerfile = "deploy\serve.Dockerfile"; Context = $rootDir }
-    keep  = @{ Dockerfile = "deploy\keep.Dockerfile";  Context = (Join-Path $rootDir "keep") }
+    serve   = @{ Dockerfile = "deploy\serve.Dockerfile";   Context = $rootDir }
+    keep    = @{ Dockerfile = "deploy\keep.Dockerfile";    Context = (Join-Path $rootDir "keep") }
+    # ⚠️ Built from `publish/`, so this build CANNOT copy `forge/` -- it is not in its context. §33
+    # enforced by the shape of the command rather than by a rule somebody has to remember.
+    publish = @{ Dockerfile = "deploy\publish.Dockerfile"; Context = (Join-Path $rootDir "publish") }
 }
 
 $build = $builds[$Image]
@@ -147,8 +155,9 @@ finally {
 
 # Both load scripts travel with the tars, so one transfer of docker_images/ brings everything the
 # server needs. Their source of truth stays in tools/; these are copies for transport.
-Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_serve_image.sh") -Destination $dockerImagesDir -Force
-Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_keep_image.sh")  -Destination $dockerImagesDir -Force
+Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_serve_image.sh")   -Destination $dockerImagesDir -Force
+Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_keep_image.sh")    -Destination $dockerImagesDir -Force
+Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_publish_image.sh") -Destination $dockerImagesDir -Force
 
 Write-Host ""
 Write-Host "Docker image creation completed successfully!"

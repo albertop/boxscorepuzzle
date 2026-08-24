@@ -166,6 +166,45 @@ services:
 
     networks: [backend]
 
+  # The rotation's scheduler. **F3.**
+  #
+  # ⚠️⚠️ **Its own, not the `dglweb-scheduler` already on this VPS.** That one belongs to dglweb, and
+  # hanging this rotation off it would mean that the day that stack is redeployed or removed **the
+  # puzzle stops changing and nothing says so** -- a coupling between two products that share only a
+  # host. §33's argument about trees, one level up.
+  #
+  # ⚠️ **There is no `publish` service here.** The job creates its own container from
+  # `bxcpze-publish` and deletes it afterwards; a service would be a container that exits by design,
+  # which reads in `docker ps` exactly like one that keeps crashing. `deploy/ofelia/rotation.ini` is
+  # the whole definition.
+  scheduler:
+    # Pinned by digest, the operator's own convention for this image.
+    image: mcuadros/ofelia@sha256:efcbe2c5cf658a25de6443c1462d653f9cc03791d642e01fc6c638a00f97e492
+    container_name: bxcpze-scheduler
+    restart: unless-stopped
+    command: daemon --config=/etc/ofelia/config.ini
+
+    environment:
+      # ⚠️⚠️ **UTC, deliberately, and not the host's zone.** `serving_date()` is UTC-based -- the day
+      # changes at 08:00 UTC -- so writing the schedule in any other clock would mean the schedule and
+      # the thing it triggers are in two zones, and every future reader has to convert one to check the
+      # other. `rotation.ini` carries the reasoning.
+      TZ: UTC
+
+    volumes:
+      # ⚠️⚠️ **Read-only, and it is still the largest privilege in this stack.** Anything that can talk
+      # to the Docker socket can start a container as root on the host. It is here because that is how
+      # ofelia runs a job in another container at all, and it is why this scheduler is a small thing
+      # with one job rather than something with more in it.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /srv/boxscorepuzzle/ofelia/config.ini:/etc/ofelia/config.ini:ro
+
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+    networks: [backend]
+
 networks:
   # ⚠️⚠️ **One network, and it is the VPS's existing `backend`** — the same one dglweb, sabertables,
   # sixdegrees, revive and pgadmin are on, and the one `postgres-postgres-1` is on. `serve` reaches

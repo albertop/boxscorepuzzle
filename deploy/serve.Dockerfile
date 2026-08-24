@@ -68,6 +68,18 @@ COPY deploy/nginx/boxscorepuzzle.conf.template /etc/nginx/templates/default.conf
 # rewritten from `/var/run/nginx.pid` when this image says `/run/nginx.pid` — the substitution matched
 # nothing, **the build succeeded**, and the container died on start. A `sed` that finds nothing is
 # silent and a Dockerfile has no way to notice. The `grep -q` calls turn that into a failed build.
+# ⚠️⚠️ **The published path is owned by the uid that WRITES it, which is not this image's.** The
+# rotation (`deploy/publish.Dockerfile`, uid 10002) is the only writer; nginx only reads, and 755 is
+# enough for that. **Docker takes a new named volume's ownership from the image path it populates it
+# from**, and that path is this one -- so if this image leaves it root-owned, the rotation cannot write
+# and fails with `PermissionError` the first time it runs.
+#
+# ⚠️ **Found by running the rotation, not by reading either file.** `publish.Dockerfile` claimed in a
+# comment that the public path was "mounted writable and owned by this uid" and nothing made it so.
+# `forge/tests/test_the_images_build.py` now asserts the two agree, because a uid spelled in two
+# Dockerfiles is two places encoding one fact.
+RUN chown -R 10002:10002 /srv/serve/data/puzzles
+
 RUN rm -f /etc/nginx/conf.d/default.conf \
  && chown -R nginx:nginx /var/cache/nginx /var/run /etc/nginx/conf.d /etc/nginx/templates \
  && sed -i 's|^user  nginx;|# user directive removed: this image runs as nginx already|' /etc/nginx/nginx.conf \
