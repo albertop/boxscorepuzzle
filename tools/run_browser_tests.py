@@ -21,6 +21,8 @@ exited zero would turn a broken client into a green build.
 import socket
 import subprocess
 import sys
+import threading
+from collections import deque
 from contextlib import closing
 from pathlib import Path
 
@@ -50,6 +52,28 @@ different fault. The suite grows; this is sized for a slow CI runner with room, 
 count, so it does not need raising again every time a test is added."""
 
 
+LOG_LINES_KEPT = 200
+"""How much of the server's log the teardown can show. The failure path prints twenty; the rest is
+headroom for reading a little further back when twenty is not enough."""
+
+
+def _drain(server: "subprocess.Popen[str]", log: "deque[str]") -> None:
+    """Read the server's output forever, so its pipe cannot fill. See the note where the thread starts.
+
+    ⚠️ **Failures here are swallowed on purpose.** This is a diagnostic reader on a daemon thread; an
+    exception raised in it after the process is terminated would print a traceback that belongs to the
+    teardown rather than to the run, on top of whatever the run was actually reporting.
+    """
+    stream = server.stdout
+    if stream is None:  # pragma: no cover - `stdout=PIPE` above guarantees it
+        return
+    try:
+        for line in stream:
+            log.append(line.rstrip())
+    except (ValueError, OSError):  # pragma: no cover - the stream closing under a terminate()
+        return
+
+
 def free_port() -> int:
     """A port the operating system says is free.
 
@@ -62,7 +86,7 @@ def free_port() -> int:
         return int(probe.getsockname()[1])
 
 
-def _stop(server: "subprocess.Popen[str]", *, explain: bool) -> None:
+def _stop(server: "subprocess.Popen[str]", log: "deque[str]", *, explain: bool) -> None:
     """Shut the development server down and, when something went wrong, say what it said.
 
     ⚠️ **The wait used to be a bare `server.wait(timeout=10)` inside the `finally`.** A
@@ -74,13 +98,16 @@ def _stop(server: "subprocess.Popen[str]", *, explain: bool) -> None:
     """
     server.terminate()
     try:
-        leftover = server.communicate(timeout=10)[0]
+        server.wait(timeout=10)
     except subprocess.TimeoutExpired:
         server.kill()
-        leftover = "the development server did not stop; killed"
-    if explain and leftover and leftover.strip():
+        log.append("the development server did not stop; killed")
+    # ⚠️ From the deque the reader thread filled, never from `communicate()`. Reading the pipe here was
+    # the deadlock: it is the one place that cannot help, because by now the run it would have
+    # explained has already failed.
+    if explain and log:
         print("the development server said:")
-        for line in leftover.strip().splitlines()[-20:]:
+        for line in list(log)[-20:]:
             print(f"  {line}")
 
 
@@ -103,7 +130,33 @@ def main() -> int:
         text=True,
         encoding="utf-8",
         errors="replace",
+        bufsize=1,
     )
+    # ⚠️⚠️⚠️ **The pipe is drained continuously, and not draining it was a deadlock that took a day to
+    # find.** The server writes one line per request. A `PIPE` nobody reads fills its operating-system
+    # buffer — 64 KB on Windows, about a thousand of these lines — and the *server* then blocks inside
+    # `write()` on its next request and stops answering. The browser waits forever for a response, the
+    # suite never finishes, and `communicate()` in the teardown reads the pipe only after the run it
+    # just killed.
+    #
+    # **The symptoms were a perfect disguise.** It looked like a defect in whichever test happened to
+    # be running at the thousandth request, so it *moved* when tests were added or removed; it did not
+    # reproduce in an ordinary browser, whose server was writing to a terminal; and every isolated
+    # probe passed, because a hundred requests never fill a buffer. `docs/reviews/todo.md` records the
+    # whole chase, and the wrong conclusion it nearly reached: that the suite needed splitting across
+    # two pages. **That would have moved the ceiling, not raised the floor** — the next thousand
+    # requests would have hit the same wall.
+    #
+    # ⚠️ **Discarding the output is not the fix and was the previous defect** (v36-P3-11): both streams
+    # went to `DEVNULL`, so a stolen port or a crash inside `dev_server.py` presented as a bare
+    # `ERR_CONNECTION_REFUSED` with the one explanation thrown away. Keeping it *and* reading it is
+    # what neither version did.
+    #
+    # ⚠️ A bounded deque rather than a list: the teardown prints the last twenty lines, so an unbounded
+    # one would hold a hundred thousand strings to throw away all but twenty.
+    log: deque[str] = deque(maxlen=LOG_LINES_KEPT)
+    reader = threading.Thread(target=_drain, args=(server, log), daemon=True)
+    reader.start()
     console: list[str] = []
     # ⚠️ Set before every failing exit and read in the `finally`. The server's own log is
     # diagnosis: printing it on a green run is noise, and noise is how a report stops being read.
@@ -190,7 +243,7 @@ def main() -> int:
         trouble = True
         raise
     finally:
-        _stop(server, explain=trouble)
+        _stop(server, log, explain=trouble)
 
     failures = results["failures"]
     for failure in failures:

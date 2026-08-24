@@ -3570,23 +3570,34 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     }
   });
 
-  // ⚠⚠⚠ **A test belongs here and it is not here, and that is a finding rather than an omission.**
-  //
-  // `loadPuzzle` should be driven end to end: an unknown `/p/<id>` refused rather than substituted
-  // (v36-P3-45, which E1 exists to close), the default path loading the board the pointer names, and
-  // `calendarDate` coming off the pointer. It was written, it passes in an ordinary browser, and
-  // **adding it makes the headless run stop finishing** -- at 900 seconds against a forty-second suite,
-  // at whichever test happens to be standing on the line.
-  //
-  // The suite was passing with **no margin**: one extra test of any weight tips it. `docs/reviews/todo.md`
-  // carries what was established -- the previous commit is green headless, the same page is green in a
-  // real browser, and fetches, imports and `loadPuzzle` are all fine in isolation at far higher counts
-  // than the suite uses. **The cause is not known.**
-  //
-  // ⚠️ **So this is a hole in the coverage of the thing E1 was built for**, left visible on purpose
-  // rather than papered over with a weaker test that happens to fit. It goes back when the run has room
-  // -- a second test page is the structural answer, since the runner drives one page and the whole
-  // suite therefore shares one budget.
+  test("⚠️⚠️ the loader names one board, refuses an unknown one, and never computes a date", async () => {
+    // **v36-P3-45, and closing it is what E1 is for.** The loader took an unknown `?p=` and served
+    // `manifest.puzzles[0]` instead — a soft-404: a 200 carrying *a different puzzle as if it were the
+    // one asked for*. With shared links that is a person solving somebody else's board while believing
+    // they solved this one, and **the absence of the requested puzzle reading as the presence of
+    // another** is the shape this project records most often.
+    //
+    // The second assertion is the control: a loader that refused every path would satisfy the first.
+    // The third is C4 and E1.3 — `calendarDate` is the date on the signed pointer, never
+    // `localDate(now)`, which would be *the player's* date wearing the calendar's name.
+    const { loadPuzzle, NoPuzzle, idInPath } = await import("../ui/phone/daily.js");
+    const pointer = await (await fetch("../data/puzzles/today.json", { cache: "no-store" })).json();
+
+    let refused = null;
+    try {
+      await loadPuzzle("/p/deadbeefdeadbeef");
+    } catch (error) {
+      refused = error;
+    }
+    const loaded = await loadPuzzle("/");
+
+    assert(refused instanceof NoPuzzle, `an unknown id gave ${refused?.constructor.name ?? "a board"}`);
+    equal(loaded.id, pointer.puzzle_id, "the default path did not load the board the pointer names");
+    equal(loaded.calendarDate, pointer.date, "the calendar date did not come from the pointer");
+    equal(idInPath(`/p/${pointer.puzzle_id}`), pointer.puzzle_id, "the id was not read out of the path");
+    equal(idInPath("/"), null, "a path that names no puzzle produced one");
+    equal(idInPath("/p/NOTHEX"), null, "a segment that is not an opaque id was accepted");
+  });
 
   test("⚠️⚠️ no source under serve/ computes a calendar date", async () => {
     // **The reason `serve` owes no third `ROLLOVER_OFFSET_HOURS`**, asserted rather than asserted-in-a-

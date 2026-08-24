@@ -18,7 +18,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
-| **E** serving for real | ⬜ **not met** | ✔ **E1b met** — `publish/`, the rotation and the health verdict as a **function**; its endpoint is F3. E1, E2, E3 open |
+| **E** serving for real | ⬜ **not met** | ✔ **E1b and E1 met** — the rotation and the health verdict as a **function** (its endpoint is F3), and the routes over the two public paths. ⬜ **E2 and E3 open**, and both are the server rather than the client |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 

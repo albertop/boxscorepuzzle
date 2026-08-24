@@ -64,7 +64,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **B** the hand-solve gate | ⬜ B1 done, **B2–B4 outstanding** | ⚠⚠ **this is what blocks beta 0** |
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
-| **E** serving for real | ▶ starting, **E1b first** | the routes, the two public paths, the caching contract |
+| **E** serving for real | ▶ **E1b and E1 done, E2 next** | the two public paths and the routes over them; ⬜ the caching contract and nginx |
 | **F** deployment | ⬜ not begun | |
 | **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
 

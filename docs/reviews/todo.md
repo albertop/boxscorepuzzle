@@ -1125,66 +1125,76 @@ The `fifty-` artefacts were not touched: `fifty-boards.pdf`, `fifty-solutions.pd
 `fifty-recording-sheet.csv` and `fifty-pack-run.log` still carry their August 18 and 20 timestamps.
 ---
 
-## 2026-08-23 — ⬜⬜ The browser suite hangs in headless, and it was passing with no margin
+## 2026-08-23 — ✔ The browser suite's headless hang: **a pipe nobody was reading**
 
-**E1 added tests to `serve/tests/engine.test.js` and the headless run stopped finishing.** It passes in
-an ordinary browser — 283 tests, about forty seconds — and times out under Playwright's chromium with
-`window.__results` never set.
+**The runner started the development server with `stdout=subprocess.PIPE` and read it only in the
+teardown.** The server writes one line per request. A pipe nobody drains fills its operating-system
+buffer — 64 KB on Windows, roughly a thousand of those lines — and then the **server** blocks inside
+`write()` on its next request and stops answering. The browser waits forever for a response that the
+server can no longer send.
 
-### What was established, so the next person does not repeat it
+**The suite was making about a thousand requests.** That is the whole of *one test away from silence*:
+the wall was a byte count, and every test added moved the run closer to it.
 
-| tried | result |
-|---|---|
-| the previous commit, headless | **283 passed.** So it is not the runner or the machine |
-| the same page in a real browser, twice, at 375×812 and on `127.0.0.1` | **283 passed**, in seconds |
-| 80 `no-store` fetches and 20 `loadPuzzle` calls, headless, on a fresh page | fine, 500ms |
-| fetching every page and pointer, headless, on a fresh page | fine, single-digit ms |
-| raising the timeout 120s → 300s → **900s** | still stuck, at the same test |
-| reverting `tools/dev_server.py` | still stuck |
-| removing `today.html` / `today.js` | still stuck |
-| `cache: "force-cache"` on the package fetch, removed | still stuck |
-| HTTP/1.1 keep-alive on the dev server | still stuck |
-| **disabling the three new `loadPuzzle` tests** | **283 passed** |
+### Why it disguised itself so well
 
-⚠️⚠️ **The position moves with load and the hang is always on a `fetch` or a dynamic `import`.** Three
-new tests → it stops mid-suite; one → it stops at the *last* test of the *last* suite. That is the
-signature of a budget, not of a defect in any one test — and it means **the suite has been sitting one
-test from silence** and nobody could have known.
+- **The position moved**, so it looked like a defect in whichever test was running at the thousandth
+  request. Three suspects were investigated and cleared in turn.
+- **It did not reproduce in an ordinary browser**, because that server was writing to a terminal.
+- **Every isolated probe passed** — 80 `no-store` fetches, 20 `loadPuzzle` calls, every page and pointer
+  — because a hundred requests never fill a buffer. *The instrument that reproduces a threshold has to
+  cross it.*
+- **Raising the timeout did nothing**, correctly: a deadlock is not slowness. 120s → 300s → 900s.
+- `communicate()` in the teardown is the one place that reads the pipe, and by then the run it would
+  have explained has already failed.
 
-⚠️ **It is a hang, not slowness.** 900 seconds is fifteen minutes against a forty-second run.
+⚠️⚠️ **The near-miss is worth more than the fix.** The structural answer proposed — split the suite
+across two pages, since the runner drives one — **would have worked, and would have been wrong.** Two
+pages make two servers' worth of requests against the same unread pipe: the ceiling moves and the next
+thousand requests find it again, with the same disguise. **A remedy that makes a symptom rarer is the
+hardest kind of wrong answer to detect, because it is confirmed by exactly the evidence that would
+confirm a correct one.**
 
-### What is not known
+### What found it
 
-**What the budget is.** Fetches, imports and `loadPuzzle` are all fine in isolation at far higher counts
-than the suite uses, so it is something about the accumulated page — mounted boards, listeners, storage,
-memory — that only bites under Playwright. Nothing in the console, no page error, no crash.
+**Bisecting by difference, not by suspicion.** A probe was written that ran the *same* suite headless
+and finished. Then the runner's features were added to the probe one at a time — the console handler,
+the `pageerror` handler that calls `page.evaluate` — and it kept finishing. What was left was how the
+two started the server: `DEVNULL` in the probe, `PIPE` in the runner.
 
-### What it cost, and the instrument that was missing
+### The fix, and it is a fix rather than an accommodation
 
-**An afternoon**, most of it spent on the wrong test. The runner said *the browser suite never finished*
-and printed an empty console, which reads exactly like a module that failed to load. Two instruments
-were added while chasing it and both are keepers:
+A daemon thread drains the pipe into a bounded `deque`; the teardown prints from the deque. ⚠️
+**Discarding the output is not the fix and was the previous defect** (v36-P3-11): both streams went to
+`DEVNULL`, so a stolen port or a crash inside `dev_server.py` presented as a bare
+`ERR_CONNECTION_REFUSED` with the one explanation thrown away. **Keeping it *and* reading it is what
+neither version did.**
 
-- **`serve/tests/harness.js` publishes `globalThis.__running`** before each test. The page only appends
-  a suite's lines when the whole suite finishes, so *the last thing rendered* named a suite several
-  tests too early. The one line that names the hang did not exist.
-- **`tools/run_browser_tests.py` prints it, and the last six rendered lines**, on timeout.
+**Proved rather than assumed.** The retired test is back and the real runner reports **281 passed**. A
+temporary suite making **4000 extra requests** — several times the old buffer — was then added and the
+run reported **282 passed**. The ceiling is gone, not higher.
 
-⚠️ **The timeout is 900s now and that is not a fix.** It was 120s and fired on a run that was merely
-slow, which is its own false report; the value is sized for a slow CI runner with room.
+### What it cost, and the instruments that stayed
 
-### ⬜ What is owed
+**An afternoon**, most of it on the wrong test. The runner said *the browser suite never finished* with
+an empty console, which reads exactly like a module that failed to load. Three instruments were built
+while chasing it and all three are keepers:
 
-- **The cause.** Until it is known, any test added to `engine.test.js` may push the run back over.
-- ⚠⚠ **The test E1 was built to have.** `loadPuzzle` driven end to end — an unknown `/p/<id>` refused
-  rather than substituted (v36-P3-45), the default path loading the board the pointer names,
-  `calendarDate` coming off the pointer. **It is written, it passes in a real browser, and it does not
-  fit.** It was withdrawn rather than weakened, and the reason stands where it belongs in
-  `serve/tests/engine.test.js`. **The closure of v36-P3-45 is therefore asserted by nothing**, which is
-  the honest statement and the cost of not knowing the cause.
-- **A second test page** is the obvious structural answer — the runner drives one page today, so the
-  whole suite shares one browsing context and one budget. Splitting it is real work and is not being
-  invented here.
+- **`serve/tests/harness.js` publishes `globalThis.__running`** before each test. A suite's lines are
+  appended to the page only when the whole suite finishes, so *the last thing rendered* named a suite
+  several tests too early.
+- **`tools/run_browser_tests.py` prints it and the last rendered lines** on timeout — each behind its
+  own `page.evaluate` timeout, because the first version was not, and on a wedged page the *reporter*
+  hung. **An instrument that can hang on the failure it exists to describe removes the timeout's own
+  signal.**
+- **The timeout is 900s.** It was 120s and fired on a run that was merely slow, which is its own false
+  report. It is sized for a slow CI runner with room and is not what fixed anything.
+
+### ⚠️ The one thing this does not close
+
+`tools/dev_server.py` still logs a line per request, and nothing bounds how much a *different* consumer
+of that process might buffer. The runner is the only one today. If a second ever starts it, the same
+rule applies and is not enforced anywhere: **a subprocess pipe is drained or it is not created.**
 ---
 
 ## 2026-08-23 — ✔ E1: `/today` and `/p/<id>`, and what it retired
