@@ -51,7 +51,7 @@ stands. **It is the authority on progress; the table below is a pointer, not a s
 
 ---
 
-## Where the work is — last checked **2026-08-23**
+## Where the work is — last checked **2026-08-24**
 
 ⚠️ **The date is detection, not prevention.** This line read *"design complete at the 'what and why'
 level, implementation starting"* long after four groups were built, and a cold session reading it
@@ -61,7 +61,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | | | |
 |---|---|---|
 | **A** inventory and calendar | ✔ complete | the batch, the calendar, the runbook |
-| **B** the hand-solve gate | ⬜ B1 done, **B2–B4 outstanding** | ⚠⚠ **this is what blocks beta 0** |
+| **B** the hand-solve gate | ▶ B1 and B2 done, **B2 answered: the ladder does not order**; **B3's first half passed — 16/16 solved, none guessed**; ⬜ **B3's stratified sample**, ⬜ B4 | ⚠⚠ **still what blocks beta 0** — three strata almost untested |
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |

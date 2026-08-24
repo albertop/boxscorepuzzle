@@ -465,6 +465,21 @@ at all**: it would have produced boards against a retired axis, or failed its ow
   bracket, not about the boards: `check_derivability` proves every shipped board needs no search.
 - ⚠️ **Not built at the end of a long run.** It gets a fresh session: the instrument is a person, the key
   is sealed, and a board printed wrong is an afternoon spent on the wrong thing.
+- ✔✔ **Solved 2026-08-24, all sixteen, and the answer to B2's question is no.** Spearman
+  rho(target stalls, felt difficulty) = **+0.202**, the rung explaining **4.5%** of the variance against a
+  two-tailed 5% critical value of about **0.50** at n=16. The four rung means fit inside 0.50; a single
+  rung spans 3; **every rung contains a board rated 2**, rung 12 included. `docs/reviews/todo.md` carries
+  it in full and **leaves it open**, for the reason below.
+- ⚠️⚠️ **It cannot become *the stall axis does not work*, and the reason was written down before the pack
+  was built.** The rungs were not filled from boards of similar reach, and the packages **do not record
+  the board's ceiling**, so a holdout rung-11 board and a squeezed rung-5 one are indistinguishable after
+  the fact. A confound has no signature in the results. What is established is that **the ladder as built
+  does not order**; what would settle the rest is the ceiling in the metadata.
+- ⚠️ **The sixteenth rating moved rho eleven hundredths** (+0.094 → +0.202). An estimate that moves that
+  far on one point of sixteen supports nothing built on it in either direction — and `rows on the board`
+  at +0.596, the one candidate that clears a *single*-test threshold, does not survive correcting for the
+  seven that were tried (~0.66). It is recorded as a hypothesis from the data that generated it,
+  explicitly not a result.
 
 ### B3. The derivability sample — the gate
 
@@ -474,6 +489,15 @@ at all**: it would have produced boards against a retired axis, or failed its ow
   (⚠️ especially boards that only became eligible when the pitcher cap went to six), and boards that
   depend on the **batting order** family.
 - **B3.3** ⬜ **N and the stratum quotas are open**, and `audit()` asserts them after selection.
+- ✔ **B3's first half passed 2026-08-24: sixteen of sixteen solved, none by guessing.** Pack A doubles
+  as the first tranche of the gate, and this is what the gate exists to test — one failure would have
+  falsified the assumption that layer 3 without backtracking implies human derivability. There was none,
+  and all sixteen are uncertified by 3b, so nothing leaned on the weaker solver.
+- ⬜ **The stratified sample has not run, and Pack A does not substitute for it.** It left three strata
+  almost untouched, and they are the three named here as where the assumption is weakest:
+  **`batting_order` — 1 board of 16, against 10 of the 150 published (7%)**, and it is the one relation
+  that cannot be read off a boxscore; **six pitchers — 0 boards, against 4 published**; **pre-1950 — 0
+  boards**. Rungs and era were covered adequately.
 - **Done when:** every board in the sample solved by hand without guessing. **One failure stops the
   milestone** — it falsifies the assumption the publication rule rests on.
 
