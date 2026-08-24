@@ -371,8 +371,10 @@ compared to anything.
 
 **Where it lives:** `serve/engine/share.js` masks, `serve/ui/phone/share-image.js` draws and
 rasterises, `serve/ui/phone/share-send.js` gets it off the device, and `keep`'s `POST /shares` records
-that it happened. ⬜ **G3 has not run** — the image has never been sent through WhatsApp, iMessage or X
-on a real phone, and until it has, this is built rather than verified.
+that it happened. ✔ **G3 ran on 2026-08-24: the image was sent through WhatsApp, iMessage
+and X from a real phone and arrived intact.** That is the half a local harness cannot check —
+it would be supplying the compression, the colour profile and the scaling that are the
+properties under test.
 
 ### ⚠️⚠️ Two things about the implementation that will be undone by somebody trying to improve it
 

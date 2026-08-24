@@ -153,7 +153,7 @@ closed. **The group was met against the work it did, and the second run is the o
 | **The data layer** | ✔ built — `keep/`, 77 tests at 100% on both engines |
 | **Event upload** | ✔ built — `serve/engine/outbox.js`, queued, offline-first, one event per finished game |
 | **Uncaught client errors** | ✔ built — `serve/engine/report.js`, rate-limited two ways and unable to throw |
-| **The share PNG** | ▶ **built 2026-08-24** — `serve/engine/share.js`, `share-image.js`, `share-send.js`, and `keep`'s `POST /shares`. The button is live. ⬜ **G3 has not run**: the image has never been sent through WhatsApp, iMessage or X on a real phone, and the plan says *verified by sending, not by generating* |
+| **The share PNG** | ✔ **done 2026-08-24** — `serve/engine/share.js`, `share-image.js`, `share-send.js`, and `keep`'s `POST /shares`. **Sent through WhatsApp, iMessage and X from a real phone and it arrived intact**, which is what the plan meant by *verified by sending, not by generating* |
 | **The deployment** | ⬜ **not built.** No VPS, no DNS, no TLS. ✔ **The images and the server block exist** — `deploy/`, both unprivileged and secretless, the proxy to `keep` tested end to end; what is left needs a host |
 | **`/today` and `/p/<id>`** | ✔ **built.** `/p/<id>` canonical, `/today` a page that follows the signed pointer, `/tutorial` reachable, `?p=` gone, an unknown id refused rather than substituted. ✔ **The caching contract with it** — E2 folded into E3 and the server block carries it |
 | **The daily rotation** | ✔ built — `publish/`, a fourth tree: today and yesterday public, everything else removed, and a health verdict with two independent questions |

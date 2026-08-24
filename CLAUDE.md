@@ -66,7 +66,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **D** the data layer | ✔ complete | `keep/`, its own container |
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
 | **F** deployment | ✔ **met 2026-08-24** | the three images, the site live over TLS, and the rotation with its own scheduler. `docs/runbook-inventory.md` §5b is the deployment |
-| **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
+| **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be |
 
 ⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
 and it is the only verification of human derivability that exists: layer 3 propagates intervals to a fixed

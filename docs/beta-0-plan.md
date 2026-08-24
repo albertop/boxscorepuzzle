@@ -20,7 +20,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
 | **F** deployment | ✔ **met 2026-08-24** | ✔ F1 the three images; ✔ **F2 — `boxscorepuzzle.com` live over TLS, `www` canonical, rate limit and security headers on the host, the stack in Portainer**; ✔ **F3 — the rotation's image, its own ofelia, verified by rotating for real**. ⬜ Its one-time deployment steps are `docs/runbook-inventory.md` §5b |
-| **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
+| **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be |
 
 ⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
 stops everything — and G, which cannot be dropped for time.
@@ -70,7 +70,7 @@ checked against the tree: 2026-08-22, after v39.**
 | **Device UUID** | ✔ **built.** `serve/engine/device.js`, its own key and its own lifetime |
 | **Event upload** | ✔ **built.** `serve/engine/outbox.js` queues and drains; `report.js` reports uncaught errors |
 | **Data layer** | ✔ **built.** `keep/`, 77 tests at 100% on both engines |
-| **Share PNG** | ▶ **built 2026-08-24** — the masked board, the PNG, the sheet and the `POST /shares` record. ⬜ **G3 unverified**: never sent through a messaging app on a real phone |
+| **Share PNG** | ✔ **done 2026-08-24** — the masked board, the PNG, the sheet, the `POST /shares` record, and **G3: sent through WhatsApp, iMessage and X from a real phone**. The plan asked for *verified by sending, not by generating*, and it was |
 | **Deployment** | ⬜ **does not exist.** `compose.yaml` is a dev server on a mounted tree, no image, no nginx. **Group F** |
 | **Signed date pointers** | ✔ **built**, and ⚠️ **only the newest generation holds a complete schedule** — an older one was written before the later dates existed. That is what makes the newest generation the rotation's source |
 
@@ -1052,7 +1052,7 @@ the finished game — not a priority.
 
 ### ▶ Deliverable G — **an image a player sends in one tap that survives the trip and gives nothing away**
 
-⚠️ **G1 and G2 are built as of 2026-08-24. G3 has not run and it is the one that decides.**
+✔ **G is met, 2026-08-24 — including G3, which is the one that decides.**
 
 | | |
 |---|---|
@@ -1061,23 +1061,7 @@ the finished game — not a priority.
 | ✔ **G1.3** | time, tries and hints, from the reveal's own catalogue keys |
 | ✔ **G2** | `navigator.share` where `canShare` takes the file, the clipboard where it does not — and a cancelled sheet is not an error |
 | ✔ **the record** | `keep`'s `POST /shares`, its own event because the share happens after the game is uploaded and the insert that makes a retry free ignores a second arrival |
-| ⬜ **G3** | **not run.** WhatsApp, iMessage and X, on a real phone, looking at what arrived. **The operator's**, and it is what says the deliverable is done |
-
-⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
-that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read
-as **empty** and the board looks less finished than it is — the opposite of what the blur is for. It is
-1.0px, and that number came from generating the image and looking at it rather than from an argument.
-
-⚠️ **G1 and G2 are built as of 2026-08-24. G3 has not run and it is the one that decides.**
-
-| | |
-|---|---|
-| ✔ **G1.1** | the board, never the reveal — `share-image.js` draws with `renderLineScore`, `renderSection` and `renderFootnotes`, the board's own renderers, and the only difference from the live board is the game they are handed |
-| ✔ **G1.2** | replaced then blurred — `maskAnswers()` produces a game whose answers are gone, so the board is **drawn from masked values** rather than drawn and then obscured. Nine browser tests, including that not one answer survives and that a replacement keeps its digit count |
-| ✔ **G1.3** | time, tries and hints, from the reveal's own catalogue keys |
-| ✔ **G2** | `navigator.share` where `canShare` takes the file, the clipboard where it does not — and a cancelled sheet is not an error |
-| ✔ **the record** | `keep`'s `POST /shares`, its own event because the share happens after the game is uploaded and the insert that makes a retry free ignores a second arrival |
-| ⬜ **G3** | **not run.** WhatsApp, iMessage and X, on a real phone, looking at what arrived. **The operator's**, and it is what says the deliverable is done |
+| ✔ **G3** | **run by the operator and it arrived intact** — WhatsApp, iMessage and X, opened on a real phone. ⚠️ This is the half no local harness could supply: the compression, the colour profile, the aspect ratio and the scaling are every property under test, and a generate-and-inspect check is the instrument supplying them itself |
 
 ⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
 that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read
