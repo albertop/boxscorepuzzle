@@ -14,15 +14,16 @@ Collapsing them into `None` is what the reference writer did, and it is why nobo
 failing a check.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from boxscore_domain import AUTOMATIC_RUNNER_FLOOR, MAX_INNINGS
 from boxscore_forge import produce as producer
 from boxscore_forge.boxscore import Direction
 from boxscore_forge.pool import Loaded
-from boxscore_forge.produce import produce, required_boxscore
+from boxscore_forge.produce import inadmissible, produce, required_boxscore
 from boxscore_forge.publish import to_board
 from tests.reveals import reveal_for as fixture_reveal
 
@@ -59,6 +60,11 @@ def _loaded(direction: Direction) -> Loaded:
         official_left_on_base=board.left_on_base,
         slots=tuple(range(1, len(direction.batting) + 1)),
         is_deduced=0,
+        # ⚠⚠ **Admissible, and spelled out rather than defaulted.** `Loaded`'s four disposition fields
+        # default to the *refusing* values (`docs/excluded-games.md`), so a fixture that omits them is
+        # refused as a partial account -- which is the fail-closed direction and the reason the default
+        # is what it is. A fixture standing in for a publishable game has to say so.
+        account="Y",
         printed=fixture.boxscore,
     )
 
@@ -145,3 +151,123 @@ class TestTheTwoCauses:
 class _Certified:
     refusals: tuple[str, ...]
     publishable: bool = False
+
+
+class TestTheGamesTheBoardCannotHonestlyShow:
+    """`inadmissible()`, the register in `docs/excluded-games.md` at the narrowest place.
+
+    ⚠️⚠️ **Every one of these boards balances.** Forfeits, ties and partial accounts were tested through
+    `produce()` itself and **published boards §22's four layers accepted** — the layers ask whether the
+    numbers agree with each other, and for these games they do. What they describe is a game the board
+    cannot honestly show, and what lies is the reveal (§29).
+
+    ⚠️ **The refusal is a named cause, not a boolean**, so a future reader meeting one on a perfect game
+    can find out why rather than concluding the check is broken.
+    """
+
+    @pytest.mark.parametrize(
+        ("field", "value", "cause"),
+        [
+            ("forfeit", "V", "forfeit"),
+            ("forfeit", "T", "forfeit"),
+            ("protest", "V", "protest"),
+            ("protest", "Y", "protest"),
+            ("completed_later", True, "completed later"),
+            ("account", "P", "partial account"),
+            ("account", "", "partial account"),
+            ("account", "N", "partial account"),
+        ],
+    )
+    def test_each_disposition_refuses_with_its_own_cause(
+        self, cubs_at_braves_1968: Direction, field: str, value: object, cause: str
+    ) -> None:
+        loaded = replace(_loaded(cubs_at_braves_1968), **{field: value})
+
+        assert inadmissible(loaded) == cause
+
+    def test_an_ordinary_game_is_admissible(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ The control. Without it every case above is satisfied by a function that refuses
+        everything, which is the shape this project records as a check that cannot distinguish."""
+        assert inadmissible(_loaded(cubs_at_braves_1968)) == ""
+
+    def test_the_account_test_is_an_acceptance_not_an_exclusion(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️⚠️ `!= "P"` would admit every code nobody thought of — including the empty one that 297 pool
+        games carry — which is the fail-open shape §32 has closed twice. Only `Y` passes."""
+        for code in ("P", "N", "D", "", "y", "YES"):
+            assert inadmissible(replace(_loaded(cubs_at_braves_1968), account=code)) == "partial account"
+        assert inadmissible(replace(_loaded(cubs_at_braves_1968), account="Y")) == ""
+
+    def test_a_tie_is_refused(self, cubs_at_braves_1968: Direction) -> None:
+        """The reveal shows a boxscore with no winner, and the share, the streak and the reveal all read
+        a game as something somebody won."""
+        loaded = _loaded(cubs_at_braves_1968)
+        score = loaded.direction.line_score
+        tied = replace(
+            loaded, direction=replace(loaded.direction, line_score=replace(score, defense_runs=score.offense_runs))
+        )
+
+        assert inadmissible(tied) == "tie"
+
+    def test_produce_refuses_before_it_erases(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️⚠️ **The guarantee is here rather than in the query.** The pool excludes these too, but only
+        to avoid building what it would discard: a `Loaded` assembled by hand never passed through a
+        `WHERE`, and one query's rule is not the next query's."""
+        loaded = replace(_loaded(cubs_at_braves_1968), account="P")
+
+        attempt = produce(loaded, 8, Ed25519PrivateKey.generate(), note="test")
+
+        assert attempt.package is None
+        assert attempt.cause == "partial account"
+
+
+class TestTheAutomaticRunnerBoundaryIsOpenAndSaysSo:
+    """⬜ `AUTOMATIC_RUNNER_FROM` is unset: a rulebook fact §7 forbids inventing here.
+
+    ⚠️⚠️ **The loud failure is scoped, and the first version was not.** It raised on *every* extra-inning
+    game and aborted a production run on a **1964** board — an unknown boundary applied as *always*,
+    which halts production rather than failing closed on the case in question. `AUTOMATIC_RUNNER_FLOOR`
+    is the last season measured clean, plus one.
+    """
+
+    def _extra_innings(self, direction: Direction, season: int) -> Loaded:
+        loaded = replace(_loaded(direction), season=season)
+        score = loaded.direction.line_score
+        longer = replace(
+            score,
+            offense_by_inning=(*score.offense_by_inning, 0),
+            defense_by_inning=(*score.defense_by_inning, 1),
+        )
+        return replace(loaded, direction=replace(loaded.direction, line_score=longer))
+
+    def test_a_season_nothing_has_measured_raises(self, cubs_at_braves_1968: Direction) -> None:
+        with pytest.raises(ValueError, match="AUTOMATIC_RUNNER_FROM is not set"):
+            inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FLOOR))
+
+    def test_a_season_the_measurement_covers_does_not_raise(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️⚠️ **The half that matters most.** An open decision enforced as though the answer were always
+        yes stops every build; this is the assertion that it does not."""
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FLOOR - 1)) != "automatic runner"
+
+    def test_setting_the_boundary_refuses_the_era_and_spares_the_rest(self, cubs_at_braves_1968: Direction) -> None:
+        """The rule is wired and dormant. Setting the year is the only thing that changes what ships."""
+        import boxscore_forge.produce as producer  # noqa: PLC0415
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(producer, "AUTOMATIC_RUNNER_FROM", 2020)
+
+            assert producer.inadmissible(self._extra_innings(cubs_at_braves_1968, 2021)) == "automatic runner"
+            assert producer.inadmissible(self._extra_innings(cubs_at_braves_1968, 2019)) == ""
+
+    def test_a_board_past_the_inning_cap_is_refused_before_the_boundary_is_consulted(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        """⚠️ Order matters: §6's cap is a fact about the screen and holds whatever the rulebook says."""
+        loaded = self._extra_innings(cubs_at_braves_1968, 1950)
+        score = loaded.direction.line_score
+        long_game = replace(
+            score,
+            offense_by_inning=tuple([0] * (MAX_INNINGS + 1)),
+            defense_by_inning=tuple([0] * (MAX_INNINGS + 1)),
+        )
+
+        assert inadmissible(replace(loaded, direction=replace(loaded.direction, line_score=long_game))) == "innings"

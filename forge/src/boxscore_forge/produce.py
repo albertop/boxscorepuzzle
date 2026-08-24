@@ -18,6 +18,7 @@ from typing import Final
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from boxscore_domain import AUTOMATIC_RUNNER_FLOOR, AUTOMATIC_RUNNER_FROM, MAX_INNINGS, REGULATION_INNINGS
 from boxscore_forge.identity import puzzle_id
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback
 from boxscore_forge.pool import Loaded
@@ -132,6 +133,70 @@ def evidence_for(loaded: Loaded) -> Evidence:
     )
 
 
+def inadmissible(loaded: Loaded) -> str:
+    """Why this game may not become a board, or `""`. **`docs/excluded-games.md` is the register.**
+
+    ⚠⚠ **Every one of these balances.** Forfeits, ties and partial accounts were tested through this
+    very function and **published boards the four layers accepted** — §22's layers ask whether the
+    numbers agree with each other, and for these games they do. What they describe is a game the board
+    cannot honestly show, and **what lies is the reveal** (§29): it prints the finished boxscore beside a
+    Baseball Reference link, and a player who follows it finds *forfeited*, or *tie, called*, or a game
+    completed three weeks later.
+
+    **So a future reader meeting a refusal on a perfect game is not looking at a broken check.** That is
+    why this returns a named cause and why the register exists.
+    """
+    score = loaded.direction.line_score
+    innings = max(len(score.offense_by_inning), len(score.defense_by_inning))
+    if innings > REGULATION_INNINGS and AUTOMATIC_RUNNER_FROM is None and loaded.season >= AUTOMATIC_RUNNER_FLOOR:
+        # ⚠⚠ **Loud where the answer could differ, and silent where it cannot.** A placed runner leaves
+        # `PA = Outs + Runs + LOB` short by one, and *which seasons* placed one is a rulebook fact §7
+        # forbids inventing here. But refusing **every** extra-inning game while the constant is unset
+        # was the first version of this line and it aborted the build on a 1964 game -- an unknown
+        # boundary read as *always*, which stops all production rather than failing closed on the case
+        # in question.
+        #
+        # ⚠️ **What makes the narrow form safe is that the boundary is not the guarantee.** A placed
+        # runner is detected *per game* by the global identity, at construction, whichever season it is:
+        # the runner is out, scores, or is stranded, and all three leave a run or an out or an LOB with
+        # no plate appearance behind it. `docs/excluded-games.md` §2 measured exactly that -- three era
+        # games refused with `global_plate_appearances is off by -1`, three pre-era controls published.
+        # So the constant buys **work avoided, not correctness**, and it is loud only above the last
+        # season anybody has evidence about.
+        message = (
+            f"{loaded.game_id} is a {loaded.season} game that went to {innings} innings, and "
+            f"AUTOMATIC_RUNNER_FROM is not set. The boundary is an open decision "
+            f"(docs/excluded-games.md section 2); set it in boxscore_domain rather than deciding it "
+            f"by omission on a season nothing has measured."
+        )
+        raise ValueError(message)
+    grounds = (
+        # The board draws twelve (§6). A seventeen-inning line score has seventeen columns.
+        (innings > MAX_INNINGS, "innings"),
+        (
+            AUTOMATIC_RUNNER_FROM is not None
+            and innings > REGULATION_INNINGS
+            and loaded.season >= AUTOMATIC_RUNNER_FROM,
+            "automatic runner",
+        ),
+        (bool(loaded.forfeit), "forfeit"),
+        # ⚠️ All protests, not only the two upheld codes. A disallowed protest leaves the game exactly
+        # as played and those 127 are sound — the operator ruled that 132 games out of 203,908 is not
+        # worth a rule that has to be right about five letters. Recorded so nobody re-admits them
+        # believing they were excluded by mistake.
+        (bool(loaded.protest), "protest"),
+        (loaded.completed_later, "completed later"),
+        # ⚠️ **An acceptance test.** Retrosheet's codes are `Y` complete, `P` partial, `N` nothing, `D`
+        # derived — and 297 pool games carry no value at all. `!= "P"` would admit every code nobody
+        # thought of, including the empty one, which is the fail-open shape §32 has closed twice.
+        (loaded.account != "Y", "partial account"),
+        (score.offense_runs == score.defense_runs, "tie"),
+    )
+    # ⚠️ A tuple rather than a chain of returns, so adding a rule is adding a line and the order the
+    # causes are reported in is visible in one place.
+    return next((cause for holds, cause in grounds if holds), "")
+
+
 def produce(loaded: Loaded, target: int, key: Ed25519PrivateKey, *, note: str, seed: int = SEED) -> Attempt:
     """Generate one puzzle and put it through the publication gate, not a subset of the checks.
 
@@ -141,6 +206,12 @@ def produce(loaded: Loaded, target: int, key: Ed25519PrivateKey, *, note: str, s
     walks measured. On the eleven directions that reach eight stalls only with it, nine carry no such
     filler at all. It is worth something exactly where the board cannot get there without it.
     """
+    # ⚠⚠ **Before any work, and this is the guarantee rather than the query.** The pool excludes these
+    # too, but only to avoid building what it would discard — a `Loaded` assembled by hand never passed
+    # through a `WHERE`, and one query's rule is not the next query's. **Every published board comes
+    # through here**, so this is the narrowest place that cannot be walked around.
+    if refusal := inadmissible(loaded):
+        return Attempt(package=None, cause=refusal, refusals=())
     produced, why = erase_with_lineup_fallback(loaded.direction, tuple(loaded.slots), target_stalls=target, seed=seed)
     # ⚠️⚠️ **Kept, and written into the package.** (v36-P2-12) This read `del why` — *the reason is for
     # the measurement instruments; this script only needs the board* — and `lineup_fallback.py` returns
@@ -183,6 +254,18 @@ def produce(loaded: Loaded, target: int, key: Ed25519PrivateKey, *, note: str, s
             metadata={
                 "note": note,
                 "difficulty_model": "stalls",
+                # ⚠⚠ **Recorded so `audit()` can ask the shipped population whether it is clean, from
+                # disk and without a database.** A rule that lives only in a `WHERE` has nothing
+                # checking it afterwards — which is how the seventeen-inning board reached a date. These
+                # four are what the packages carry forward about their own admissibility.
+                "innings": max(
+                    len(loaded.direction.line_score.offense_by_inning),
+                    len(loaded.direction.line_score.defense_by_inning),
+                ),
+                # ⚠️ No `season` here: §7 strips it from the published package, so it would not
+                # survive to be audited. `audit()` reads the era from the calendar's `game_id`.
+                "account": loaded.account,
+                "disposition": "".join((loaded.forfeit, loaded.protest, "C" if loaded.completed_later else "")),
                 "target_stalls": target,
                 "stalls": produced.solution.stalls,
                 # Descriptive telemetry. Chain is recorded because every earlier measurement used it

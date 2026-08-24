@@ -280,6 +280,28 @@ def eligibility(  # noqa: PLR0913
       -- is the defect this file spent a day closing, so the EXISTS that used to be here is gone
       -- rather than kept as a belt — and `Season.admission` is why it stays one place now that there
       -- are two seasons to admit.
+      -- ⚠⚠ **Games the board cannot honestly show. `docs/excluded-games.md` is the register.**
+      --
+      -- These are **not** arithmetic failures: every one of them balances, and most publish a board
+      -- the four layers accept. What lies is the reveal (§29), which prints the finished boxscore with
+      -- teams and date beside a Baseball Reference link — and a player who follows it finds *forfeited*
+      -- or *tie, called*, a disposition the board never showed and cannot show. **A product decision,
+      -- not a correctness one**, and it is written down here so a future reader who meets a refusal on
+      -- a perfect game does not assume the check is broken and delete it.
+      --
+      -- ⚠️ **This clause is the cheap half, not the rule.** It stops the pipeline doing work it will
+      -- throw away; `produce()` is where a board is actually refused, because a `Loaded` built by hand
+      -- never passed through here. One `WHERE` is a filter; the refusal at the chokepoint is the
+      -- guarantee.
+      AND (l.ForfeitInfo IS NULL OR LEN(l.ForfeitInfo) = 0)
+      AND (l.ProtestInfo IS NULL OR LEN(l.ProtestInfo) = 0)
+      AND (l.CompletionInfo IS NULL OR LEN(l.CompletionInfo) = 0)
+      -- ⚠️ `AcquisitionInfo = 'Y'` is an **acceptance** test, not `<> 'P'`. Retrosheet's own codes are
+      -- `Y` complete, `P` partial, `N` nothing, `D` derived from a box score — and 297 pool games carry
+      -- no value at all. An exclusion list admits every code nobody thought of, including the empty
+      -- one, which is the fail-open shape §32 already closed twice in this file.
+      AND l.AcquisitionInfo = 'Y'
+      AND g.HOME_SCORE_CT <> g.AWAY_SCORE_CT
       {gate_clause}
     """  # noqa: S608 - see `what reaches this query` in the docstring
 
@@ -484,6 +506,26 @@ class Loaded:
 
     `None` when the club could not be named for that season; the loader drops those directions.
     """
+
+    forfeit: str = ""
+    """`retroGameLogs.ForfeitInfo`. **`V`/`H` forfeited to that club, `T` ruled a no-decision.**"""
+
+    protest: str = ""
+    """`retroGameLogs.ProtestInfo`. **`P` unidentified team, `V`/`H` disallowed, `X`/`Y` upheld.**"""
+
+    completed_later: bool = False
+    """`retroGameLogs.CompletionInfo` is set: the game finished on a later date, after a suspension or
+    an upheld protest. **Two games stitched into one record.**"""
+
+    account: str = ""
+    """`retroGameLogs.AcquisitionInfo`. ⚠⚠ **`P` means Retrosheet has only part of the game** — its own
+    words are *we may be missing innings at the beginning, middle and end*. **Not the same `P` as
+    `protest`**, which is a different field where `P` means *protested by an unidentified team*. Two
+    fields, one letter, unrelated meanings.
+
+    ⚠️ **These four travel because a rule that stops at the query is a filter, not a guarantee.** The
+    precedent is `source_type` directly above: a game-log fact carried forward so the decision can be
+    made where every board must pass, rather than in one `WHERE` that the next query will not have."""
 
 
 FIELDING_CODE: Final = {1: "P", 2: "C", 3: "1B", 4: "2B", 5: "3B", 6: "SS", 7: "LF", 8: "CF", 9: "RF"}
@@ -867,7 +909,12 @@ def load(  # noqa: PLR0913, PLR0915
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeAB ELSE l.VisAB END
             FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_at_bats,
            (SELECT CASE WHEN o.TEAM_ID = g.HOME_TEAM_ID THEN l.HomeLOB ELSE l.VisLOB END
-            FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base
+            FROM dbo.retroGameLogs l WHERE l.GAME_ID = g.GAME_ID) AS official_left_on_base,
+           -- ⚠⚠ **Appended at the end, never inserted above.** Every row downstream is unpacked by
+           -- position, so a column added in the middle silently re-labels a dozen fields — the loader
+           -- would go on running and mean something else. See `Loaded.forfeit` for why these four
+           -- travel at all rather than being decided in the WHERE and forgotten.
+           l.ForfeitInfo, l.ProtestInfo, l.CompletionInfo, l.AcquisitionInfo
     {cohort}
     -- ⚠️⚠️ **The tiebreaker is what makes the sample repeatable.** (v36-P3-07) `CHECKSUM` is
     -- 32-bit, so ties exist, and SQL Server's order among tied rows is not defined — a `TOP (?)`
@@ -1011,6 +1058,12 @@ def load(  # noqa: PLR0913, PLR0915
             is_deduced,
             official_at_bats,
             official_left_on_base,
+            # ⚠️ Appended here because they were appended to the SELECT. This tuple is positional and
+            # a name added anywhere but the end silently re-labels every field after it.
+            forfeit_info,
+            protest_info,
+            completion_info,
+            acquisition_info,
         ) in candidates:
             batting_rows = _rows(connection, rows_query, game_id, offense)
             pitching_rows = _rows(connection, pitch_query, game_id, defense)
@@ -1109,6 +1162,12 @@ def load(  # noqa: PLR0913, PLR0915
                         offense=_printed_side(offense, *offense_name, batting_rows, offense_pitching_rows),
                         defense=_printed_side(defense, *defense_name, defense_batting_rows, pitching_rows),
                     ),
+                    # ⚠️ By keyword and from the end of the SELECT, so nothing above shifts. See
+                    # `Loaded.forfeit`: these travel so `produce()` can refuse, not merely the query.
+                    forfeit=forfeit_info or "",
+                    protest=protest_info or "",
+                    completed_later=bool(completion_info),
+                    account=acquisition_info or "",
                 )
             )
     if rejected:

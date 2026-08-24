@@ -658,6 +658,40 @@ class TestTheInningCapIsAGateAndNotANote:
         with pytest.raises(PackageError, match=f"more than the {MAX_INNINGS} the board can draw"):
             LineScore.from_json(self._line_score(MAX_INNINGS + 1))
 
+    def test_the_constructor_refuses_it_too_and_that_is_the_half_that_was_missing(self) -> None:
+        """⚠️⚠️ **The parse path had this guard for months and the constructor did not.**
+
+        `MAX_INNINGS` lived only in `_innings()`, so the forge **built, certified, signed and published**
+        a seventeen-inning board — `a74a6230760c872b`, dated 2026-11-01 — that its own reader refuses.
+        It was found when something happened to read it back, not by any check.
+
+        ⚠️ The test above passes with the constructor unguarded, which is exactly why this one exists
+        beside it rather than instead of it: *the same rule, asked on the other path.*
+        """
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore, PackageError  # noqa: PLC0415
+
+        too_long = tuple([0] * (MAX_INNINGS + 1))
+        with pytest.raises(PackageError, match=f"more than the {MAX_INNINGS} the board can draw"):
+            LineScore(too_long, tuple([0] * MAX_INNINGS), 0, 0, 0, 0, 0, 0)
+
+    def test_the_constructor_refuses_a_long_defensive_half_as_well(self) -> None:
+        """⚠️ Both halves, because a guard that only reads one of them refuses nothing on a board where
+        the home club batted the extra innings."""
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore, PackageError  # noqa: PLC0415
+
+        with pytest.raises(PackageError, match=f"more than the {MAX_INNINGS} the board can draw"):
+            LineScore(tuple([0] * MAX_INNINGS), tuple([0] * (MAX_INNINGS + 1)), 0, 0, 0, 0, 0, 0)
+
+    def test_the_constructor_accepts_a_board_at_the_cap(self) -> None:
+        from boxscore_domain import MAX_INNINGS  # noqa: PLC0415
+        from boxscore_package.format import LineScore  # noqa: PLC0415
+
+        at_cap = tuple([0] * MAX_INNINGS)
+
+        assert len(LineScore(at_cap, at_cap, 0, 0, 0, 0, 0, 0).offense_by_inning) == MAX_INNINGS
+
     def test_a_board_at_the_cap_is_accepted(self) -> None:
         """⚠️ The other half, or a gate that refuses everything would pass the test above."""
         from boxscore_domain import MAX_INNINGS  # noqa: PLC0415

@@ -233,6 +233,45 @@ this constant is deleted rather than measured.
 # The line score's width (§2, §6)
 # ---------------------------------------------------------------------------------------------------
 
+REGULATION_INNINGS: Final = 9
+"""A full game. Anything past this is extra innings, which is where the automatic runner lives."""
+
+AUTOMATIC_RUNNER_FROM: Final[int | None] = None
+"""The first season a runner was placed on second to start an extra inning. ⬜ **NOT DECIDED.**
+
+⚠⚠ **Left unset on purpose, and anything that needs it fails loudly rather than guessing.** A placed
+runner scores or is stranded with no plate appearance behind him, so `PA = Outs + Runs + LOB` is short
+by exactly one — measured, on three games of the era, against three pre-era controls
+(`docs/excluded-games.md` §2).
+
+**What the data can say and what it cannot.** The contradiction appears in 2021 and 2023 and not in
+1954, 1994 or 2013. **Whether the rule applied in the postseason, and exactly what happened in the
+shortened season it was introduced in, is a fact about the rulebook**, and this project's rule is that a
+number shaping the product is not invented in a source file (§7).
+
+⚠⚠ **Until it is set, an extra-inning game from `AUTOMATIC_RUNNER_FLOOR` on raises — and one from
+before it does not.** The first version raised on *every* extra-inning game and aborted a build on a
+1964 one: an unknown boundary applied as *always*, which halts production instead of failing closed on
+the case in question. See `AUTOMATIC_RUNNER_FLOOR` for why the narrow form is the safe one."""
+
+AUTOMATIC_RUNNER_FLOOR: Final = 2014
+"""The last season anybody here has evidence about, plus one. **Not the boundary and never a stand-in.**
+
+⚠⚠ **This is a statement about what has been measured, not about baseball.** `docs/excluded-games.md`
+§2 ran three era games and three controls: the contradiction appears in 2021 and 2023, and does not in
+1954, 1994 or **2013**. So below 2014 the evidence says extra innings are ordinary, and a refusal there
+would be this file deciding a rulebook fact it is forbidden to decide (§7) — in the direction that stops
+every build.
+
+⚠️ **Raising it is not a way to set the boundary.** Moving this number changes which seasons *demand
+an answer*; only `AUTOMATIC_RUNNER_FROM` changes which games are excluded. If a later measurement
+publishes a clean 2016 extra-inning board, this becomes 2017 and nothing else moves.
+
+⚠️ **And neither constant is the guarantee.** A placed runner is caught **per game** by the global
+identity at construction, whatever the season: he is put out, scores, or is stranded, and each leaves an
+out or a run or an LOB with no plate appearance behind it. The boundary buys work avoided — 306 games
+not processed to be discarded — rather than correctness."""
+
 MAX_INNINGS: Final = 12
 """The longest game the board will draw. **Decided by the operator, inside a measured width limit.**
 

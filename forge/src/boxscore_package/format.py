@@ -311,6 +311,32 @@ class LineScore:
     defense_hits: int
     defense_errors: int
 
+    def __post_init__(self) -> None:
+        """⚠️⚠️ **The inning cap, enforced where it cannot be bypassed — and it was not, until 2026-08-23.**
+
+        `MAX_INNINGS` lived only in `_innings()`, which runs on the **parse** path. So the forge built,
+        certified, signed and **published** a seventeen-inning board (`a74a6230760c872b`, dated
+        2026-11-01) that its own reader refuses — found only when something tried to read it back.
+
+        That is the write/read asymmetry this file records closing three times already: slot references,
+        `schema`, the blank profile, plus `puzzle_id` and `signature` in v36-P2-02. **The rule was
+        written down, applied to five fields, and this one was not among them.**
+
+        ⚠️ **Defence in depth, not a duplicate of the pool's clause.** The pool stops these games being
+        selected and `produce()` refuses them at the chokepoint; this stops one being *signed*. A future
+        reader must not delete any of the three as redundant — they fail at different moments and only
+        this one holds against a `Package` built in memory by a migration or an instrument.
+        """
+        for name, innings in (
+            ("offense_by_inning", self.offense_by_inning),
+            ("defense_by_inning", self.defense_by_inning),
+        ):
+            if len(innings) > MAX_INNINGS:
+                message = (
+                    f"line_score.{name} has {len(innings)} innings, more than the {MAX_INNINGS} the board can draw (§6)"
+                )
+                raise PackageError(message)
+
     def as_json(self) -> dict[str, Any]:
         return {
             "offense_by_inning": list(self.offense_by_inning),

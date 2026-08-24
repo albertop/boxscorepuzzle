@@ -25,12 +25,19 @@ import pytest
 
 from boxscore_forge.pool import load
 
-_CANDIDATE_COLUMNS = 18
+_CANDIDATE_COLUMNS = 22
+"""⚠️ **Asserted below, because a positional unpack does not say when it is wrong.** The row gained
+four disposition columns on 2026-08-23 (`docs/excluded-games.md`) and every one of them was **appended**;
+inserting one mid-list silently re-pairs every column after it with the wrong name."""
 
 
 def candidate(game: str, offense: str, defense: str = "OPP", year: int = 1975) -> tuple[object, ...]:
-    """One row of the cohort query, in the order `load()` unpacks it."""
+    """One row of the cohort query, in the order `load()` unpacks it.
+
+    The four trailing values are the **admissible** ones: no forfeit, no protest, no later completion,
+    and a complete game account."""
     row = [game, year, offense, defense, 0, 8, "000000000", "000000000", 1, 1, 5, 5, 3, 2, "EVN", 0, 30, 8]
+    row += ["", "", "", "Y"]
     assert len(row) == _CANDIDATE_COLUMNS, "the cohort query's column count changed"
     return tuple(row)
 

@@ -87,6 +87,11 @@ def _loaded(direction: Direction) -> Loaded:
         official_runs=board.line_score.offense_runs,
         is_deduced=False,
         official_at_bats=board.batting_totals[BATTING_COLUMNS.index("at_bats")],
+        # ⚠⚠ **Admissible, and spelled out rather than defaulted.** `Loaded`'s four disposition fields
+        # default to the *refusing* values (`docs/excluded-games.md`), so a fixture that omits them is
+        # refused as a partial account -- which is the fail-closed direction and the reason the default
+        # is what it is. A fixture standing in for a publishable game has to say so.
+        account="Y",
         official_left_on_base=board.left_on_base,
         slots=SLOTS,
         printed=fixture.boxscore,
