@@ -22,6 +22,10 @@ which proxies them and adds the token at the edge — the same arrangement as th
 payment webhook, and for the same reason: *a secret inside a container is a secret; an open port is
 surface.*
 
+✔ **That proxy exists as of F1, 2026-08-24** — `deploy/nginx/boxscorepuzzle.conf.template`, tested
+against a real `keep` and Postgres. ⚠️ **The client's own `Authorization` header is discarded rather
+than merged**, so a browser cannot influence what `keep` sees; the edge decides every time.
+
 ⚠️ **Those two paths do not exist yet** (plan F1.3b), so today they 404. That is the case the client's
 retry rule was written around: **a 404 leaves the queue intact**, so everything recorded before the
 proxy exists is delivered by the first visit after it.

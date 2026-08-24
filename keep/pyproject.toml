@@ -3,10 +3,18 @@ name = "keep"
 version = "0.1.0"
 description = "The data layer: devices, events and later accounts. The only thing that touches a database."
 requires-python = "==3.13.*"
-# No runtime dependencies. Three routes, no templating, no ORM, no async workload -- section 23 asks for
-# availability from having fewer pieces rather than bigger ones. psycopg is a dev extra because
-# production installs it and the tests reach it only when a Postgres is configured.
-dependencies = []
+# Three routes, no templating, no ORM, no async workload -- section 23 asks for availability from having
+# fewer pieces rather than bigger ones. **One runtime dependency: the driver.**
+#
+# ⚠⚠ **`psycopg` was a dev extra and the comment justifying that was circular** -- *"a dev extra
+# because production installs it"*. `keep` cannot start without a database and does not invent one;
+# a package the production process needs is a runtime dependency, whatever the tests can do without.
+# Found at F1, when the image had to be built: `uv sync --frozen --no-dev` produced a container that
+# would have died on its first request with `ModuleNotFoundError`.
+#
+# ⚠️ The lazy import in `main.py` stays and keeps its own reason: it lets the module be imported by a
+# suite that never touches a database.
+dependencies = ["psycopg[binary]>=3.2"]
 
 [dependency-groups]
 dev = [
@@ -14,7 +22,6 @@ dev = [
     "pytest-cov>=6",
     "mypy>=1.13",
     "ruff>=0.8",
-    "psycopg[binary]>=3.2",
 ]
 
 [tool.hatch.build.targets.wheel]

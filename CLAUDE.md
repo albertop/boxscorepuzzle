@@ -65,7 +65,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
-| **F** deployment | ⬜ not begun | |
+| **F** deployment | ▶ **F1 done** | the two images and the proxy; ⬜ F2 and F3 need the VPS |
 | **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
 
 ⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
@@ -217,8 +217,33 @@ packages into `serve/data/puzzles/` from outside `serve/` and never needed to li
 forbids cross-*imports*; the only thing that crosses is a signed package, which is what §33 permits. `keep` has **no
 runtime dependencies at all** — three routes, no ORM, no framework — and `forge` never learns that users
 exist (§33). They share no code and no deployment cycle. The
-only thing that crosses is a signed package of validated puzzles. **Deployment ships `serve/` only** —
-generator code must never reach the VPS.
+only thing that crosses is a signed package of validated puzzles.
+
+### ⚠️⚠️ What deployment ships — **split rather than rewritten, because half of it never expired**
+
+**Permanent, and the reason §33 exists: `forge/` must never reach the VPS.** It holds the generator and
+the human-solvability guarantee, which is trade secret (§16). No image, no build stage, no runbook step
+copies it — not for a lockfile, not for a shared module, not for convenience. **That half is unchanged
+and is not up for discussion.**
+
+**Expired 2026-08-24: *deployment ships `serve/` only*.** It was true when `serve/` was the only thing
+there was, and **three directories reach the VPS now**:
+
+| | what it is | why it goes |
+|---|---|---|
+| `serve/` | the client and the two public packages | it is the site |
+| `publish/` | the daily rotation and the health verdict | the rotation runs *there*; a job on the laptop cannot rotate a VPS |
+| `deploy/` | the nginx template and the two Dockerfiles | the server block describes how `serve/` is served |
+
+⚠️ **`publish/` and `deploy/` are not a softening of the rule.** Neither is the generator, neither holds
+a private key, and neither can produce a puzzle. **What the rule protects is the generator**, and it is
+exactly as protected as it was.
+
+⚠️⚠️ **The old sentence was kept unedited for a day on purpose and that was the right call.**
+`docs/beta-0-plan.md` F1.5 recorded it as landing with F, because editing it earlier would have described
+a deployment that did not exist — and §5 of the runbook has already reintroduced the archive hole once by
+being followed literally. **A sentence that is false in a document people follow is worse than one marked
+as owed.** This is F, so it is now split rather than left marked.
 
 **Generated puzzle inventory never goes in Git.** It lives in an ignored folder inside `forge/`.
 
@@ -478,6 +503,60 @@ immediately: `ROUTES` held `play.html`, `index.html`, `tutorial.html`. Linked fr
 and the tutorial had no production URL at all. ⚠️⚠️ **The test that checked them fetched
 `../ui/phone/${file}`, prefixing the directory whose absence was the defect** — an instrument supplying
 the property under judgement, which is the padded text dump one more time.
+
+### ⚠️⚠️ The near-neighbour class is **not mechanically detectable**, and that is the finding
+
+Three instances in one day, all written by somebody who had just recorded the rule twice: a test
+comparing a response's bytes and never asking whether the page worked; a fetch that supplied the
+directory whose absence *was* the defect; a readiness probe asking whether the port was open rather than
+whether nginx answered.
+
+**They share one shape.** Each asserts a property **P** when the property that matters is **Q**, where P
+is *necessary but not sufficient* — and **P is true in the broken state.** The bytes matched while the
+board was dead; the file existed while the link was dead; the socket accepted while nginx answered
+nothing.
+
+**Detecting that requires knowing Q, and Q is intent.** No analysis derives it from the code: a test
+asserting a necessary condition is indistinguishable from one asserting the right condition, because
+*being sufficient* is not a property of the text. **So there is no check to write, and saying so is
+worth more than a check that passes forever.** What follows are the three things that do work, and each
+one names what it cannot do.
+
+**⚠️⚠️ A new test is not finished until it has been seen red for the reason it exists.** Not *consider
+whether it could fail* — **break the thing and watch it go red**, then say in the test what was broken.
+
+**The evidence is one day's worth and it is one-sided.** The guards that held were the ones broken on
+purpose first: the workflow deleted and nothing turned red, the delete removed to see which case
+noticed, the config broken four ways and each failure named. The three that failed were the three
+believed without being broken.
+
+⚠️ **Nothing enforces this and it is written as an action for that reason.** A question on a checklist is
+answered by the person who already believes the answer; a step that produces a red run either happened
+or did not. **It is still a discipline, not a gate** — the honest statement is that this class is caught
+by doing that, or it is not caught.
+
+**⚠️ A wait loop's success condition is a real request, not an open socket.** Instruction-shaped, with
+nothing to decide: if code waits for a service, it waits for the service to *answer*. Docker's port
+forwarder binds before the container accepts and then resets what it accepted, so a connect proves the
+forwarder is up and nothing else.
+
+⚠️⚠️ **And there is no static rule to be had here, which is worth stating because the rule looks
+obvious.** `forge/tests/test_dev_server_routes.py` waited on a socket and was **correct** — a plain
+Python server binds and starts accepting with nothing in between. A check on the pattern would fire on
+that, and a threshold that rejects real data gets loosened until it says nothing. *(The instance was
+changed anyway: `compose.yaml` exists, and the day that suite runs against a containerised dev server it
+breaks the same way. Fixing the instance is not the same as having a rule.)*
+
+**⚠️ One narrow guard exists and it is the only part of this that can fail.** No served HTML names an
+asset relatively, and no `ROUTES` value is a filename — static, decidable, and **proved to fire**: with
+the filenames restored, the nginx test reports *the client links to play.html and nginx answers 400*.
+**It covers two instances and not the class**, and it is written down that way so nobody reads it as the
+class being closed.
+
+**⚠️ Automated mutation testing is rejected for this, and the reason is specific rather than general.**
+Today's three mutations were **HTML, a data literal and a startup condition**. No mutation tool
+generates any of them — they operate on expressions and operators in source. It would run, report
+coverage, and have caught none of the three: work with the appearance of coverage.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that

@@ -154,7 +154,7 @@ closed. **The group was met against the work it did, and the second run is the o
 | **Event upload** | ✔ built — `serve/engine/outbox.js`, queued, offline-first, one event per finished game |
 | **Uncaught client errors** | ✔ built — `serve/engine/report.js`, rate-limited two ways and unable to throw |
 | **The share PNG** | ⬜ **not built.** Designed in `serve-flow.md` §7b; the button exists and is `disabled` |
-| **The deployment** | ⬜ **not built.** No image and no DNS. ✔ **The nginx server block exists** — `deploy/nginx/`, tested in a container over `serve/`; TLS, DNS and the proxy to `keep` are F |
+| **The deployment** | ⬜ **not built.** No VPS, no DNS, no TLS. ✔ **The images and the server block exist** — `deploy/`, both unprivileged and secretless, the proxy to `keep` tested end to end; what is left needs a host |
 | **`/today` and `/p/<id>`** | ✔ **built.** `/p/<id>` canonical, `/today` a page that follows the signed pointer, `/tutorial` reachable, `?p=` gone, an unknown id refused rather than substituted. ✔ **The caching contract with it** — E2 folded into E3 and the server block carries it |
 | **The daily rotation** | ✔ built — `publish/`, a fourth tree: today and yesterday public, everything else removed, and a health verdict with two independent questions |
 

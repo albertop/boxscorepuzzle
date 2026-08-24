@@ -3084,7 +3084,9 @@ boxscorepuzzle/
 
 A single root containing everything, with this section's separation visible in the structure itself. Name without spaces or hyphens, matching the domain.
 
-**A single private Git repository on GitHub: `boxscorepuzzle`.** Rationale: one push backs up everything, which matters because the repository's primary job is being the backup. The forge/serve separation is enforced where it actually matters — in deployment configuration and in the no-cross-imports rule — not by repository boundaries. **Deployment ships `serve/` only; generator code must never reach the VPS.**
+**A single private Git repository on GitHub: `boxscorepuzzle`.** Rationale: one push backs up everything, which matters because the repository's primary job is being the backup. The forge/serve separation is enforced where it actually matters — in deployment configuration and in the no-cross-imports rule — not by repository boundaries. **Generator code must never reach the VPS.** ⚠️ This read *deployment ships `serve/` only* until
+2026-08-24; `serve/`, `publish/` and `deploy/` all reach it now and none of them is the generator
+(`CLAUDE.md`).
 
 **The repository stays private permanently.** `forge/` holds the generator algorithm and the solvability guarantee — the trade secret identified in §16.
 

@@ -10,7 +10,16 @@
 # worse than one that visibly needs rewriting. A config is not an executable. `deploy/` is a sibling
 # holding what the VPS needs and cannot run.
 #
-# ⚠️⚠️ **Two things are declared elsewhere and this file must not restate either.**
+# ⚠️⚠️ **This is a TEMPLATE, not a finished config**, and the extension says so. It carries
+# `${KEEP_SHARED_TOKEN}`; the nginx image substitutes it at container start from `/etc/nginx/templates/`.
+# **The token is therefore never in the image and there is no default** — `docs/signing-keys.md`'s
+# precedent: a key file is where the key is, an exported variable is an instruction, and a default is
+# what reaches production by omission.
+#
+# ⚠️ `NGINX_ENVSUBST_FILTER=^KEEP_` keeps the substitution to that one name, so nginx's own `$host`,
+# `$1` and `$keep_upstream` survive it untouched.
+#
+# ⚠⚠ **Two things are declared elsewhere and this file must not restate either.**
 #
 #   * the routes -- `tools/dev_server.py`'s `ROUTES`, tagged production or development
 #   * the cache rule per document -- the table in `docs/calendar.md`
@@ -101,6 +110,45 @@ server {
     # (`docs/serve-brief.md` §7), which is why this is `no-store` rather than a revalidation window.
     location /ui/ {
         add_header Cache-Control "no-store" always;
+    }
+
+    # ---- the data layer, reached only through here (F1.3b) ----------------------------------------
+    # ⚠⚠⚠ **The browser must never reach `keep`.** Its port is not published and the shared token must
+    # not travel to a browser (`docs/data-layer.md` §4), so the client posts here and **the token is
+    # added at the edge**, where the secret already lives and the browser cannot see it.
+    #
+    # ⚠⚠ **`${KEEP_SHARED_TOKEN}` comes from the environment at run time and is never in the image.** The
+    # precedent is `docs/signing-keys.md`: *a key file is where the key is; an exported variable is an
+    # instruction.* There is no default here on purpose — a default is what reaches production by
+    # omission, and a token file in the tree is something somebody copies.
+    #
+    # ⚠️ **Until this block is deployed the two paths 404, and that is by design.** A 404 leaves the
+    # client's queue intact, so every event and error recorded before deployment is delivered by the
+    # first visit after it. Dropping them would be permanent (C7).
+    location ~ "^/api/(events|errors)$" {
+        # ⚠️ Only POST reaches `keep`. Anything else is refused here rather than forwarded: the data
+        # layer answers three routes and a GET on this path is not one of them.
+        limit_except POST { deny all; }
+
+        # ⚠⚠ **The client's own Authorization header is discarded, not merged.** A browser that sent one
+        # must not be able to influence what `keep` sees; the edge decides, every time.
+        proxy_set_header Authorization "Bearer ${KEEP_SHARED_TOKEN}";
+        proxy_set_header Host $host;
+        # ⚠️ **No `X-Forwarded-For`.** §35 keeps IP addresses out of the system entirely, and adding the
+        # header here would put one in `keep`'s reach for the sake of a convention.
+        # ⚠⚠ **Resolved at request time, through a variable, rather than at start-up.** A literal
+        # `proxy_pass http://keep:8081` makes nginx resolve `keep` while *reading* the config — so
+        # **`serve` would refuse to start whenever the data layer is down**, which inverts §23: the game
+        # is static and must survive the backend being absent. With a resolver and a variable, `keep`
+        # being down is a 502 on two API paths and a working game everywhere else.
+        resolver 127.0.0.11 valid=10s ipv6=off;
+        set $keep_upstream keep;
+        proxy_pass http://$keep_upstream:8081/$1;
+
+        # A queue that retries is the client's design (C3); an edge that hangs on a slow data layer is
+        # a page that hangs. `serve` answers, or it answers that it could not.
+        proxy_connect_timeout 3s;
+        proxy_read_timeout 10s;
     }
 
     # ---- what must not answer ---------------------------------------------------------------------

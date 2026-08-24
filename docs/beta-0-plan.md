@@ -19,7 +19,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
-| **F** deployment | ⬜ | |
+| **F** deployment | ⬜ **not met** | ✔ **F1 met** — both images, unprivileged and secretless, and the proxy tested end to end against a real `keep`. ⬜ **F2 and F3 need the VPS**: TLS, DNS, the compose file, and the health endpoints |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
 ⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
@@ -900,41 +900,69 @@ deployment is moving a known-good thing rather than discovering the difference i
 
 ## Group F — deployment
 
-### F1. Images
+### ▶ F1. Images — **built 2026-08-24, everything in F that needs no VPS**
 
-- **F1.1** A Dockerfile for `serve` — ⚠️ **`serve/` only.** Generator code must never reach the VPS.
-- **F1.2** A Dockerfile for the data layer.
-- **F1.3** No secrets in images. Containers unprivileged. The data layer's port **not published**.
-- **F1.3b** ⚠⚠ **nginx proxies `/api/events` and `/api/errors` to `keep`, adding the shared token.**
-  The client posts to `serve` because the browser must never reach `keep` — its port is unpublished and
-  the token must not travel to a browser (`data-layer.md` §4). **Until this exists the two paths 404**,
-  which is exactly why a 404 leaves the queue intact: every event and error recorded before deployment
-  is waiting to be delivered by the first visit after it, and dropping them would be permanent.
-- **F1.4** ⚠️ The VPS holds the **public** signing key. The private key never leaves the laptop.
-- **F1.5** ⚠⚠ **Two sentences become false the moment F ships, and they are recorded here because
-  nothing else will remember them.** E1b adds a fourth tree, `publish/`, holding the serving-side
-  executables — the rotation now, the health endpoints at F3, the archive endpoint at beta 3, and the
-  ingest step `serve/data/README.md` already anticipates. **Something executable now has to reach the
-  VPS**, and today two documents say it does not:
+- ✔ **F1.1 done** — `deploy/serve.Dockerfile`. ⚠️ **`serve/` and the server block, and nothing else.**
+  It is nginx with no application: `serve/` is static files, which is §23's whole point — the day's
+  puzzle survives every backend being down because serving it needs no backend. An image with a process
+  in it would be a process whose failure takes the game away.
+- ✔ **F1.2 done** — `deploy/keep.Dockerfile`, built **from `keep/`** rather than the repository root.
+  ⚠️ That is the boundary rather than a convenience: the build *cannot* copy `forge/` because it is not
+  in its context. §33 enforced by the shape of the command.
+  - ⚠️⚠️ **It surfaced a real defect: `psycopg` was a dev extra**, justified by a comment reading *"a dev
+    extra because production installs it"* — which is circular. `keep` cannot start without a database.
+    `uv sync --frozen --no-dev` produced a container that would have died on its first request, and
+    **nothing else in the project installs `keep` the way production does**, so nothing else could have
+    found it. It is a runtime dependency now.
+  - ⚠️ `python:3.13-slim`, not `alpine`: `psycopg[binary]` ships manylinux wheels, and on musl the
+    install falls back to building from source against a libpq that is not there.
+- ✔ **F1.3 done and asserted.** Both images run as a non-root user — `nginx` in one, a created `keep`
+  user at uid 10001 in the other, checked with `id`. No secret is in either image: the token and the DSN
+  arrive as environment variables, and `keep` refuses to start without them.
+- ✔ **F1.3b done** — the `/api/(events|errors)` block in `deploy/nginx/`, tested end to end against a
+  real `keep` and Postgres.
+  - ⚠️⚠️ **The token is added at the edge and the client's own header is discarded, not merged**, so a
+    browser cannot influence what `keep` sees. Asserted by sending a wrong one and still being accepted.
+  - ⚠️⚠️ **`resolver` and a variable, not a literal upstream.** `proxy_pass http://keep:8081` makes nginx
+    resolve `keep` while *reading* the config, so **`serve` would refuse to start whenever the data layer
+    is down** — §23 inverted. With the variable, `keep` being absent is a 502 on two API paths and a
+    working game everywhere else. Verified: with no `keep` running, `POST /api/events` is 502 and `/`,
+    `/today` and `/tutorial` are 200.
+  - ⚠️ **Until this is deployed the two paths 404, and that is by design**: a 404 leaves the client's
+    queue intact, so everything recorded before deployment is delivered by the first visit after it (C7).
+- ✔ **F1.4 unchanged and now enforced by the image**: the VPS holds the **public** signing key, which is
+  in `serve/data/` and therefore in the image. The private key never leaves the laptop and no build stage
+  can reach it.
+- ✔ **F1.5 done. The two sentences are split rather than replaced**, which is what this project does with
+  something superseded: *generator code must never reach the VPS* is permanent and is the reason the rule
+  exists; *deployment ships `serve/` only* expired, because `serve/`, `publish/` and `deploy/` all go now
+  and none of them is the generator. `CLAUDE.md` carries the split; `docs/python-conventions.md` and
+  `docs/design-boxscore-puzzle.md` held **two more copies of the expired half** and are corrected.
+  - ⚠️ **The runbook's §5 is rewritten as instructions rather than as a marking**, with a table of what
+    goes where. It is followed literally by somebody who has forgotten everything, and following it
+    literally is what reintroduced the archive hole once already.
 
-  | | says | why it stops being true |
-  |---|---|---|
-  | `docs/runbook-inventory.md` §5 | *"Copy the generation directory to the VPS. `forge/` never goes — **packages only**."* | `publish/` goes too, and the runbook is followed literally by somebody who has forgotten everything |
-  | `CLAUDE.md` §33 | *"**Deployment ships `serve/` only** — generator code must never reach the VPS."* | the second half stays true and is the point; the first half does not |
+#### ✔ The ordering trap is closed — the condition no longer holds
 
-  ⚠️ **And `deploy/` makes it a third thing, added 2026-08-24.** E3's nginx server block lives there —
-  outside `serve/`, because a config inside the served root is a config nginx hands out. **Three
-  directories reach the VPS now**: `serve/`, `publish/` and `deploy/`. The rewrite F owes has to name
-  all three, and the half that must survive it is unchanged: *generator code must never reach the VPS*.
+**It said F must not land before E1 replaced `daily.js`**, because a deployment carrying the manifest-
+reading client would have put the whole archive one URL away. **E1 is done**: `daily.js` reads the two
+dated pointers, the public path is flat and holds two packages, and the rotation is what keeps it that
+way. There is nothing left to warn about, so the warning is removed rather than left standing over a
+condition that has passed.
 
-  ⚠️ **Deliberately not edited when `publish/` was built.** E1b is localhost-only, and §5 and §6b
-  presuppose a serving VPS that F builds — editing them earlier would describe a deployment that does
-  not exist. **But §5 has already reintroduced the archive hole once by being followed literally**, so
-  this is the ordering trap recorded above, and it is written down rather than left to memory.
+#### ⚠️⚠️ What F1 leaves untested — **absent from the config, not present and unverified**
 
-  ⚠️ **What must not be lost in the rewrite:** *generator code must never reach the VPS* is the half
-  §33 exists for. `publish/` deploying is not a softening of it — `publish/` is not the generator, holds
-  no private key, and cannot produce a puzzle.
+An untested line that looks finished is worse than a gap F2 has to fill deliberately, so none of these
+is written and then left unchecked. **F2 inherits named holes:**
+
+| | why it cannot be tested here |
+|---|---|
+| **TLS and certbot** | no domain, no certificate. There is no `listen 443`, no cert path and no redirect in the template |
+| **DNS** | no zone |
+| **`keep` reachable only on the internal network** | a property of the VPS's network. The image `EXPOSE`s its port and **no compose file may publish it** — that is a line F2 writes and this cannot check |
+| **IPs not persisted anywhere** | `access_log off` is one line and is checkable; *nowhere on the host* is not. It is deliberately absent |
+| **the rate limit** | a limit tuned against a laptop is a number with no measurement behind it (§7). No `limit_req_zone` is written |
+| **the production compose file** | it is F2's, and writing it here would be guessing at a host |
 
 ### F2. The VPS
 
@@ -1025,33 +1053,30 @@ A ──────────────────────────
 ⚠️ **Two things gate the milestone rather than merely being in it:** B3 — one board failing by hand stops
 everything — and G, which cannot be dropped for time.
 
-### ⚠⚠ E before F is load-bearing, and nothing enforces it — recorded 2026-08-23
+### ✔ E before F was load-bearing. **The condition no longer holds — closed 2026-08-24**
 
-**The arrow from E to F above is not a convenience.** If F lands while `daily.js` is still the loader,
-`docs/runbook-inventory.md` §5 becomes a trap with an operator in front of it and a generation in hand,
-and **both ways out are wrong**:
+**What it warned about:** if F landed while `daily.js` still read `manifest.json`, `docs/runbook-inventory.md`
+§5 became a trap with an operator in front of it and both ways out wrong — withhold the manifest and the
+site 404s on every page, or publish it and hand out **every published id**, which is the leak
+`docs/calendar.md` exists to prevent. The second is the worse one, because a 404 is visible in minutes
+and an over-published manifest is not, and *anything fetched once is gone*.
 
-- **Follow §5** — keep `manifest.json` behind the wall — and `daily.js` 404s on the landing page and on
-  the board. Every visit lands on the landing page, so the site does not work at all.
-- **Put the manifest on a public path so `daily.js` works** and it lists **every published id**, which
-  is the leak A4.2 and `docs/calendar.md` exist to prevent. ⚠️ Worse than the first: a 404 is visible
-  within minutes and an over-published manifest is not, and *anything fetched once is gone*.
+**E1 removed the condition rather than the risk being managed.** `daily.js` reads `today.json` and
+`yesterday.json`; the public path is flat and holds two packages; **no code under `serve/` opens a
+manifest at all**; and the rotation is what keeps the count at two. There is no file the deploy is
+instructed to withhold that the loader needs.
 
-**Today the trap is real and not armed**, because both outcomes need a VPS that is serving and F is not
-begun — §5 and §6b presuppose the whole of it. **What keeps it disarmed is only this ordering.**
+⚠️⚠️ **So the warning is removed rather than left standing**, and that is the point of closing it. A
+warning about a condition that has passed is read by the next person as a live hazard, and they spend
+their attention on it — or they discover it is stale and start discounting the others. **A stale warning
+costs more than no warning**, which is the same argument this project makes about a rule stated in the
+place people go to learn the rules.
 
-⚠️ **The marking done in `docs/calendar.md` is what stops this being invisible. It is not what stops it
-happening.** A reader who follows §5 to the letter now meets a pointer saying which clause is future;
-a reader who does not read it meets nothing. **That is detection, and the ordering is still a judgement.**
-
-⬜ **What would remove the judgement is an assertion rather than a procedure, and it does not exist.**
-Same shape as `docs/reloading-retrosheet.md`'s closing section, which names the two assertions that
-would replace *look at a number and act on it* and says neither is built. Here the thing to assert is
-that the served root's loader does not depend on a file the deploy is instructed to withhold — **named
-as absent rather than designed here**, because designing it belongs with E1, which is what changes the
-loader. Until then the ordering is the check, which is why it is written down.
-
----
+⬜ **What it asked for and did not get: an assertion instead of an ordering.** It named the thing to
+assert — *the served root's loader does not depend on a file the deploy withholds* — and said it belonged
+with E1. **E1 did not build it either**, and it is worth being straight about that: what makes the trap
+gone is that the dependency was removed, not that anything checks for one. If a future loader starts
+reading a withheld file, nothing will notice.
 
 ## What was open before starting — four of five closed
 

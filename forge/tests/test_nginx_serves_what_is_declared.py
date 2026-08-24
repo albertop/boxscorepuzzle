@@ -22,6 +22,7 @@ project keeps closing.
 import http.client
 import importlib.util
 import re
+import secrets
 import socket
 import subprocess
 import time
@@ -32,7 +33,7 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[2]
-_CONF = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf"
+_CONF = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
 _CALENDAR = _ROOT / "docs" / "calendar.md"
 _IMAGE = "nginx:1.27-alpine"
 _CONTAINER_PORT = 8080
@@ -109,8 +110,18 @@ def _serve(conf: Path) -> Iterator[int]:
             f"{port}:{_CONTAINER_PORT}",
             "-v",
             f"{root}/serve:/srv/serve:ro",
+            # ⚠⚠ **Mounted as a TEMPLATE, which is how it is deployed.** The config carries
+            # `${KEEP_SHARED_TOKEN}` and the nginx image substitutes it at start; mounting it straight
+            # into `conf.d/` would leave the placeholder in place and test a config that never runs.
+            #
+            # ⚠️ **A throwaway token, because a config that names one must have one to be valid** — not
+            # because anything here authenticates. It exists inside this process for a few seconds.
+            "-e",
+            f"KEEP_SHARED_TOKEN={secrets.token_hex(24)}",
+            "-e",
+            "NGINX_ENVSUBST_FILTER=^KEEP_",
             "-v",
-            f"{conf.as_posix()}:/etc/nginx/conf.d/default.conf:ro",
+            f"{conf.as_posix()}:/etc/nginx/templates/default.conf.template:ro",
             _IMAGE,
         ],
         capture_output=True,

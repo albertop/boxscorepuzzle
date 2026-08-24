@@ -53,15 +53,26 @@ def server() -> Iterator[int]:
         stderr=subprocess.DEVNULL,
     )
     try:
-        deadline = time.monotonic() + 15
+        # ⚠⚠ **A real request, not an open socket.** This waited on `create_connection` and was
+        # *correct* — a plain Python server binds and starts accepting with nothing in between, so a
+        # connect really does mean it is up. **It stops being correct the day this runs against a
+        # containerised dev server**, and `compose.yaml` already exists: Docker's forwarder binds before
+        # the container accepts and then resets what it accepted, which is how the nginx probe failed in
+        # CI on a server that was seconds from fine.
+        #
+        # ⚠️ It is changed even though it works, because leaving it would leave an example of the
+        # pattern looking fine — and `CLAUDE.md` records that a wait loop's success condition is a real
+        # request. **The instance is fixed; there is deliberately no rule banning the pattern**, since
+        # such a rule would have fired on this very line while it was right.
+        deadline = time.monotonic() + 30
         while time.monotonic() < deadline:
             try:
-                with closing(socket.create_connection(("127.0.0.1", port), timeout=0.5)):
-                    break
-            except OSError:
+                _get(port, "/")
+                break
+            except (OSError, http.client.HTTPException):
                 time.sleep(0.05)
         else:
-            message = f"the development server never answered on {port}"
+            message = f"the development server never answered an HTTP request on {port}"
             raise AssertionError(message)
         yield port
     finally:

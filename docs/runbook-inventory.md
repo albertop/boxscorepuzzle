@@ -182,7 +182,26 @@ but not the others. This project has already shipped a pack that reported quotas
 no public path — a static file on a public path cannot be sold, and §9 sells the archive. **The daily
 rotation is what enforces it**, and a rotation that fails once leaks the archive one day at a time.
 
-- Copy the generation directory to the VPS. **`forge/` never goes** (§16, §33) — packages only.
+### What goes to the VPS
+
+⚠️⚠️ **This step said *copy the generation directory; `forge/` never goes — packages only*, and that
+stopped being the whole truth on 2026-08-24.** It is written for somebody who has forgotten everything
+and follows it literally, and following it literally is what reintroduced the archive hole once already.
+**Three things go, and the puzzles are only one of them:**
+
+| | from | to | when |
+|---|---|---|---|
+| the private inventory | `forge/inventory/<generation>/` | the VPS's private path, **not** under the served root | every batch |
+| `publish/` | the tree | the VPS | when it changes |
+| `deploy/` | the tree | the VPS | when it changes |
+
+**`forge/` itself never goes** (§16, §33) — not the generator, not the validator, not the calendar
+builder, and **not the private signing key**. `publish/` and `deploy/` are not the generator: neither can
+produce a puzzle and neither holds a key.
+
+⚠️ **The public path is not one of these rows.** Nothing is copied *into* it by hand: the rotation puts
+today's and yesterday's there and removes everything else. Copying a package into the served root
+directly is how two days becomes three.
 - ⚠️⚠️ **The generation directory itself is behind the wall, not just the manifest.** It holds all 150
   packages and **only two may be on a public path**. Following this runbook literally is what caught
   that: the line above used to read *copy the generation directory to the VPS* with only the manifest

@@ -398,11 +398,14 @@ between forge and serve is enforced where it actually matters — in deployment 
 solvability guarantee, the one genuinely hard-to-replicate piece of the product and a trade secret
 (§16). Never push any part of it to a public gist, issue, or paste service.
 
-**Deployment ships `serve/` only.** Generator code must never reach the VPS. This is a deployment
-configuration concern, not a repository concern.
+**Generator code must never reach the VPS.** That is the permanent half and the reason the rule
+exists. ⚠️ **The sentence here read *deployment ships `serve/` only* until 2026-08-24**, which was true
+when `serve/` was the only thing there was: **`serve/`, `publish/` and `deploy/` all go now**, and none
+of the three is the generator. `CLAUDE.md` carries the split. This is a deployment configuration
+concern, not a repository concern.
 
-**No cross-imports between `forge/` and `serve/`.** They share no code. The only thing that crosses
-between them is a signed package of validated puzzles.
+**No cross-imports between `forge/`, `serve/`, `publish/` and `keep/`.** They share no code. The only
+thing that crosses between them is a signed package of validated puzzles.
 
 ### Commits
 

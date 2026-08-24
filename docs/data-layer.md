@@ -42,9 +42,18 @@ for a *sanity check on client-reported durations so absurd values do not corrupt
 column's range is twenty-five days, so a duration far past absurd is still storable. There are no
 percentiles yet. `docs/reviews/todo.md`.
 
-⬜ **Not built here, and it belongs to deployment (F):** the Dockerfile, and the container running with
-its port unpublished, and the nginx block proxying `/api/events` and `/api/errors` with the shared
-token — **without which the client's two queues 404 and keep everything**, which is by design.
+✔ **Built at F1, 2026-08-24, and tested end to end:** `deploy/keep.Dockerfile` — unprivileged, no secret
+in the image, `EXPOSE` without publishing — and the nginx block in `deploy/nginx/` proxying
+`/api/events` and `/api/errors` with the shared token added **at the edge**, where the secret already
+lives and the browser cannot see it. `forge/tests/test_the_proxy_reaches_keep.py` posts an event through
+the edge and requires `keep` to report it **stored**.
+
+⚠️ **Until it is deployed the two paths 404, and that is by design** — a 404 leaves the client's two
+queues intact, so everything recorded before deployment is delivered by the first visit after it.
+
+⬜ **What still belongs to F2**, and is absent from the config rather than written and unverified: the
+port staying unpublished is a line in a compose file that does not exist yet, and *reachable only on the
+internal network* is a property of the VPS rather than of any file here.
 
 ---
  Where a question is still open it says so; those are not implementation

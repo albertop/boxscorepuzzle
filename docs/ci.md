@@ -195,9 +195,15 @@ done twice on 2026-08-23, by me, without noticing.
 
 ## ⚠️⚠️ One forge test needs Docker, and it skips rather than failing when there is none
 
-`forge/tests/test_nginx_serves_what_is_declared.py` starts nginx in a container over `serve/` and checks
-every URL the route table and the cache table declare. **Without a container runtime it skips, with the
-reason printed** — `docker is not runnable here`, or what `docker info` said.
+**Two tests need one.** `forge/tests/test_nginx_serves_what_is_declared.py` starts nginx over `serve/`
+and checks every URL the route table and the cache table declare;
+`forge/tests/test_the_proxy_reaches_keep.py` **builds `deploy/keep.Dockerfile`** and runs it beside a
+Postgres and an nginx on their own network, to post an event through the edge. **Without a container
+runtime both skip, with the reason printed** — `docker is not runnable here`, or what `docker info` said.
+
+⚠️ **The second one builds an image**, which is the slowest thing in the suite by a wide margin on a
+cold runner. It is the only place `keep` is installed the way production installs it, and that is what
+caught `psycopg` being a dev extra — so the cost buys something nothing else can.
 
 ⚠️ **A skip that reads like a pass is the shape this project keeps closing**, so the distinction matters:
 the run says *there is no Docker*, never *the routes are fine*. GitHub's `ubuntu-latest` has Docker, so
