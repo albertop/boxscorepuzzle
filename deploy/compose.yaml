@@ -4,7 +4,8 @@
 #
 # ⚠️⚠️ **`name:` is what Portainer shows as the stack**, and it is why the containers appear together:
 # compose stamps `com.docker.compose.project` on each one and Portainer groups by that label. Deploying
-# this through Portainer's *Stacks → Add stack* with the name `bxcpze` produces the same grouping; the
+# this through Portainer's *Stacks → Add stack* with the name `boxscorepuzzle` produces the same
+# grouping; the
 # `name:` here keeps a command-line deploy identical to a UI one instead of leaving two conventions.
 #
 # ⚠️ **The test containers are deliberately NOT in this stack.** `docker run` creates no project label,
@@ -16,7 +17,17 @@
 # boot, because a deploy that alters the database at three in the morning is the one failure a rollback
 # does not undo. `keep` asks the schema version and refuses if it is not what it expects.
 
-name: bxcpze
+# ⚠️ **The stack is `boxscorepuzzle` and the images and containers are `bxcpze-*`, and that is not a
+# leftover.** The stack name is what a person reads in Portainer, so it is the product's name; the
+# prefix is what a `docker ps --filter name=` sweep matches, so it is short and uncommon enough that it
+# cannot hit somebody else's container on a shared VPS. Two audiences, two names, neither derived from
+# the other.
+#
+# ⚠️ **The volume follows the stack**, so it is `boxscorepuzzle_puzzles` and not `bxcpze_puzzles`. A
+# rename of the stack orphans the old volume rather than moving it -- the packages in it are two public
+# files the rotation rewrites daily, so nothing is lost, but the old one stays on disk until it is
+# removed by hand.
+name: boxscorepuzzle
 
 services:
   # The site. nginx over the baked `serve/` tree, with the routes and the cache rule.
@@ -43,7 +54,17 @@ services:
       # what reaches production by omission.
       KEEP_SHARED_TOKEN: ${KEEP_SHARED_TOKEN:?set it in the stack's environment; there is no default}
       # Keeps the substitution to that one name, so nginx's own `$host` and `$1` survive it.
-      NGINX_ENVSUBST_FILTER: "^KEEP_"
+      # ⚠️⚠️ **Two names and no more.** `envsubst` would otherwise eat nginx's own `$host`, `$1` and
+      # `$keep_upstream`, which is why this is a filter rather than an absence.
+      #
+      # `NGINX_LOCAL_RESOLVERS` is computed by the image's `15-local-resolvers.envsh` from the
+      # container's `/etc/resolv.conf`, and the template uses it for the resolver that finds `keep`.
+      # **It was a hardcoded `127.0.0.11`** — right on a user-defined network, wrong on the default
+      # bridge, and wrong silently: `/api/` 502s while the whole site keeps working.
+      NGINX_ENVSUBST_FILTER: "^(KEEP_|NGINX_LOCAL_RESOLVERS)"
+      # ⚠️ Without this the script above returns immediately and the variable is never exported, so the
+      # template would keep a literal `${NGINX_LOCAL_RESOLVERS}` and nginx would refuse to start.
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"
 
     volumes:
       # ⚠️⚠️⚠️ **The public path is a volume, not what the image baked.** The image carries the
@@ -52,8 +73,19 @@ services:
       # is what makes the image's copy irrelevant rather than a thing that can be served by accident.
       #
       # ⬜ **Nothing writes this yet.** `publish` does the rotation and needs a scheduler; that is F3 and
-      # is deliberately not invented here. Until it runs, this volume is empty and the site has no
-      # puzzle — which the health check is built to say out loud.
+      # is deliberately not invented here.
+      #
+      # ⚠️⚠️ **This said the volume would be empty until the rotation ran, and that is false.** Docker
+      # populates a NEW named volume from the image's contents on first mount, so the first deploy came
+      # up serving the image's development tree: two packages and two pointers dated **2026-09-02**,
+      # confirmed on the VPS 2026-08-24. The sentence was written from what the mount was *for* rather
+      # than from what Docker does, and it survived a review because it sounded like a limitation.
+      #
+      # ⚠️⚠️ **What follows from it is the thing to act on: the site serves a fixed future-dated puzzle
+      # until F3's rotation runs, and it does so while looking perfectly healthy.** There is no empty
+      # directory for the inventory health check to complain about — the failure it was built to catch
+      # is exactly the one this hides. **A player arriving before the rotation gets the same board every
+      # day**, which is worse than an outage because nothing reports it.
       - puzzles:/srv/serve/data/puzzles
 
     ports:
@@ -75,6 +107,15 @@ services:
     depends_on:
       keep:
         condition: service_started
+
+    # ⚠️ **Belt to the image's braces.** `worker_rlimit_nofile` in the image raises nginx's own soft
+    # limit and is what actually acts; this raises the container's, so the two cannot disagree and a
+    # future value above 8192 is not silently capped by a limit nobody looked at. The stock soft limit
+    # is 1024, which the startup log prints on every boot.
+    ulimits:
+      nofile:
+        soft: 16384
+        hard: 16384
 
     logging:
       driver: json-file

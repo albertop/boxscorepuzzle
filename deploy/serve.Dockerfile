@@ -13,7 +13,11 @@
 # ⚠️ Built from the repository root, because it copies two sibling directories: the served tree and the
 # server block that describes how to serve it.
 
-FROM nginx:1.27-alpine
+# ⚠️ **Pinned to a minor, not to `alpine` or `stable`.** A floating tag means the image the tests built
+# and the image production runs can be different builds of different nginx, and the difference shows up
+# only as behaviour. Moving it is a deliberate edit and `forge/tests/test_the_images_build.py` starts
+# what it produced.
+FROM nginx:1.30.4-alpine
 
 # ⚠️⚠️ **Nothing here is a secret and nothing here may become one.** The image holds published puzzles,
 # the client, and the **public** half of the signing key — which belongs in the tree, because it records
@@ -45,10 +49,35 @@ COPY deploy/nginx/boxscorepuzzle.conf.template /etc/nginx/templates/default.conf
 # that finds nothing is silent, and a Dockerfile has no way to notice: only running it does.
 # ⚠️ The stock `default.conf` is removed: the entrypoint writes ours beside it, and two server blocks
 # on one port means whichever nginx reads first wins.
+#
+# ⚠️⚠️ **The file-descriptor ceiling, and the startup log is what asks for it.** The stock image reports
+# `getrlimit(RLIMIT_NOFILE): 1024:524288` — a **soft** limit of 1024 descriptors per worker against a
+# hard limit half a million. Every client connection is one descriptor and every proxied request to
+# `keep` is a second, so 1024 is the real ceiling on concurrency and the hard limit is not the thing
+# doing the limiting.
+#
+# `worker_rlimit_nofile` is nginx calling `setrlimit` on itself, bounded by the hard limit — so this
+# alone raises it, with no privilege and no change on the host. `worker_connections` is raised beside it
+# because a descriptor budget nothing is allowed to spend is not a budget.
+#
+# ⚠️ **8192 and 2048 are the operator's own numbers**, from the VPS's `/etc/nginx/nginx.conf`, which has
+# run five sites for months. Matching them is deliberate: a second set of figures here would be a second
+# opinion about the same machine, and nobody has measured this container to have a different one.
+#
+# ⚠️⚠️ **Every `sed` below is verified in the same layer, and this Dockerfile is why.** The pid line was
+# rewritten from `/var/run/nginx.pid` when this image says `/run/nginx.pid` — the substitution matched
+# nothing, **the build succeeded**, and the container died on start. A `sed` that finds nothing is
+# silent and a Dockerfile has no way to notice. The `grep -q` calls turn that into a failed build.
 RUN rm -f /etc/nginx/conf.d/default.conf \
  && chown -R nginx:nginx /var/cache/nginx /var/run /etc/nginx/conf.d /etc/nginx/templates \
  && sed -i 's|^user  nginx;|# user directive removed: this image runs as nginx already|' /etc/nginx/nginx.conf \
- && sed -i 's|pid *[^;]*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf
+ && sed -i 's|pid *[^;]*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf \
+ && sed -i 's|^worker_processes .*|worker_processes  auto;\nworker_rlimit_nofile  8192;|' /etc/nginx/nginx.conf \
+ && sed -i 's|worker_connections  *[0-9]*;|worker_connections  2048;|' /etc/nginx/nginx.conf \
+ && grep -q '^pid /tmp/nginx.pid;' /etc/nginx/nginx.conf \
+ && grep -q '^worker_rlimit_nofile  8192;' /etc/nginx/nginx.conf \
+ && grep -q 'worker_connections  2048;' /etc/nginx/nginx.conf \
+ && ! grep -q '^user  nginx;' /etc/nginx/nginx.conf
 
 USER nginx
 

@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import DOCKER_PREFIX
+from tests.conftest import DOCKER_PREFIX, nginx_environment_flags
 
 _ROOT = Path(__file__).resolve().parents[2]
 _PUBLIC = _ROOT / "serve" / "data" / "puzzles"
@@ -99,8 +99,7 @@ def site() -> Iterator[int]:
             # authenticates, and it exists inside this process for a few seconds.
             "-e",
             "KEEP_SHARED_TOKEN=0000000000000000000000000000000000000000",
-            "-e",
-            "NGINX_ENVSUBST_FILTER=^KEEP_",
+            *nginx_environment_flags(),
             image,
         )
         yield port

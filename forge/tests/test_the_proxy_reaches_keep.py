@@ -26,12 +26,13 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import DOCKER_PREFIX
+from tests.conftest import DOCKER_PREFIX, nginx_base_image, nginx_environment_flags
 
 _ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = _ROOT / "keep" / "migrations" / "001-initial.sql"
 _TEMPLATE = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
-_NGINX = "nginx:1.27-alpine"
+_NGINX = nginx_base_image()
+"""⚠️ Read from `deploy/serve.Dockerfile`, never spelled. See `nginx_base_image`."""
 _POSTGRES = "postgres:17-alpine"
 
 
@@ -188,8 +189,7 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
             f"{port}:8080",
             "-e",
             f"KEEP_SHARED_TOKEN={token}",
-            "-e",
-            "NGINX_ENVSUBST_FILTER=^KEEP_",
+            *nginx_environment_flags(),
             "-v",
             f"{_TEMPLATE.as_posix()}:/etc/nginx/templates/default.conf.template:ro",
             "-v",

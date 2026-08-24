@@ -32,12 +32,15 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import DOCKER_PREFIX
+from tests.conftest import DOCKER_PREFIX, nginx_base_image, nginx_environment_flags
 
 _ROOT = Path(__file__).resolve().parents[2]
 _CONF = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
 _CALENDAR = _ROOT / "docs" / "calendar.md"
-_IMAGE = "nginx:1.27-alpine"
+_IMAGE = nginx_base_image()
+"""⚠️ Read from `deploy/serve.Dockerfile`, never spelled. This was `nginx:1.27-alpine` while the
+Dockerfile had moved to 1.30.4 -- a suite green about a config running on a different nginx than
+the one shipped."""
 _CONTAINER_PORT = 8080
 
 
@@ -120,8 +123,7 @@ def _serve(conf: Path) -> Iterator[int]:
             # because anything here authenticates. It exists inside this process for a few seconds.
             "-e",
             f"KEEP_SHARED_TOKEN={secrets.token_hex(24)}",
-            "-e",
-            "NGINX_ENVSUBST_FILTER=^KEEP_",
+            *nginx_environment_flags(),
             "-v",
             f"{conf.as_posix()}:/etc/nginx/templates/default.conf.template:ro",
             _IMAGE,

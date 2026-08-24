@@ -13,7 +13,9 @@ as though the footnote columns are decoration.
 """
 
 import os
+import re
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 from hypothesis import settings
@@ -100,3 +102,69 @@ shared prefix that sweep has to know every name, which is a second list of the s
 ⚠️ **Uncommon on purpose.** `bsp` collides with anything; this string appears nowhere else on a normal
 machine, so the filter cannot match a container somebody else is depending on.
 """
+
+
+_ROOT = Path(__file__).resolve().parents[2]
+"""The repository root. `deploy/` is a sibling of `forge/`."""
+
+
+def _serve_environment() -> dict[str, str]:
+    """The `serve` service's nginx variables, **read from `deploy/compose.yaml`**.
+
+    ⚠️⚠️ **Three tests spelled `NGINX_ENVSUBST_FILTER=^KEEP_` and the compose file spelled it a fourth
+    time.** Four places encoding one fact, and the failure is silent in the direction that matters: a
+    test passing its own filter proves nginx works **with that filter**, never with the deployment's. The
+    day they differ, the suite is green about a configuration nobody runs.
+
+    ⚠️ Parsed with a regex rather than a YAML library because `forge` has no YAML dependency and this
+    reads two lines. **It asserts it found them** -- a parse that silently returns nothing would hand
+    every test an empty environment and nginx would start on an unsubstituted template.
+    """
+    compose = (_ROOT / "deploy" / "compose.yaml").read_text(encoding="utf-8")
+    wanted = ("NGINX_ENVSUBST_FILTER", "NGINX_ENTRYPOINT_LOCAL_RESOLVERS")
+    found: dict[str, str] = {}
+    for name in wanted:
+        match = re.search(rf"^\s*{name}:\s*\"?([^\"\n]+?)\"?\s*$", compose, re.MULTILINE)
+        if match is None:
+            message = f"{name} is not in deploy/compose.yaml; the tests would run a different nginx"
+            raise AssertionError(message)
+        found[name] = match.group(1)
+    return found
+
+
+NGINX_ENVIRONMENT = _serve_environment()
+"""What the deployment gives nginx, so a test starts the container the deployment starts.
+
+⚠️ `KEEP_SHARED_TOKEN` is deliberately **not** here: each test makes its own, because a token committed
+to the repository is a token, and `docs/signing-keys.md` records why that is never done."""
+
+
+def nginx_environment_flags() -> list[str]:
+    """`-e NAME=VALUE` for every nginx variable the deployment sets.
+
+    ⚠️ **Returns the flags, not the values.** The first version returned `NAME=VALUE` strings spliced
+    after a single `-e`, so the second variable reached `docker run` as an image name and every test
+    died with exit 125. A helper that hands back half of a flag pair is a helper whose caller has to
+    remember the other half.
+    """
+    flags: list[str] = []
+    for name, value in NGINX_ENVIRONMENT.items():
+        flags += ["-e", f"{name}={value}"]
+    return flags
+
+
+def nginx_base_image() -> str:
+    """The nginx image `deploy/serve.Dockerfile` builds on, **read from it**.
+
+    ⚠️⚠️ **Two tests spelled `nginx:1.27-alpine` while the Dockerfile said something else.** A test that
+    runs the config on a different nginx than the one shipped is green about a build nobody deploys --
+    and the version moved to 1.30.4 with nothing complaining. **It asserts it found the line**: a regex
+    that silently matched nothing would hand back an empty image name and the failure would describe
+    something else entirely.
+    """
+    dockerfile = (_ROOT / "deploy" / "serve.Dockerfile").read_text(encoding="utf-8")
+    match = re.search(r"^FROM\s+(nginx:\S+)", dockerfile, re.MULTILINE)
+    if match is None:
+        message = "no FROM nginx: line in deploy/serve.Dockerfile; the tests would run some other nginx"
+        raise AssertionError(message)
+    return match.group(1)

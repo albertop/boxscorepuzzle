@@ -37,6 +37,17 @@
 # an untested line that looks finished is worse than a gap F has to fill deliberately.
 
 server {
+    # ⚠️ **IPv4 only, and deliberately.** The image's `10-listen-on-ipv6-by-default.sh` adds
+    # `listen [::]:...` to `conf.d/default.conf` — but it runs *before* `20-envsubst-on-templates.sh`
+    # writes this file there, so it never sees it and logs `default.conf is not a file or does not
+    # exist`. **That line in the startup log is expected**: it is the script reporting it had nothing to
+    # do, and its presence followed by the envsubst line is what says the entrypoint ran at all.
+    #
+    # ⚠️⚠️ **Do not "fix" it by adding `listen [::]:8080;` here.** Nothing reaches this container over
+    # IPv6: the host's nginx proxies to `127.0.0.1:3005`, which is IPv4 by definition, and the compose
+    # publishes on that address. And on a Docker daemon without IPv6 enabled **nginx fails to bind and
+    # the container does not start** — which is the whole reason that script tests for IPv6 first
+    # instead of writing the line unconditionally. Writing it by hand throws away the test.
     listen 8080;
     server_name localhost;
 
@@ -161,7 +172,20 @@ server {
         # **`serve` would refuse to start whenever the data layer is down**, which inverts §23: the game
         # is static and must survive the backend being absent. With a resolver and a variable, `keep`
         # being down is a 502 on two API paths and a working game everywhere else.
-        resolver 127.0.0.11 valid=10s ipv6=off;
+        # ⚠️⚠️ **Derived from the container's own `/etc/resolv.conf`, never written down here.** This
+        # was the literal `127.0.0.11` — Docker's embedded DNS, and correct **only** on a user-defined
+        # network. Measured on the image: a user-defined network gives `127.0.0.11`, the default bridge
+        # gives `192.168.65.7`. A hardcoded value is right where it was tested and wrong anywhere else.
+        #
+        # ⚠️⚠️ **And the failure it produces is the bad kind: `keep` stops resolving, `/api/` answers
+        # 502, and every other route on the site keeps working.** The page loads, the board plays, and
+        # the events go nowhere — a site that looks healthy while losing exactly the data C7 calls
+        # irreversible.
+        #
+        # The image computes this in `15-local-resolvers.envsh`, which needs
+        # `NGINX_ENTRYPOINT_LOCAL_RESOLVERS` set to run at all. `valid=` and `ipv6=off` stay ours: only
+        # the address is derived.
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
         set $keep_upstream keep;
         proxy_pass http://$keep_upstream:8081/$1;
 
