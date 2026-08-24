@@ -240,9 +240,13 @@ an answer is never a passing one.
 
 ### Why inventory is on the list, and it is the one nobody would think of
 
-**`serve` serves static files.** It can be perfectly up with an empty puzzle directory, or with a manifest
-pointing at a generation that no longer exists. **None of the other three checks would notice**, and the
-first person to find out would be a player.
+**`serve` serves static files.** It can be perfectly up with an empty puzzle directory, or with
+`today.json` naming a package that is not on the public path. **None of the other three checks would
+notice**, and the first person to find out would be a player.
+
+⚠️ **The second case was a real hole until v40-P1-01.** `publish.health.inspect()` read the pointer's
+date and never its `puzzle_id`, so **zero packages was healthy** as long as a current-dated pointer
+survived — the one state this endpoint exists for. Both pointers are followed to their package now.
 
 §33 puts the alert below three months of forward inventory. **This endpoint is what Kuma watches for it.**
 

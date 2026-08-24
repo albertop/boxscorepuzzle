@@ -155,7 +155,7 @@ closed. **The group was met against the work it did, and the second run is the o
 | **Uncaught client errors** | ✔ built — `serve/engine/report.js`, rate-limited two ways and unable to throw |
 | **The share PNG** | ⬜ **not built.** Designed in `serve-flow.md` §7b; the button exists and is `disabled` |
 | **The deployment** | ⬜ **not built.** No image, no nginx, no DNS |
-| **`/today` and `/p/<id>`** | ⬜ **not built.** The routes and the caching contract are decided in `serve-brief.md` and unimplemented |
+| **`/today` and `/p/<id>`** | ✔ **built 2026-08-23.** `/p/<id>` canonical, `/today` a static page that follows the signed pointer, `?p=` gone, an unknown id refused rather than substituted. ⬜ The *caching contract* is E2 and is not built |
 | **The daily rotation** | ✔ built — `publish/`, a fourth tree: today and yesterday public, everything else removed, and a health verdict with two independent questions |
 
 ---
@@ -166,8 +166,10 @@ closed. **The group was met against the work it did, and the second run is the o
 2. ✔ **Device UUID** — asymmetric cost; every event before it exists is unattributable, and C7 is
    irreversible. **Done 2026-08-22**, and the upload queue with it.
 3. ✔ **The data layer**, against the Postgres already running. **Done 2026-08-22** — `keep`.
-4. ⬜ **Serving for real**, then ⬜ **deployment**. *Not in the original list because `/today` was assumed
+4. ▶ **Serving for real**, then ⬜ **deployment**. *Not in the original list because `/today` was assumed
    to come with the calendar; it does not, and it is where the two-public-paths rule becomes real code.*
+   ✔ E1b and E1 are done — the rotation, the two public paths, and the routes over them. ⬜ E2's caching
+   contract and E3's nginx remain, and both are about the server rather than the client.
 5. ⬜ **The share** — last to build, **held to the same standard as everything else in the milestone.**
 
 ⚠️ **What is left is items 4 and 5, plus the hand-solve gate**, which is the operator's and is the one

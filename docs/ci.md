@@ -193,6 +193,22 @@ done twice on 2026-08-23, by me, without noticing.
 
 ---
 
+## ⚠️⚠️ One forge test depends on `serve/` and on `tools/`, and the path filters cannot see that
+
+`forge/tests/test_dev_server_routes.py` starts `tools/dev_server.py` and asks it for pages under
+`serve/ui/phone/`. **`ci-forge.yml` skips `serve/`-only changes**, so a commit that renamed or removed
+`play.html` would not run it there.
+
+**What still catches it:** the pre-push hook runs every tree on every push, `ci-browser.yml` runs on
+`serve/` changes and would fail on the missing page, and the weekly run is complete. **What does not
+catch it is the workflow that owns the test**, and that is the honest shape of a path filter: it
+partitions by directory and a dependency that crosses one is invisible to it.
+
+⚠️ **Not fixed by widening `ci-forge.yml`'s triggers.** That would run the whole forge suite on every
+`serve/` commit and give back most of what `paths-ignore` was for. The test is cheap and its real
+guarantee is the hook; this paragraph exists so the next person to read a green forge badge after a
+`serve/` change knows what it did not run.
+
 ## The guard
 
 `forge/tests/test_the_hook_runs_what_ci_runs.py` asserts that the hook and the push workflows check

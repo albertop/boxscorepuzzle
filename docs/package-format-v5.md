@@ -209,10 +209,24 @@ A generation is a directory of packages, immutable once written, named by a dige
 contents. `manifest.json` at the root names the generation that is current:
 
 ```
-serve/data/puzzles/
+<inventory>/
   manifest.json          {"schema": 1, "generation": "<12 hex>", "puzzles": ["<id>", ...]}
   <generation>/<puzzle_id>.json
+  <generation>/days/<date>.json   {"date", "puzzle_id", "generation", "schema", "signature"}
 ```
+
+⚠️⚠️ **That is the PRIVATE inventory, and since E1 it is not what `serve/data/puzzles/` looks like.**
+The served root is flat and holds two days (`docs/calendar.md`):
+
+```
+serve/data/puzzles/
+  today.json  yesterday.json          the dated pointers, copied by publish.rotate
+  <puzzle_id>.json                     the two public packages
+  manifest.json                        {"schema": 1, "puzzles": [<the two ids>]}
+```
+
+**A pointer names the generation that owns its package**, which the rotation uses to find the file in the
+inventory. The browser never does: the public path has no generation directories at all.
 
 ⚠⚠ **`schema` there is the *manifest's* own format version and does not track the package schema.**
 Two documents, two independently versioned formats, one key name. It is `MANIFEST_SCHEMA` in

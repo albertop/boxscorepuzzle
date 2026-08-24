@@ -755,21 +755,66 @@ rule goes missing: E stops counting it and beta 3 never starts.
 ✔ **What E1b did leave ready:** the event carries **both dates** already (C2), so **nothing new has to be
 stored** for the exclusion to be computable when the reads exist.
 
-### E1. `/today` and `/p/<id>` — **second, after E1b**
+### ✔ E1. `/today` and `/p/<id>` — **done 2026-08-23**
 
-- **E1.1** C6: `/p/<id>` canonical, `/today` redirects. `daily.js` currently takes an id from the query
-  string — that is development scaffolding and it goes.
-- **E1.2** ⚠️ **The engine still does not know what day it is** (C4). A loader decides, server-side.
+- ✔ **E1.1 done.** `/p/<id>` is canonical and `/today` is a page that reads the pointer and replaces
+  itself with it. `?p=` is gone from `daily.js`, from `withSearch` and from every caller; `?test=` stays,
+  because it selects a development *mode* rather than a puzzle.
+  - ⚠️⚠️ **The soft-404 went with it (v36-P3-45).** An unknown id used to fall back to
+    `manifest.puzzles[0]` — a 200 carrying *a different puzzle as if it were the one asked for*. With
+    shared links that is somebody solving another person's board believing it is today's. It raises
+    `NoPuzzle` now and the page says so in its own sentence, distinct from *this puzzle could not be
+    read*: **nothing there** and **there and refused** are different facts, and telling a player their
+    board is corrupt sends them to reload instead of to come back tomorrow.
+  - ⚠️ **`/today` is a static page, not a service, and that is §23 rather than a shortcut.** `/today` is
+    the play path; a process answering it is a process whose failure removes the only door into the game.
+    `publish` is allowed to be an executable precisely because it is *not* on that path. The cost is a
+    real one and is named where the page is: this is not a 302, because a redirect status needs either a
+    request-time reader or a daily nginx reload.
+- ✔ **E1.2 done, and it settled the third assertion by removing the debt rather than paying it.**
+  The engine still does not know what day it is (C4) and neither does the loader: **it reads the date off
+  the signed pointer.**
   ✔ **And which clock it decides with is settled**: `docs/calendar.md` — the day rolls at **08:00 UTC**,
   a fixed `UTC-8` — **03:00 Eastern and midnight Pacific in winter, 04:00 and 01:00 under daylight saving.** §36 carried this open as *local
   midnight or UTC* and **UTC is the worst answer available**: it lands at 20:00 Eastern, so a player who
   sits down at 19:45 loses the board fifteen minutes later. The forge already computes the same date
-  (`serving_date()`) and `publish` spells it for the rotation. ⚠⚠ **E1 owes the third spelling *and its
-  assertion*.** `docs/calendar.md` states `ROLLOVER_OFFSET_HOURS = -8` once and each tree asserts its
-  constant against that line — verified on 2026-08-23 by changing the document and watching both existing
-  ones go red. **A shared-by-pointing rule with two of three pointers is worse than three honest copies**,
-  because it reads as covered: the missing pointer is the one nobody checks.
-- **E1.3** Everyone gets the same puzzle on the same date — **never derived from device-local state.**
+  (`serving_date()`) and `publish` spells it for the rotation.
+
+  ⚠️⚠️ **This item said E1 owed a third spelling of `ROLLOVER_OFFSET_HOURS` and its assertion. It does
+  not, and the sentence replaces the debt.** `serve` **consumes** the calendar date and never computes
+  it: `today.json` carries the date the forge wrote, `publish` chose which pointer to copy, and the
+  browser follows it. A third constant would have **no consumer** — its assertion against
+  `docs/calendar.md` would pass forever while testing nothing about behaviour, which is this project's
+  own *a check that never fires* wearing the clothes of diligence.
+
+  **Two trees compute the date and one reads it.** The two that compute are asserted against the
+  document, verified on 2026-08-23 by changing the value and watching both go red. The reading side is
+  asserted differently and has to be: a browser test refuses any source under `serve/ui/phone/` that
+  reaches for a rollover or a timezone offset, and refuses `calendarDate` being fed the player's own
+  date. ⚠️ **It does not ban `localDate` outright** — `shell.js` uses it for `playedOn`, *when did this
+  person sit down*, which is a different quantity on a different clock. The first version of that test
+  banned the function and went red on correct code.
+- ✔ **E1.3 done, by construction rather than by discipline.** The loader has no way to derive a date:
+  it reads one. ⚠️ A browser test refuses any player-page source that reaches for `ROLLOVER` or
+  `getTimezoneOffset`, or that feeds `calendarDate` the player's own date.
+  - ⚠️⚠️ **And it is why client-side staleness detection is refused.** Noticing that `today.json` is a day
+    old requires knowing what today is — the exact thing this item forbids as a basis for choosing a
+    puzzle. A player whose laptop is a day fast would be shown an error about a file that is perfectly
+    current. **Staleness is detected server-side and already is**: `publish.health.inspect()` compares the
+    pointer's date to the serving date. One observer with the right clock, not every visitor with their
+    own. The reason is written beside the code as well as here, because a future reader will otherwise
+    add the check.
+
+### ▶ What E1 left for E2 and F
+
+- ⚠️⚠️ **Two implementations of the routes, and nothing compares them.** `tools/dev_server.py` declares
+  the set — `REDIRECTS`, `BOARD_PATH`, `TEST_PATH` — and `forge/tests/test_dev_server_routes.py` drives a
+  real server against that declaration. **F writes the same rules again as an nginx server block**, and no
+  check can see both. It is the project's oldest defect shape, accepted knowingly: **F must copy from the
+  declaration rather than from memory**, and the reason is written in `do_GET` so F meets it there.
+- ⚠️ **`/today` is not a 302.** A redirect status needs a request-time reader — forbidden on the play path
+  by §23 — or a daily nginx reload, which is a moving part. If F wants the status code, that is the
+  trade to argue then; it is not a defect to fix quietly.
 
 ### E2. The caching contract
 

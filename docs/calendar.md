@@ -430,21 +430,28 @@ leaks the future. A manifest listing only today leaks nothing and protects nothi
 | `days/<date>.json` | the browser, one at a time | this id is this date's, **and this is the generation it lives in**, signed |
 | `<generation>/<id>.json` | the browser | the puzzle, immutable, cached a year |
 
-### ⚠⚠ That table is E1b's end state. **Today the browser reads `manifest.json`** — marked 2026-08-23
+### ✔ That table is true as of E1, 2026-08-23. The marking is removed with it
 
-**This is the one place that fact lives.** `docs/runbook-inventory.md` §5 and `write_manifest`'s
-docstring point here rather than restating it: three copies of a status is three things to remember to
-un-mark, and the one that gets forgotten is the one somebody believes.
+**It read *E1b's end state; today the browser reads `manifest.json`* for one day.** `serve/ui/phone/daily.js`
+fetched the manifest from the browser on both player pages and followed it to `<generation>/<id>.json`,
+picking the id from the query string. **None of that is left.**
 
-**What the code does today**, which is a statement about `serve/ui/phone/daily.js` and not about what it
-should do: it fetches `manifest.json` with `cache: "no-store"` **from the browser, on both player
-pages** — the landing and the board — and follows it to `${generation}/${id}.json`. It picks the id from
-the query string. `daily.js` says of itself that *the real `/today` route is server work and does not
-live here*: it is scaffolding **E1 retires**, and the table above is what replaces it.
+**What the code does now:** `daily.js` fetches `today.json` — and `yesterday.json`, which may legitimately
+be absent — validates each through `readPointer`, and follows the one it wants to `<id>.json` on the flat
+public path. `/p/<id>` takes the id from `location.pathname` and is refused unless it is one of the two
+public days. `?p=` is gone.
 
-⚠️ **Only the audience is future. The access model is not.** *Only two packages are public* is a
-present, permanent rule and nothing here softens it — what is not yet true is the row saying **never the
-browser**, because the browser is currently the only reader there is.
+⚠️⚠️ **The generation is in the pointer and the browser does not use it.** The *rotation* needs it to
+find the package in the private inventory; the public path is flat. A reader who sees the field and
+concludes the served layout is `<generation>/<id>.json` has the private shape in mind.
+
+⚠️ **Three copies of a status were three things to remember to un-mark**, and the whole reason this
+section owned the fact was that the forgotten one is the one somebody believes. All three came off
+together: this, `docs/runbook-inventory.md` §5, and `write_manifest`'s docstring. **A fourth was found
+while doing it and had been stale for a day** — `docs/serve-flow.md` §6 still carried *what time midnight
+is is still open*, settled the previous day. It was not on the list because it was never marked: the
+three that were tracked were tracked *because somebody wrote them down as owed*, and the one that went
+stale by itself is exactly the one no list could hold.
 
 ### ⚠⚠ A pointer names the generation that owns its package — not the one that wrote the pointer
 
@@ -470,7 +477,9 @@ ways:
 
 1. **A daily job copies today's pointer into the served root** as `today.json`. Nothing served can name
    a future date, because only one exists. ✔ **This is what `publish/` does**, and it writes `yesterday.json`
-   beside it for the rollover-boundary window.
+   beside it for the rollover-boundary window. ✔ **And since E1 the browser reads exactly those two
+   files** — `serve/ui/phone/daily.js`, validated through `readPointer` before either is trusted to name
+   a package.
 2. **nginx serves `days/<date>.json` only when the date is not in the future.** No daily job, but one
    configuration rule stands between the whole calendar and the world.
 

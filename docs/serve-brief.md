@@ -221,8 +221,15 @@ something and reading it** — never by reasoning about it. The zero-heavy board
 three centre fielders, the suffix that three decisions were secretly reading, the comparison page with
 its own `grid()`.
 
-Building against the six real packages in `serve/data/puzzles/` is how the sixth one gets found now
+Building against **real published packages** rather than fixtures is how the sixth one gets found now
 instead of in February. Render early, render often, and read what comes out.
+
+⚠️ **Two of them since E1, not six.** `serve/data/puzzles/` is the served root now and the access model
+allows today and yesterday (`docs/calendar.md`); the other four live in a private reference inventory
+under `forge/`. **That is a smaller sample and it is the honest one** — a suite driven against six public
+packages was driven against an inventory that may not exist. The 2026-08-23 regeneration is what found
+the outs bound reading the wrong side of the line score, on the first board where the two halves differ
+in length.
 
 ---
 
@@ -273,7 +280,11 @@ legitimate — a pinch hitter who then takes the position — but it is the exac
 last time. **Reported, not worked around**, because a client that compensates for it becomes the second
 place encoding the rule.
 
-**7. ⚠️ The manifest is a pointer and must never be cached; the packages are immutable and should be.**
+**7. ⚠️ A pointer must never be cached; the packages are immutable and should be.**
+
+⚠️ **Since E1 the browser's pointer is `today.json`, not `manifest.json`** (`docs/calendar.md`), and the
+public path is flat: `<id>.json`. The pairing below is unchanged and the reasoning is why — what makes a
+document cacheable is whether it can change, not what it is called.
 Found the moment the six were regenerated: the generation directory changed, the manifest was rewritten
 to name it, and the browser went on serving the old manifest **and the old JavaScript modules** — so a
 correct client refused the packages as the wrong schema and the failure read as a code defect. That is
@@ -579,10 +590,13 @@ with a URL attached. It is also a soft-404 and an unbounded duplicate-URL space,
 anything that indexes.
 
 **The decision, taken now so it is not invented during the route work:** an unknown id is **refused**.
-Client-side that is the `package.unreadable` path; server-side it is a real 404. **Never substituted.**
+Client-side that is a refusal path; server-side it is a real 404. **Never substituted.**
 
-The fallback can stay until the routes are built — it is the only thing that makes `?p=` usable by
-hand — and it goes when they arrive. v36-P3-45.
+✔ **Built at E1, 2026-08-23, and `?p=` went with it.** `loadPuzzle` raises `NoPuzzle` for an id that is
+not one of the two public days, and the pages show `day.none` — **a different sentence from
+`package.unreadable`**, which the decision above did not anticipate and which matters: *nothing there*
+and *there and refused* are different facts, and telling somebody their board is corrupt sends them to
+reload rather than to come back tomorrow. v36-P3-45, closed.
 
 ## ⬜ Decision to record before anything is indexed: the URL and status-code contract — `v36-P3-48`
 

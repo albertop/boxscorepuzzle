@@ -35,7 +35,9 @@ any of them. A landing page only the newcomer sees is a landing page for a produ
 - **A small static example board.** The green scoreboard and a grid with holes. **Explaining a visual
   puzzle in words is worse than showing it**, and this project has spent a day proving the same thing
   in the other direction: no description of a board substitutes for a picture of one.
-- **A large button for today's puzzle, with the date.**
+- **A large button for today's puzzle, with the date.** ✔ **The date is real as of E1**: it comes from
+  `today.json`, the signed pointer, and not from the visitor's clock. Two people in different zones see
+  the same date on the same button.
 - **A secondary link, *how to play*, opening the tutorial.**
 
 ### ⚠️ The button changes when today is already played
@@ -320,7 +322,18 @@ The puzzle **stays open all day and saves itself** (§27). At midnight it closes
 remains playable from the archive. **Tomorrow is a different puzzle**, with its own saved state — nothing
 is carried across.
 
-*What time midnight is — local or UTC — is still open (§36) and does not block any of this.*
+✔ **What time midnight is was settled on 2026-08-23: the day rolls at 08:00 UTC, a fixed UTC−8.**
+`docs/calendar.md` owns the decision and the reason; the short version is that UTC would land the
+rollover at 20:00 Eastern, so a player who sits down at 19:45 loses the board fifteen minutes later.
+
+⚠️⚠️ **This line read *still open (§36)* for a day after it was closed, and it was the one nobody was
+watching.** Three other copies of an E1 status were tracked and un-marked deliberately; this one was
+never on the list, because nothing had recorded it as owed. **A list of things to un-mark holds what
+somebody wrote down, and a sentence that goes stale on its own is not on it** — which is the argument
+for having one owner rather than four statements, applied to the case the argument was made about.
+
+⚠️ **The client never computes this.** `serve` reads the date off the signed pointer (E1.2); the forge
+and `publish` are the two trees that compute it.
 
 ---
 

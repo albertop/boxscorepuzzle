@@ -1125,6 +1125,156 @@ The `fifty-` artefacts were not touched: `fifty-boards.pdf`, `fifty-solutions.pd
 `fifty-recording-sheet.csv` and `fifty-pack-run.log` still carry their August 18 and 20 timestamps.
 ---
 
+## 2026-08-23 — ⬜⬜ The browser suite hangs in headless, and it was passing with no margin
+
+**E1 added tests to `serve/tests/engine.test.js` and the headless run stopped finishing.** It passes in
+an ordinary browser — 283 tests, about forty seconds — and times out under Playwright's chromium with
+`window.__results` never set.
+
+### What was established, so the next person does not repeat it
+
+| tried | result |
+|---|---|
+| the previous commit, headless | **283 passed.** So it is not the runner or the machine |
+| the same page in a real browser, twice, at 375×812 and on `127.0.0.1` | **283 passed**, in seconds |
+| 80 `no-store` fetches and 20 `loadPuzzle` calls, headless, on a fresh page | fine, 500ms |
+| fetching every page and pointer, headless, on a fresh page | fine, single-digit ms |
+| raising the timeout 120s → 300s → **900s** | still stuck, at the same test |
+| reverting `tools/dev_server.py` | still stuck |
+| removing `today.html` / `today.js` | still stuck |
+| `cache: "force-cache"` on the package fetch, removed | still stuck |
+| HTTP/1.1 keep-alive on the dev server | still stuck |
+| **disabling the three new `loadPuzzle` tests** | **283 passed** |
+
+⚠️⚠️ **The position moves with load and the hang is always on a `fetch` or a dynamic `import`.** Three
+new tests → it stops mid-suite; one → it stops at the *last* test of the *last* suite. That is the
+signature of a budget, not of a defect in any one test — and it means **the suite has been sitting one
+test from silence** and nobody could have known.
+
+⚠️ **It is a hang, not slowness.** 900 seconds is fifteen minutes against a forty-second run.
+
+### What is not known
+
+**What the budget is.** Fetches, imports and `loadPuzzle` are all fine in isolation at far higher counts
+than the suite uses, so it is something about the accumulated page — mounted boards, listeners, storage,
+memory — that only bites under Playwright. Nothing in the console, no page error, no crash.
+
+### What it cost, and the instrument that was missing
+
+**An afternoon**, most of it spent on the wrong test. The runner said *the browser suite never finished*
+and printed an empty console, which reads exactly like a module that failed to load. Two instruments
+were added while chasing it and both are keepers:
+
+- **`serve/tests/harness.js` publishes `globalThis.__running`** before each test. The page only appends
+  a suite's lines when the whole suite finishes, so *the last thing rendered* named a suite several
+  tests too early. The one line that names the hang did not exist.
+- **`tools/run_browser_tests.py` prints it, and the last six rendered lines**, on timeout.
+
+⚠️ **The timeout is 900s now and that is not a fix.** It was 120s and fired on a run that was merely
+slow, which is its own false report; the value is sized for a slow CI runner with room.
+
+### ⬜ What is owed
+
+- **The cause.** Until it is known, any test added to `engine.test.js` may push the run back over.
+- ⚠⚠ **The test E1 was built to have.** `loadPuzzle` driven end to end — an unknown `/p/<id>` refused
+  rather than substituted (v36-P3-45), the default path loading the board the pointer names,
+  `calendarDate` coming off the pointer. **It is written, it passes in a real browser, and it does not
+  fit.** It was withdrawn rather than weakened, and the reason stands where it belongs in
+  `serve/tests/engine.test.js`. **The closure of v36-P3-45 is therefore asserted by nothing**, which is
+  the honest statement and the cost of not knowing the cause.
+- **A second test page** is the obvious structural answer — the runner drives one page today, so the
+  whole suite shares one browsing context and one budget. Splitting it is real work and is not being
+  invented here.
+---
+
+## 2026-08-23 — ✔ E1: `/today` and `/p/<id>`, and what it retired
+
+`/p/<id>` is canonical (C6) and `/today` is a static page that reads the signed pointer and replaces
+itself with it. `?p=` is gone; `?test=` stays, because it selects a development *mode* rather than a
+puzzle.
+
+### The decision that shaped everything else: no executable on the play path
+
+**`/today` is how every player reaches the board**, and §23 forbids a backend dependency there. A
+process answering that address is a process whose failure removes the only door into the game. `publish`
+is allowed to be an executable precisely because it is **not** on that path: it runs once a day, writes
+files and exits, and if it dies the previous day's files still serve.
+
+⚠️ **The cost is real and is named where the page is: this is not a 302.** A redirect *status* needs
+either a request-time reader — the dependency above — or a daily nginx reload, which is a moving part in
+F. What is given up is a cacheable, crawler-friendly redirect on a page nobody links to twice.
+
+### The failure modes, which are the part that matters
+
+| | what happens |
+|---|---|
+| `today.json` absent | `NoPuzzle`, and the page says **`day.none`** — *there is no puzzle at this address today* |
+| `today.json` malformed | the same, through `readPointer`, which is `readManifest` with its subject changed (v36-P3-23 travels with it) |
+| `/p/<id>` unknown | refused. **v36-P3-45, closed** |
+| pointer names a package that is not public | refused, not substituted |
+| pointer is **stale** | **served, deliberately** |
+
+⚠️⚠️ **Staleness stays undetected client-side and the reason is written beside the code.** Noticing that
+`today.json` is a day old requires knowing what today is — the exact thing E1.3 forbids as a basis for
+choosing a puzzle. A player whose laptop is a day fast would be shown an error about a file that is
+perfectly current. `publish.health.inspect()` already compares the pointer's date to the serving date:
+**one observer with the right clock, not every visitor with their own.**
+
+⚠️ **`day.none` is a different sentence from `package.unreadable` on purpose.** *Nothing there* and
+*there and refused* are different facts, and telling somebody their board is corrupt sends them to
+reload rather than to come back tomorrow — the soft-404 wearing a sentence.
+
+### E1.2 did not owe a third `ROLLOVER_OFFSET_HOURS`, and the sentence replaced the debt
+
+`serve` **consumes** the calendar date. A third constant would have no consumer and its assertion would
+pass forever while testing nothing. **Two trees compute the date, one reads it.** The reading side is
+asserted differently: no player-page source may reach for `ROLLOVER` or `getTimezoneOffset`, and
+`calendarDate` may never be fed the player's own date. ⚠️ It does **not** ban `localDate` — `shell.js`
+uses it for `playedOn`, a different quantity on a different clock, and the first version of that test
+banned the function and went red on correct code.
+
+### What it retired
+
+- `readManifest` and its two tests. **No code under `serve/` opens a manifest now.** It presupposed the
+  browser reading one, which is the thing being retired; the deployment-side check that reads a manifest
+  belongs to F and will be written against the operator's needs rather than the browser's.
+- `?p=`, from `daily.js`, `withSearch` and every caller.
+- The four E1 markings — `docs/calendar.md` (the owner), `docs/runbook-inventory.md` §5,
+  `write_manifest`'s docstring, `docs/beta-0-plan.md` §761 — **and a fifth that was never on the list**:
+  `docs/serve-flow.md` §6 still carried *what time midnight is is still open*, settled the day before.
+  ⚠️ **The four were tracked because somebody wrote them down as owed. The fifth went stale by itself,
+  and no list of things to un-mark can hold that.**
+
+### ⚠️⚠️ The served tree held six packages and the model allows two
+
+`serve/data/puzzles/` is written by `publish.rotate` now, so what the browser loads on the laptop is
+byte-for-byte what it loads on the VPS. The six reference packages moved to a private inventory under
+`forge/reference-inventory/`, gitignored the way `forge/inventory/` is, and **three of the six were
+withdrawn cards** — partial accounts the register excludes — so the local board came from a game the
+rules forbid. The set was regenerated from the clean pool.
+
+⚠️ **The browser suite's package sample dropped from six to two**, and that is not a coverage regression
+to work around: a suite asserting properties over six *public* packages was asserting them over an
+inventory that may not exist.
+
+### Two defects the regeneration exposed, both real
+
+- ⚠️⚠️ **A test bounded a staff's outs by the wrong side of the line score.** The board draws one club's
+  batters and **the other club's pitchers**, so the innings that bound their outs are the ones the
+  *offence* batted. The test used `defense_by_inning`, **copied from the certifier's sentence** — where
+  it is correct, because `check_independent_correspondence` bounds a *different grid*, the reveal's
+  unshared half. One rule, two grids, and the sentence travelled without its subject. It passed for
+  months because both halves are nine innings in an ordinary game; the first board where they differ — a
+  home club leading after the top of the ninth and never batting — made it fire, **on correct data**.
+- ⚠️ **A conformance vector produced its condition only by luck.** *A repeated slot reference* set
+  `slot_references[1]` to `"1"`, which repeats only if the board holds `"1"` at index 0. A regenerated
+  board opening `1a`, `1b` made it stop testing anything. It writes **both** entries now.
+
+### ⚠️ `check_pdf.py` and the runner, in passing
+
+Both were refusing or timing out on healthy input. See the Pack A entry and the browser-suite entry.
+---
+
 ## Where everything stands
 
 **40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**

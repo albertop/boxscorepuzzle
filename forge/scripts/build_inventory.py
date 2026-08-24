@@ -453,9 +453,9 @@ def write_manifest(generation: str, out: Path, key: Ed25519PrivateKey) -> int:
     """The signed record that this generation is whole. **`serve` and the operator read it; the browser
     never does** (`docs/calendar.md`).
 
-    ⚠⚠ **That second sentence is E1b's end state and is not true today**, and `docs/calendar.md` owns
-    the fact rather than this docstring restating it: `serve/ui/phone/daily.js` fetches this file from
-    the browser, on both player pages, and follows it to the package. It is scaffolding E1 retires.
+    ✔ **That second sentence became true at E1, 2026-08-23.** `serve/ui/phone/daily.js` fetched this
+    file from the browser on both player pages until then; it reads `today.json` now and no code under
+    `serve/` opens a manifest at all. `docs/calendar.md` owns the fact and this points at it.
 
     ⚠️ Built from the files on disk rather than from the calendar, deliberately: the calendar says what
     was *assigned* and this says what was *written*. Generating both from one list would make the
