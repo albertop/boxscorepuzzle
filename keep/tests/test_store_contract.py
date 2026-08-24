@@ -119,7 +119,21 @@ def postgres_store() -> Iterator[Store]:
     psycopg = pytest.importorskip("psycopg")
     connection = psycopg.connect(dsn, autocommit=False)
     with connection.cursor() as cursor:
-        cursor.execute("DROP TABLE IF EXISTS events, client_errors, keep_schema")
+        # ⚠️⚠️ **Derived from the database, never a list kept by hand.** This was
+        # `DROP TABLE IF EXISTS events, client_errors, keep_schema` -- three names spelled here and
+        # created in `001-initial.sql`, two places encoding one fact. Adding `shares` to the migration
+        # and not to that line left the table behind between tests, and every Postgres case after the
+        # first died on `DuplicateTable`. **The migration is the only place a table is named**, and a
+        # fifth one next year is dropped by existing rather than by somebody remembering this line.
+        cursor.execute(
+            "SELECT tablename FROM pg_tables WHERE schemaname = current_schema()",
+        )
+        existing = [row[0] for row in cursor.fetchall()]
+        if existing:
+            # Quoted and CASCADE: a name needing quotes would otherwise fail here, and a future foreign
+            # key between two of these would make the drop order matter.
+            names = ", ".join(f'"{table}"' for table in existing)
+            cursor.execute(f"DROP TABLE IF EXISTS {names} CASCADE")
         cursor.execute(_MIGRATION.read_text(encoding="utf-8"))
     connection.commit()
     yield PostgresStore(connection)

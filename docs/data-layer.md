@@ -51,9 +51,15 @@ the edge and requires `keep` to report it **stored**.
 ⚠️ **Until it is deployed the two paths 404, and that is by design** — a 404 leaves the client's two
 queues intact, so everything recorded before deployment is delivered by the first visit after it.
 
-⬜ **What still belongs to F2**, and is absent from the config rather than written and unverified: the
-port staying unpublished is a line in a compose file that does not exist yet, and *reachable only on the
-internal network* is a property of the VPS rather than of any file here.
+⬜ **What still belongs to F2**, and is absent rather than written and unverified: *reachable only on
+the internal network* is a property of the running VPS rather than of any file here, so nothing in this
+repository can assert it.
+
+⚠️ **The compose file it used to say did not exist is `deploy/compose.yaml`**, written 2026-08-24.
+`keep` publishes no port there and the two services share the VPS's existing `backend` network. **What
+that buys is smaller than the sentence above once promised**: `backend` is shared with every other site
+on the host, so the unpublished port keeps `keep` off the internet and not away from its neighbours.
+The token is what stands between it and them, and it always was.
 
 ---
  Where a question is still open it says so; those are not implementation

@@ -18,18 +18,31 @@ does not start (`data-layer.md` §4). Every route below assumes both.
 ### ⚠⚠ What the browser actually posts to — added 2026-08-22, when the client was built
 
 **The browser never reaches `keep`.** It posts to **`/api/events`**, **`/api/errors`** and
-**`/api/shares`** on `serve`,
-which proxies them and adds the token at the edge — the same arrangement as the health check and the
-payment webhook, and for the same reason: *a secret inside a container is a secret; an open port is
-surface.*
+**`/api/shares`** on `serve`, which proxies them and adds the token at the edge — the same arrangement
+as the health check and the payment webhook, and for the same reason: *a secret inside a container is a
+secret; an open port is surface.*
 
-✔ **That proxy exists as of F1, 2026-08-24** — `deploy/nginx/boxscorepuzzle.conf.template`, tested
-against a real `keep` and Postgres. ⚠️ **The client's own `Authorization` header is discarded rather
-than merged**, so a browser cannot influence what `keep` sees; the edge decides every time.
+✔ **All three exist**: the proxy since F1, 2026-08-24, tested against a real `keep` and Postgres
+(`deploy/nginx/boxscorepuzzle.conf.template`), and `/api/shares` since G on the same day. ⚠️ **The
+client's own `Authorization` header is discarded rather than merged**, so a browser cannot influence
+what `keep` sees; the edge decides every time.
 
-⚠️ **Those two paths do not exist yet** (plan F1.3b), so today they 404. That is the case the client's
-retry rule was written around: **a 404 leaves the queue intact**, so everything recorded before the
-proxy exists is delivered by the first visit after it.
+### ⚠️ The case that shaped the retry rule, and no longer occurs
+
+**Before the proxy existed these paths answered 404**, and that is what the client's retry rule was
+written around: **a 404 leaves the queue intact.** Everything a player recorded while the route was
+missing was delivered by their first visit after it appeared, and nothing had to be thrown away in the
+meantime.
+
+**The rule outlives the case and is why it is kept here rather than deleted.** `outbox.js` still treats
+404 as *a route that does not exist **yet***, never as *this item will never be accepted* — deliberately
+not "any 4xx". The distinction is what makes adding a fourth route safe: a client shipped before it
+keeps whatever it recorded, instead of discarding it on the first attempt.
+
+⚠️⚠️ **This paragraph said *those two paths do not exist yet, so today they 404* until 2026-08-24** —
+directly beneath the line saying the proxy exists, added above it and never reconciled. **A superseded
+sentence surviving under its own replacement is the shape this project keeps meeting**, and the reason
+it was not simply deleted is that it carried the retry rule's whole justification.
 
 ---
 

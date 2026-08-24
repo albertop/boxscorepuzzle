@@ -153,7 +153,7 @@ closed. **The group was met against the work it did, and the second run is the o
 | **The data layer** | ✔ built — `keep/`, 77 tests at 100% on both engines |
 | **Event upload** | ✔ built — `serve/engine/outbox.js`, queued, offline-first, one event per finished game |
 | **Uncaught client errors** | ✔ built — `serve/engine/report.js`, rate-limited two ways and unable to throw |
-| **The share PNG** | ⬜ **not built.** Designed in `serve-flow.md` §7b; the button exists and is `disabled` |
+| **The share PNG** | ▶ **built 2026-08-24** — `serve/engine/share.js`, `share-image.js`, `share-send.js`, and `keep`'s `POST /shares`. The button is live. ⬜ **G3 has not run**: the image has never been sent through WhatsApp, iMessage or X on a real phone, and the plan says *verified by sending, not by generating* |
 | **The deployment** | ⬜ **not built.** No VPS, no DNS, no TLS. ✔ **The images and the server block exist** — `deploy/`, both unprivileged and secretless, the proxy to `keep` tested end to end; what is left needs a host |
 | **`/today` and `/p/<id>`** | ✔ **built.** `/p/<id>` canonical, `/today` a page that follows the signed pointer, `/tutorial` reachable, `?p=` gone, an unknown id refused rather than substituted. ✔ **The caching contract with it** — E2 folded into E3 and the server block carries it |
 | **The daily rotation** | ✔ built — `publish/`, a fourth tree: today and yesterday public, everything else removed, and a health verdict with two independent questions |
@@ -275,7 +275,7 @@ from a retired design.** Found while writing this document down.
 | | what it asks | size | axis | status |
 |---|---|---|---|---|
 | **The gate** | are the boards humanly derivable at all | — | — | **undefined, see below** |
-| **Pack A** | does the difficulty ordering correspond to felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | **stalls** | designed 2026-08-21, not built |
+| **Pack A** | does the difficulty ordering correspond to felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | **stalls** | ✔ **built 2026-08-23, solved 2026-08-24.** The answer is no: rho = +0.202, 4.5% of the variance (`docs/reviews/todo.md`) |
 | **The stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | designed, not built |
 
 **Where *fifty* came from, and why it was stale.** `build_pack.py`'s `audit()` asserted fifty boards with

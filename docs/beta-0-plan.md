@@ -70,7 +70,7 @@ checked against the tree: 2026-08-22, after v39.**
 | **Device UUID** | ✔ **built.** `serve/engine/device.js`, its own key and its own lifetime |
 | **Event upload** | ✔ **built.** `serve/engine/outbox.js` queues and drains; `report.js` reports uncaught errors |
 | **Data layer** | ✔ **built.** `keep/`, 77 tests at 100% on both engines |
-| **Share PNG** | ⬜ **does not exist.** The button is drawn and `disabled`. **Group G** |
+| **Share PNG** | ▶ **built 2026-08-24** — the masked board, the PNG, the sheet and the `POST /shares` record. ⬜ **G3 unverified**: never sent through a messaging app on a real phone |
 | **Deployment** | ⬜ **does not exist.** `compose.yaml` is a dev server on a mounted tree, no image, no nginx. **Group F** |
 | **Signed date pointers** | ✔ **built**, and ⚠️ **only the newest generation holds a complete schedule** — an older one was written before the later dates existed. That is what makes the newest generation the rotation's source |
 
