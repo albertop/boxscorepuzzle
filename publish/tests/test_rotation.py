@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 from publish.health import PUBLIC_LIMIT
-from publish.rotate import MANIFEST, TODAY, YESTERDAY, RotationError, rotate
+from publish.rotate import MANIFEST, PENDING, TODAY, YESTERDAY, RotationError, rotate
 from tests.conftest import FIRST as _FIRST
 from tests.conftest import build_inventory as _inventory
 
@@ -256,6 +256,87 @@ class TestTheClockItServesBy:
 
         assert stated, "docs/calendar.md no longer states ROLLOVER_OFFSET_HOURS, which three trees point at"
         assert int(stated[1]) == ROLLOVER_OFFSET_HOURS
+
+
+class TestAFailedWriteLeavesTheOldBytes:
+    """v40-P2-01. **The ordering this module states, applied to the files that state it.**
+
+    ⚠⚠ `rotate()` copies before it deletes so a part-way failure leaves the public path holding *more*
+    than it should -- reportable -- rather than less, which is a day with no game and no signal. An
+    in-place write inverts that at `today.json`: opening it truncates the pointer that selects the day's
+    puzzle, so a short write destroys the old one and the new one never lands.
+
+    ⚠️ **Fault-injected, because reading the output cannot show it.** The old code passed every case
+    in this file: nothing ever failed mid-write, so nothing observed the truncation window.
+    """
+
+    def _erroring(self, monkeypatch: pytest.MonkeyPatch, name: str) -> None:
+        """Fail the write of one public file, after its pending file has been opened."""
+        real = Path.write_bytes
+
+        def refuse(self: Path, content: bytes) -> int:
+            if self.name == name + PENDING:
+                message = "no space left on device"
+                raise OSError(message)
+            return real(self, content)
+
+        monkeypatch.setattr(Path, "write_bytes", refuse)
+
+    def _rotated(self, tmp_path: Path) -> tuple[Path, Path]:
+        inventory = _inventory(tmp_path, days=6)
+        public = tmp_path / "public"
+        rotate(inventory, public, _FIRST + timedelta(days=3))
+        return inventory, public
+
+    def test_the_served_pointer_survives_a_failed_rotation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        inventory, public = self._rotated(tmp_path)
+        before = (public / TODAY).read_bytes()
+        self._erroring(monkeypatch, TODAY)
+
+        with pytest.raises(OSError, match="no space"):
+            rotate(inventory, public, _FIRST + timedelta(days=4))
+
+        assert (public / TODAY).read_bytes() == before, "the served pointer was destroyed by a failed write"
+        served = json.loads((public / TODAY).read_text(encoding="utf-8"))
+        assert served["date"] == (_FIRST + timedelta(days=3)).isoformat()
+
+    def test_the_manifest_survives_a_failed_rotation(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        inventory, public = self._rotated(tmp_path)
+        before = (public / MANIFEST).read_bytes()
+        self._erroring(monkeypatch, MANIFEST)
+
+        with pytest.raises(OSError, match="no space"):
+            rotate(inventory, public, _FIRST + timedelta(days=4))
+
+        assert (public / MANIFEST).read_bytes() == before
+
+    def test_no_pending_file_is_left_behind(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """⚠️ A surviving pending file is served by nothing and swept by nothing. The failing write
+        removes its own; the sweep removes any older one."""
+        inventory, public = self._rotated(tmp_path)
+        self._erroring(monkeypatch, TODAY)
+        with pytest.raises(OSError, match="no space"):
+            rotate(inventory, public, _FIRST + timedelta(days=4))
+        monkeypatch.undo()
+        (public / f"leftover.json{PENDING}").write_text("half a package", encoding="utf-8")
+
+        rotate(inventory, public, _FIRST + timedelta(days=4))
+
+        assert not list(public.glob(f"*{PENDING}"))
+
+    def test_a_pending_file_is_not_counted_as_a_package(self, tmp_path: Path) -> None:
+        """⚠⚠ Why the suffix goes **after** `.json` rather than before it. The public path is counted
+        with `*.json`, so `x.pending.json` would read as a third public package and turn the health check
+        red over a file nothing serves."""
+        _inv, public = self._rotated(tmp_path)
+        (public / f"halfway.json{PENDING}").write_text("torn", encoding="utf-8")
+
+        assert (
+            _public_packages(public) == {name.removesuffix(".json") for name in ("p20260904.json", "p20260903.json")}
+            or len(_public_packages(public)) <= PUBLIC_LIMIT
+        )
 
 
 class TestWhatARefusedPointerLooksLike:

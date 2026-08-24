@@ -156,6 +156,15 @@ class TestTheHookAndCiCheckTheSameThings:
 
         hook = _HOOK.read_text(encoding="utf-8")
         pushed = chr(10).join(path.read_text(encoding="utf-8") for path in on_push())
+        # ⚠⚠ **The scheduled run is a third side and it was not asked.** (v40-P3-01) `publish` arrived
+        # on 2026-08-23 with its own push workflow and its own hook block, so both sides above named it
+        # and this guard was green -- while `weekly.yml` never installed it. The tool-set comparison
+        # could not see it either, since `keep` already contributes the same four tool names.
+        #
+        # ⚠️ **`docs/ci.md` calls the weekly run the complete one from a clean checkout**, and that is
+        # the claim being checked here: a tree it does not name makes the claim false about exactly the
+        # thing the weekly run exists to catch.
+        weekly = chr(10).join(path.read_text(encoding="utf-8") for path in scheduled())
 
         # ⚠️⚠️ **A word boundary, because `keep` is inside `keeps`.** The first version asked
         # `tree not in text` and `ci-forge.yml` says *"the gate keeps 11% of the pool"* in a comment —
@@ -165,9 +174,8 @@ class TestTheHookAndCiCheckTheSameThings:
         def named(tree: str, text: str) -> bool:
             return re.search(rf"(?<![\w-]){re.escape(tree)}(?![\w-])", text) is not None
 
-        missing = {
-            tree: [side for side, text in (("hook", hook), ("CI", pushed)) if not named(tree, text)] for tree in trees
-        }
+        sides = (("hook", hook), ("CI", pushed), ("weekly", weekly))
+        missing = {tree: [side for side, text in sides if not named(tree, text)] for tree in trees}
         unchecked = {tree: sides for tree, sides in missing.items() if sides}
 
         assert not unchecked, f"trees nothing checks: {unchecked}"

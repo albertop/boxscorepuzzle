@@ -76,6 +76,20 @@ jobs:
 
       # ⚠️ `keep` too: the weekly run is the complete one, and a tree missing from it would make that
       # claim false in the one place nothing else checks.
+      # ⚠️ `publish` too, for the same reason (v40-P3-01). It is the executable that decides which
+      # puzzles stay public, and it was outside the run that claims to be the complete one.
+      - name: publish — install
+        run: uv sync --frozen --group dev
+        working-directory: publish
+
+      - name: publish — lint, types and the rotation suite
+        run: |
+          uv run ruff check src tests
+          uv run ruff format --check src tests
+          uv run mypy src
+          uv run pytest -q --cov --cov-report=term-missing
+        working-directory: publish
+
       - name: keep — install
         run: uv sync --frozen --group dev
         working-directory: keep

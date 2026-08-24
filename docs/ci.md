@@ -211,6 +211,18 @@ now asks whether every tree with a `pyproject.toml` is named by the hook **and**
 Found by deleting the workflow and watching nothing break, which is the only way that class is found,
 and it is the `sign(` that matched inside `verify_signature(` again.
 
+⚠️⚠️ **And it asked two sides where there are three, which cost the same defect a second time.**
+(v40-P3-01) `publish` arrived on 2026-08-23 with its own push workflow and its own hook block, so the
+hook and CI both named it and the guard was green — **while `weekly.yml` never installed it at all.**
+The tool-set comparison could not see it either: `keep` already contributes ruff, ruff format, mypy and
+pytest, so a second project running exactly those is invisible to a set of names.
+
+**The weekly run is the one this document calls complete**, so a tree missing from it makes the claim
+false about precisely what the weekly run exists to catch — a hook that has been skipped or disabled.
+The guard asks the scheduled workflow now, alongside the hook and the push workflows, and the weekly
+job installs and checks `publish`. Verified by renaming `publish` out of `weekly.yml` and watching the
+guard name both the tree and the side.
+
 ⚠⚠ **And blind to the *invocation* as well, which is the same blindness one level up.** On 2026-08-23 a
 suite was verified all day with `uv run python -m pytest` while the hook runs `uv run pytest`. **They are
 different commands**: `python -m` puts the working directory on `sys.path` and plain `pytest` does not,

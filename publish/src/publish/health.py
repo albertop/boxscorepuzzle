@@ -60,23 +60,58 @@ def inspect(public: Path, today: date) -> Verdict:
     if not pointer.is_file():
         faults.append(f"{TODAY} is missing; nothing names the day's puzzle")
     else:
-        named = _date_named_by(pointer)
+        named = _pointer(pointer)
         if named is None:
-            faults.append(f"{TODAY} carries no readable date")
-        elif named != today.isoformat():
-            # The job that did not run. It leaves yesterday's board in place, which players notice
-            # within hours -- and this notices it first.
-            faults.append(f"{TODAY} names {named} and today is {today.isoformat()}; the rotation has not run")
+            faults.append(f"{TODAY} is not a readable pointer")
+        else:
+            when, puzzle_id = named
+            if when != today.isoformat():
+                # The job that did not run. It leaves yesterday's board in place, which players notice
+                # within hours -- and this notices it first.
+                faults.append(f"{TODAY} names {when} and today is {today.isoformat()}; the rotation has not run")
+            # ⚠⚠ **The pointer is followed, and until v40-P1-01 it was not.** The date was read and the
+            # `puzzle_id` beside it was ignored, so **an empty public directory was healthy** as long as
+            # a current-dated pointer survived: the package ceiling is an *at most*, and zero satisfies
+            # it. F3 exists precisely for `serve` being up with no inventory (`docs/data-layer.md`), and
+            # that was the one state it could not see.
+            #
+            # ⚠️ **This is the shape the register keeps recording**: a check whose two halves were each
+            # true -- at most two packages, the date is today -- and whose conjunction still admitted the
+            # outage. Nothing was broken; the question was never asked.
+            if puzzle_id is None:
+                faults.append(f"{TODAY} names no puzzle")
+            elif not (public / f"{puzzle_id}.json").is_file():
+                faults.append(f"{TODAY} names {puzzle_id} and {puzzle_id}.json is not public; today's game is a 404")
+
+    # ⚠️ **Yesterday is checked the same way and its absence is not a fault.** The calendar's first
+    # day has no yesterday, and §9's two-day window is a ceiling rather than a quota -- but a pointer
+    # that *exists* and names a file that does not is the same outage one day older.
+    if (public / YESTERDAY).is_file():
+        named = _pointer(public / YESTERDAY)
+        if named is None:
+            faults.append(f"{YESTERDAY} is not a readable pointer")
+        elif named[1] is None or not (public / f"{named[1]}.json").is_file():
+            faults.append(f"{YESTERDAY} names {named[1]} and no such package is public")
 
     return Verdict(healthy=not faults, faults=tuple(faults))
 
 
-def _date_named_by(pointer: Path) -> str | None:
+def _pointer(pointer: Path) -> tuple[str, str | None] | None:
+    """The date and puzzle id a pointer names, or `None` if it cannot be read at all.
+
+    ⚠️ **One parse, two facts.** These were two reads of the same file in two places, which is the
+    same document being described twice -- and the second description was the one that never got
+    written. An unreadable pointer and a pointer with no `puzzle_id` are different faults, so the
+    missing id comes back as `None` inside a tuple rather than collapsing into the outer one.
+    """
     try:
         loaded = json.loads(pointer.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
     if not isinstance(loaded, dict):
         return None
-    named = loaded.get("date")
-    return named if isinstance(named, str) else None
+    when = loaded.get("date")
+    if not isinstance(when, str):
+        return None
+    puzzle_id = loaded.get("puzzle_id")
+    return when, puzzle_id if isinstance(puzzle_id, str) else None

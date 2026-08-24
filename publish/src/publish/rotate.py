@@ -19,7 +19,6 @@ so the daily step is a copy — the private key stays on the laptop (§16, §33)
 """
 
 import json
-import shutil
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -124,6 +123,11 @@ def _package(inventory: Path, pointer: dict[str, object]) -> Path:
     return found
 
 
+PENDING = ".pending"
+"""Suffix for a public file being written. ⚠️ It ends in `.pending`, **after** `.json`, so a half-written
+package is not picked up by the `*.json` sweep as a real one -- and the sweep removes any it finds."""
+
+
 def rotate(inventory: Path, public: Path, when: date) -> Rotation:
     """Make `when` and the day before public, and **remove everything else**.
 
@@ -154,8 +158,15 @@ def rotate(inventory: Path, public: Path, when: date) -> Rotation:
     # more than it should, which the health check reports — rather than holding less, which is a day
     # with no game and no signal.
     for label, (_day, pointer_doc, source) in pointers.items():
-        shutil.copyfile(source, public / source.name)
-        (public / label).write_text(json.dumps(pointer_doc, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        _place(public / source.name, source.read_bytes())
+        _place(public / label, (json.dumps(pointer_doc, indent=1, sort_keys=True) + "\n").encode("utf-8"))
+
+    # ⚠️⚠️ **Its own sweep, and the first version folded it into the loop below.** That loop globs
+    # `*.json` and a pending file ends in `.pending`, so the branch could never run — a check that
+    # cannot fire, inside the fix for a check that did not exist. It was caught by the test asserting
+    # a leftover is removed, which is the only reason to write that test rather than trust the branch.
+    for pending in sorted(public.glob(f"*{PENDING}")):
+        pending.unlink()
 
     retired = []
     # ⚠️ A different name from the pointer above on purpose: one `found` holding a parsed document in one
@@ -191,4 +202,32 @@ def _write_public_manifest(public: Path, wanted: set[str]) -> None:
         "schema": PUBLIC_SCHEMA,
         "puzzles": sorted(name.removesuffix(".json") for name in wanted),
     }
-    (public / MANIFEST).write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    _place(public / MANIFEST, (json.dumps(document, indent=1, sort_keys=True) + "\n").encode("utf-8"))
+
+
+def _place(destination: Path, content: bytes) -> None:
+    """Write a public file so a failure leaves the **previous** bytes, never a torn file. (v40-P2-01)
+
+    ⚠⚠ **Opening a file for writing truncates it before the new bytes arrive**, and that inverts this
+    module's whole ordering. The copy-then-delete sequence above is deliberate: a part-way failure is
+    meant to leave the public path holding *more* than it should, which the health check reports, rather
+    than less, which is a day with no game and no signal. An in-place write of `today.json` breaks that
+    at the one file that selects the day's puzzle -- a disk-full or short write destroys the pointer it
+    was replacing and the rotation raises with neither the old one nor the new one valid.
+
+    ⚠️ **Pending file, then `replace()`, which is atomic on the same filesystem** on Windows and on
+    Linux alike. On a failure before the rename the pending file is removed and the served file is
+    untouched -- so the failure mode is *the rotation did not happen*, which is exactly what the health
+    check is built to notice.
+
+    ⚠️ **No lock and no multi-file transaction.** There is one writer, once a day. What this closes is
+    one process meeting one ordinary filesystem error, and a scheme that needs coordination would be
+    solving a problem this deployment does not have.
+    """
+    pending = destination.with_name(destination.name + PENDING)
+    try:
+        pending.write_bytes(content)
+        pending.replace(destination)
+    except OSError:
+        pending.unlink(missing_ok=True)
+        raise
