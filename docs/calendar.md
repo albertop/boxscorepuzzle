@@ -505,6 +505,60 @@ here so that a future change to how packages are named meets both reasons rather
 
 ---
 
+## ⬜ The cache rule per document — **a specification, not something in force**
+
+⚠️⚠️ **Nothing enforces any of this today, and that is stated first on purpose.** Cache headers are a
+server's, there is no server, and `tools/dev_server.py` is not deployed — it turns caching off entirely,
+which is correct for development and is the **opposite** shape to production. This is the table **E3
+implements**, written here rather than in the plan because `docs/calendar.md` already owns the access
+model and one definition is the whole point.
+
+⚠️ **E2 was folded into E3 for exactly this reason** (`docs/beta-0-plan.md`): a rule with no
+implementation and nothing to verify it against is a sentence in a document, and this project has
+recorded what becomes of those.
+
+| document | rule | why |
+|---|---|---|
+| `today.json`, `yesterday.json` | **`no-store`** | they change daily, and **a stale pointer is indistinguishable from a rotation that did not run** |
+| `<id>.json` | **`public, max-age=31536000, immutable`** | a package cannot change: a different board gets a different id |
+| `manifest.json` (public) | **`no-store`** | written from the files actually placed; no browser reads it today, but it is on the public path and it names what is |
+| `/today` | **`no-store`** | it is the same pointer wearing a URL (`docs/serve-brief.md`, v36-P3-48) |
+| `/`, `/p/<id>`, the modules and CSS | **`no-store`**, or a short revalidation | they are the application, and a stale copy has twice refuted a change that was correct |
+
+⚠️⚠️ **The reasoning is what survives a rename, and it had to.** E2.1 was written as *`manifest.json`
+never cached, `<generation>/<id>.json` cached for a year*, and **since E1 the public path is flat and the
+browser reads neither of those files**. The rule was unchanged by that because it was never about the
+names: **what makes a document cacheable is whether it can change.** A rule stated against files that do
+not exist is what E3 would have implemented.
+
+### ⚠️⚠️ Order matters here, and it is not decoration
+
+**The enforcement is the absent id. The cache rule is the belt.**
+
+A package is named by an opaque id and **only two ids are public**, so tomorrow's puzzle cannot be
+requested by anyone who cannot name it — and no intermediary or CDN can prefetch a URL it cannot
+construct. **That is true today, with no code and no header.** *Cache only the current day, never the
+week* sits on top of it.
+
+⚠️ **Written the other way round, the cache header reads as the thing holding the line**, and the next
+person to meet a slow first load relaxes it believing the exposure is a cache setting. It is not: it is
+which ids exist publicly.
+
+### ⬜ What must assert it, when E3 exists
+
+**Nothing can today** — there is no configuration to compare against. When there is, the check is the
+one the route set already has in a weaker form: **this table is the single definition, and something
+reads it and the server block and requires them to agree.** ⚠️ Until then a check would be one that
+cannot fire, and a check that cannot fire is indistinguishable from one that is broken — so the way it
+fails matters: *there is no configuration yet* and *the configuration disagrees* must not look alike.
+
+⚠️ **Nothing goes into `tools/dev_server.py`.** Production headers in a server whose entire purpose is
+to switch caching off would be two opposite rules in one file, and the development rule exists for two
+real ghost bugs — a regenerated generation served stale, and a prototype reported as *not rendering*
+that was the cache.
+
+---
+
 ## ⬜ The open question: the difficulty curve
 
 §31 wants easy Monday and hard Saturday. **Nobody knows yet which rung is which** — that is what the

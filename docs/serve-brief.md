@@ -614,11 +614,27 @@ server:**
 |---|---|---|
 | `/` | **200**, the landing page, by rewrite | Every visit lands here (`serve-flow.md` §1). A redirect makes the canonical homepage a second URL |
 | `/p/<id>` | **200** | C6's canonical puzzle URL. An unknown id is a real **404**, never a substitution — see the section above |
-| `/today` | **302** | C6 says it redirects, and **302 rather than 301**: its target changes daily, and a 301 is cached by browsers and intermediaries effectively forever |
+| `/today` | ⚠️ **200**, a page that follows the pointer — **corrected 2026-08-24, it said 302** | See below. It still *redirects*, and the redirect is no longer the server's |
 | `/ui/phone/*.html` | **not reachable** | Implementation paths are never exposed as alternates. They are where the files happen to live today |
 
-⚠️ **`/today` and the manifest carry the same caching rule for the same reason.** `daily.js` fetches
-`manifest.json` with `no-store` because a stale pointer and a stale build are indistinguishable from
+### ⚠️⚠️ `/today` is a 200 and not a 302, and this table said 302 until 2026-08-24
+
+**E1 built it as a static page that reads `today.json` and replaces itself with `/p/<id>`.** A redirect
+*status* needs something that reads the pointer per request — and `/today` is the **play path**, where
+§23 forbids a backend dependency: a process answering that address is a process whose failure removes
+the only door into the game. `publish` is allowed to be an executable precisely because it is not there.
+
+**So C6 still holds — `/today` redirects — and the redirect moved from the server to the page.** What is
+given up is a cacheable, crawler-friendly redirect on an address nobody links to twice.
+
+⚠️⚠️ **This row mattering is the whole reason this section exists.** It is *the sentence the first nginx
+config is written against*, and a stale one is a mistake indexed permanently. It went stale within a day
+of E1 and nothing noticed, because a decision recorded before the work is exactly the kind that stops
+being re-read after it. **If E3 wants the status code back, that is a trade to argue then** — a
+request-time reader on the play path, or a daily nginx reload — and not a defect to fix quietly.
+
+⚠️ **`/today` and the pointers carry the same caching rule for the same reason.** `daily.js` fetches
+`today.json` with `no-store` because a stale pointer and a stale build are indistinguishable from
 outside; `/today` is the same pointer wearing a URL, so it is `no-store` too. Caching either one
 serves yesterday's puzzle to somebody, and CLAUDE.md's *cache the day's puzzle, never the week* is the
 rule this follows.

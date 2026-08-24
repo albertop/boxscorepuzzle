@@ -18,7 +18,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
-| **E** serving for real | ⬜ **not met** | ✔ **E1b and E1 met** — the rotation and the health verdict as a **function** (its endpoint is F3), and the routes over the two public paths. ⬜ **E2 and E3 open**, and both are the server rather than the client |
+| **E** serving for real | ⬜ **not met** | ✔ **E1b and E1 met** — the rotation and the health verdict as a **function** (its endpoint is F3), and the routes over the two public paths. ⤴ **E2 folded into E3**: cache headers are a server's and there is no server. ⬜ **E3 open** |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
@@ -816,17 +816,40 @@ stored** for the exclusion to be computable when the reads exist.
   by §23 — or a daily nginx reload, which is a moving part. If F wants the status code, that is the
   trade to argue then; it is not a defect to fix quietly.
 
-### E2. The caching contract
+### ⤵ E2. The caching contract — **folded into E3, 2026-08-24. Not deferred and not open.**
 
-- **E2.1** `manifest.json` never cached; `<generation>/<id>.json` cached for a year (it is immutable).
-- **E2.2** ⚠⚠ **The enforcement is the absent id; the cache rule is the belt.** Packages are named by
-  an opaque id and the public manifest lists **two**, so tomorrow's puzzle cannot be requested by anyone
-  who cannot name it — and no intermediary or CDN can prefetch a URL it cannot construct. **Cache only
-  the current day, never the week** on top of that.
+**There is nowhere for it to live.** Cache headers are a server's, nginx is E3, and
+`tools/dev_server.py` is not deployed — it turns caching off entirely, which is right for development
+and is the **opposite** shape to production. Building E2 now means writing a rule with no
+implementation and nothing to verify it against.
+
+⚠️⚠️ **That is worse here than it sounds, because the comparable residual is not comparable.** The
+route set has a local implementation that `forge/tests/test_dev_server_routes.py` drives, so one of its
+two copies cannot drift silently. **Headers would have neither copy** — a sentence in a document, which
+is the thing this project has recorded going stale over and over.
+
+⚠️ **Folded rather than deferred, so the absence is not read as an oversight and nobody builds it
+separately later.** The rule itself is written down and owned: `docs/calendar.md` carries the
+per-document cache table as **the specification E3 implements**, marked as not in force. E3 is where it
+becomes true, and where something can assert that it is.
+
+- **E2.1** ⚠️ **Its file names were wrong and are corrected where they stand**, because a rule stated
+  against files that do not exist is what E3 would implement. It read *`manifest.json` never cached;
+  `<generation>/<id>.json` cached for a year*. **Since E1 the public path is flat and the browser reads
+  neither of those.** What exists is `today.json` and `yesterday.json` — the dated pointers — and
+  `<id>.json`, the packages. The pointers are `no-store`; the packages are immutable and cache for a
+  year. **The reasoning is unchanged and that is why renaming is safe: what makes a document cacheable
+  is whether it can change, not what it is called.**
+- **E2.2** ✔ **Already true without code, and it is the half that matters.** ⚠⚠ **The enforcement is
+  the absent id; the cache rule is the belt.** Packages are named by an opaque id and only two are
+  public, so tomorrow's puzzle cannot be requested by anyone who cannot name it — and no intermediary
+  or CDN can prefetch a URL it cannot construct. **Cache only the current day, never the week** on top
+  of that.
 
   ⚠️ **Written in that order deliberately.** The other way round, the cache header looks like the thing
   holding the line, and the next person to meet a slow first load relaxes it believing the exposure is a
-  cache setting.
+  cache setting. **The enforcement exists today; the belt is waiting for something to thread it
+  through.**
 
 ### E3. nginx
 
@@ -836,8 +859,9 @@ stored** for the exclusion to be computable when the reads exist.
 ### ▶ Deliverable E — **the real routes and the real caching contract, running locally**
 
 `/p/<id>` canonical and `/today` redirecting, with the day decided **server-side** and never from
-device-local state — everyone gets the same puzzle on the same date. `manifest.json` never cached,
-`<generation>/<id>.json` cached for a year, and **only the current day cached ahead**.
+device-local state — everyone gets the same puzzle on the same date. ✔ **That half is done.** The
+pointers never cached, the packages cached for a year because they are immutable, and **only the
+current day cached ahead** — ⤵ **that half arrives with E3**, which is the only place it can.
 
 **What it makes possible:** what runs on the laptop is now the shape that will run on the VPS, so
 deployment is moving a known-good thing rather than discovering the difference in production.

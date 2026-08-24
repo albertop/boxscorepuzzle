@@ -64,7 +64,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **B** the hand-solve gate | ⬜ B1 done, **B2–B4 outstanding** | ⚠⚠ **this is what blocks beta 0** |
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
-| **E** serving for real | ▶ **E1b and E1 done, E2 next** | the two public paths and the routes over them; ⬜ the caching contract and nginx |
+| **E** serving for real | ▶ **E1b and E1 done, E3 next** | the two public paths and the routes over them; ⤴ **E2 folded into E3** — headers need a server |
 | **F** deployment | ⬜ not begun | |
 | **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
 
@@ -450,6 +450,45 @@ habit.
 **Fail closed at boundaries.** Verification that passes when its secret is missing, parsing that accepts
 malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
 the absence of a check reading as the presence of a passing one.
+
+**⚠️⚠️ A remedy that makes a symptom rarer is confirmed by the same evidence as one that removes it.**
+This is the hardest wrong answer in the register to detect, and it was one decision away from being
+taken on 2026-08-23.
+
+The browser suite stopped finishing in headless. The evidence said *a budget*: the hang moved when tests
+were added or removed, it never reproduced in an ordinary browser, and every isolated probe passed. The
+structural answer followed — **the runner drives one page, so split the suite across two.** It would have
+worked. **It was wrong.** The cause was the runner starting the development server with
+`stdout=subprocess.PIPE` and reading it only in the teardown: the server writes a line per request, the
+64 KB pipe fills at about a thousand of them, and the *server* blocks inside `write()` and stops
+answering. Two pages make the same requests against the same unread pipe — **the ceiling moves and the
+next thousand find it again, with the identical disguise.**
+
+**Splitting would have produced a green suite and a report saying the problem was fixed.** Nothing in
+that outcome distinguishes it from a real fix, which is what makes this different from every other shape
+here: the others are caught by looking at the output, and this one *survives* looking at the output.
+
+**The check that exists for it: a remedy aimed at a threshold has to name the resource.** *The suite got
+too big* is not a cause, it is a restatement of the symptom — and a remedy built on a restatement can
+only move it. Ask what runs out, in units. If the answer is not a number of bytes, sockets, threads or
+descriptors, the cause is not known yet and the fix is a guess wearing an argument.
+
+**And what found it was bisecting on difference, not on suspicion.** Three tests were investigated and
+cleared in turn, which is bisecting on suspicion and cost an afternoon. What worked was writing a probe
+that ran **the same suite** and finished, then adding the runner's features to the probe one at a time
+until only one difference was left. ⚠️ **The last difference standing was the one nobody would have
+listed as a feature** — how each started the subprocess.
+
+⚠️ **The instrument that reproduces a threshold has to cross it.** Every isolated probe — eighty fetches,
+twenty loads, every page — passed, because a hundred requests never fill a buffer. A probe that stays
+below the limit reports health at any size of limit, which is a check that cannot fire.
+
+⚠️⚠️ **And the fix is not the opposite of the defect.** The pipe existed because **discarding the output
+was the previous defect** (v36-P3-11): both streams went to `DEVNULL`, so a stolen port or a crash in the
+server presented as a bare `ERR_CONNECTION_REFUSED` with the one explanation thrown away. Going back to
+`DEVNULL` would trade one silent failure for another. **Keeping the output *and* reading it is what
+neither version did** — when a fix reintroduces the thing an earlier fix removed, the answer is usually
+the property both versions were missing rather than either version.
 
 **⚠️⚠️ A rule that acts on arrival cannot say anything about what is already there.** A filter in a
 `WHERE` clause and a refusal in a producer both stop a bad thing entering, and **neither leaves anything

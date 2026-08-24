@@ -7,10 +7,17 @@
 # the next reload. A `Dockerfile` here would buy nothing and cost a rebuild per edit.
 #
 # ⚠️ **No nginx and no production shape.** This is the development environment on a Windows laptop
-# running Docker Desktop, and that is all it is. The service's real caching contract — `manifest.json`
-# never cached, `<generation>/<id>.json` cached for a year — is a VPS decision recorded in
-# `docs/reviews/todo.md`, not something to half-build here. `dev_server.py` caches nothing at all,
-# which is the correct blunt answer for a tree being edited every few seconds.
+# running Docker Desktop, and that is all it is. The service's real caching contract — the dated
+# pointers never cached, the packages cached for a year because they are immutable — is the table in
+# `docs/calendar.md`, which E3 implements and nothing enforces yet. `dev_server.py` caches nothing at
+# all, which is the correct blunt answer for a tree being edited every few seconds and is the
+# **opposite** shape to production.
+#
+# ⚠⚠ **This named `manifest.json` and `<generation>/<id>.json` until 2026-08-24, and since E1 the
+# public path holds neither.** It is flat: `today.json`, `yesterday.json` and `<id>.json`. The rule did
+# not change with the names because it was never about them — what makes a document cacheable is
+# whether it can change — but a rule stated against files that do not exist is what somebody
+# implements.
 
 services:
   serve:
