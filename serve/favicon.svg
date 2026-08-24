@@ -47,7 +47,10 @@
     <rect x="13" y="20" width="6" height="5" rx="1"/>
   </g>
 
-  <rect x="6" y="19" width="20" height="0.8" fill="#ffffff" opacity="0.55"/>
+  <!-- The totals rule. y is 18.6 so its centre lands on 19, which is the middle of the gap between
+       the second row (13 to 18) and the third (20 to 25). At y=19 it sat 0.4 low and read as
+       belonging to the bottom row instead of separating the two. -->
+  <rect x="6" y="18.6" width="20" height="0.8" fill="#ffffff" opacity="0.55"/>
 
   <rect x="20" y="20" width="6" height="5" rx="1" fill="#ffffff"/>
 </svg>
