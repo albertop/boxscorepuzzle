@@ -365,8 +365,17 @@ The record:
 | CI abbreviation wrong for weeks | A term adopted in conversation and never checked against baseball notation |
 | Watchdog slept eight hours | A grep for `"hardest day"` against a file saying `HARDEST DAY` |
 | Three hours of compute lost | A patched script never parsed, and a driver that ignored a non-zero exit |
+| **1,015 major-league games missing from the pool for months** | **Retrosheet's own two names for one club** — the 1955–67 Athletics are `KC1` in event files and `OAK` in game logs, so a `GAME_ID` built from the home club differs between tables and the join finds no partner |
 
 **None of these break an identity.** That is why four validation layers caught none of them.
+
+⚠️⚠️ **The last one is the shape at its purest and it is worth the extra line: neither side is wrong.**
+`retroGamesReg` is right that the club is `KC1`; `retroGameLogs` is right that the franchise is `OAK`.
+Every row in both tables is correct, every count is plausible, and **the only symptom is a join that
+quietly returns fewer rows than it should** — 1,029 games, a fifth of a season of inventory, absent from
+the pool by nobody's decision. **It was found by asking why an exclusion had a suspiciously round
+count**, not by any check. *Two places that should say the same thing* does not require either place to
+be mistaken.
 
 ### The rules that follow
 

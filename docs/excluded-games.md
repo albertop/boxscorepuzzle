@@ -34,7 +34,7 @@ these exclusions. Measured 2026-08-23 against the dataset then loaded.
 | 8 | **Home club batted first** | **30** | event rows | already excluded before today |
 | 9 | **Negro Leagues (`EVR`)** | **1,872** | source type | ✔ **settled 2026-08-17.** Not a question — see §9 |
 | 10 | **Postseason before 1950** | **268** | `POSTSEASON_SEASON_FLOOR` | ✔ **floor lowered from 1969 on 2026-08-24**: +116 games, +50 gated directions |
-| 11a | **No `retroGameLogs` row** | **2,901** | an inner `JOIN` | **1,872 are §9's, settled.** ⚠️ the other **1,029 are Kansas City Athletics home games** and look like a gap in the load |
+| 11a | **No `retroGameLogs` row** | **2,901** | an inner `JOIN` | **1,872 are §9's, settled.** The other **1,029 are a stale snapshot** — the 2025-12 game logs called the 1955–67 Athletics `OAK`, the current ones say `KC1`. ✔ **deferred to the off-season reload, 2026-08-24** |
 | 11b | **Deduced reconstructions (`ED*`)** | **3,465** | `is_deduced` | deliberate, **redundant** — §7 removes them first |
 | 11c | **No line score** | **17,282** | `VisLineScore` | 19th-century coverage: **200 from 1910 on**, and the pool starts at 1910 |
 | 11d | **Seasons outside 1910–2029** | **0** | season window | ⚠️ **removes nobody** — the data runs 1910–2025 |
@@ -387,58 +387,91 @@ present; the missing one is **1904**, when no World Series was played.
 
 ⚠️⚠️ **Two of these are exclusions nobody asked for, and one is a clause that removes nobody.**
 
-### 11a. Games with no `retroGameLogs` row — **2,901, and they are exactly two populations**
+### 11a. Games with no `retroGameLogs` row — **2,901, and only 1,872 of them are an exclusion**
 
 The cohort does `JOIN dbo.retroGameLogs l`, inner. **Nobody wrote that as a rule**: it is there because
 the line score, the forfeit, the protest, the completion and the account all come from that table.
-Dropping the join with every clause that depends on it admits **21,461 more ungated directions and
-6,060 more gated**.
 
-**Investigated 2026-08-24, and the 2,901 split cleanly with no remainder and no overlap:**
+**Investigated 2026-08-24. The 2,901 split cleanly, no overlap, no remainder:**
 
 | | | |
 |---|---|---|
-| **1,872** | Negro Leagues, `EVR`, 1913–1961 | ✔ **already excluded on purpose** — §9, settled 2026-08-17 |
-| **1,029** | **Kansas City Athletics home games, `KC1`, 1955–1967** | ⬜ nobody has ever decided anything about these |
+| **1,872** | Negro Leagues, `EVR`, 1913–1961 | ✔ **excluded on purpose** — §9, settled 2026-08-17 |
+| **1,029** | **Kansas City Athletics home games, 1955–1967** | ⚠️⚠️ **not an exclusion. A stale snapshot, and Retrosheet has already fixed it.** |
 
-The Negro League clubs account for the rest of the prefixes — `KCM` Monarchs 276, `PH5` Stars 180,
-`HOM` Grays 163, `NW2` Eagles 158, `CAG` American Giants 151, `BLG` Elite Giants 149, and so on.
+## ⚠️⚠️ The Athletics half: our download is old, and 1,015 games are waiting in the new one
 
-### ⚠️⚠️ The Athletics half does not look like a Retrosheet gap. It looks like a gap in the load.
+**The download of 2025-12-01 named the same club two ways in two file families.**
 
-| | |
+| | event files | game logs, **2025-12-01 download** | game logs, **2026-08-24 download** |
+|---|---|---|---|
+| Philadelphia Athletics, to 1954 | `PHA` | `PHA`, park `PHI11` | `PHA` |
+| **Kansas City Athletics, 1955–1967** | **`KC1`** | **`OAK`**, park `KAN05` | ✔ **`KC1`**, park `KAN05` |
+| Oakland Athletics, 1968 on | `OAK` | `OAK`, park `OAK01` | `OAK`, first appearing in 1968 |
+
+A `GAME_ID` is built from the home club's code, so in the old files the same game carried two
+identifiers and the join missed every one of them:
+
+```
+old game log   OAK195504120   park KAN05
+event file     KC1195504120   home=KC1 away=DET     <- Detroit at Kansas City, opening day 1955
+new game log   KC1195504120   park KAN05            <- they agree
+```
+
+**The fresh files were checked directly**, `gl1955.zip` … `gl1968.zip`: `KC1` as the home club for
+**76, 77, 77, 78, 77, 78, 80, 81, 81, 81, 81, 81, 81 = 1,029 games**, no `OAK` before 1968 and 83 in
+1968, which is when the club moved. **Those thirteen counts match `retroGamesReg`'s `KC1` home games
+season for season.**
+
+## ✔ Deferred to the next full reload — **the operator's decision, 2026-08-24. Do not raise it again.**
+
+**The database is loaded from the 2025-12 download and stays that way until the off-season**, when the
+2026 season is published and everything is reloaded together. **1,015 American League games with
+accepted provenance stay out of the pool until then** — known, priced, and accepted.
+
+⚠️ **A targeted `UPDATE` was considered first and the scope check is what argued against it.** The stale
+`OAK` is not confined to the game logs:
+
+| table.column | rows carrying `OAK` in 1955–1967 |
 |---|---|
-| `KC1` home games in `retroGamesReg`, 1955–1967 | **1,029** |
-| of those with a `retroGameLogs` row | **0** |
-| **`KC1`-prefixed rows in `retroGameLogs`, any era** | **0** |
-| `KC1` **away** games with a log, same seasons | **1,031** |
-| of the 1,029: accepted provenance (`EVA`) | 1,015 |
-| of the 1,029: deduced (`EDA`) | 14 |
-| do they have `retroDailyReg` rows? | **all 2,901 do** |
-| do they have `retroEventsReg` rows? | **all 2,901 do** |
+| `retroRosters.teamId` | 2,520 |
+| `retroTransactions.toTeam` / `.fromTeam` | 1,829 / 1,649 |
+| `retroGameLogs.VisTeam` / `.HomeTeam` / `GAME_ID` | 1,031 / 1,029 / 1,029 |
+| `retroCoaches.team` | 336 |
+| `retroDiscrepancies.teamId` | 331 |
+| `retroParkFactorsByTeam.HOME_TEAM_ID` | 171 |
+| `retroTeams_6d.franchiseID` / `.teamId` | 5 / 2 |
 
-**A game-log row is keyed by the home club, so what is missing is every row whose `GAME_ID` begins
-`KC1` — the entire home half of one major-league club's thirteen seasons, and nothing else.** The away
-half is present, under the other club's identifier. The same games are present in the games table, the
-daily table and the events table.
+**Each would have to be judged separately, because `OAK` is not wrong everywhere.**
+`retroTeams_6d.franchiseID` is a franchise identifier and `OAK` is what it should say; the rosters and
+transactions tables come from file families whose current spelling has not been checked. **A rewrite that
+is correct for one table and wrong for the next is worse than the stale snapshot**, which is at least
+uniformly one vintage. The reload replaces all of them from one download, consistently.
 
-**Named, so this is checkable rather than asserted:** `KC1195504120` (DET at KC, opening day 1955),
-`KC1195504130`, `KC1195504180`, `KC1195504190`, `KC1195504220`.
+⚠️ **What the reload still owes when it happens, and it is a §21 question:** if Retrosheet corrected the
+Athletics it may have corrected other things in the same files. The pool *gaining* games is safe; a
+published board whose underlying row has changed is not, because the calendar's past assignments are
+permanent. **Check the new files against the loaded rows field by field before the reload lands**, not
+after.
 
-⚠️⚠️ **That is this project's signature failure shape** — two places that should say the same thing
-saying different things, with nothing checking they agree — and it is silently keeping **1,015
-American League games** out of the pool. **Whether Retrosheet publishes those game logs has not been
-checked here; what is established is that this database does not have them while having everything else
-about the same games.**
+### ⚠️⚠️ What this cost, and it was not the data
 
-**Not a rule, and no rule is proposed.** §32's rules are about what may be *admitted*; this is about
-whether a table is complete. **What re-admits the population:** changing the join to `LEFT`, moving any
-of the five dependent facts to another source, or **loading the missing rows** — and only the third is
-about the actual question.
+**The exclusion was reported twice before it was understood, and each version was confidently wrong.**
 
-⚠️ **Stated because the first version of this section did not know:** it called all 2,901 an incidental
-exclusion and put them in front of the operator as one question. **They are two populations with two
-completely different statuses**, and one of them was settled a week earlier.
+| | what it said | why it was wrong |
+|---|---|---|
+| first | all 2,901 are an incidental exclusion, one question for the operator | 1,872 of them were settled a week earlier |
+| second | the Athletics half is *a gap in the load* | nothing was dropped; the rows were there under another name |
+| third | *the data is complete and the two sides disagree about a name* — and **a fresh download will say the same, because that is how Retrosheet publishes this club** | **it was not. Retrosheet had already fixed it, and the operator found that out by downloading the files.** |
+
+⚠️⚠️ **The third is the one worth keeping.** A single snapshot was treated as a property of the source.
+The evidence was thirteen files from **one download on one date**, and the claim made from it was about
+what Retrosheet *publishes* — present tense, no date, not checkable. **A downloaded file has a date, and
+any statement about what a source contains inherits it.** The correct sentence was *the December
+download says `OAK`*, which invites exactly the check that settled it.
+
+⚠️ **`discovery/retrosheet-coverage/` exists for this** — re-establishing source claims against a new
+download rather than trusting a loaded snapshot. It had not been run against the game logs.
 
 ### 11b. Deduced reconstructions — `ED*`, **deliberate but redundant**
 
@@ -517,7 +550,11 @@ itself.
 
 - ⬜ **Batting out of order.** No column found that marks it. **Named as unknown rather than guessed.**
 
-### ⬜ What the sweep left for the operator — **one question, and it is not about a clause**
+### ✔ What the sweep left for the operator — **nothing open. All four closed 2026-08-24.**
+
+⚠️⚠️ **This heading is the record of the list, not a live list.** Every row below is settled, and it
+stays here so the same four are not re-derived and re-asked by the next sweep — which is exactly what
+happened to the Negro Leagues on the day this was written.
 
 ⚠️⚠️ **This list had four rows and three of them should never have been on it.**
 
@@ -527,11 +564,11 @@ itself.
 | **Deduced files, and the season window** | not decisions either. Both are **documented at zero bite** in §11b and §11d, which is a fact about them and not a question. Deleting a clause that removes nothing today is the only option with a cost — it is also the only thing that would do the work if the data changed |
 | **The postseason floor** | ✔ **decided: 1950** — see §10 |
 
-**What is actually left:**
+**And what was actually left, now also closed:**
 
 | | the question |
 |---|---|
-| ⬜ **11a — the 1,029 Kansas City Athletics games** | Once he knows what they are, does their exclusion become explicit? ⚠️ **The other 1,872 of the 2,901 are the Negro Leagues and are already settled**, so this question is only ever about the Athletics. **And it is very likely not an exclusion question at all** — see §11a: no `KC1`-prefixed row exists in `retroGameLogs` at all, which looks like a gap in the load rather than in Retrosheet |
+| ✔ **11a — the 1,029 Kansas City Athletics games** | **Settled 2026-08-24: deferred to the off-season reload.** Not an exclusion and not a pool decision — the loaded snapshot is from 2025-12, which named the club `OAK`, and the current files say `KC1`. A targeted `UPDATE` was rejected because seven tables carry the stale code and `OAK` is correct in some of them. See §11a |
 
 ⚠️ **§11c is not on this list.** A missing line score means no board can be drawn; and from 1910 on it
 is **200 rows in the whole database**. It is a construction fact and §11c now says so.
