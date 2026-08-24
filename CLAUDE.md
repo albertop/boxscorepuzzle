@@ -603,11 +603,50 @@ never *did it do the thing you wanted*.** For anything whose job is to check som
 says about the subject and confirm the subject was there** — a byte count, a filename, a line that
 should have changed.
 
-**⚠️⚠️ Nothing stops a fourth, and there is no check to write.** The same argument as the near-neighbour
-class above: knowing whether a tool was pointed at the right subject requires knowing what the right
-subject was, which is intent. What exists is the habit of asking a verifier for something it can only
-produce from the real subject — *print the line that should have changed* — and that is a discipline
-rather than a gate.
+**⚠️⚠️ Nothing stopped a fourth, and for the general case there is still no check to write.** The same
+argument as the near-neighbour class above: knowing whether a tool was pointed at the right subject
+requires knowing what the right subject was, which is intent. What exists is the habit of asking a
+verifier for something it can only produce from the real subject — *print the line that should have
+changed* — and that is a discipline rather than a gate.
+
+⚠️ **This paragraph said *there is no check to write* full stop, and the fourth instance produced one for
+a narrow slice of it.** The slice is below. The general claim stands; the sentence that implied nothing
+could ever be written did not.
+
+### ⚠️⚠️ The fourth arrived the same day, and this one DOES have a check
+
+**`gh run list --commit 7cc0518` returns nothing.** Not an error, not a warning, not a non-zero exit —
+an empty list, because `--commit` wants the full forty-character SHA and silently matches nothing on a
+short one. A watcher built on it polled for twenty minutes and would have reported **"still running"
+about four workflows that had been green the whole time.**
+
+**That is the same family as the three `nginx -t` approvals — a tool reporting on a subject it was never
+given — with one new wrinkle worth naming separately:**
+
+> **An empty result and a genuine "nothing matched" are the same bytes, and the tool does not say
+> which.** A filter that matches nothing, a glob over a mistyped directory, a `--jq` selecting an absent
+> field, a database query with a stale id: every one returns an empty set that reads as a finding.
+
+⚠️⚠️ **So the check exists here, and it is narrow and mechanical**, which is what distinguishes it from
+the "no check to write" above:
+
+> **Any query used as a status check must assert it found something.**
+
+Not *look at whether it found something* — assert it, so the empty case fails loudly instead of being
+interpreted. `forge/tests/test_hand_solve_keys_are_ignored.py::test_the_sweep_finds_keys_to_check` is
+what it looks like: before asking whether every key is ignored, it asserts there are keys.
+
+⚠️ **And the timing is the finding, not the instance.** That test was written **one hour before** the
+watcher, by the same author, and its docstring says in as many words that a check over an empty set
+passes forever. **Knowing the rule does not apply it** — this file has said so since the fourth regex,
+and today it earned the sentence twice more. What separates the guard that held from the watcher that
+did not is that one was written as a test and the other as a throwaway one-liner. **The discipline is
+that the assertion goes in by default, including in code that will be deleted in an hour.**
+
+⚠️ **The residual is unchanged and is worth restating so this does not read as the class being closed.**
+This covers a query *used as a status check*, which is decidable by looking at what the result is used
+for. It does not cover the general case — whether a tool was pointed at the right subject is still
+intent, and still not derivable from the code.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
@@ -686,6 +725,13 @@ about a different era. **Scope the loud failure to where the answer could actual
 the scope rests on: here, the last season anybody has measured. ⚠️ And check whether the open decision is
 load-bearing at all — the placed runner is caught **per game** by the global identity, so the boundary
 buys work avoided, not correctness. *A question that blocks everything is worth asking what it is for.*
+
+⚠️ **The decision itself was settled on 2026-08-24 — 2020, regular season only, never the postseason —
+and the lesson above is about the interim, not about an open question.** It is kept because the shape
+recurs; `docs/excluded-games.md` §2 is where the ruling lives. ⚠️⚠️ **And it stayed marked open in four
+documents after he had answered it**, which is why it was put to him a second time. **A stale open
+marking costs the person who already decided**, and closing one is part of taking the decision, not
+tidying afterwards.
 
 **Never propose pausing, stopping for the day, continuing tomorrow, or deferring to a later session
 — in any form, including softened ones.** The operator decides when work stops; nobody else raises the

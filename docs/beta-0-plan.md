@@ -15,7 +15,7 @@ it. ⚠️ Where the two differ, this file says so.
 | | | |
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
-| **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
+| **B** the hand-solve gate | ⬜ **not met** | B1 and B2 done; **B3's first half passed — 16/16 solved, none guessed**. ⬜ B3's stratified sample and B4 remain: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
@@ -180,13 +180,16 @@ was signed, certified and dated **2026-11-01**, and the failure appeared only wh
   ask whether the numbers agree with each other; for these games they do. What lies is the reveal (§29).
 - ✔ **`LineScore` enforces `MAX_INNINGS` at construction**, closing the write/read asymmetry that let the
   forge sign a package **its own reader refuses**. The sixth recorded instance of that shape.
-- ✔ **The automatic-runner rule is wired and dormant**, and the loud failure is scoped to
-  `AUTOMATIC_RUNNER_FLOOR = 2014` — the last season measured clean, plus one. ⚠️ **The first version
-  raised on every extra-inning game and aborted a production run on a 1964 board**: *unknown* applied as
-  *always*, which halts production rather than failing closed on the case in question.
+- ✔✔ **The automatic-runner rule is settled and live — 2020, regular season only, never the postseason**
+  (operator, 2026-08-24). `AUTOMATIC_RUNNER_FROM = 2020`; `AUTOMATIC_RUNNER_FLOOR` and the loud failure it
+  scoped are **deleted**, because the open decision they guarded is closed. ⚠️ **The season is half the
+  rule**: a floor refusing every 2020+ extra-inning game has the right number and the wrong rule, and the
+  postseason exemption is asserted separately from the constant. ⚠️ **The first version of the old raise
+  fired on every extra-inning game and aborted a production run on a 1964 board** — *unknown* applied as
+  *always* — and `docs/excluded-games.md` §2 keeps that record.
 - ✔ **The five affected boards were replaced** — all future dates, §21 — and **the 145 that predate the
   metadata were restamped**: same game, same target, every field asserted identical, written back with the
-  facts. ⬜ **The season boundary is still the operator's** and is a rulebook fact, not a measurement.
+  facts. ✔ **The season boundary was settled on 2026-08-24** — see the row above.
 
 ### ✔ A3 (core). The calendar module — **done 2026-08-22**
 
@@ -436,6 +439,10 @@ it now**, and both mutations go red: erasing directly kills the new guard, rever
 quota test.
 
 ### ⚠️ What is left of B is the operator's, and B1 was what blocked it
+
+⚠️ **Updated 2026-08-24: B2 is done and B3's first half passed.** Sixteen boards solved by hand, none by
+guessing; the stall ladder does not order felt difficulty. What remains is **B3's stratified sample** —
+whose N and quotas are the operator's — and **B4**.
 
 **B1 was mine and it is done.** B2, B3 and B4 are afternoons of somebody solving boards by hand — the one
 measurement in this project whose instrument is a person. **Until B1 landed the pack could not be built

@@ -609,11 +609,22 @@ def _inadmissible_boards(calendar: Calendar) -> list[str]:
             faults.append(f"{where} has a {account!r} game account, not a complete one")
         if metadata.get("disposition"):
             faults.append(f"{where} is {metadata['disposition']!r}: forfeit, protest or completed later")
-        if (
-            AUTOMATIC_RUNNER_FROM is not None
-            and innings > REGULATION_INNINGS
-            and int(entry.game_id[3:7]) >= AUTOMATIC_RUNNER_FROM
-        ):
+        # ⚠️⚠️ **This applies the regular-season rule to every board, and `produce()` does not.** The
+        # operator settled the boundary on 2026-08-24: 2020 onward, **regular season only**, never the
+        # postseason. `inadmissible()` can honour the second half because `Loaded` carries
+        # `source_type`; **the metadata here does not, so this check cannot tell the two apart.**
+        #
+        # ⚠️ **What makes it sound today, stated rather than assumed:** this producer draws no
+        # postseason games at all — there is no postseason path in it, and every board it has ever
+        # written is regular season. So a 2020+ extra-inning board here *is* a fault.
+        #
+        # ⚠️⚠️ **What would make it wrong, so it is not discovered by a false fault:** the day the batch
+        # draws postseason games, a legitimate 2020+ postseason extra-inning board is flagged here and
+        # the build stops on a good board. Closing that needs the postseason fact carried in the
+        # metadata, which is a §7 question about what a published package may say — a postseason flag
+        # narrows the game to 0.6% of the pool, which is the kind of hint §7 strips `season` to avoid.
+        # `docs/excluded-games.md` §2 carries it as owed.
+        if innings > REGULATION_INNINGS and int(entry.game_id[3:7]) >= AUTOMATIC_RUNNER_FROM:
             faults.append(f"{where} is an extra-inning game from the automatic-runner era")
     return faults
 

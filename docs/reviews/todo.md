@@ -5394,9 +5394,13 @@ stream on Windows is cp1252 — `UnicodeEncodeError` **after the compute, before
 anyone**. `test_reports_survive_a_redirected_stream.py` caught it on the pre-push hook, which is what
 that guard exists for and the reason it stopped being a comment. Plain text now.
 
-⬜ **Whether the two arms are deleted is an operator decision.** Keeping them lets the recorded figures
-be reproduced, which is the argument that kept every other superseded instrument intact; deleting them
-is what `CLAUDE.md` says was done everywhere else for this particular option.
+✔ **Settled, and it was already settled when this was written.** `CLAUDE.md`'s *Dead code, or code held
+in reserve* register answers it directly and **names this very file as the worked example**: an
+instrument that once flipped an answer is a **record**, kept exactly as it is, with the losing arm
+present and *named as losing* — *keeping the wrong arm and naming it wrong is what makes a file evidence
+instead of a trap.* The arms stay, labelled in the docstring and in the printed table, which is what was
+done. ⚠️ Marked as an open operator decision here for two days after the rule that decides it was
+written; **a stale marking costs the person who already answered.**
 
 ### ⚠️ Coverage per stall target, re-run at the decided gate — and the move is **not** the gate
 

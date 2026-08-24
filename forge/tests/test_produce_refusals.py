@@ -19,10 +19,10 @@ from dataclasses import dataclass, replace
 import pytest
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from boxscore_domain import AUTOMATIC_RUNNER_FLOOR, MAX_INNINGS
+from boxscore_domain import AUTOMATIC_RUNNER_FROM, MAX_INNINGS
 from boxscore_forge import produce as producer
 from boxscore_forge.boxscore import Direction
-from boxscore_forge.pool import Loaded
+from boxscore_forge.pool import POSTSEASON_SOURCE, Loaded
 from boxscore_forge.produce import inadmissible, produce, required_boxscore
 from boxscore_forge.publish import to_board
 from tests.reveals import reveal_for as fixture_reveal
@@ -220,17 +220,32 @@ class TestTheGamesTheBoardCannotHonestlyShow:
         assert attempt.cause == "partial account"
 
 
-class TestTheAutomaticRunnerBoundaryIsOpenAndSaysSo:
-    """⬜ `AUTOMATIC_RUNNER_FROM` is unset: a rulebook fact §7 forbids inventing here.
+class TestTheAutomaticRunnerBoundaryIsSettled:
+    """**2020, regular season only, never the postseason. Settled by the operator on 2026-08-24.**
 
-    ⚠️⚠️ **The loud failure is scoped, and the first version was not.** It raised on *every* extra-inning
-    game and aborted a production run on a **1964** board — an unknown boundary applied as *always*,
-    which halts production rather than failing closed on the case in question. `AUTOMATIC_RUNNER_FLOOR`
-    is the last season measured clean, plus one.
+    ⚠️⚠️ **The season is half the rule and the tests are written so half cannot pass for the whole.**
+    A floor that refuses every 2020+ extra-inning game has the right number and the wrong rule: it
+    would throw away legitimate postseason boards, which have never had a placed runner in any season.
+    `test_a_postseason_game_from_the_era_is_admitted` is the assertion that fails if that happens, and
+    it is the one worth breaking on purpose — it was verified red by dropping the `source_type` clause
+    from `inadmissible`, which reports `automatic runner` on a 2021 World Series board.
+
+    ⚠️ **The exemption is an acceptance test.** A game escapes only by being positively known to be
+    postseason; an unrecorded `source_type` is treated as regular season and refused, which is the
+    fail-closed direction and the same shape as `account != "Y"`.
+
+    ⚠️ **What this replaces.** The boundary was an open decision and the code raised loudly on any
+    extra-inning game from a season nothing had measured. `AUTOMATIC_RUNNER_FLOOR` scoped that raise
+    and is deleted with it — the first version of the raise fired on *every* extra-inning game and
+    aborted a production run on a **1964** board, which is why the scoping existed at all.
     """
 
-    def _extra_innings(self, direction: Direction, season: int) -> Loaded:
-        loaded = replace(_loaded(direction), season=season)
+    def _extra_innings(self, direction: Direction, season: int, source_type: str = "EVN") -> Loaded:
+        """An extra-inning board in a given season. **`EVN` by default: a regular-season game.**
+
+        The default is the case the rule bites on, so a test asking about the postseason has to say so.
+        """
+        loaded = replace(_loaded(direction), season=season, source_type=source_type)
         score = loaded.direction.line_score
         longer = replace(
             score,
@@ -239,24 +254,47 @@ class TestTheAutomaticRunnerBoundaryIsOpenAndSaysSo:
         )
         return replace(loaded, direction=replace(loaded.direction, line_score=longer))
 
-    def test_a_season_nothing_has_measured_raises(self, cubs_at_braves_1968: Direction) -> None:
-        with pytest.raises(ValueError, match="AUTOMATIC_RUNNER_FROM is not set"):
-            inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FLOOR))
+    def test_the_boundary_is_the_season_mlb_introduced_the_rule(self) -> None:
+        """⚠️ A rulebook fact, not a measurement: the automatic runner arrived in 2020."""
+        assert AUTOMATIC_RUNNER_FROM == 2020
 
-    def test_a_season_the_measurement_covers_does_not_raise(self, cubs_at_braves_1968: Direction) -> None:
-        """⚠️⚠️ **The half that matters most.** An open decision enforced as though the answer were always
-        yes stops every build; this is the assertion that it does not."""
-        assert inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FLOOR - 1)) != "automatic runner"
+    def test_a_regular_season_game_from_the_era_is_refused(self, cubs_at_braves_1968: Direction) -> None:
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, 2021)) == "automatic runner"
 
-    def test_setting_the_boundary_refuses_the_era_and_spares_the_rest(self, cubs_at_braves_1968: Direction) -> None:
-        """The rule is wired and dormant. Setting the year is the only thing that changes what ships."""
-        import boxscore_forge.produce as producer  # noqa: PLC0415
+    def test_the_first_season_of_the_rule_is_inside_it(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ `>=`, not `>`. 2020 is the first season the runner was placed, not the last without one."""
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FROM)) == "automatic runner"
 
-        with pytest.MonkeyPatch.context() as patch:
-            patch.setattr(producer, "AUTOMATIC_RUNNER_FROM", 2020)
+    def test_the_season_before_it_is_untouched(self, cubs_at_braves_1968: Direction) -> None:
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, AUTOMATIC_RUNNER_FROM - 1)) == ""
 
-            assert producer.inadmissible(self._extra_innings(cubs_at_braves_1968, 2021)) == "automatic runner"
-            assert producer.inadmissible(self._extra_innings(cubs_at_braves_1968, 2019)) == ""
+    def test_a_postseason_game_from_the_era_is_admitted(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️⚠️ **The half a season floor gets wrong.** The rule has never applied to the postseason.
+
+        Verified red by removing the `source_type` clause from `inadmissible`: this then reports
+        `automatic runner` on a 2021 postseason board, which is a good board thrown away.
+        """
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, 2021, source_type=POSTSEASON_SOURCE)) == ""
+
+    def test_no_postseason_season_is_touched(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ *In any season* — so the exemption is asserted well past the boundary, not only beside it."""
+        for season in (2020, 2024, 2029):
+            board = self._extra_innings(cubs_at_braves_1968, season, source_type=POSTSEASON_SOURCE)
+            assert inadmissible(board) == "", f"a {season} postseason board was refused"
+
+    def test_a_game_whose_source_is_unrecorded_is_treated_as_regular_season(
+        self, cubs_at_braves_1968: Direction
+    ) -> None:
+        """⚠️⚠️ **Fail closed.** The exemption needs positive evidence; absence is not the evidence.
+
+        `Loaded.source_type` defaults to `""`, and a board that never learned where it came from must
+        not inherit the postseason's exemption by having said nothing.
+        """
+        assert inadmissible(self._extra_innings(cubs_at_braves_1968, 2021, source_type="")) == "automatic runner"
+
+    def test_a_nine_inning_game_from_the_era_is_untouched(self, cubs_at_braves_1968: Direction) -> None:
+        """⚠️ The runner is placed **to start an extra inning**. A regulation game never meets one."""
+        assert inadmissible(replace(_loaded(cubs_at_braves_1968), season=2021, source_type="EVN")) == ""
 
     def test_a_board_past_the_inning_cap_is_refused_before_the_boundary_is_consulted(
         self, cubs_at_braves_1968: Direction

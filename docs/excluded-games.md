@@ -32,9 +32,25 @@ these exclusions. Measured 2026-08-23 against the dataset then loaded.
 | 6 | **Completed on a later date** | **0 in the pool** | `CompletionInfo` | not reachable today — see below |
 | 7 | **Partial game accounts** | **5,177** | `AcquisitionInfo` | ⚠️⚠️ **PUBLISHES — 6 of 6 tested** |
 | 8 | **Home club batted first** | **30** | event rows | already excluded before today |
+| 9 | **Negro Leagues (`EVR`)** | **1,872** | source type | excluded **twice**; the rule's own bite is **zero** |
+| 10 | **Postseason before 1969** | **384** | `POSTSEASON_SEASON_FLOOR` | real bite: **158 gated directions** |
+| 11a | **No `retroGameLogs` row** | **2,901** | an inner `JOIN` | ⚠️ **incidental** — nobody asked for it; the block costs **6,060 gated** |
+| 11b | **Deduced reconstructions (`ED*`)** | **3,465** | `is_deduced` | deliberate, **redundant** — §7 removes them first |
+| 11c | **No line score** | **17,282** | `VisLineScore` | incidental: no line score, no board |
+| 11d | **Seasons outside 1910–2029** | **0** | season window | ⚠️ **removes nobody** — the data runs 1910–2025 |
 
 ⚠️ The classes overlap. `PHA194309240` is a tie **and** sixteen innings; `DET193208010` is a forfeit
 **and** an upheld protest. The counts are per class, not a partition.
+
+⚠️⚠️ **Rows 1–8 were written from incidents; rows 9–11 from walking the query.** The two halves were
+produced by different methods and the second found four populations the first never looked for — see
+*Why this register was incomplete* below. **The Games column is the size of the population, not what the
+clause is the one removing**, and for 9, 11b, 11c and 11d those two numbers differ; each section says
+which.
+
+⚠️ **What is deliberately not here: the roster caps and §5's zero-density gate.** They define the cohort
+the counts above are measured against rather than excluding a game the board could otherwise show, and
+they live in §5 and §6. Named so their absence is not read as a fifth thing nobody swept for.
 
 ---
 
@@ -75,34 +91,64 @@ pre  SEA201308270  PUBLISHES  (2013, ten innings)
 **So this class cannot produce a wrong board** — it fails loudly during construction. The exclusion buys
 nothing in correctness and stops 306 games being processed to be thrown away.
 
-⬜ **The season boundary is not settled here.** The contradiction appears in 2021 and 2023 and not in
-1954, 1994 or 2013. **Whether the rule applied in the postseason, and exactly what happened in the
-shortened season it was introduced in, is a fact about the rulebook that the data cannot answer** — it
-is the operator's, and it decides admissibility for every extra-inning game after it.
+## ✔ The boundary — **settled by the operator on 2026-08-24**
 
-### ⚠️⚠️ What the unset boundary does, and the version of it that was wrong
+| | |
+|---|---|
+| **From** | **2020** — the season MLB introduced the automatic runner |
+| **Applies to** | **regular-season** games, 2020 onward |
+| **Never applies to** | the **postseason**, in **any** season |
 
-`AUTOMATIC_RUNNER_FROM` is `None` in `boxscore_domain`, and the rule around it is fully wired: the
-query would exclude the era, `produce()` would refuse it, `audit()` would refuse a board already in the
-calendar from it. **All three are dormant until the year exists.**
+`AUTOMATIC_RUNNER_FROM = 2020` in `boxscore_domain`. It is a rulebook fact, which is why the data could
+not answer it and §7 forbade inventing it here — the measurement above says the contradiction appears in
+2021 and 2023 and not in 1954, 1994 or 2013, which is consistent with the ruling and does not establish
+it.
 
-**The loud failure is scoped by `AUTOMATIC_RUNNER_FLOOR = 2014`** — the last season measured clean, plus
-one. An extra-inning game from 2014 on raises while the boundary is unset; one from before it does not.
+### ⚠️⚠️ The season is half the rule, and half of it passes for the whole very easily
 
-⚠️⚠️ **The first version raised on every extra-inning game, and it aborted a production run on a 1964
-board.** That is *unknown* being applied as *always*: it does not fail closed on the case in question, it
-halts all production for a question about a different era. **An open decision that blocks the seasons it
-is not about is not caution, it is a different defect** — and it is the one that reads as rigour.
+**A floor that refuses every 2020+ extra-inning game has the right number and the wrong rule.** It would
+discard legitimate postseason boards, which have never had a placed runner in any season. The exclusion
+is scoped in `boxscore_forge.produce.inadmissible` and the scoping is asserted **separately from the
+constant**: `test_a_postseason_game_from_the_era_is_admitted` and `test_no_postseason_season_is_touched`
+both go red if the `source_type` clause is dropped, which was verified by dropping it.
 
-⚠️ **What makes the narrow form safe is that neither constant is the guarantee.** A placed runner is
-caught **per game** by the global identity at construction, whatever the season — he is put out, scores,
-or is stranded, and each leaves an out or a run or an LOB with no plate appearance behind it. That is
-exactly what the five-game measurement above shows. **The boundary buys work avoided, not correctness:**
-306 games not processed to be discarded.
+⚠️ **The exemption is an acceptance test, not an exclusion list.** A game escapes only by being
+positively known to be postseason (`source_type == POSTSEASON_SOURCE`); a game whose source is
+unrecorded is treated as regular season and refused. That is the fail-closed direction — a board lost
+costs a board, a placed runner published costs the identity — and it is the same shape as §32's
+`account != "Y"`.
 
-⚠️ **`AUTOMATIC_RUNNER_FLOOR` is not a stand-in for the boundary and cannot become one.** It says which
-seasons *demand an answer*; only `AUTOMATIC_RUNNER_FROM` says which games are excluded. If a clean
-extra-inning board from 2016 is ever published, the floor becomes 2017 and no game changes status.
+### ⚠️ `AUTOMATIC_RUNNER_FLOOR` was deleted with the ruling, and this is the record of what it was for
+
+It was `2014` — the last season measured clean, plus one — and it existed **only** to scope a loud
+failure while `AUTOMATIC_RUNNER_FROM` was unset: an extra-inning game from 2014 on raised, one from
+before it did not. With the boundary settled there is no question left to demand an answer to, so the
+constant and the raise are gone rather than set to a value nothing reads.
+
+⚠️⚠️ **Why it existed at all, kept because the lesson outlives it.** The first version of that raise
+fired on **every** extra-inning game and aborted a production run on a **1964** board. That is *unknown*
+applied as *always*: it does not fail closed on the case in question, it halts all production for a
+question about a different era. **An open decision that blocks the seasons it is not about is not
+caution, it is a different defect** — and it is the one that reads as rigour.
+
+⚠️ **And neither constant was ever the guarantee.** A placed runner is caught **per game** by the global
+identity at construction, whatever the season — he is put out, scores, or is stranded, and each leaves an
+out or a run or an LOB with no plate appearance behind it. That is what the five-game measurement above
+shows. **The boundary buys work avoided, not correctness:** 306 games not processed to be discarded. So
+an error in it costs yield, never a wrong board.
+
+### ⬜ One thing is owed, and it is engineering rather than a decision
+
+**`audit()` cannot honour the postseason exemption**, because it reads a package's metadata from disk and
+the metadata does not record whether the game was postseason. It therefore applies the regular-season
+rule to every board. **That is sound today and stated at the line rather than assumed:** the batch
+producer draws no postseason games at all, so a 2020+ extra-inning board in the calendar *is* a fault.
+
+**The day the batch draws postseason games, a legitimate board is flagged and the build stops on it.**
+Closing that means carrying the fact in the metadata, which is a §7 question — a postseason flag narrows
+the game to 0.6% of the pool, and §7 strips `season` precisely to avoid that kind of hint. **Not the
+operator's to decide until somebody proposes a shape; recorded here so it is not discovered by a false
+fault.**
 
 ---
 
@@ -242,12 +288,178 @@ which side is `AWAY BATTING`, and the outs for a home team that wins without bat
 ⚠️ Retrosheet also carries this as `HTBF` in the game-log's field 160. **The pool does not use it** — it
 asks the event rows. The two are not known to disagree and nothing checks that they agree.
 
+
+---
+
+## 9. Negro Leagues games — `EVR`
+
+**1,872 games, 1913–1961. Excluded, and excluded twice.** §32 states the rule: only `dbo.retro*`, and
+only the three accepted source types.
+
+| | |
+|---|---|
+| **Deliberately** | the acceptance list `('EVA', 'EVN', 'EVF')` in `REGULAR.admission`. `EVR` is not in it, and it is an **acceptance** list, so a game escapes only by having one of the three |
+| **Incidentally** | **not one of the 1,872 has a row in `dbo.retroGameLogs`**, and the cohort `JOIN`s that table inner |
+| **Marginal bite of the rule** | **zero directions**, gated and ungated |
+
+### ⚠️⚠️ The deliberate exclusion never exercises, and that is what is worth recording
+
+Accepting `EVR` and changing nothing else admits **0 games** — measured, both cohorts. The games are
+gone before the acceptance list is consulted, because the game-log join removed them.
+
+**So the presence of `EVR`-not-in-the-list must not be read as a tested guarantee.** It has never
+rejected a game, and *a check that never fires is indistinguishable from a check that is broken.* It is
+correct, it is the right shape, and nothing has ever demonstrated it working.
+
+⚠️ **Re-admitting needs both pieces changed, not one.** Adding `'EVR'` to `PROVENANCE_SOURCES` does
+nothing on its own; the game-log join would have to go too. **Stated so a future reader who makes the
+one-line change and sees no effect does not go looking for what else is in the way and remove it.**
+
+⚠️ **Where the exposure actually is:** if Retrosheet ever publishes game logs for these games, the
+acceptance list becomes the only thing standing — and it will be doing, for the first time, a job
+nothing has ever confirmed it does.
+
+---
+
+## 10. Postseason before 1969
+
+**384 games, 1903–1968. A real filter with real bite: 669 ungated directions, 158 gated.** These are
+boards that would otherwise be built.
+
+`POSTSEASON_SEASON_FLOOR = 1969`, a `WHERE g.SEASON >= 1969` inside `POSTSEASON.admission`. ⚠️ **Not the
+same mechanism as §9 and not the same SELECT** — a season predicate in one `Season`, an acceptance list
+in the other.
+
+### The declared reason, which is the provenance one rather than the taxonomic one
+
+**The postseason has no provenance table**, and none is needed for what exists: every postseason event
+file is `.EVE`, none deduced, no league letter. **So the floor is a blunt stand-in for a per-game check
+that does not exist there** — and it is set where **the last deduced game in the whole database, regular
+season included, is 1968.**
+
+⚠️ **That is the reason. The divisional-play boundary is context, not the argument.** From the data:
+**5.9 postseason games per season before 1969 against 26.7 from 1969** — the World Series alone against a
+multi-round postseason. 65 of the 66 seasons from 1903 to 1968 are present; the one missing is **1904**,
+when no World Series was played. It makes the line explicable to a player, and it is not why the line is
+there.
+
+⚠️ **A floor is a weaker guarantee than a provenance table.** The table asserts *this game came from a
+scored file*; a floor asserts *no game in this era came from one that was not*, which is a claim about
+Retrosheet's future behaviour rather than about a row.
+
+**What would re-admit them:** lowering `POSTSEASON_SEASON_FLOOR`. One constant, and the 158 gated
+directions come back.
+
+---
+
+## 11. What the sweep found — four populations nobody registered
+
+⚠️⚠️ **Two of these are exclusions nobody asked for, and one is a clause that removes nobody.**
+
+### 11a. Games with no `retroGameLogs` row — **incidental, 2,901 games**
+
+The cohort does `JOIN dbo.retroGameLogs l`, inner. **Nobody wrote that as a rule**; it is there because
+the line score, the forfeit, the protest, the completion and the account all come from that table.
+
+**Dropping the join and every clause that depends on it admits 21,461 more ungated directions and
+6,060 more gated ones.**
+
+⚠️⚠️ **This is §6's `CompletionInfo` shape at fifteen times the size** — an exclusion that exists by
+consequence, that no document asked for, and that a join change would undo silently. §6 is registered
+because somebody noticed it; this is larger and was not.
+
+**What re-admits it:** changing the join to `LEFT`, or moving any of the five dependent facts to another
+source. Either does it **without the word *exclusion* appearing in the diff.**
+
+### 11b. Deduced reconstructions — `ED*`, **deliberate but redundant**
+
+**3,465 games**, 3,451 of them with a game log. `is_deduced = 0` in the acceptance apply excludes them
+(§32). **Marginal bite: zero** — all 3,451 carry `AcquisitionInfo = 'D'`, so §7's complete-account rule
+removes them first. Same standing as §9: correct, deliberate, and never the clause that does the work.
+
+### 11c. Game logs with a NULL `VisLineScore` — **incidental, 17,282 rows**
+
+`l.VisLineScore IS NOT NULL` is a construction requirement — no line score, no board — rather than a
+product decision. **Marginal bite zero**, for the same interlock reason.
+
+### 11d. ⚠️⚠️ The season window `1910–2029` — **excludes nobody**
+
+`dbo.retroGamesReg` runs **1910 to 2025**. Games before 1910: **0**. Games after 2029: **0**. The clause
+**removes zero games** and has, on this dataset, never removed one.
+
+**That is the `source_type` shape — a clause that reads as a rule and excludes nothing — and it is the
+third instance in this register.** It is not therefore wrong: it bounds a sampler against a dataset that
+may grow. But *what it is* and *what it does* are different sentences, and only one of them was written
+down anywhere.
+
+---
+
+## ⚠️⚠️ Why this register was incomplete, and what closed it
+
+**It was written from what had been investigated, not from what the query does.** Every entry above
+§9 arrived because something went wrong and was traced: a seventeen-inning board reached a date, a
+forfeit published, a partial account published. Each was then registered. **Nothing ever walked the
+query clause by clause and asked what each one removes** — so the classes that never caused an incident
+were never written down, and their absence looked exactly like their not existing.
+
+⚠️ **The operator found two of them by reading this document and noticing what was not in it.** One
+missing entry is an oversight; **two found by a person reading, in a document whose subject is
+completeness, means the enumeration was never done.**
+
+**What closed it:** the whole query, clause by clause, with **population and marginal bite measured
+separately** — how many games the clause is about, and how many directions it is the one removing.
+
+### ⚠️⚠️ The instrument was wrong first, inside the sweep meant to catch exactly this
+
+**The first pass dropped one clause at a time and reported zero for four of them.** Provenance
+acceptance, the season window, the game-log join and the line score all measured as removing nothing.
+
+**Three of those zeros were an artefact of the instrument.** The other `l.*` clauses were left in place
+and every one of them requires a game-log row, so dropping the join alone changed nothing: the
+population was still removed, by its neighbours. **The measurement was of marginal bite and it was
+reported as population.**
+
+⚠️ **That is the near-neighbour class again** — asserting a property that is true in the broken state —
+and it happened **inside the sweep written to find instances of it**, by someone who had recorded the
+rule twice the same day. It was caught the way this project catches these: four zeros in a row is a
+metric that cannot vary, and a metric that cannot vary is broken rather than informative.
+
+**What the numbers above do instead:** population is counted directly against the tables, and marginal
+bite is counted by dropping a clause **with its dependants**, asserting the substitution matched exactly
+once first — because a replacement that matches nothing is silent and would compare the baseline against
+itself.
+
 ---
 
 ## What is still open
 
 - ⬜ **Batting out of order.** No column found that marks it. **Named as unknown rather than guessed.**
-- ⬜ **The automatic-runner season boundary** (§2 above) — the operator's, and it is a rulebook fact.
+
+### ⬜ What the sweep put in front of the operator — four rulings, none of them taken here
+
+**None of these is a defect and none is urgent.** They are places where *what the code does* and *what
+anybody decided* are different sentences, and only he can close that gap. **Nothing has been changed in
+the query, and none of these proposes admitting a game.**
+
+| | the question | if he says nothing |
+|---|---|---|
+| **11a** | **`retroGameLogs` — does the exclusion become asked-for?** 2,901 games are out because five needed facts live in one table and the join is inner. **Nobody decided this**; it costs 6,060 gated directions | it stays, undecided, and a future join change undoes it without the word *exclusion* in the diff |
+| **11c** | **A missing line score** — almost certainly a construction fact rather than a product decision, but it has never been written as either | same |
+| **9, 11b, 11d** | **The three dead clauses — stay, go, or documented at zero?** Negro Leagues, deduced files and the season window each remove **nothing on the margin.** They are correct and none has ever fired | they stay and this register records the bite as zero, which is the state as written today |
+| **10** | **Is 1969 the floor he wants?** It is a real filter costing 158 gated directions, resting on *the last deduced game is 1968* — a claim about Retrosheet rather than about a row | it stays at 1969 |
+
+⚠️⚠️ **The recommendation on the three dead clauses is that deleting them is the one option with a
+cost.** A clause that removes nothing today is doing no work and is also the only thing that would do
+the work if the data changed — §9 says exactly where that could happen. **Documented-at-zero is what
+this register now does**, and it is the state that survives somebody measuring them again and finding
+zero.
+
+⚠️ **11a is the one worth an actual answer**, because it is the largest exclusion in this document, it
+was nobody's decision, and it is the only one that can be reversed by a change whose subject is
+something else entirely.
+
+- ✔ **The automatic-runner boundary was settled by the operator on 2026-08-24** (§2 above): **2020, regular season only, never the postseason in any season.** ⚠️ It stayed marked open here after he had answered it and was raised with him again as a result — **the cost of a stale marking lands on the person who already decided.**
+- ⬜ **`audit()` cannot see the postseason exemption** (§2 above). Engineering, not a decision, and not live until the batch draws postseason games.
 - ✔ **The four shipped partial-account games and the seventeen-inning board were replaced on
   2026-08-23**, all five future dates, by `build_inventory.py --replace` (§21: a future date is replaced).
   The table in §7 records what each one was.

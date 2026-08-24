@@ -236,41 +236,41 @@ this constant is deleted rather than measured.
 REGULATION_INNINGS: Final = 9
 """A full game. Anything past this is extra innings, which is where the automatic runner lives."""
 
-AUTOMATIC_RUNNER_FROM: Final[int | None] = None
-"""The first season a runner was placed on second to start an extra inning. ⬜ **NOT DECIDED.**
+AUTOMATIC_RUNNER_FROM: Final = 2020
+"""The first season a runner was placed on second to start an extra inning. **Settled 2026-08-24.**
 
-⚠⚠ **Left unset on purpose, and anything that needs it fails loudly rather than guessing.** A placed
-runner scores or is stranded with no plate appearance behind him, so `PA = Outs + Runs + LOB` is short
-by exactly one — measured, on three games of the era, against three pre-era controls
-(`docs/excluded-games.md` §2).
+**The operator's ruling, and it is a rulebook fact rather than a measurement:**
 
-**What the data can say and what it cannot.** The contradiction appears in 2021 and 2023 and not in
-1954, 1994 or 2013. **Whether the rule applied in the postseason, and exactly what happened in the
-shortened season it was introduced in, is a fact about the rulebook**, and this project's rule is that a
-number shaping the product is not invented in a source file (§7).
+* MLB introduced the automatic runner in **2020**.
+* It applies to **regular-season** games from 2020 onward.
+* It does **not** apply to the postseason, in **any** season.
 
-⚠⚠ **Until it is set, an extra-inning game from `AUTOMATIC_RUNNER_FLOOR` on raises — and one from
-before it does not.** The first version raised on *every* extra-inning game and aborted a build on a
-1964 one: an unknown boundary applied as *always*, which halts production instead of failing closed on
-the case in question. See `AUTOMATIC_RUNNER_FLOOR` for why the narrow form is the safe one."""
+⚠️⚠️ **The season alone is not the rule, and a floor that refuses both halves is the wrong rule with the
+right number.** The exclusion is scoped in `boxscore_forge.produce.inadmissible` to games that are not
+postseason, and the scoping is asserted separately from the constant — a 2020+ postseason extra-inning
+game is admissible and a test exists that fails if it is refused.
 
-AUTOMATIC_RUNNER_FLOOR: Final = 2014
-"""The last season anybody here has evidence about, plus one. **Not the boundary and never a stand-in.**
+⚠️ **The scoping is an acceptance test for the exemption**, not an exclusion list: a game escapes this
+rule only by being **positively known** to be postseason (`source_type == POSTSEASON_SOURCE`). A game
+whose source is unrecorded is treated as regular season and refused, which is the fail-closed direction
+— losing a board costs a board, publishing a placed runner costs the identity `PA = Outs + Runs + LOB`.
+It is the same shape as §32's `account != "Y"`.
 
-⚠⚠ **This is a statement about what has been measured, not about baseball.** `docs/excluded-games.md`
-§2 ran three era games and three controls: the contradiction appears in 2021 and 2023, and does not in
-1954, 1994 or **2013**. So below 2014 the evidence says extra innings are ordinary, and a refusal there
-would be this file deciding a rulebook fact it is forbidden to decide (§7) — in the direction that stops
-every build.
+**What the evidence said before the ruling, kept because it agrees with it.** `docs/excluded-games.md`
+§2 ran three era games against three pre-era controls: the contradiction appears in 2021 and 2023 and
+does not in 1954, 1994 or 2013. A placed runner scores or is stranded with no plate appearance behind
+him, so the row identity is short by exactly one.
 
-⚠️ **Raising it is not a way to set the boundary.** Moving this number changes which seasons *demand
-an answer*; only `AUTOMATIC_RUNNER_FROM` changes which games are excluded. If a later measurement
-publishes a clean 2016 extra-inning board, this becomes 2017 and nothing else moves.
+⚠️ **Neither this constant nor the scoping is the guarantee.** A placed runner is caught **per game** by
+the global identity at construction, whatever the season: he is put out, scores, or is stranded, and
+each leaves an out or a run or an LOB with no plate appearance behind it. This buys **work avoided** —
+306 games not processed to be discarded — rather than correctness. So an error in the boundary costs
+yield, not a wrong board.
 
-⚠️ **And neither constant is the guarantee.** A placed runner is caught **per game** by the global
-identity at construction, whatever the season: he is put out, scores, or is stranded, and each leaves an
-out or a run or an LOB with no plate appearance behind it. The boundary buys work avoided — 306 games
-not processed to be discarded — rather than correctness."""
+⚠️⚠️ **`AUTOMATIC_RUNNER_FLOOR` was deleted with this ruling and must not come back.** It existed only
+to scope a loud failure while this constant was unset — *which seasons demand an answer* — and there is
+no longer a question to demand an answer to. `docs/excluded-games.md` §2 keeps the record of what it was
+for, so a future reader meeting its absence is not looking at something that was lost."""
 
 MAX_INNINGS: Final = 12
 """The longest game the board will draw. **Decided by the operator, inside a measured width limit.**

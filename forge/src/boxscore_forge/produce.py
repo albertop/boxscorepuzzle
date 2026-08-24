@@ -18,10 +18,10 @@ from typing import Final
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from boxscore_domain import AUTOMATIC_RUNNER_FLOOR, AUTOMATIC_RUNNER_FROM, MAX_INNINGS, REGULATION_INNINGS
+from boxscore_domain import AUTOMATIC_RUNNER_FROM, MAX_INNINGS, REGULATION_INNINGS
 from boxscore_forge.identity import puzzle_id
 from boxscore_forge.lineup_fallback import erase_with_lineup_fallback
-from boxscore_forge.pool import Loaded
+from boxscore_forge.pool import POSTSEASON_SOURCE, Loaded
 from boxscore_forge.publish import slot_references, to_board
 from boxscore_package.format import Package, PrintedBoxscore, Reveal
 from boxscore_package.signing import sign
@@ -148,35 +148,23 @@ def inadmissible(loaded: Loaded) -> str:
     """
     score = loaded.direction.line_score
     innings = max(len(score.offense_by_inning), len(score.defense_by_inning))
-    if innings > REGULATION_INNINGS and AUTOMATIC_RUNNER_FROM is None and loaded.season >= AUTOMATIC_RUNNER_FLOOR:
-        # ⚠⚠ **Loud where the answer could differ, and silent where it cannot.** A placed runner leaves
-        # `PA = Outs + Runs + LOB` short by one, and *which seasons* placed one is a rulebook fact §7
-        # forbids inventing here. But refusing **every** extra-inning game while the constant is unset
-        # was the first version of this line and it aborted the build on a 1964 game -- an unknown
-        # boundary read as *always*, which stops all production rather than failing closed on the case
-        # in question.
-        #
-        # ⚠️ **What makes the narrow form safe is that the boundary is not the guarantee.** A placed
-        # runner is detected *per game* by the global identity, at construction, whichever season it is:
-        # the runner is out, scores, or is stranded, and all three leave a run or an out or an LOB with
-        # no plate appearance behind it. `docs/excluded-games.md` §2 measured exactly that -- three era
-        # games refused with `global_plate_appearances is off by -1`, three pre-era controls published.
-        # So the constant buys **work avoided, not correctness**, and it is loud only above the last
-        # season anybody has evidence about.
-        message = (
-            f"{loaded.game_id} is a {loaded.season} game that went to {innings} innings, and "
-            f"AUTOMATIC_RUNNER_FROM is not set. The boundary is an open decision "
-            f"(docs/excluded-games.md section 2); set it in boxscore_domain rather than deciding it "
-            f"by omission on a season nothing has measured."
-        )
-        raise ValueError(message)
     grounds = (
         # The board draws twelve (§6). A seventeen-inning line score has seventeen columns.
         (innings > MAX_INNINGS, "innings"),
+        # ⚠️⚠️ **Three conditions, and the third is the rule rather than a detail.** The operator settled
+        # this on 2026-08-24: the automatic runner is a **regular-season** rule from 2020, and it has
+        # never applied to the postseason in any season. A 2020+ postseason extra-inning game is
+        # ordinary and must be admitted — `test_the_automatic_runner_is_regular_season_only` fails if
+        # a season floor is ever applied to both halves, which is the wrong rule with the right number.
+        #
+        # ⚠️ **The exemption is an acceptance test, not an exclusion.** A game escapes only by being
+        # positively known to be postseason; an unrecorded `source_type` is treated as regular season
+        # and refused. That is the fail-closed direction — a board lost against an identity broken —
+        # and the same shape as `account != "Y"` below.
         (
-            AUTOMATIC_RUNNER_FROM is not None
-            and innings > REGULATION_INNINGS
-            and loaded.season >= AUTOMATIC_RUNNER_FROM,
+            innings > REGULATION_INNINGS
+            and loaded.season >= AUTOMATIC_RUNNER_FROM
+            and loaded.source_type != POSTSEASON_SOURCE,
             "automatic runner",
         ),
         (bool(loaded.forfeit), "forfeit"),

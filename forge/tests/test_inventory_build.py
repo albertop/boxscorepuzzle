@@ -158,24 +158,30 @@ class TestTheCalendarIsAuditedAgainstTheRegister:
         with pytest.raises(SystemExit, match=expected):
             builder.build(5, date(2026, 9, 2), _key(), _TODAY)
 
-    def test_the_automatic_runner_era_is_wired_and_dormant_until_the_boundary_is_set(
+    def test_the_audit_refuses_an_extra_inning_board_from_the_automatic_runner_era(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
-        """⚠⚠ **The rule is built and the constant is unset**, so this asserts both halves.
+        """**The boundary is 2020 and settled**, so this asserts the audit acts on it.
 
-        With `AUTOMATIC_RUNNER_FROM` unset an extra-inning board passes -- which is what an unset
-        boundary *means*, and stating it here is what stops the dormancy being mistaken for a check that
-        does not work. Setting the year makes the same board refuse.
+        ⚠️⚠️ **This check is deliberately blunter than `produce()`'s and the difference is recorded
+        rather than hidden.** `inadmissible()` exempts the postseason, which never had a placed runner;
+        the audit reads a package's metadata and **the metadata does not say whether a game was
+        postseason**, so it applies the regular-season rule to everything. That is sound only because
+        this producer draws no postseason games at all, and `build_inventory.audit` says so at the line.
+
+        The stub's games are all from 1911, so the boundary is moved down to reach them rather than
+        fabricating a 2021 fixture -- the same technique the dormant version used.
         """
         extra = {"innings": 11, "account": "Y", "disposition": ""}
         self._built(monkeypatch, tmp_path, extra)
 
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=20)
-        assert builder.AUTOMATIC_RUNNER_FROM is None
+        assert builder.AUTOMATIC_RUNNER_FROM == 2020
+
+        # 1911 is far below 2020, so the same board passes the audit as it stands.
         builder.build(5, date(2026, 9, 2), _key(), _TODAY)
 
-        # The stub's games are all from 1911, so any boundary at or below it catches them.
         monkeypatch.setattr(builder, "AUTOMATIC_RUNNER_FROM", 1900)
         with pytest.raises(SystemExit, match="automatic-runner era"):
             builder.build(5, date(2026, 9, 2), _key(), _TODAY)
