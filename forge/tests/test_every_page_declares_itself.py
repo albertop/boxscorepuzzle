@@ -185,8 +185,12 @@ def test_the_preview_image_and_the_marks_exist_and_are_not_empty() -> None:
     """⚠️⚠️ Size-checked, because this is exactly how the favicon failed. A `--` inside an XML comment
     made the SVG unparseable, the write reported success, and the rasteriser turned Chromium's error
     page into a 98-byte icon. **The file existing said nothing.**"""
-    for name, floor in (("og-image.png", 10_000), ("favicon.svg", 200), ("favicon.ico", 200),
-                        ("apple-touch-icon.png", 500)):
+    for name, floor in (
+        ("og-image.png", 10_000),
+        ("favicon.svg", 200),
+        ("favicon.ico", 200),
+        ("apple-touch-icon.png", 500),
+    ):
         asset = _ROOT / "serve" / name
         assert asset.is_file(), f"{name} is missing and every page links to it"
         assert asset.stat().st_size > floor, f"{name} is {asset.stat().st_size} bytes, which is not a {name}"
