@@ -535,8 +535,18 @@ answered by the person who already believes the answer; a step that produces a r
 or did not. **It is still a discipline, not a gate** — the honest statement is that this class is caught
 by doing that, or it is not caught.
 
-**⚠️ A wait loop's success condition is a real request, not an open socket.** Instruction-shaped, with
-nothing to decide: if code waits for a service, it waits for the service to *answer*. Docker's port
+**⚠️ A wait loop's success condition is a real request to the thing the caller actually needs.**
+Instruction-shaped, with nothing to decide: if code waits for a service, it waits for **that** service to
+*answer*.
+
+⚠⚠ **The second half was added after the rule was broken by the code written to demonstrate it.** A
+fixture starting nginx and `keep` waited for **nginx** — which answers a static file the instant it
+starts — and the first request into `keep` met a data layer that was not listening yet. **Green in
+isolation, red in the full run**, and the hook is what caught it. *Waiting for a service* was satisfied
+by waiting for the wrong one, which is the near-neighbour shape one level in.
+
+**That is four instances in one day**, the last inside the fix for the third. **Knowing the rule does not
+apply it** — this file has said so since the fourth regex, and the evidence keeps arriving. Docker's port
 forwarder binds before the container accepts and then resets what it accepted, so a connect proves the
 forwarder is up and nothing else.
 
@@ -557,6 +567,41 @@ class being closed.
 Today's three mutations were **HTML, a data literal and a startup condition**. No mutation tool
 generates any of them — they operate on expressions and operators in source. It would run, report
 coverage, and have caught none of the three: work with the appearance of coverage.
+
+### ⚠️⚠️ A validator reports on the subject it was given, and cannot tell you it was given the wrong one
+
+**Three times in a row, in ten minutes, `nginx -t` printed *configuration file test is successful* about
+a config that was not under test.** Three different mechanisms, one shape:
+
+| | what was actually validated |
+|---|---|
+| the edit script raised before writing, so the template did not exist | the stock config that ships in the image |
+| `docker run -v` with a missing source **created a directory** where a file was meant | the stock config again |
+| a custom command (`sh -c`) meant the image's entrypoint never ran, so the template was never substituted into `conf.d/` | the stock config a third time |
+
+**`nginx -t` cannot distinguish *this config is valid* from *I validated a different config*, and neither
+can most tools of that shape** — a type checker given no files, a test run that collected nothing, a
+linter pointed at a directory that does not exist. **They report on their subject, and the subject being
+absent is not something they are built to notice.** Every one of them says the same thing about an empty
+input as about a clean one.
+
+**⚠️⚠️ What caught all three was reading the output rather than the exit code.** The status was 0 every
+time. What did not add up was *what the output said*: a substituted `Authorization` line that was not
+there, a `ls` showing `conf.d/default.conf` at 1072 bytes and dated months earlier, a `grep` for a token
+returning nothing. **The exit code was true and useless.**
+
+**⚠️ That is the third shape of this kind in one day and the repetition is the finding, not the
+instances.** A `| tail` swallowing a non-zero exit; a `; echo EXIT=$?` reporting the echo's status; and
+now a validator reporting on nothing. **The common rule: an exit code answers *did this command finish*,
+never *did it do the thing you wanted*.** For anything whose job is to check something, **read what it
+says about the subject and confirm the subject was there** — a byte count, a filename, a line that
+should have changed.
+
+**⚠️⚠️ Nothing stops a fourth, and there is no check to write.** The same argument as the near-neighbour
+class above: knowing whether a tool was pointed at the right subject requires knowing what the right
+subject was, which is intent. What exists is the habit of asking a verifier for something it can only
+produce from the real subject — *print the line that should have changed* — and that is a discipline
+rather than a gate.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that

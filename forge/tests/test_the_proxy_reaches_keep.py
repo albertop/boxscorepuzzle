@@ -82,6 +82,10 @@ def _answers(url: str, *, data: bytes | None = None, tries: int = 60) -> tuple[i
         except urllib.error.HTTPError as error:
             return error.code, error.read().decode("utf-8", "replace")
         except (urllib.error.URLError, OSError, TimeoutError):
+            if tries == 1:
+                # ⚠️ One try means the caller is polling and wants the answer, not a retry loop of its
+                # own. Nothing listening is reported as a 502 so a poll can treat it like one.
+                return 502, "nothing answered"
             time.sleep(0.25)
     message = f"nothing answered at {url}"
     raise AssertionError(message)
@@ -190,7 +194,27 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
             f"{str(_ROOT).replace(chr(92), '/')}/serve:/srv/serve:ro",
             _NGINX,
         )
-        _answers(f"http://127.0.0.1:{port}/")
+        # ⚠⚠⚠ **Waiting for nginx is not waiting for the path this test is about, and that is what the
+        # first version did.** nginx answers `/` from a static file the instant it starts; `keep` is
+        # still importing psycopg, connecting and checking the schema. The first POST went out into a
+        # data layer that was not listening and the edge answered **502** — green in isolation, red in
+        # the full run.
+        #
+        # ⚠️ **Fourth instance today of asking about the near neighbour**, and this one is in the code
+        # written to demonstrate the rule. `CLAUDE.md` says knowing the rule does not apply it; this is
+        # what that looks like.
+        #
+        # ⚠️ **It waits on the whole path** — browser to edge to `keep` — because that is what every case
+        # below uses. Retrying on 502 **here** is correct and retrying on 502 in an assertion would not
+        # be: this is establishing that the stack is up, and those are testing what it does.
+        for _attempt in range(240):
+            status, _body = _answers(f"http://127.0.0.1:{port}/api/errors", data=b'{"errors": []}', tries=1)
+            if status != 502:
+                break
+            time.sleep(0.5)
+        else:
+            message = "keep never became reachable through the edge"
+            raise AssertionError(message)
         yield port, token, network, f"bsp-keep-{suffix}"
     finally:
         for name in (edge, keep, database):

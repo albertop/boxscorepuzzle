@@ -1396,6 +1396,50 @@ budget raised to 60s for a cold pull. ⚠️ The failure message says *never ans
 rather than *never started*, because those are different facts.
 ---
 
+## 2026-08-24 — ⚠⚠ A fourth near-neighbour, in the fixture written to demonstrate the rule
+
+**The proxy test waited for nginx and needed `keep`.** nginx answers `/` from a static file the instant
+it starts; `keep` was still importing psycopg, connecting and checking the schema, so the first POST met
+a data layer that was not listening and the edge answered **502**.
+
+⚠️ **Green in isolation, red in the full run, and the hook is what caught it** — the push was refused.
+That is the hook buying exactly what it exists for: the isolated run is not the run that matters.
+
+**Fixed by waiting on the whole path** — browser to edge to `keep` — because that is what every case uses.
+⚠️ Retrying on 502 *there* is right and retrying on 502 in an assertion would not be: one is establishing
+that the stack is up, the other is testing what it does.
+
+**Four instances in one day, the last inside the fix for the third.** `CLAUDE.md` carries the rule and
+now carries this: knowing it does not apply it.
+
+---
+
+## 2026-08-24 — ⚠⚠ Three false approvals in ten minutes, all from `nginx -t`
+
+Building F1.3b, `nginx -t` reported **configuration file test is successful** three times running about
+a config that was not under test. Three mechanisms, one shape:
+
+1. the edit script raised before writing, so **the template did not exist**;
+2. `docker run -v` with a missing source **created a directory** where a file was meant;
+3. a custom command (`sh -c`) meant the image's **entrypoint never ran**, so the template was never
+   substituted into `conf.d/`.
+
+Each time nginx validated the stock config that ships in the image and exited 0.
+
+⚠⚠ **What caught all three was reading the output, not the exit code** — a substituted `Authorization`
+line that was not there, a `ls` showing `conf.d/default.conf` at 1072 bytes dated months earlier, a
+`grep` for the token returning nothing. **The status was true and useless.**
+
+⚠️ **Third shape of that kind in one day**, after a `| tail` swallowing a non-zero exit and a
+`; echo EXIT=$?` reporting the echo's status. `CLAUDE.md` carries the rule now: an exit code answers
+*did this command finish*, never *did it do the thing you wanted*.
+
+⚠⚠ **Nothing stops a fourth and there is no check to write.** Knowing whether a tool was pointed at the
+right subject requires knowing what the right subject was, which is intent — the same argument as the
+near-neighbour class. What exists is asking the verifier for something it can only produce from the real
+subject, and that is a discipline rather than a gate.
+---
+
 ## Where everything stands
 
 **40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**
