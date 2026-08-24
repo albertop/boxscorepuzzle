@@ -215,8 +215,14 @@ while changing in substance is worse than one that visibly needs rewriting.**
 ⚠️ **The relationship it needs is the one `forge` already has**: `write_reference_puzzles.py` writes
 packages into `serve/data/puzzles/` from outside `serve/` and never needed to live inside it. §33
 forbids cross-*imports*; the only thing that crosses is a signed package, which is what §33 permits. `keep` has **no
-runtime dependencies at all** — three routes, no ORM, no framework — and `forge` never learns that users
-exist (§33). They share no code and no deployment cycle. The
+runtime dependency — the PostgreSQL driver** — three routes, no ORM, no framework, no templating and no
+cross-import from the other trees — and `forge` never learns that users exist (§33).
+
+⚠️ **This said *no runtime dependencies at all* until 2026-08-24, and F1 made it false.** `psycopg` moved
+out of the development group because `keep` cannot start without a database, which is the classification
+that had already produced a container unable to import its own driver. **Leaving the old claim in the
+guide invites the cleanup in reverse** — somebody moves it back because the guide says no runtime package
+belongs there. v41-P3-01. They share no code and no deployment cycle. The
 only thing that crosses is a signed package of validated puzzles.
 
 ### ⚠️⚠️ What deployment ships — **split rather than rewritten, because half of it never expired**

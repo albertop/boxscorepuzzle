@@ -32,6 +32,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import DOCKER_PREFIX
+
 _ROOT = Path(__file__).resolve().parents[2]
 _CONF = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
 _CALENDAR = _ROOT / "docs" / "calendar.md"
@@ -95,7 +97,7 @@ def _docker() -> str | None:
 def _serve(conf: Path) -> Iterator[int]:
     """nginx in a container over `serve/` and one config, torn down whatever happened."""
     port = _free_port()
-    name = f"bsp-nginx-{port}"
+    name = f"{DOCKER_PREFIX}-nginx-{port}"
     # ⚠️ `-w` gives the Windows path Docker needs; on Linux `Path.as_posix()` is already right.
     root = str(_ROOT).replace("\\", "/")
     subprocess.run(

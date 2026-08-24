@@ -533,7 +533,8 @@ the row is about the package that is really being served rather than about a sha
 | `/` | `no-store` | the application; a stale copy has twice refuted a change that was correct |
 | `/today` | `no-store` | it is the same pointer wearing a URL (`docs/serve-brief.md`, v36-P3-48) |
 | `/p/<id>` | `no-store` | the application again — the board page, not the board's data |
-| `/ui/phone/main.js` | `no-store` | the modules and the CSS, for the same reason |
+| `/ui/phone/main.js` | `no-store` | the page modules and the CSS, for the same reason |
+| `/engine/package.js` | `no-store` | ⚠️ **the engine is application code too, and it is not under `/ui/`.** The pages import it as `../../engine/…`, which resolves to `/engine/…` — a second root that the rule missed while the table said *the modules* and listed only one of them |
 | `/data/puzzles/today.json` | `no-store` | it changes daily, and **a stale pointer is indistinguishable from a rotation that did not run** |
 | `/data/puzzles/yesterday.json` | `no-store` | the same, for the rollover window |
 | `/data/puzzles/manifest.json` | `no-store` | written from the files actually placed, so it moves with them |

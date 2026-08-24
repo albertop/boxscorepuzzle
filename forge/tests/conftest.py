@@ -87,3 +87,16 @@ def cubs_at_braves_1968() -> Direction:
             defense_errors=0,
         ),
     )
+
+
+DOCKER_PREFIX = "bxcpze"
+"""The prefix on every image, container and network this suite creates. **Declared once.**
+
+⚠️⚠️ **So a stray one can be found and removed by name.** These tests build images and start containers
+on a machine that is also somebody's laptop; a run killed part-way leaves them behind, and a run that
+names things after itself is one `docker ps --filter name=bxcpze` away from being cleaned up. Without a
+shared prefix that sweep has to know every name, which is a second list of the same facts.
+
+⚠️ **Uncommon on purpose.** `bsp` collides with anything; this string appears nowhere else on a normal
+machine, so the filter cannot match a container somebody else is depending on.
+"""

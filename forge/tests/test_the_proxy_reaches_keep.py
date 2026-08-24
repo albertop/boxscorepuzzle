@@ -26,6 +26,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import DOCKER_PREFIX
+
 _ROOT = Path(__file__).resolve().parents[2]
 _MIGRATION = _ROOT / "keep" / "migrations" / "001-initial.sql"
 _TEMPLATE = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
@@ -102,7 +104,7 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
     # enough that the length floor is not what is being tested here.
     token = secrets.token_hex(24)
     suffix = _free_port()
-    network, database, keep, edge = (f"bsp-{name}-{suffix}" for name in ("net", "db", "keep", "edge"))
+    network, database, keep, edge = (f"{DOCKER_PREFIX}-{name}-{suffix}" for name in ("net", "db", "keep", "edge"))
     port = _free_port()
 
     _docker("network", "create", network)
@@ -112,7 +114,7 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
             "-f",
             str(_ROOT / "deploy" / "keep.Dockerfile"),
             "-t",
-            f"bsp-keep-{suffix}",
+            f"{DOCKER_PREFIX}-keep-{suffix}",
             str(_ROOT / "keep"),
             timeout=900,
         )
@@ -173,7 +175,7 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
             f"KEEP_SHARED_TOKEN={token}",
             "-e",
             "KEEP_DATABASE_URL=postgresql://postgres:keep@db:5432/keep",
-            f"bsp-keep-{suffix}",
+            f"{DOCKER_PREFIX}-keep-{suffix}",
         )
         _docker(
             "run",
@@ -215,12 +217,12 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
         else:
             message = "keep never became reachable through the edge"
             raise AssertionError(message)
-        yield port, token, network, f"bsp-keep-{suffix}"
+        yield port, token, network, f"{DOCKER_PREFIX}-keep-{suffix}"
     finally:
         for name in (edge, keep, database):
             _docker("rm", "-f", name, check=False, timeout=120)
         _docker("network", "rm", network, check=False, timeout=120)
-        _docker("image", "rm", "-f", f"bsp-keep-{suffix}", check=False, timeout=300)
+        _docker("image", "rm", "-f", f"{DOCKER_PREFIX}-keep-{suffix}", check=False, timeout=300)
 
 
 class TestThePostReachesKeep:

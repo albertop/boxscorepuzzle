@@ -1440,9 +1440,53 @@ near-neighbour class. What exists is asking the verifier for something it can on
 subject, and that is a discipline rather than a gate.
 ---
 
+## 2026-08-24 — ✔ v41: four findings, four closed — and the P1 is the sharpest instrument lesson yet
+
+`docs/reviews/code_review_v41.md` carries them, and it closed v40's three first. All four were
+reproduced before being accepted.
+
+| | what | closed by |
+|---|---|---|
+| **v41-P1-01** | `deploy/serve.Dockerfile` copied `boxscorepuzzle.conf`, which no longer exists, into `conf.d/`, which is not the path the entrypoint substitutes. **The image could not be built at all** | the template, into `templates/`, plus `forge/tests/test_the_images_build.py` |
+| **v41-P2-01** | the `keep` healthcheck ran `wget` and `python:3.13-slim` ships neither wget nor curl | a `python -c` probe, and a test that asks the **image** whether the executable is there |
+| **v41-P2-02** | `/engine/` was outside the `no-store` rule — the pages import `../../engine/…`, a **second root** the `/ui/` block never covered | an `/engine/` block, and an engine URL in the cache table so the sweep requests one |
+| **v41-P3-01** | `CLAUDE.md` still said `keep` has *no runtime dependencies at all* after F1 moved `psycopg` into them | the guide says one runtime dependency and why |
+
+### ⚠️⚠️ Why the P1 survived: the tests checked the config by a path the product does not use
+
+**`keep`'s image was built and probed by hand. `serve`'s had never been built.** What covered it was the
+nginx suite — which **mounts the template directly into a stock nginx**. That exercises the product's
+configuration through a route the product never takes, so a Dockerfile naming the wrong file and the
+wrong destination is invisible to it. **A working instrument, aimed one question short**: *is this config
+right* rather than *does the thing we ship serve it*.
+
+⚠️ **And building it was still not enough.** The first build that succeeded produced a container that
+**died on start**: the pid-path `sed` said `/var/run/nginx.pid` and this image writes `/run/nginx.pid`,
+so the substitution matched nothing. **A `sed` that finds nothing is silent and the build exits 0.** The
+rewrite is by shape now, and the test starts the container and asks it for pages — because *it built* and
+*it runs* are two claims and only the second is what a deploy needs.
+
+**What closes it: `forge/tests/test_the_images_build.py`** builds both Dockerfiles, starts the site
+image, and requests every route the product links to, the engine module, and an implementation path that
+must 404. ⚠️ Verified by breaking it — pointing the `COPY` back at `conf.d/` turns it red.
+
+### ⚠️ The stray directory that made the P1 harder to see
+
+`deploy/nginx/boxscorepuzzle.conf` existed **as a directory** while this was being checked — created by a
+`docker run -v` whose source file was missing, in one of the false approvals recorded above. So a `ls`
+appeared to show the file the Dockerfile wanted. Removed.
+
+### Docker names carry one prefix — `bxcpze-`
+
+Every image, container and network this suite creates, declared once in `forge/tests/conftest.py`.
+⚠️ **So a stray one can be found and removed by name**: these run on a machine that is also somebody's
+laptop, and a run killed part-way leaves things behind. The string is uncommon on purpose — `bsp` would
+collide with anything, and a cleanup filter that matches somebody else's container is worse than none.
+---
+
 ## Where everything stands
 
-**40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**
+**41 reviews**, the last of them v41. ⚠⚠ **The finding total is deliberately not stated any more.**
 
 This paragraph read *"twenty-nine reviews, 135 findings"* for ten reviews after it stopped being true, and
 the section below already records that **the count in this file has been wrong three times — mine.** A

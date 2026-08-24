@@ -112,6 +112,18 @@ server {
         add_header Cache-Control "no-store" always;
     }
 
+    # ⚠️⚠️ **`/engine/` is application code and was outside the rule.** The pages import the engine as
+    # `../../engine/package.js`, which resolves to **`/engine/package.js`** — a path with no cache block,
+    # so it took nginx's default. A deploy could serve a new `main.js` beside a cached `game.js`, which
+    # is the mixed-version failure `no-store` was adopted for after stale JavaScript made a correct
+    # schema change look broken twice.
+    #
+    # ⚠️ **The cache table's test could not see it**, because the table said *the modules and the CSS*
+    # and listed only a `/ui/` URL. It lists an engine module now, so the sweep requests one. v41-P2-02.
+    location /engine/ {
+        add_header Cache-Control "no-store" always;
+    }
+
     # ---- the data layer, reached only through here (F1.3b) ----------------------------------------
     # ⚠⚠⚠ **The browser must never reach `keep`.** Its port is not published and the shared token must
     # not travel to a browser (`docs/data-layer.md` §4), so the client posts here and **the token is

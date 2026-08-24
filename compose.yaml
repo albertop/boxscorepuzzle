@@ -22,7 +22,7 @@
 services:
   serve:
     image: python:3.13-alpine
-    container_name: boxscorepuzzle-serve
+    container_name: bxcpze-serve-dev
     working_dir: /app
     # ⚠️ **`init: true`, so something reaps signals.** (v36-P3-43) The exec-form command makes CPython
     # PID 1, `dev_server.py` installs no SIGTERM handler, and PID 1 gets no default signal

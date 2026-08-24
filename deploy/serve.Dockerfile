@@ -8,7 +8,7 @@
 # is §23's whole point — the day's puzzle survives every backend being down because serving it needs no
 # backend. An image with a Python process in it would be a process whose failure takes the game away.
 #
-#     docker build -f deploy/serve.Dockerfile -t boxscorepuzzle-serve .
+#     docker build -f deploy/serve.Dockerfile -t bxcpze-serve .
 #
 # ⚠️ Built from the repository root, because it copies two sibling directories: the served tree and the
 # server block that describes how to serve it.
@@ -21,7 +21,16 @@ FROM nginx:1.27-alpine
 # The private key never leaves the laptop; the shared token arrives as an environment variable at run
 # time and is never baked in.
 COPY serve/ /srv/serve/
-COPY deploy/nginx/boxscorepuzzle.conf /etc/nginx/conf.d/default.conf
+# ⚠️⚠️⚠️ **The TEMPLATE, into `templates/`, and this named the old file and the wrong destination.**
+# The config was renamed to `.conf.template` when `${KEEP_SHARED_TOKEN}` arrived and **this line was not
+# carried with it** — so the image could not be built at all, and had it built, the placeholder would
+# have reached nginx unresolved: `conf.d/` is not the path the entrypoint substitutes.
+#
+# ⚠️⚠️ **It survived because this image had never been built.** `keep`'s was built and probed; this one
+# was covered by tests that **mount the template directly** — the product's config by a path the product
+# does not use. v41-P1-01, and one more instance of an instrument answering the near neighbour of its
+# question. `forge/tests/test_the_images_build.py` builds it now.
+COPY deploy/nginx/boxscorepuzzle.conf.template /etc/nginx/templates/default.conf.template
 
 # ⚠️⚠️ **Unprivileged, and the port above 1024 is what makes that possible.** A container that starts as
 # root to bind 80 and drops afterwards still has a root-owned start-up; binding 8080 needs nothing.
@@ -29,9 +38,17 @@ COPY deploy/nginx/boxscorepuzzle.conf /etc/nginx/conf.d/default.conf
 #
 # ⚠️ The directories nginx writes to have to be writable by that user, and the base image's `nginx.conf`
 # also wants to write a pid file. Both are handed over rather than the process being given root back.
-RUN chown -R nginx:nginx /var/cache/nginx /var/run /etc/nginx/conf.d \
+#
+# ⚠⚠ **The pid line is rewritten by shape, not by its old value.** The first version replaced
+# `/var/run/nginx.pid` and this image says `/run/nginx.pid` — so the `sed` matched nothing, the build
+# succeeded, and the container **died on start with `open() "/run/nginx.pid" failed`**. A substitution
+# that finds nothing is silent, and a Dockerfile has no way to notice: only running it does.
+# ⚠️ The stock `default.conf` is removed: the entrypoint writes ours beside it, and two server blocks
+# on one port means whichever nginx reads first wins.
+RUN rm -f /etc/nginx/conf.d/default.conf \
+ && chown -R nginx:nginx /var/cache/nginx /var/run /etc/nginx/conf.d /etc/nginx/templates \
  && sed -i 's|^user  nginx;|# user directive removed: this image runs as nginx already|' /etc/nginx/nginx.conf \
- && sed -i 's|/var/run/nginx.pid|/tmp/nginx.pid|' /etc/nginx/nginx.conf
+ && sed -i 's|pid *[^;]*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf
 
 USER nginx
 

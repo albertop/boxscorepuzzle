@@ -10,7 +10,7 @@
 # configured is an open door that looks like a working deployment, which is why the refusal is at start-up
 # rather than at the first request.
 #
-#     docker build -f deploy/keep.Dockerfile -t boxscorepuzzle-keep keep/
+#     docker build -f deploy/keep.Dockerfile -t bxcpze-keep keep/
 #
 # ⚠️ Built from `keep/` rather than the repository root, and that is the boundary rather than a
 # convenience: this build **cannot** copy `forge/`, `serve/` or anything else, because they are not in
@@ -52,7 +52,14 @@ EXPOSE 8081
 
 # ⚠️ The health endpoint, asked over HTTP for the same reason the other image's is: a bound port is not
 # a working service. `docs/keep-api.md` names what it answers.
+# ⚠️⚠️ **Python, because this image has no `wget`.** `python:3.13-slim` ships neither wget nor curl, and
+# the probe called one — so a perfectly healthy `keep` with a live database would have been reported
+# unhealthy by a command that could not run. **The probe would have failed for a reason unrelated to the
+# thing it judges**, which is the same defect as a check that cannot fire, inverted. v41-P2-01.
+#
+# ⚠️ The one runtime this image guarantees is the one it is built around. Nothing is installed for a
+# probe.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://127.0.0.1:8081/health || exit 1
+  CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8081/health', timeout=3).status == 200 else 1)"]
 
 CMD ["python", "-m", "keep.main"]
