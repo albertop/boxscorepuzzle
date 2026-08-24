@@ -73,3 +73,14 @@ serve/data/puzzles/.staging/
 
 # The ceiling pack's erasure cache. Regenerable and large, and it is keyed to one sample.
 discovery/hand-solve/ceiling-erasures.json
+
+# The image tars, built by `tools/create_docker_image.ps1` and transferred to the VPS by hand.
+#
+# ⚠️ Hundreds of megabytes per version and **reproducible from the tree that is committed** -- the
+# same argument that keeps generated puzzle inventory out (CLAUDE.md). What must be recoverable is the
+# Dockerfile and the script that builds it, and both are tracked.
+#
+# ⚠️ The directory also receives copies of `tools/deploy_bxcpze_serve_image.sh` and
+# `tools/deploy_bxcpze_keep_image.sh` on every build, so one transfer carries everything the server
+# needs. The tracked copies in `tools/` are the source of truth.
+docker_images/

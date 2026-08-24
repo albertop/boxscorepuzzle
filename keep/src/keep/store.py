@@ -74,6 +74,37 @@ class ErrorReport:
     user_agent: str
 
 
+@dataclass(frozen=True, slots=True)
+class Share:
+    """One press of *Share* on a finished game. **The growth mechanism, and the only measurement of it.**
+
+    ⚠️⚠️ **A share is its own event, not a column on `Event`, and the reason is `ON CONFLICT DO
+    NOTHING`.** The share happens after the game ends, so an event already uploaded would have to be
+    *updated* to record it — and the insert that makes retries free ignores a second arrival of the same
+    id. Waiting for a share before uploading the event is worse: it delays every upload for something
+    most players never do, and loses the event when the tab closes.
+
+    ⚠️⚠️ **This measures INTENT, never reach.** The browser cannot tell whether a share was delivered:
+    `navigator.share` resolves when the sheet closes — on some platforms whether or not anything was
+    sent — and a clipboard copy says nothing about whether it was ever pasted. A row here means *the
+    player pressed Share and the mechanism responded*. Read as "how many people shared", it is
+    `CLAUDE.md`'s recorded shape of a metric correctly computed and measuring something else.
+
+    ⚠️ **`channel` is required for that reason.** `native` and `clipboard` have different semantics and
+    a combined figure erases the one distinction that would let anybody interpret the number later.
+
+    ⚠️ **`event_id` carries no foreign key.** Events can arrive out of order or be lost, and a real share
+    must not be refused because the game it came from has not uploaded yet.
+    """
+
+    share_id: str
+    device_id: str
+    puzzle_id: str
+    event_id: str | None
+    channel: str
+    shared_on: str | None
+
+
 class SchemaMismatchError(RuntimeError):
     """The database is not the shape this code expects. **Refused at startup, never worked around.**"""
 
@@ -105,6 +136,10 @@ class Store(ABC):
     @abstractmethod
     def store_errors(self, reports: Sequence[ErrorReport]) -> list[str]:
         """Same contract as `store_events`, for client error reports."""
+
+    @abstractmethod
+    def store_shares(self, shares: Sequence[Share]) -> list[str]:
+        """Same contract again, for shares. **The id is the client's and the retry is free.**"""
 
     @abstractmethod
     def alive(self) -> bool:
@@ -139,8 +174,10 @@ _EVENT_COLUMNS = (
 
 _ERROR_COLUMNS = ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent")
 
+_SHARE_COLUMNS = ("share_id", "device_id", "puzzle_id", "event_id", "channel", "shared_on")
 
-def _row(item: Event | ErrorReport, columns: tuple[str, ...]) -> tuple[Any, ...]:
+
+def _row(item: Event | ErrorReport | Share, columns: tuple[str, ...]) -> tuple[Any, ...]:
     return tuple(getattr(item, column) for column in columns)
 
 
@@ -160,7 +197,10 @@ class SqliteStore(Store):
     def store_errors(self, reports: Sequence[ErrorReport]) -> list[str]:
         return self._insert("client_errors", _ERROR_COLUMNS, reports)
 
-    def _insert(self, table: str, columns: tuple[str, ...], items: Iterable[Event | ErrorReport]) -> list[str]:
+    def store_shares(self, shares: Sequence[Share]) -> list[str]:
+        return self._insert("shares", _SHARE_COLUMNS, shares)
+
+    def _insert(self, table: str, columns: tuple[str, ...], items: Iterable[Event | ErrorReport | Share]) -> list[str]:
         rows = [_row(item, columns) for item in items]
         if not rows:
             return []
@@ -226,7 +266,10 @@ class PostgresStore(Store):
     def store_errors(self, reports: Sequence[ErrorReport]) -> list[str]:
         return self._insert("client_errors", _ERROR_COLUMNS, reports)
 
-    def _insert(self, table: str, columns: tuple[str, ...], items: Iterable[Event | ErrorReport]) -> list[str]:
+    def store_shares(self, shares: Sequence[Share]) -> list[str]:
+        return self._insert("shares", _SHARE_COLUMNS, shares)
+
+    def _insert(self, table: str, columns: tuple[str, ...], items: Iterable[Event | ErrorReport | Share]) -> list[str]:
         rows = [_row(item, columns) for item in items]
         if not rows:
             return []

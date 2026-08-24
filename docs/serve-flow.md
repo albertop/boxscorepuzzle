@@ -362,12 +362,43 @@ rows are positions throughout, and the boxscore at the end is the answer to *who
 
 ---
 
-## 7b. The share is a PNG of the board — decided, not built
+## ✔ 7b. The share is a PNG of the board — **built 2026-08-24**
 
 **The board itself, as an image. The cells the player filled in are replaced with random digits and
 then blurred; the given cells show their real values.** With it go **the time, the hints used and the
 tries**, because §26's comparison rests on them and a result carrying one without the others cannot be
 compared to anything.
+
+**Where it lives:** `serve/engine/share.js` masks, `serve/ui/phone/share-image.js` draws and
+rasterises, `serve/ui/phone/share-send.js` gets it off the device, and `keep`'s `POST /shares` records
+that it happened. ⬜ **G3 has not run** — the image has never been sent through WhatsApp, iMessage or X
+on a real phone, and until it has, this is built rather than verified.
+
+### ⚠️⚠️ Two things about the implementation that will be undone by somebody trying to improve it
+
+**The rasteriser must load the SVG from a `data:` URI and not from a `blob:` URL.** Chromium **taints
+the canvas** when it draws an SVG containing a `foreignObject` that came from a blob URL, so `toBlob`
+throws `SecurityError` and no image exists at all. Measured on this project's own runner:
+
+| | blob URL | data URI |
+|---|---|---|
+| plain SVG | clean | clean |
+| **SVG with `foreignObject`** | **TAINTED** | clean |
+
+The first version used a blob URL for the honest reason that the markup is a hundred kilobytes and
+`encodeURIComponent` over it is neither small nor fast. **That reasoning was right about the cost and
+irrelevant**: the cheaper form produces nothing. Anyone who changes it back will see a size win, pass a
+review, and break the share at the moment a player presses the button.
+
+**The height is measured under the same stylesheet the image is drawn under.** A `foreignObject` lays
+nothing out on its own, so the sheet is put in the real document and measured — and the first version
+measured it there *without* the image's own rules and then rendered *with* them. **The symptom was the
+bottom of the picture silently missing**, which reads as a layout choice rather than as a defect. The
+rules go into the page and into the SVG from one constant.
+
+⚠️ **Both were found by generating an image and looking at it**, which is the only thing that has ever
+found a defect of this kind here. Neither was visible in any assertion, and the test suite was green
+through both.
 
 ⚠️⚠️ **Tries is shared, and that is a decision rather than a consequence.** It appears on the reveal,
 the share carries what the reveal shows, so it would have arrived in the image whether or not anybody
@@ -453,8 +484,11 @@ onboarding has to work before the thing that brings people to it.
 
 ### ⚠️ The button exists and does nothing — deliberately, since 2026-08-22
 
-The reveal carries a *Share* button beside *Back to the board*, `disabled`, with the three-node web
-share mark. Operator's instruction: **place it in the UX now, before it works.**
+The reveal carries a *Share* button beside *Back to the board*, with the three-node web share mark.
+Operator's instruction at the time: **place it in the UX now, before it works** — it was `disabled` for
+weeks and is live since 2026-08-24. ⚠️ It is still `disabled` when the caller supplies no action, so a
+second interface or a test that renders the reveal alone gets the control it had before rather than one
+that throws on the first press.
 
 **The reason it is worth drawing early** is that the reveal is where the decision to show anyone gets
 made, so where the button sits changes what the rest of that screen can be. Discovering that after the

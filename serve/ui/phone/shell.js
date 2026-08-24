@@ -21,7 +21,10 @@ import { createGame } from "../../engine/game.js";
 import { browserStorage, createStore } from "../../engine/store.js";
 import { deviceId, localDate } from "../../engine/device.js";
 import { eventId } from "../../engine/outbox.js";
+import { shareRecord } from "../../engine/share.js";
 import { checkBoard, renderReference, renderReveal } from "./finish.js";
+import { sendShare } from "./share-send.js";
+import { shareImage } from "./share-image.js";
 import { applySolvedTitle } from "./head.js";
 import { text } from "../../engine/strings.js";
 import {
@@ -53,6 +56,11 @@ export function boot({
   // and draws exactly the same game — which is what every test written before C3 relies on, and what a
   // second interface does before it has wiring of its own.
   outbox = null,
+  // ⚠️ **Optional for the same reason as `outbox`** (§23). A shell handed no share queue still shares:
+  // the sheet opens, the image goes out, and nothing is recorded. **The share must never wait on the
+  // backend** -- it is the only growth mechanism the product has, and friction here is friction on it.
+  shares = null,
+  device = null,
 }) {
   const app = root;
   app.replaceChildren();
@@ -278,7 +286,36 @@ export function boot({
   // because focusing the body silently succeeds.
   const showReveal = (record, opener = null) => {
     app.classList.add("solved");
-    present(() => renderReveal(puzzle, record), opener);
+    present(() => renderReveal(puzzle, record, { onShare: () => shareResult(record) }), opener);
+  };
+
+  /**
+   * What *Share* does. **G, and `docs/serve-flow.md` §7b is the design.**
+   *
+   * ⚠️⚠️ **The record is queued whatever the sheet does, and the order is deliberate.** `navigator.share`
+   * rejects when the player cancels, and on some platforms resolves whether or not anything was sent --
+   * so waiting for it to resolve before recording would drop shares on the platforms that lie and record
+   * fewer than happened on the ones that do not. What is being measured is **intent**: the player
+   * pressed Share and the mechanism responded. `keep-api.md` says so beside the column.
+   *
+   * ⚠️ **The image is built before either path is taken**, because both need it and a failure to build
+   * one must not present as a cancelled share.
+   */
+  const shareResult = async (record) => {
+    const image = await shareImage(puzzle, game);
+    const file = new File([image], "boxscorepuzzle.png", { type: "image/png" });
+    const channel = await sendShare(file);
+    // ⚠️ `event_id` is the game's own id when there is a queue and null when there is not -- present
+    // and null, never absent, which is what `keep` refuses by name.
+    shares?.add(
+      shareRecord({
+        deviceId: device,
+        puzzleId: record.puzzle_id,
+        eventId: outbox ? eventId(record) : null,
+        channel,
+        at: record.played_on ?? null,
+      }),
+    );
   };
 
   // ⚠️⚠️ **The keypad exists while the board is an input surface and not afterwards.** A finished board

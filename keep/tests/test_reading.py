@@ -7,7 +7,7 @@ rule, and a boundary whose refusals are untested is one nobody has watched refus
 
 import pytest
 
-from keep.reading import LARGEST_STORED_INTEGER, MalformedError, read_batch, read_error, read_event
+from keep.reading import LARGEST_STORED_INTEGER, MalformedError, read_batch, read_error, read_event, read_share
 
 
 def an_event() -> dict[str, object]:
@@ -88,3 +88,56 @@ class TestOneRow:
         event = read_event(an_event())
 
         assert (event.event_id, event.duration_ms, event.solved) == ("e-1", 1, True)
+
+
+def a_share_body(**overrides: object) -> dict[str, object]:
+    body: dict[str, object] = {
+        "share_id": "s-1",
+        "device_id": "d-1",
+        "puzzle_id": "p-1",
+        "event_id": "e-1",
+        "channel": "native",
+        "shared_on": "2026-08-31",
+    }
+    body.update(overrides)
+    return body
+
+
+class TestReadingAShare:
+    """The share reader, which is the boundary the growth measurement arrives through."""
+
+    def test_a_whole_share_is_read(self) -> None:
+        share = read_share(a_share_body())
+
+        assert (share.share_id, share.channel, share.event_id) == ("s-1", "native", "e-1")
+
+    def test_both_channels_are_accepted(self) -> None:
+        for channel in ("native", "clipboard"):
+            assert read_share(a_share_body(channel=channel)).channel == channel
+
+    def test_a_channel_nobody_has_seen_is_refused_by_name(self) -> None:
+        """⚠️⚠️ **An acceptance list, so absence does not read as permission.**
+
+        A client sending `"sms"` is either a newer client or a typo, and storing it would put a value
+        in the growth figures that nothing can interpret -- C7 makes that permanent.
+        """
+        with pytest.raises(MalformedError, match="channel is 'sms'"):
+            read_share(a_share_body(channel="sms"))
+
+    def test_an_absent_event_id_is_refused_and_a_null_one_is_not(self) -> None:
+        """⚠️ Present-and-null rather than missing: a field that appears only sometimes is one
+        consumers forget to check for. The same rule `account_id` follows on an event."""
+        assert read_share(a_share_body(event_id=None)).event_id is None
+
+        without = a_share_body()
+        del without["event_id"]
+        with pytest.raises(MalformedError, match="event_id is missing"):
+            read_share(without)
+
+    def test_an_unknown_field_is_refused(self) -> None:
+        with pytest.raises(MalformedError, match="unknown fields"):
+            read_share(a_share_body(shared_at="2026-08-31"))
+
+    def test_a_share_that_is_not_an_object_is_refused(self) -> None:
+        with pytest.raises(MalformedError, match="a share is list"):
+            read_share([])

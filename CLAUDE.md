@@ -66,7 +66,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **D** the data layer | ✔ complete | `keep/`, its own container |
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
 | **F** deployment | ▶ **F1 done** | the two images and the proxy; ⬜ F2 and F3 need the VPS |
-| **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
+| **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
 
 ⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
 and it is the only verification of human derivability that exists: layer 3 propagates intervals to a fixed

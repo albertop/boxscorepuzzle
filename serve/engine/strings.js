@@ -113,11 +113,15 @@ const en = {
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
   "reveal.close": "Back to the board",
-  // ⚠️ **Present and inert, deliberately.** The share grid does not exist yet (§26: comparison is the
-  // paid feature, and the grid must never leak the solution or a player's name). The button is drawn
-  // now so the shape of the finished screen is the shape it will keep — the reveal is where a player
-  // decides whether to show anyone, and discovering that decision late would move every other control.
+  // ⚠️ **Live since G.** It was drawn and inert for weeks so the shape of the finished screen would be
+  // the shape it keeps — the reveal is where a player decides whether to show anyone, and discovering
+  // that decision late would have moved every other control. What it does now is `share-send.js`.
   "reveal.share": "Share",
+  // ⚠️ **What travels beside the image on the native path**, and it is not a caption for it. The image
+  // already carries the board and the three figures; this is the sentence a messaging app puts above
+  // it, so it says what the thing is to somebody who has never seen one. It must not name the game,
+  // the teams or the date — the recipient is a future player (§7).
+  "share.text": "I rebuilt this boxscore from arithmetic.",
   // ⚠️ Beside the time, because a shared result has to carry both. One minute with three hints and one
   // minute with none are two different results, and that is the whole reason hints are allowed at all.
   // ⚠️ **"Checks failed", and it read "Tries" for one commit.** The line counts presses of *Check* on a

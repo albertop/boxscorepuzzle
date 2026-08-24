@@ -1,10 +1,10 @@
-"""`keep`'s three routes, as a WSGI application.
+"""`keep`'s four routes, as a WSGI application.
 
 **`docs/keep-api.md` is the contract.** This is thin on purpose: everything worth getting right is in
 `store.py`, `auth.py` and `reading.py`, and this file is the part that turns a request into a call.
 
 ⚠️⚠️ **Plain WSGI and no framework, and that is a decision rather than an omission.** The service has
-three routes, no templating, no sessions, no ORM and no async workload — it writes rows and answers a
+four routes, no templating, no sessions, no ORM and no async workload — it writes rows and answers a
 health check. §23 asks for availability from **having fewer pieces rather than bigger ones**, and a
 framework here would add two dependencies to save perhaps forty lines.
 
@@ -21,8 +21,23 @@ from collections.abc import Callable, Iterable
 from typing import Any
 
 from keep.auth import accepted, presented
-from keep.reading import MalformedError, read_batch, read_error, read_event
+from keep.reading import MalformedError, read_batch, read_error, read_event, read_share
 from keep.store import Store
+
+_WRITES: dict[str, tuple[str, Any, Any]] = {
+    "/events": ("events", read_event, lambda store, rows: store.store_events(rows)),
+    "/errors": ("errors", read_error, lambda store, rows: store.store_errors(rows)),
+    # ⚠️⚠️ **Shares are their own route because they are their own event.** The share happens after the
+    # game is uploaded, and the insert that makes retries free ignores a second arrival of the same id --
+    # so a `shared` column on the event could never be filled in afterwards. `store.py`'s `Share` carries
+    # the whole argument, including that this measures intent and never reach.
+    "/shares": ("shares", read_share, lambda store, rows: store.store_shares(rows)),
+}
+"""Every path that writes: the envelope key, the reader for one member, and the store call.
+
+⚠️ **One table, read twice** -- once to decide what is a route at all and once to dispatch. Two literal
+sets would be two places encoding one rule, and the failure is silent: a path accepted by the first and
+missing from the second falls through to whichever branch happened to be last."""
 
 _MAX_BODY = 1_000_000
 """A megabyte. A queue draining after a week offline is a few hundred events at roughly 300 bytes each;
@@ -73,7 +88,7 @@ def create_app(store: Store, token: str) -> Application:
             # tells a caller how close it is.
             return _reply(start_response, "401 Unauthorized", {"error": "unauthorized"})
 
-        if method != "POST" or path not in {"/events", "/errors"}:
+        if method != "POST" or path not in _WRITES:
             return _reply(start_response, "404 Not Found", {"error": "no such route"})
 
         try:
@@ -83,10 +98,11 @@ def create_app(store: Store, token: str) -> Application:
             return _reply(start_response, "400 Bad Request", {"error": f"unreadable body: {broken}"})
 
         try:
-            if path == "/events":
-                stored = store.store_events(read_batch(body, "events", read_event))
-            else:
-                stored = store.store_errors(read_batch(body, "errors", read_error))
+            # ⚠️ Dispatched from one table rather than a chain of `if`s, so the set that answers 404 and
+            # the set that is handled **cannot disagree** -- a route accepted above and unhandled here
+            # would fall through to whatever the last branch happened to be.
+            envelope, one, write = _WRITES[path]
+            stored = write(store, read_batch(body, envelope, one))
         except MalformedError as refusal:
             # ⚠️ The field name travels to the caller. A 400 saying *invalid request* leaves the fix to
             # guesswork, and the caller here is a client the operator also wrote.

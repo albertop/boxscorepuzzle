@@ -23,7 +23,7 @@ import { newId } from "./device.js";
 export const OUTBOX_PREFIX = "boxscorepuzzle.outbox.v1.";
 
 /**
- * The two paths on **`serve`**, not on `keep`.
+ * The three paths on **`serve`**, not on `keep`.
  *
  * ⚠️ The browser never reaches `keep`: its port is not published and the shared token must not travel
  * to a browser (`data-layer.md` §4). `serve` proxies these, adding the token at the edge — the same
@@ -31,6 +31,7 @@ export const OUTBOX_PREFIX = "boxscorepuzzle.outbox.v1.";
  */
 export const EVENTS_PATH = "/api/events";
 export const ERRORS_PATH = "/api/errors";
+export const SHARES_PATH = "/api/shares";
 
 /**
  * The statuses that mean *this item will never be accepted*.
@@ -289,6 +290,23 @@ export const eventId = (record) => `${record.device_id ?? "anonymous"}:${record.
  */
 export function errorOutbox(storage, send) {
   return createOutbox(storage, { name: "errors", path: ERRORS_PATH, idField: "error_id", capacity: 40, send });
+}
+
+/**
+ * The share outbox. **The growth mechanism's only measurement, so it queues like everything else.**
+ *
+ * ⚠️⚠️ **It must not block the share.** The player presses Share, the sheet opens, and the record goes
+ * in this queue — a network round trip between the press and the sheet would put latency on the one
+ * action the product's growth depends on (G2: *any friction here is friction on the only growth
+ * mechanism the product has*). §23 is the same rule from the other side: the play path never waits on
+ * the backend.
+ *
+ * ⚠️ **Small, like the error queue and unlike the event queue.** A device produces at most one share
+ * per puzzle (see `shareId`), so a queue that survived a fortnight offline would hold a fortnight of
+ * them; 40 is far past any real backlog and short of anything that costs storage.
+ */
+export function shareOutbox(storage, send) {
+  return createOutbox(storage, { name: "shares", path: SHARES_PATH, idField: "share_id", capacity: 40, send });
 }
 
 export { newId as reportId };

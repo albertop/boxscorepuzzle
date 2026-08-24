@@ -25,7 +25,16 @@ from typing import Any
 
 import pytest
 
-from keep.store import SCHEMA_VERSION, ErrorReport, Event, PostgresStore, SchemaMismatchError, SqliteStore, Store
+from keep.store import (
+    SCHEMA_VERSION,
+    ErrorReport,
+    Event,
+    PostgresStore,
+    SchemaMismatchError,
+    Share,
+    SqliteStore,
+    Store,
+)
 
 _MIGRATION = Path(__file__).resolve().parents[1] / "migrations" / "001-initial.sql"
 POSTGRES_VARIABLE = "KEEP_TEST_POSTGRES"
@@ -58,6 +67,17 @@ def a_report(error_id: str = "x-1") -> ErrorReport:
         page="/p/abc",
         viewport="375x812",
         user_agent="a browser",
+    )
+
+
+def a_share(share_id: str = "s-1", *, event_id: str | None = "e-1") -> Share:
+    return Share(
+        share_id=share_id,
+        device_id="d-1",
+        puzzle_id="p-1",
+        event_id=event_id,
+        channel="native",
+        shared_on="2026-08-31",
     )
 
 
@@ -163,6 +183,30 @@ class TestTheRetryContract:
         store.store_errors([a_report()])
 
         assert _count(store, "client_errors") == 1
+
+    def test_shares_deduplicate_the_same_way(self, store: Store) -> None:
+        """⚠️ The retry contract holds for shares too, and it is the reason they are their own event.
+
+        A share arrives after the game was uploaded, so it could never be recorded by re-sending the
+        event -- `ON CONFLICT DO NOTHING` ignores that. What makes the share's own retry free is this.
+        """
+        store.store_shares([a_share()])
+        store.store_shares([a_share()])
+
+        assert _count(store, "shares") == 1
+
+    def test_a_share_reports_its_id_rather_than_a_count(self, store: Store) -> None:
+        assert store.store_shares([a_share()]) == ["s-1"]
+
+    def test_a_share_whose_game_has_not_uploaded_yet_is_stored(self, store: Store) -> None:
+        """⚠️⚠️ **`event_id` carries no foreign key and this is the test that says why.**
+
+        Events and shares travel in separate batches through one queue, so the share can land first --
+        or the event can be lost entirely. Refusing the share would discard the only measurement the
+        product's growth mechanism has, to protect a reference nothing reads.
+        """
+        assert store.store_shares([a_share(event_id=None)]) == ["s-1"]
+        assert _count(store, "shares") == 1
 
     def test_an_empty_batch_is_not_an_error(self, store: Store) -> None:
         # A queue that drains to nothing sends nothing. Refusing it would make the ordinary case an error.

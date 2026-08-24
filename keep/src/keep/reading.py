@@ -19,7 +19,7 @@ from typing import Any
 # something that *might be anything* — JSON off a request, relayed from a browser — and either produce a
 # record or refuse by name. A narrower type would be a claim about the input that nothing has checked
 # yet, which is the claim these functions exist to make rather than assume.
-from keep.store import ErrorReport, Event
+from keep.store import ErrorReport, Event, Share
 
 
 class MalformedError(ValueError):
@@ -89,6 +89,20 @@ _EVENT_FIELDS = (
 
 _ERROR_FIELDS = ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent")
 
+_SHARE_FIELDS = ("share_id", "device_id", "puzzle_id", "event_id", "channel", "shared_on")
+
+SHARE_CHANNELS = ("native", "clipboard")
+"""How the share left the device. **An acceptance list, and the two are not interchangeable.**
+
+`native` is `navigator.share` and `clipboard` is the fallback where it does not exist
+(`docs/beta-0-plan.md` G2). They have different semantics -- a share sheet that opened is not a link
+that was pasted -- so a combined figure erases the only distinction that would let the number be read
+later. A third channel is a decision, and it arrives by being added here rather than by a client
+sending a word nobody has seen.
+
+⚠️ **Acceptance, never exclusion.** A channel this reader does not know is refused by name, which is
+the shape §32 records for provenance: absence must not read as permission."""
+
 
 def read_event(row: Any) -> Event:  # noqa: ANN401
     """One event, checked field by field."""
@@ -127,6 +141,31 @@ def read_error(row: Any) -> ErrorReport:  # noqa: ANN401
         raise MalformedError(message)
     _no_unknown_fields(row, _ERROR_FIELDS)
     return ErrorReport(**{field: _text(row, field) or "" for field in _ERROR_FIELDS})
+
+
+def read_share(row: Any) -> Share:  # noqa: ANN401
+    """One share, checked field by field.
+
+    ⚠️ `event_id` is optional and **required to be present** -- null rather than missing, the same rule
+    `account_id` follows on an event, and for the same reason: a field that appears only sometimes is
+    one consumers forget to check for. A share whose game has not uploaded yet carries `null`.
+    """
+    if not isinstance(row, dict):
+        message = f"a share is {type(row).__name__}, expected an object"
+        raise MalformedError(message)
+    _no_unknown_fields(row, _SHARE_FIELDS)
+    channel = _text(row, "channel") or ""
+    if channel not in SHARE_CHANNELS:
+        message = f"channel is {channel!r}, expected one of {list(SHARE_CHANNELS)}"
+        raise MalformedError(message)
+    return Share(
+        share_id=_text(row, "share_id") or "",
+        device_id=_text(row, "device_id") or "",
+        puzzle_id=_text(row, "puzzle_id") or "",
+        event_id=_text(row, "event_id", optional=True) if "event_id" in row else _absent("event_id"),
+        channel=channel,
+        shared_on=_text(row, "shared_on", optional=True),
+    )
 
 
 def read_batch(body: Any, key: str, one: Any) -> list[Any]:  # noqa: ANN401

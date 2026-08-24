@@ -17,7 +17,7 @@
 
 import { browserStorage } from "./store.js";
 import { deviceId } from "./device.js";
-import { errorOutbox, eventOutbox } from "./outbox.js";
+import { errorOutbox, eventOutbox, shareOutbox } from "./outbox.js";
 import { watchForErrors } from "./report.js";
 
 /**
@@ -27,29 +27,36 @@ import { watchForErrors } from "./report.js";
  * @param {Storage} [options.storage] where queues and the device id live.
  * @param {EventTarget} [options.target] the window, for `online`, `visibilitychange` and uncaught errors.
  * @param {Function} [options.send] the transport, injected by tests.
- * @returns {{storage: Storage, device: string, events: object, errors: object, stop: Function}}
+ * @returns {{storage: Storage, device: string, events: object, errors: object, shares: object, stop: Function}}
  */
 export function startUplink({ storage = browserStorage(), target = globalThis, send } = {}) {
   const device = deviceId(storage);
   const events = eventOutbox(storage, send);
   const errors = errorOutbox(storage, send);
+  // ⚠️ The share's queue. Separate from the event's because a share is a separate event: it
+  // happens after the game is uploaded, and `keep`'s insert ignores a second arrival of an id it
+  // already holds -- so a field on the event could never be filled in afterwards.
+  const shares = shareOutbox(storage, send);
 
   // ⚠️ **The watcher is installed before either queue is followed**, so an exception thrown by the
   // first drain is reported rather than lost. It is the one ordering here that is not arbitrary.
   const stopWatching = watchForErrors({ outbox: errors, deviceId: device, target });
   const stopEvents = events.follow(target);
   const stopErrors = errors.follow(target);
+  const stopShares = shares.follow(target);
 
   return {
     storage,
     device,
     events,
     errors,
+    shares,
     /** For a test, and for an interface that unmounts. Nothing in the browser calls it. */
     stop() {
       stopWatching();
       stopEvents();
       stopErrors();
+      stopShares();
     },
   };
 }

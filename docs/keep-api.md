@@ -17,7 +17,8 @@ does not start (`data-layer.md` §4). Every route below assumes both.
 
 ### ⚠⚠ What the browser actually posts to — added 2026-08-22, when the client was built
 
-**The browser never reaches `keep`.** It posts to **`/api/events`** and **`/api/errors`** on `serve`,
+**The browser never reaches `keep`.** It posts to **`/api/events`**, **`/api/errors`** and
+**`/api/shares`** on `serve`,
 which proxies them and adds the token at the edge — the same arrangement as the health check and the
 payment webhook, and for the same reason: *a secret inside a container is a secret; an open port is
 surface.*
@@ -114,6 +115,43 @@ Uncaught client errors (C4). Same shape of contract: an id, and `stored` back.
 
 ⚠️ **No IP, no geolocation** (§35). A user agent and a viewport are what reproduce a rendering fault;
 anything past that is collected because it was easy.
+
+### `POST /shares`
+
+One press of *Share* on a finished game. Same contract again: a client-made id, and `stored` back.
+
+```
+{ "shares": [ { "share_id": "...", "device_id": "...", "puzzle_id": "...",
+                "event_id": "..." | null, "channel": "native" | "clipboard",
+                "shared_on": "2026-08-31" | null } ] }
+```
+
+#### ⚠️⚠️ Why this is a route and not a field on the event
+
+**The share happens after the game is uploaded**, and `keep`'s insert is `ON CONFLICT DO NOTHING` —
+which is the whole reason a client retry is free. So a `shared` field on the event could never be
+filled in afterwards: re-sending the event with it set would be **ignored, silently**. The two ways
+around that are both worse — waiting for a share before uploading the event delays every upload for
+something most players never do and loses the event when the tab closes.
+
+**A share is an event, which is what C7 says to store.**
+
+#### ⚠️⚠️ What this measures: intent, never reach
+
+**The browser cannot tell whether a share was delivered.** `navigator.share` resolves when the sheet
+closes — on some platforms whether or not anything was sent — and a clipboard copy says nothing about
+whether it was ever pasted. A row here means *the player pressed Share and the mechanism responded*.
+
+**Read later as "how many people shared", it is a metric correctly computed and measuring something
+else** — the shape `CLAUDE.md` records under *what the player does when the number goes up*. Whoever
+reports on this table states the limit with the figure or the figure is misleading.
+
+#### The two fields that carry decisions
+
+| | |
+|---|---|
+| `channel` | **required**, `native` or `clipboard`, an **acceptance list**. The two have different semantics and a combined figure erases the only distinction that lets the number be read. A third channel arrives by being added to `SHARE_CHANNELS`, not by a client sending a word nobody has seen |
+| `event_id` | **present and null**, never absent — the rule `account_id` follows on an event. **No foreign key**: events and shares travel in separate batches and the share can land first, or the event can be lost. Refusing the share would discard the growth mechanism's only measurement to protect a reference nothing reads |
 
 ### `GET /health`
 

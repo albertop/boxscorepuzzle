@@ -1,0 +1,27 @@
+# What may enter a Docker build context. **An acceptance list, never an exclusion list.**
+#
+# ⚠️⚠️ THIS IS THE SECOND GUARD ON THE RULE THAT MATTERS MOST HERE. `forge/` must never reach the VPS
+# -- it holds the generator and the human-solvability guarantee, which is trade secret (CLAUDE.md
+# sections 16 and 33). **A build context is a copy**: `docker build` ships the whole context to the
+# daemon, and `deploy/serve.Dockerfile` is built with the repository root as its context. Without this
+# file that context is the entire repository, `forge/` and `forge/inventory/` included.
+#
+# The first guard is that the build happens on the laptop and only the finished image is transferred
+# (`tools/create_docker_image.ps1`). This is what holds when somebody builds somewhere else.
+#
+# ⚠️ **Everything is excluded and only named directories are admitted**, which is the form this
+# project requires wherever absence must not read as permission. The consequence is the point: a
+# directory added next year is outside the context **by not being named**, rather than inside it by
+# not having been forbidden. An exclusion list would have to be updated by whoever adds the directory,
+# and they will not know that it needs updating.
+#
+# Adding a line here means deciding that its contents may travel into an image. There are exactly two.
+
+*
+
+# The client: the pages, the engine, the fonts, and the two public packages. This is the site.
+!serve/
+
+# The Dockerfiles and the nginx template. `serve.Dockerfile` copies the template from here, which is
+# the only reason the context has to be the root rather than `serve/` itself.
+!deploy/

@@ -31,7 +31,7 @@
 #
 # ⚠️⚠️ **Half of what this file will do cannot be tested here, and it is named rather than discovered at
 # deployment.** `docs/beta-0-plan.md` E3 splits it. Not testable on a laptop: TLS and certbot, DNS, the
-# `/api/events` and `/api/errors` proxy to `keep` with the shared token, `keep` being reachable only on
+# `/api/events`, `/api/errors` and `/api/shares` proxy to `keep` with the shared token, `keep` being reachable only on
 # the internal network, and IPs not being persisted anywhere -- `access_log off` is checkable and the
 # host property is not. **Those lines are absent from this file** rather than present and unverified:
 # an untested line that looks finished is worse than a gap F has to fill deliberately.
@@ -137,7 +137,15 @@ server {
     # ⚠️ **Until this block is deployed the two paths 404, and that is by design.** A 404 leaves the
     # client's queue intact, so every event and error recorded before deployment is delivered by the
     # first visit after it. Dropping them would be permanent (C7).
-    location ~ "^/api/(events|errors)$" {
+    # ⚠️⚠️ **Three routes, anchored, and the list is a list rather than a prefix.** `location /api/`
+    # would forward anything under it to `keep`, including paths `keep` does not serve and paths added
+    # to it later without anybody deciding they should be public. Naming the three is what makes adding
+    # a fourth a decision.
+    #
+    # ⚠️ `shares` arrived with the share (G). It is a separate route because a share is a separate
+    # event: it happens after the game is uploaded, and `keep`'s insert ignores a second arrival of an
+    # id it already holds — so a `shared` field on the event could never be filled in afterwards.
+    location ~ "^/api/(events|errors|shares)$" {
         # ⚠️ Only POST reaches `keep`. Anything else is refused here rather than forwarded: the data
         # layer answers three routes and a GET on this path is not one of them.
         limit_except POST { deny all; }

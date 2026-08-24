@@ -21,10 +21,16 @@ name: bxcpze
 services:
   # The site. nginx over the baked `serve/` tree, with the routes and the cache rule.
   serve:
-    build:
-      context: ..
-      dockerfile: deploy/serve.Dockerfile
-    image: bxcpze-serve
+    # ⚠️⚠️ **No `build:` block, and its absence is the rule rather than an omission.** The image is
+    # built on the laptop by `tools/create_docker_image.ps1`, saved, transferred, and loaded by
+    # `tools/deploy_bxcpze_serve_image.sh`. **A build here would need the repository on the VPS**, and
+    # `forge/` must never reach it (CLAUDE.md sections 16 and 33) -- a build context is a copy, even
+    # when the resulting image carries only `serve/`.
+    #
+    # ⚠️ So this file **runs** a stack and never produces one. Portainer redeploying it pulls nothing
+    # and builds nothing: it starts what `docker load` already put on the machine, and says so plainly
+    # if the tag is absent.
+    image: bxcpze-serve:${BXCPZE_SERVE_VERSION:?the version that was loaded, e.g. 1.2026.1}
     container_name: bxcpze-serve
     restart: unless-stopped
     init: true
@@ -55,31 +61,37 @@ services:
       # terminates TLS and proxies here. Publishing on every interface would put this container on the
       # internet beside the reverse proxy that is supposed to be in front of it, on plain HTTP.
       #
-      # ⚠️ The host's nginx needs `proxy_pass http://127.0.0.1:8080;` and nothing else: the routes, the
+      # ⚠️⚠️ **3005 on the host, 8080 inside.** The VPS's loopback already holds 3001 sabertables,
+      # 3002 sixdegrees, 3003 the MLB proxy, 3004 dglweb, 5050 pgAdmin, 8081 revive and 9000/9443
+      # Portainer. **8080 was the first choice and it is one digit from revive's 8081** -- close enough
+      # that a typo in the host's `proxy_pass` reaches somebody else's ad server and answers, which is
+      # worse than not answering. The 300x range is where this VPS puts its sites.
+      #
+      # ⚠️ The host's nginx needs `proxy_pass http://127.0.0.1:3005;` and nothing else: the routes, the
       # cache headers and the `/api/` block all live in this container's config, which is the one place
       # `forge/tests/` checks them. **Putting any of them in the host block would be a second copy.**
-      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:3005:8080"
 
     depends_on:
       keep:
         condition: service_started
 
-    # ⚠⚠ **Two networks, and one was not enough.** `inside` is `internal: true`, which leaves a
-    # container with **no route out and no published ports** — the first version put `serve` only there
-    # and the publish silently did nothing: `docker port` was empty while nginx answered perfectly
-    # inside. `edge` is an ordinary bridge and is what makes `127.0.0.1:8080` reachable.
-    #
-    # ⚠️ **`keep` is deliberately not on `edge`.** That is what *the port is not published* means as a
-    # fact about the network rather than as a line somebody could add.
-    networks: [edge, inside]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+    networks: [backend]
 
   # The data layer. **Its port is never published** — that is the first line of defence and the token is
   # the second (`docs/data-layer.md` §4).
   keep:
-    build:
-      context: ../keep
-      dockerfile: ../deploy/keep.Dockerfile
-    image: bxcpze-keep
+    # Same as `serve`: loaded, never built here.
+    #
+    # ⚠️ **Its own version, independent of `serve`'s.** Most changes touch one image; rebuilding the
+    # other to bump a shared number is work that changes nothing. What they share is two `/api/` routes
+    # and a bearer token, and when that moves both versions move -- a decision to take rather than a
+    # coupling to enforce in this file.
+    image: bxcpze-keep:${BXCPZE_KEEP_VERSION:?the version that was loaded, e.g. 1.2026.1}
     container_name: bxcpze-keep
     restart: unless-stopped
     init: true
@@ -89,37 +101,55 @@ services:
       # second of two refusals rather than the only one — the container would not come up regardless,
       # and compose failing first says why in one line instead of in a traceback.
       KEEP_SHARED_TOKEN: ${KEEP_SHARED_TOKEN:?set it in the stack's environment; there is no default}
-      # ⚠️⚠️ **Points at the Postgres that already exists.** Which host to use depends on where it runs:
+      # ⚠️⚠️ **Points at the Postgres that already exists**, which is a container: `postgres-postgres-1`,
+      # on the `backend` network, with **5432 unpublished** (`docker ps`, 2026-08-24). So the host is the
+      # container's name and the route is the network below — not `host.docker.internal`, which was the
+      # other branch this file carried while nobody had looked.
       #
-      #   * a container in another stack → put its network in `networks:` below as `external` and use
-      #     that container's name here;
-      #   * listening on the VPS itself → `host.docker.internal` with the `extra_hosts` line below.
+      #     postgresql://<user>:<password>@postgres-postgres-1:5432/bxcpze_keep
       #
-      # **Neither is guessed here**: the value is supplied with the stack and the shape follows from it.
-      KEEP_DATABASE_URL: ${KEEP_DATABASE_URL:?the existing Postgres, e.g. postgresql://user:pass@host:5432/keep}
+      # ⚠️⚠️ **`bxcpze_keep`, not `keep`. The VPS's Postgres is shared** with dglweb, sabertables,
+      # sixdegrees and revive, so a database called `keep` claims a generic name in somebody else's
+      # instance. The `bxcpze` prefix is the same one every image, container and network carries; it
+      # was declared once for Docker names and **the category was not enumerated**, which is how the
+      # database came within one command of being created without it. Underscore rather than hyphen:
+      # a hyphen in a Postgres identifier requires double quotes at every use, for ever.
+      #
+      # ⚠️ **The database and its credentials are still not guessed here.** The URL is supplied with the
+      # stack; what is settled is its *shape*, because the shape follows from where Postgres actually runs.
+      KEEP_DATABASE_URL: ${KEEP_DATABASE_URL:?e.g. postgresql://user:pass@postgres-postgres-1:5432/bxcpze_keep}
 
-    # ⚠️ Uncomment when Postgres listens on the VPS rather than in a container. `host-gateway` is what
-    # makes `host.docker.internal` resolve on Linux; it is a no-op on Docker Desktop.
-    # extra_hosts:
-    #   - "host.docker.internal:host-gateway"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
 
-    networks: [inside]
+    networks: [backend]
 
 networks:
-  # An ordinary bridge, and **only `serve` is on it**. This is what a published port needs.
-  edge:
-
-  # ⚠⚠ **`internal: true` — no route out and none in.** `serve` reaches `keep` by name here and
-  # nothing outside can reach `keep` at all. It is what makes *the port is not published* a property
-  # of the network rather than a convention.
+  # ⚠️⚠️ **One network, and it is the VPS's existing `backend`** — the same one dglweb, sabertables,
+  # sixdegrees, revive and pgadmin are on, and the one `postgres-postgres-1` is on. `serve` reaches
+  # `keep` by name here, and `keep` reaches Postgres by name.
   #
-  # ⚠⚠ **`keep` needs a route to the existing Postgres and it will not come from this network.** Add
-  # the one that reaches it — the other stack's network as `external: true`, or a bridge plus the
-  # `extra_hosts` line above when Postgres listens on the VPS itself — and put it in `keep`'s list.
-  # **Do not relax this one**: the moment `inside` stops being internal, *unpublished* becomes a
-  # convention instead of a property.
-  inside:
-    internal: true
+  # ⚠️⚠️ **This replaced an `edge` + `inside` pair, and the reason is worth keeping because the pair
+  # looked correct.** `inside` was `internal: true` and carried the argument that *the port is not
+  # published* was a property of the network rather than a convention. **That was true while `keep` was
+  # only on `inside`.** Joining `backend` so `keep` could reach Postgres made it false without
+  # contradicting anything: every container on `backend` can reach `keep` either way, so the internal
+  # network restricted nothing and only added a second path between two services already able to talk.
+  # `edge` existed solely because an internal network blocks published ports, so it went with it.
+  #
+  # **A justification is scoped and does not travel.** The comment stayed true-sounding for hours after
+  # the thing it described had stopped being the case.
+  #
+  # ⚠️ **What actually keeps `keep` private is unchanged and is not this file's networks:** it publishes
+  # no port, and it refuses every request without the shared token (`docs/data-layer.md`). Those are the
+  # first and second lines of defence, and they always were.
+  #
+  # ⚠️ `external: true` means compose **fails** when `backend` is absent rather than quietly creating an
+  # empty network of the same name and leaving both services unable to resolve anything — the absence of
+  # the route reading as the route being there.
+  backend:
+    external: true
 
 volumes:
   # ⚠️ Named, so it survives `docker compose down` and a redeploy. What is in it is two public packages

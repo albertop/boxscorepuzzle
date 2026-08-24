@@ -20,7 +20,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
 | **F** deployment | ⬜ **not met** | ✔ **F1 met** — both images, unprivileged and secretless, and the proxy tested end to end against a real `keep`. ⬜ **F2 and F3 need the VPS**: TLS, DNS, the compose file, and the health endpoints |
-| **G** the share | ⬜ | last to build, **exempt from being cut** |
+| **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
 
 ⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
 stops everything — and G, which cannot be dropped for time.
@@ -1051,6 +1051,38 @@ the finished game — not a priority.
   nothing about the board.
 
 ### ▶ Deliverable G — **an image a player sends in one tap that survives the trip and gives nothing away**
+
+⚠️ **G1 and G2 are built as of 2026-08-24. G3 has not run and it is the one that decides.**
+
+| | |
+|---|---|
+| ✔ **G1.1** | the board, never the reveal — `share-image.js` draws with `renderLineScore`, `renderSection` and `renderFootnotes`, **the board's own renderers**, and the only difference from the live board is the game they are handed |
+| ✔ **G1.2** | replaced then blurred — `maskAnswers()` produces a game whose answers are gone, so the board is **drawn from masked values** rather than drawn and then obscured. Nine browser tests, including that not one answer survives and that a replacement keeps its digit count |
+| ✔ **G1.3** | time, tries and hints, from the reveal's own catalogue keys |
+| ✔ **G2** | `navigator.share` where `canShare` takes the file, the clipboard where it does not — and a cancelled sheet is not an error |
+| ✔ **the record** | `keep`'s `POST /shares`, its own event because the share happens after the game is uploaded and the insert that makes a retry free ignores a second arrival |
+| ⬜ **G3** | **not run.** WhatsApp, iMessage and X, on a real phone, looking at what arrived. **The operator's**, and it is what says the deliverable is done |
+
+⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
+that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read
+as **empty** and the board looks less finished than it is — the opposite of what the blur is for. It is
+1.0px, and that number came from generating the image and looking at it rather than from an argument.
+
+⚠️ **G1 and G2 are built as of 2026-08-24. G3 has not run and it is the one that decides.**
+
+| | |
+|---|---|
+| ✔ **G1.1** | the board, never the reveal — `share-image.js` draws with `renderLineScore`, `renderSection` and `renderFootnotes`, the board's own renderers, and the only difference from the live board is the game they are handed |
+| ✔ **G1.2** | replaced then blurred — `maskAnswers()` produces a game whose answers are gone, so the board is **drawn from masked values** rather than drawn and then obscured. Nine browser tests, including that not one answer survives and that a replacement keeps its digit count |
+| ✔ **G1.3** | time, tries and hints, from the reveal's own catalogue keys |
+| ✔ **G2** | `navigator.share` where `canShare` takes the file, the clipboard where it does not — and a cancelled sheet is not an error |
+| ✔ **the record** | `keep`'s `POST /shares`, its own event because the share happens after the game is uploaded and the insert that makes a retry free ignores a second arrival |
+| ⬜ **G3** | **not run.** WhatsApp, iMessage and X, on a real phone, looking at what arrived. **The operator's**, and it is what says the deliverable is done |
+
+⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
+that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read
+as **empty** and the board looks less finished than it is — the opposite of what the blur is for. It is
+1.0px, and that number came from generating the image and looking at it rather than from an argument.
 
 A PNG carrying the grid, the time and the failed-check count in the reveal's own words — **not a picture
 of the reveal**, with values replaced before any blur — shared through `navigator.share` in one tap, and

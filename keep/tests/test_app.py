@@ -199,6 +199,40 @@ class TestTheRoutes:
         # There is no read side. `keep` holds people and nothing reads them yet (`keep-api.md`).
         assert call("GET", "/events")[0] == 404
 
+    def test_shares_take_the_same_contract(self, call: Any) -> None:
+        """⚠️ The fourth route, and it exists because the share is its own event.
+
+        `store.py`'s `Share` carries the argument: the share happens after the event is uploaded, and
+        the insert that makes a retry free ignores a second arrival of the same id.
+        """
+        share = {
+            "share_id": "s-1",
+            "device_id": "d-1",
+            "puzzle_id": "p-1",
+            "event_id": "e-1",
+            "channel": "native",
+            "shared_on": "2026-08-31",
+        }
+
+        assert call("POST", "/shares", {"shares": [share]}) == (200, {"stored": ["s-1"]})
+
+    def test_a_share_still_needs_the_token(self, call: Any) -> None:
+        assert call("POST", "/shares", {"shares": []}, token=None)[0] == 401
+
+    def test_a_get_to_shares_is_not_found(self, call: Any) -> None:
+        assert call("GET", "/shares")[0] == 404
+
+    def test_a_bad_channel_names_the_field(self, call: Any) -> None:
+        """The refusal travels to the caller, because the caller is a client the operator also wrote."""
+        share = {
+            "share_id": "s-1", "device_id": "d-1", "puzzle_id": "p-1",
+            "event_id": None, "channel": "carrier pigeon", "shared_on": None,
+        }  # fmt: skip
+        status, body = call("POST", "/shares", {"shares": [share]})
+
+        assert status == 400
+        assert "channel" in body["error"]
+
     def test_errors_take_the_same_contract(self, call: Any) -> None:
         report = {
             "error_id": "x-1",

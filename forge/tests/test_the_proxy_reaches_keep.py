@@ -1,4 +1,4 @@
-"""F1.3b — `serve` proxies `/api/events` and `/api/errors` to `keep`, adding the token at the edge.
+"""F1.3b — `serve` proxies `/api/events`, `/api/errors` and `/api/shares` to `keep`, token at the edge.
 
 ⚠️⚠️ **The browser must never reach `keep`.** Its port is not published and the shared token must not
 travel to a browser (`docs/data-layer.md` §4), so the client posts to `serve` and **the edge adds the
@@ -254,6 +254,28 @@ class TestThePostReachesKeep:
         # satisfy the first without the second.
         assert event["event_id"] in json.loads(body).get("stored", []), f"keep did not store it: {body[:200]}"
 
+    def test_a_share_is_accepted_through_the_edge(self, stack: tuple[int, str, str, str]) -> None:
+        """⚠️⚠️ **The growth mechanism's only measurement, through the whole chain.**
+
+        `CLAUDE.md` calls the share the only growth mechanism the product has and beta 0 the one chance
+        to test it. A share that the player makes and nothing records is the launch running blind, so
+        this asserts the row reaches `keep` rather than that nginx answered.
+        """
+        port, _token, _network, _image = stack
+        share = {
+            "share_id": "s-through-the-edge",
+            "device_id": "d-1",
+            "puzzle_id": "p-1",
+            "event_id": None,
+            "channel": "native",
+            "shared_on": "2026-08-31",
+        }
+
+        status, body = _answers(f"http://127.0.0.1:{port}/api/shares", data=json.dumps({"shares": [share]}).encode())
+
+        assert status in {200, 201, 202, 204}, f"the edge answered {status}: {body[:200]}"
+        assert share["share_id"] in json.loads(body).get("stored", []), f"keep did not store it: {body[:200]}"
+
     def test_the_browser_never_supplies_the_token(self, stack: tuple[int, str, str, str]) -> None:
         """⚠️⚠️ **The client's own Authorization header is discarded rather than merged.** A browser that
         sent one must not be able to influence what `keep` sees. Sending a wrong one and still being
@@ -271,7 +293,7 @@ class TestThePostReachesKeep:
             assert response.status in {200, 201, 202, 204}
 
     def test_only_post_reaches_the_data_layer(self, stack: tuple[int, str, str, str]) -> None:
-        """`keep` answers three routes and a GET on this path is not one. Refused at the edge rather
+        """`keep` answers four routes and a GET on this path is not one. Refused at the edge rather
         than forwarded, so the data layer never sees a request it has no answer for."""
         port, _token, _network, _image = stack
 

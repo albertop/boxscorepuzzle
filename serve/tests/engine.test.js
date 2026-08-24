@@ -4720,3 +4720,137 @@ suite("The uplink: one storage, one device, both queues, in the one place three 
     }
   });
 });
+
+suite("The share: what leaves the device, and what must not", () => {
+  const puzzle = readPackage(packages[0].raw);
+
+  /** A finished game: every blank filled with its answer, which is the only ending there is. */
+  const solved = () => {
+    const game = createGame(puzzle);
+    const answers = new Map(game.cells().map((cell) => [cell.name, cell.answer]));
+    for (const name of game.blanks()) game.enter(name, answers.get(name));
+    return game;
+  };
+
+  test("⚠️⚠️ not one of the player's answers survives into the shared board", async () => {
+    // **The whole design, and the test that says it holds.** `serve-flow.md` §7b: the random digits
+    // are what protect the puzzle and the blur is typography. An implementation that blurred the real
+    // values would look identical to this one in every screenshot and would leak the answer to anyone
+    // with a deconvolution script.
+    const { maskAnswers } = await import("../engine/share.js");
+    const game = solved();
+    const masked = maskAnswers(game);
+
+    const blanks = game.blanks();
+    assert(blanks.length > 0, "the board has no blanks, so this test would pass over nothing");
+    for (const name of blanks) {
+      assert(masked.value(name) !== game.value(name), `${name} still holds the player's answer`);
+    }
+  });
+
+  test("a given cell is untouched, because hiding it would hide nothing", async () => {
+    const { maskAnswers } = await import("../engine/share.js");
+    const game = solved();
+    const masked = maskAnswers(game);
+
+    const given = game.cells().filter((cell) => cell.given !== null);
+    assert(given.length > 0, "no given cells, so this test would pass over nothing");
+    for (const cell of given) equal(masked.value(cell.name), game.value(cell.name), cell.name);
+  });
+
+  test("⚠️ a replacement keeps the digit count, so the columns still line up", async () => {
+    const { maskAnswers } = await import("../engine/share.js");
+    const game = solved();
+    const masked = maskAnswers(game);
+
+    for (const name of game.blanks()) {
+      equal(
+        String(masked.value(name)).length,
+        String(game.value(name)).length,
+        `${name} changed width, which would say how big the real value was`,
+      );
+    }
+  });
+
+  test("⚠️⚠️ no cell is marked hinted, because that would point at the one that beat them", async () => {
+    const { maskAnswers } = await import("../engine/share.js");
+    const game = createGame(puzzle);
+    const first = game.blanks()[0];
+    game.hint(first);
+    assert(game.isHinted(first), "the hint did not register, so this test proves nothing");
+
+    equal(maskAnswers(game).isHinted(first), false, "the shared board admits which cell was hinted");
+  });
+
+  test("the record is the shape keep refuses anything else", async () => {
+    const { shareRecord } = await import("../engine/share.js");
+    const record = shareRecord({ deviceId: "d-1", puzzleId: "p-1", channel: "native", at: "2026-08-31" });
+
+    equal(record.share_id, "d-1:p-1", "derived from device and puzzle, like the event id");
+    equal(record.event_id, null, "present and null rather than absent");
+    assert("event_id" in record, "event_id must be present -- keep refuses an absent one by name");
+    equal(record.channel, "native");
+  });
+
+  test("⚠️ the share sheet is preferred, and only when it takes the file", async () => {
+    const { sendShare } = await import("../ui/phone/share-send.js");
+    const file = new File([new Blob(["x"])], "b.png", { type: "image/png" });
+    const seen = [];
+    const navigatorRef = {
+      canShare: ({ files }) => files.length === 1,
+      share: async (payload) => seen.push(payload),
+    };
+
+    equal(await sendShare(file, { navigatorRef }), "native");
+    equal(seen.length, 1, "the sheet was not opened");
+    assert(seen[0].url.endsWith("/"), "the share points at the site, never at /p/<id>");
+  });
+
+  test("⚠️⚠️ a browser that cannot take a file falls back rather than opening a sheet that fails", async () => {
+    const { sendShare } = await import("../ui/phone/share-send.js");
+    const file = new File([new Blob(["x"])], "b.png", { type: "image/png" });
+    const written = [];
+    // Every mobile browser has `navigator.share`; far fewer accept `files`. The ones that do not reject
+    // AFTER the sheet has opened, which the player watches happen.
+    const navigatorRef = { canShare: () => false, share: async () => assert(false, "the sheet opened") };
+
+    equal(
+      await sendShare(file, { navigatorRef, clipboardRef: { write: async (items) => written.push(items) } }),
+      "clipboard",
+    );
+    equal(written.length, 1, "nothing reached the clipboard");
+  });
+
+  test("⚠️ a cancelled sheet is not an error -- the mechanism worked", async () => {
+    const { sendShare } = await import("../ui/phone/share-send.js");
+    const file = new File([new Blob(["x"])], "b.png", { type: "image/png" });
+    const abort = Object.assign(new Error("cancelled"), { name: "AbortError" });
+    const navigatorRef = {
+      canShare: () => true,
+      share: async () => {
+        throw abort;
+      },
+    };
+
+    equal(await sendShare(file, { navigatorRef }), "native");
+  });
+
+  test("⚠️ anything that is not a cancellation is a real fault and travels", async () => {
+    const { sendShare } = await import("../ui/phone/share-send.js");
+    const file = new File([new Blob(["x"])], "b.png", { type: "image/png" });
+    const navigatorRef = {
+      canShare: () => true,
+      share: async () => {
+        throw new TypeError("the platform broke");
+      },
+    };
+
+    let raised = null;
+    try {
+      await sendShare(file, { navigatorRef });
+    } catch (error) {
+      raised = error;
+    }
+    assert(raised instanceof TypeError, "a genuine failure was swallowed as a cancellation");
+  });
+});

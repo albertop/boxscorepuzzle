@@ -45,8 +45,29 @@ CREATE TABLE client_errors (
     user_agent TEXT NOT NULL
 );
 
+-- One press of *Share* on a finished game. Its own table rather than a column on `events`, because
+-- the share happens after the event is uploaded and the insert that makes retries free ignores a second
+-- arrival of the same id -- so a `shared` column could never be filled in afterwards.
+--
+-- share_id comes from the client for the same reason event_id does. event_id here carries NO foreign
+-- key: events can arrive out of order or be lost, and a real share must not be refused because the game
+-- it came from has not uploaded yet.
+--
+-- channel is 'native' or 'clipboard' and is required. The two are not interchangeable, and this column
+-- records INTENT rather than reach -- the browser cannot tell whether a share was delivered.
+CREATE TABLE shares (
+    share_id   TEXT PRIMARY KEY,
+    device_id  TEXT NOT NULL,
+    puzzle_id  TEXT NOT NULL,
+    event_id   TEXT,
+    channel    TEXT NOT NULL,
+    shared_on  TEXT
+);
+
 -- The health check runs a real query against keep_schema, which always has exactly one row. An index is
 -- pointless on a one-row table; the point is that the table exists and the query does not error, which
 -- SELECT 1 alone cannot say.
 CREATE INDEX events_by_device ON events (device_id);
 CREATE INDEX events_by_calendar_date ON events (calendar_date);
+CREATE INDEX shares_by_puzzle ON shares (puzzle_id);
+CREATE INDEX shares_by_device ON shares (device_id);

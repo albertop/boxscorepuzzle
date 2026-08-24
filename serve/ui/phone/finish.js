@@ -80,7 +80,7 @@ export function checkBoard(game) {
  * ⚠️ **No aged-paper texture and no newsprint ground.** At 375px there is no room for decoration, and a
  * textured background lowers contrast exactly where the player wants to read names.
  */
-export function renderReveal(puzzle, record) {
+export function renderReveal(puzzle, record, { onShare = null } = {}) {
   const reveal = puzzle.reveal;
   const panel = document.createElement("div");
   panel.className = "reveal";
@@ -191,17 +191,34 @@ export function renderReveal(puzzle, record) {
   close.className = "reveal-close";
   close.textContent = text("reveal.close");
 
-  // ⚠️⚠️ **Disabled, not merely unwired, and that is the whole of the honesty here.** A button that
-  // looks pressable and does nothing is worse than one that is plainly not ready: the player presses
-  // it, nothing happens, and the next thing they doubt is whether their result was recorded. Disabled
-  // says *not yet* in the one language every platform already speaks.
+  // ⚠️⚠️ **Live since G.** It was `disabled` for weeks with a comment saying a control that looks
+  // pressable and does nothing is worse than one plainly not ready — that was right then and the
+  // reason it is gone is that the thing behind it exists, not that the argument changed.
+  //
+  // ⚠️ **Disabled while a share is in flight, and re-enabled in a `finally`.** Building the image
+  // fetches three stylesheets and three faces; a second press during that starts a second build and,
+  // on the native path, a second sheet. A failure must still give the button back or the player is
+  // left with a dead control and no way to retry.
   const share = document.createElement("button");
   share.type = "button";
   share.className = "reveal-share";
-  share.disabled = true;
   // ⚠️ The icon is decorative and the label carries the meaning, so it is hidden from the accessibility
   // tree — a screen reader announcing "image, Share" reads the same thing twice.
   share.append(shareIcon(), document.createTextNode(text("reveal.share")));
+  // ⚠️ **No handler and no enabled button when the caller supplies no action.** A second interface, or
+  // a test that renders the reveal on its own, gets the control it had before rather than one that
+  // throws on the first press.
+  share.disabled = !onShare;
+  if (onShare) {
+    share.addEventListener("click", async () => {
+      share.disabled = true;
+      try {
+        await onShare();
+      } finally {
+        share.disabled = false;
+      }
+    });
+  }
 
   actions.append(close, share);
   sheet.append(actions);

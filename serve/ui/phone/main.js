@@ -50,6 +50,8 @@ try {
     fresh: test?.startsFresh(mode) === true,
     storage: uplink.storage,
     outbox: uplink.events,
+    shares: uplink.shares,
+    device: uplink.device,
   });
   if (test) test.applyTestMode(mode, { ...shell, history });
 } catch (error) {
