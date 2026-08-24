@@ -28,11 +28,16 @@ VECTORS = json.loads((_ROOT / "serve" / "tests" / "package-vectors.json").read_t
 
 
 def _reference() -> dict[str, Any]:
-    manifest = json.loads((_ROOT / "serve" / "data" / "puzzles" / "manifest.json").read_text(encoding="utf-8"))
+    public = _ROOT / "serve" / "data" / "puzzles"
+    manifest = json.loads((public / "manifest.json").read_text(encoding="utf-8"))
     # ⚠️ Whatever is published, not a named id: the id is derived from the game and regeneration renames
     # it, which broke every vector on a missing file rather than on anything about the contract.
-    path = _ROOT / "serve" / "data" / "puzzles" / manifest["generation"] / f"{manifest['puzzles'][0]}.json"
-    return json.loads(path.read_text(encoding="utf-8"))
+    #
+    # ⚠⚠ **Flat since E1**, and the manifest no longer carries a generation. The public path holds
+    # `<id>.json`; `<generation>/<id>.json` is the *private* inventory's shape and never travels
+    # (`docs/calendar.md`). This was reading the private shape out of a directory that is now the
+    # served one -- which is the whole reason the served one had six packages in it.
+    return json.loads((public / f"{manifest['puzzles'][0]}.json").read_text(encoding="utf-8"))
 
 
 def _apply(document: dict[str, Any], path: str, value: object) -> None:

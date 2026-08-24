@@ -408,9 +408,14 @@ _PUBLISHED = Path(__file__).resolve().parents[2] / "serve" / "data" / "puzzles"
 
 
 def _shipped() -> list[object]:
-    """The packages actually on disk in the current generation — what a player receives."""
+    """The packages actually on the public path — what a player receives.
+
+    ⚠⚠ **Flat since E1, 2026-08-23.** `serve/data/puzzles/` is the *served root* now, written by
+    `publish.rotate`: it holds `<id>.json` and a manifest with no generation. `<generation>/<id>.json` is
+    the private inventory's shape and never travels (`docs/calendar.md`).
+    """
     manifest = json.loads((_PUBLISHED / "manifest.json").read_text(encoding="utf-8"))
-    return [read(_PUBLISHED / manifest["generation"] / f"{name}.json") for name in manifest["puzzles"]]
+    return [read(_PUBLISHED / f"{name}.json") for name in manifest["puzzles"]]
 
 
 class TestTheTutorialsTwoCasesSurviveToDisk:

@@ -5,6 +5,10 @@
 
 # Generated puzzle inventory — never enters Git, transferred to the VPS separately
 forge/inventory/
+# ⚠️ The reference batch's PRIVATE inventory, as of 2026-08-23. It holds all six signed packages and
+# their dated pointers; `publish.rotate` publishes two of them into serve/data/puzzles, and those two
+# ARE committed. Six in the deployed tree was the access model inverted -- two is what it allows.
+forge/reference-inventory/
 
 # Processed Retrosheet database and raw source files — rebuildable from the loader
 forge/data/

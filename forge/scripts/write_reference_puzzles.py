@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -110,7 +111,31 @@ on the new scale, because its rungs were picked on the old one.
 # ⚠️ `SEED` moved to `boxscore_forge.produce` with the core that uses it, and is imported above rather
 # than declared twice. §21 needs it fixed: a seed that varied per run would make the same game yield a
 # different puzzle, which is the double idempotence rule broken at its root.
-OUT = _ROOT / "serve" / "data" / "puzzles"
+OUT = _ROOT / "forge" / "reference-inventory"
+"""Where the reference batch goes. ⚠️⚠️ **It was `serve/data/puzzles` and that was a leak.**
+
+Six signed packages in the deployed tree is six public puzzles, and `docs/calendar.md` allows **two**.
+Nothing was being served from a VPS yet, so nothing had escaped — but the shape was the access model
+inverted, and the tree the browser reads is the one the model is about.
+
+**So this writes a private inventory now**, in the shape `publish.rotate` consumes — a generation
+directory, a signed manifest, and `days/<date>.json` pointers — and the rotation publishes two of them
+into `serve/data/puzzles`. ⚠️ **Development and production then draw from the same population by
+construction** rather than by resemblance: what the browser loads on the laptop is byte-for-byte what it
+will load on the VPS, produced by the same executable.
+
+⚠️ Gitignored, like `forge/inventory/`. The *rotated* two are what Git carries."""
+
+REFERENCE_FIRST = date(2026, 9, 1)
+"""The first date the reference pointers are dated from. **A fixed date, never `today`.**
+
+⚠️⚠️ **A committed development tree dated by the clock goes stale the next morning**, and the staleness
+is undetectable from inside the client by design (`serve/ui/phone/daily.js`). So it would read as a
+defect nobody can locate. A fixed date is honest: the tree says which day it was built for, the client
+serves it, and `publish.health` is what notices a *real* pointer has gone stale on a real deployment.
+
+⚠️ It matches `docs/calendar.md`'s first assigned date, which is a coincidence worth keeping: the two
+trees then talk about the same day when somebody is comparing them."""
 EPHEMERAL_OUT = _ROOT / "discovery" / "ephemeral-puzzles"
 """Where a throwaway batch goes. **Outside `serve/`**, so an untrusted writer mode cannot
 change the trusted namespace at all — which is stronger than a reader that refuses it."""
@@ -354,6 +379,36 @@ def _publish(staging: Path, expected: int, key: Ed25519PrivateKey, out: Path) ->
     return generation
 
 
+DAYS = "days"
+
+
+def write_pointers(generation_dir: Path, ids: list[str], generation: str, key: Ed25519PrivateKey) -> int:
+    """One signed pointer per date, so the reference batch is an inventory the rotation can read.
+
+    ⚠️⚠️ **The same document `build_inventory.write_pointers` writes, and the two are deliberately not
+    shared.** They are in one tree and could be; what stops it is that this one dates six boards from a
+    fixed day for development and that one dates the calendar. A shared helper would need a parameter
+    saying which, and the parameter is the whole difference — `docs/calendar.md` records what a wrong
+    generation on a pointer costs (v39-P1-01): a 404 on a legitimately assigned date, signed by the
+    forge, so the wrong pairing reads as authoritative.
+
+    ⚠️ **`generation` is this batch's**, and here that is not a simplification: a reference run produces
+    exactly one, so there is no top-up case to get wrong. The rotation still reads the field rather than
+    assuming, which is what makes it correct against a real inventory.
+    """
+    days = generation_dir / DAYS
+    days.mkdir(parents=True, exist_ok=True)
+    for stale in days.glob("*.json"):
+        # A rerun with fewer boards would otherwise leave pointers naming packages the batch no longer
+        # holds -- the rotation would then refuse, correctly, on a tree this script had just written.
+        stale.unlink()
+    for offset, puzzle_id in enumerate(ids):
+        when = (REFERENCE_FIRST + timedelta(days=offset)).isoformat()
+        document = sign_manifest({"date": when, "puzzle_id": puzzle_id, "generation": generation, "schema": 1}, key)
+        (days / f"{when}.json").write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    return len(ids)
+
+
 def refuse_second_direction(games: dict[str, str], game_id: str, name: str) -> None:
     """One game, one puzzle — stated about the batch that was actually written.
 
@@ -525,6 +580,9 @@ def main() -> None:
     # file, and a counter that says six.
     generation = _publish(staging, REFERENCE_BOARDS, key, out)
     print(f"{written} puzzles in {out / generation}, committed by replacing {MANIFEST}")
+    dated = write_pointers(out / generation, [package.puzzle_id for package in published], generation, key)
+    print(f"{dated} dated pointers in {out / generation / DAYS}/")
+    print(f"publish with:  uv run python -m publish --inventory {out} --public {_ROOT / 'serve' / 'data' / 'puzzles'}")
 
 
 if __name__ == "__main__":

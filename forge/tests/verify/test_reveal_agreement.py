@@ -236,7 +236,8 @@ class TestTheVersionMeansWhatItSays:
         """
         root = Path(__file__).resolve().parents[3]
         manifest = json.loads((root / "serve" / "data" / "puzzles" / "manifest.json").read_text(encoding="utf-8"))
-        current = root / "serve" / "data" / "puzzles" / manifest["generation"] / f"{manifest['puzzles'][0]}.json"
+        # ⚠️ Flat since E1: the served root holds `<id>.json`, and the manifest carries no generation.
+        current = root / "serve" / "data" / "puzzles" / f"{manifest['puzzles'][0]}.json"
         document = json.loads(current.read_text(encoding="utf-8"))
         assert document["schema"] == SCHEMA_VERSION, "the published set is not what this code writes"
 
