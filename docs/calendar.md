@@ -505,25 +505,39 @@ here so that a future change to how packages are named meets both reasons rather
 
 ---
 
-## ⬜ The cache rule per document — **a specification, not something in force**
+## ✔ The cache rule per document — **implemented by E3, 2026-08-24**
 
-⚠️⚠️ **Nothing enforces any of this today, and that is stated first on purpose.** Cache headers are a
-server's, there is no server, and `tools/dev_server.py` is not deployed — it turns caching off entirely,
-which is correct for development and is the **opposite** shape to production. This is the table **E3
-implements**, written here rather than in the plan because `docs/calendar.md` already owns the access
-model and one definition is the whole point.
+**`deploy/nginx/boxscorepuzzle.conf` is where these live and it is the only place they are written.**
+`forge/tests/test_nginx_serves_what_is_declared.py` starts that config over `serve/` in a container and
+requests every row below, so the table and the server block cannot disagree silently.
 
-⚠️ **E2 was folded into E3 for exactly this reason** (`docs/beta-0-plan.md`): a rule with no
-implementation and nothing to verify it against is a sentence in a document, and this project has
-recorded what becomes of those.
+⚠️ **This section read *a specification, not something in force* for a few hours**, which was true while
+E2 was folded into E3 and stopped being true when E3 was built. ⚠️⚠️ **E2 was folded for the reason the
+marking recorded**: a rule with no implementation and nothing to verify it against is a sentence in a
+document. That is exactly what the fold avoided — the table arrived with the thing that enforces it.
 
-| document | rule | why |
+⚠️ **`tools/dev_server.py` still caches nothing at all** and always will. It is not deployed, and the
+development answer is the **opposite** shape to production for two real ghost bugs' worth of reason.
+
+⚠️⚠️ **The first column is a URL rather than a description, and that is what makes this one definition
+instead of two.** `forge/tests/test_nginx_serves_what_is_declared.py` parses these rows and requests
+every one of them against the real server block. A column reading *the modules and CSS* would be
+readable and unusable, so the test would have to restate the mapping — and a restatement is the second
+copy this table exists to avoid.
+
+⚠️ **`<id>` is the only placeholder.** The test substitutes the id the public manifest actually names, so
+the row is about the package that is really being served rather than about a shape.
+
+| URL | `Cache-Control` | why |
 |---|---|---|
-| `today.json`, `yesterday.json` | **`no-store`** | they change daily, and **a stale pointer is indistinguishable from a rotation that did not run** |
-| `<id>.json` | **`public, max-age=31536000, immutable`** | a package cannot change: a different board gets a different id |
-| `manifest.json` (public) | **`no-store`** | written from the files actually placed; no browser reads it today, but it is on the public path and it names what is |
-| `/today` | **`no-store`** | it is the same pointer wearing a URL (`docs/serve-brief.md`, v36-P3-48) |
-| `/`, `/p/<id>`, the modules and CSS | **`no-store`**, or a short revalidation | they are the application, and a stale copy has twice refuted a change that was correct |
+| `/` | `no-store` | the application; a stale copy has twice refuted a change that was correct |
+| `/today` | `no-store` | it is the same pointer wearing a URL (`docs/serve-brief.md`, v36-P3-48) |
+| `/p/<id>` | `no-store` | the application again — the board page, not the board's data |
+| `/ui/phone/main.js` | `no-store` | the modules and the CSS, for the same reason |
+| `/data/puzzles/today.json` | `no-store` | it changes daily, and **a stale pointer is indistinguishable from a rotation that did not run** |
+| `/data/puzzles/yesterday.json` | `no-store` | the same, for the rollover window |
+| `/data/puzzles/manifest.json` | `no-store` | written from the files actually placed, so it moves with them |
+| `/data/puzzles/<id>.json` | `public, max-age=31536000, immutable` | **a package cannot change**: a different board gets a different id. The one thing here that caches, and it caches hard |
 
 ⚠️⚠️ **The reasoning is what survives a rename, and it had to.** E2.1 was written as *`manifest.json`
 never cached, `<generation>/<id>.json` cached for a year*, and **since E1 the public path is flat and the
@@ -544,13 +558,21 @@ week* sits on top of it.
 person to meet a slow first load relaxes it believing the exposure is a cache setting. It is not: it is
 which ids exist publicly.
 
-### ⬜ What must assert it, when E3 exists
+### ✔ What asserts it
 
-**Nothing can today** — there is no configuration to compare against. When there is, the check is the
-one the route set already has in a weaker form: **this table is the single definition, and something
-reads it and the server block and requires them to agree.** ⚠️ Until then a check would be one that
-cannot fire, and a check that cannot fire is indistinguishable from one that is broken — so the way it
-fails matters: *there is no configuration yet* and *the configuration disagrees* must not look alike.
+`forge/tests/test_nginx_serves_what_is_declared.py`, which starts the real config over `serve/` and
+requests every row. ⚠️⚠️ **It also asserts the route table's second half** — that nginx answers
+everything `tools/dev_server.py` tags `production` and **nothing** it tags `development`. A test
+checking only the first half passes an nginx that also serves `/t/<mode>`, which hands a player
+`?test=solved`.
+
+⚠️ **Verified by breaking it.** A wrong header, a missing route and `/t/<mode>` left reachable were each
+introduced in turn and each turned it red. **A config test that has never failed is indistinguishable
+from one that cannot.**
+
+⚠️ **It needs Docker and says so when there is none.** A skip that reads like a pass is the shape this
+project keeps closing, so the absence of a container runtime is reported as the reason rather than as a
+green run.
 
 ⚠️ **Nothing goes into `tools/dev_server.py`.** Production headers in a server whose entire purpose is
 to switch caching off would be two opposite rules in one file, and the development rule exists for two

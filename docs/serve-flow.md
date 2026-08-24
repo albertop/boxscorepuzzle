@@ -38,7 +38,9 @@ any of them. A landing page only the newcomer sees is a landing page for a produ
 - **A large button for today's puzzle, with the date.** ✔ **The date is real as of E1**: it comes from
   `today.json`, the signed pointer, and not from the visitor's clock. Two people in different zones see
   the same date on the same button.
-- **A secondary link, *how to play*, opening the tutorial.**
+- **A secondary link, *how to play*, opening the tutorial.** ⚠⚠ **It pointed at `tutorial.html` and the
+  tutorial had no URL**, so from `/` the link was a 404 — a page this document says is reachable at any
+  time, unreachable. `/tutorial` exists since E3, 2026-08-24.
 
 ### ⚠️ The button changes when today is already played
 

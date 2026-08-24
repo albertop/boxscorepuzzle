@@ -193,11 +193,28 @@ done twice on 2026-08-23, by me, without noticing.
 
 ---
 
+## ⚠️⚠️ One forge test needs Docker, and it skips rather than failing when there is none
+
+`forge/tests/test_nginx_serves_what_is_declared.py` starts nginx in a container over `serve/` and checks
+every URL the route table and the cache table declare. **Without a container runtime it skips, with the
+reason printed** — `docker is not runnable here`, or what `docker info` said.
+
+⚠️ **A skip that reads like a pass is the shape this project keeps closing**, so the distinction matters:
+the run says *there is no Docker*, never *the routes are fine*. GitHub's `ubuntu-latest` has Docker, so
+`ci-forge.yml` runs it for real; a machine without one is told what it did not check.
+
+⚠️ **No fifth workflow.** The test lives in `forge/tests/` and runs with the forge suite. The
+`deploy/` tree holds a configuration file and nothing executable, so there is nothing to lint, type or
+test on its own — the check that matters is this one, and it belongs where the declarations it compares
+already are.
+
 ## ⚠️⚠️ One forge test depends on `serve/` and on `tools/`, and the path filters cannot see that
 
 `forge/tests/test_dev_server_routes.py` starts `tools/dev_server.py` and asks it for pages under
-`serve/ui/phone/`. **`ci-forge.yml` skips `serve/`-only changes**, so a commit that renamed or removed
-`play.html` would not run it there.
+`serve/ui/phone/`; `forge/tests/test_nginx_serves_what_is_declared.py` does the same through nginx and
+also reads `docs/calendar.md` and `deploy/nginx/`. **`ci-forge.yml` skips `serve/`-only and
+documents-only changes**, so a commit that renamed `play.html` — or edited the cache table — would not
+run either of them there.
 
 **What still catches it:** the pre-push hook runs every tree on every push, `ci-browser.yml` runs on
 `serve/` changes and would fail on the missing page, and the weekly run is complete. **What does not

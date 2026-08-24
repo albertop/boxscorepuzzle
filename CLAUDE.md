@@ -64,7 +64,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **B** the hand-solve gate | ⬜ B1 done, **B2–B4 outstanding** | ⚠⚠ **this is what blocks beta 0** |
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
-| **E** serving for real | ▶ **E1b and E1 done, E3 next** | the two public paths and the routes over them; ⤴ **E2 folded into E3** — headers need a server |
+| **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
 | **F** deployment | ⬜ not begun | |
 | **G** the share | ⬜ not begun | last to build, **exempt from being cut** |
 
@@ -177,8 +177,20 @@ boxscorepuzzle/
 ├── forge/     ← generator, cwbox, SQL, validation, calendar (never leaves the laptop)
 ├── serve/     ← the client: browser engine, phone UI, static packages (deploys to VPS)
 ├── publish/   ← the serving side's executables: the daily rotation (deploys to VPS)
+├── deploy/    ← what the VPS needs and cannot run: the nginx server block (deploys to VPS)
 └── keep/      ← the data layer: devices, events, later accounts (deploys to VPS, port unpublished)
 ```
+
+⚠⚠ **`deploy/` arrived 2026-08-24 with E3's server block, and neither of the two obvious homes works.**
+Not `serve/`: that is the **served root**, so a configuration file inside it is a configuration file nginx
+hands to anybody who asks for it — the same argument that keeps `tools/dev_server.py` out of it. Not
+`publish/`: that tree is *the serving side's **executables***, and a config is not one. Stretching that
+sentence to cover it is the exact trap `publish/`'s own creation recorded — **a sentence that stays true
+by wording while changing in substance is worse than one that visibly needs rewriting.**
+
+⚠️ **It holds nothing executable and has no package**, so there is no fifth CI workflow: what checks it
+is `forge/tests/test_nginx_serves_what_is_declared.py`, which starts the config over `serve/` in a
+container and compares it against the two tables that declare what it must do.
 
 **A single private Git repository on GitHub: `boxscorepuzzle`.** One push backs up everything, which
 matters because the repository's primary job is being the backup.
@@ -187,8 +199,10 @@ matters because the repository's primary job is being the backup.
 human-solvability guarantee, which is trade secret (§16). Never push any part of it to a public gist,
 issue, or paste service.
 
-**No cross-imports between `forge/`, `serve/`, `publish/` and `keep/`.** ⚠️ **Four trees now**, and the
-rule that kept two apart is what keeps four apart: they share no code and no deployment cycle.
+**No cross-imports between `forge/`, `serve/`, `publish/` and `keep/`.** ⚠️ **Four code trees**, and
+the rule that kept two apart is what keeps four apart: they share no code and no deployment cycle.
+`deploy/` is a fifth directory and holds **no code at all**, which is why the rule names four — there is
+nothing in it to import.
 
 ⚠⚠ **`publish/` arrived 2026-08-23 and it is the serving side's executables** — the daily rotation now,
 the health endpoints at F3, the archive endpoint at beta 3, and the ingest step `serve/data/README.md`
@@ -433,6 +447,37 @@ defects were obvious in the first screenshot taken and neither was visible in an
 produced before it. `computer{action:"screenshot"}` is the instrument that adds nothing. **Any change
 to how something looks is verified with a picture of it**, not with an assertion about it and not with
 text assembled from it — and that is a step, not a habit.
+
+**⚠️⚠️ A test that asserts a response's bytes has not asked whether the page works.** `/p/<id>` shipped
+as a blank screen and the route test passed on it, every run, because it compared the served bytes
+against `play.html` and they matched **exactly, always, by construction of the rewrite.** The assertion
+was true and the page was dead: `main.js` was named relatively, resolved to `/p/main.js`, and the prefix
+rewrite answered *that* with `play.html` too — so the browser was handed HTML where it asked for a
+module, refused it on MIME, and drew an empty `#app` with no stylesheet.
+
+**The question it should have asked is what the artefact needs in order to function**, not what it is
+made of. For a page that is: *does everything this page names resolve, from the address the player is
+at?* The test reads the modules and stylesheets out of the served HTML now and requires each to answer
+200 with something that is not markup. **`serves the right bytes` and `works here` are different
+properties, and only one of them is what the URL is for.**
+
+**⚠️⚠️ And the fix that was half-applied is the other half of the lesson.** `daily.js`'s data path was
+made absolute at E1 **for exactly this reason** — the board page is served at two addresses, so a
+relative path depends on which one — and **the HTML was not carried with it.** Two things named files;
+one was repaired.
+
+**That is the family the five constructor guards belong to**, where the sixth field was missed and
+shipped a package the forge's own reader refuses. The repair is correct, the reasoning is written down,
+and it is applied to the instance in hand rather than to the *set*. **When a fix is about a category —
+things that name files, fields checked on construction, callers of a renamed symbol — enumerate the
+category before closing it**, and put the enumeration in the commit rather than in the intention.
+
+⚠️ **One instance found by accident means the class was never swept**, and the sweep found a second
+immediately: `ROUTES` held `play.html`, `index.html`, `tutorial.html`. Linked from `/`, those resolve to
+`/play.html` and `/tutorial.html` — **both landing buttons dead, on the address every visit lands at**,
+and the tutorial had no production URL at all. ⚠️⚠️ **The test that checked them fetched
+`../ui/phone/${file}`, prefixing the directory whose absence was the defect** — an instrument supplying
+the property under judgement, which is the padded text dump one more time.
 
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that

@@ -18,7 +18,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **B** the hand-solve gate | ⬜ **not met** | B1 is done and mine; B2–B4 are the operator's: afternoons of solving by hand |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
-| **E** serving for real | ⬜ **not met** | ✔ **E1b and E1 met** — the rotation and the health verdict as a **function** (its endpoint is F3), and the routes over the two public paths. ⤴ **E2 folded into E3**: cache headers are a server's and there is no server. ⬜ **E3 open** |
+| **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
 | **F** deployment | ⬜ | |
 | **G** the share | ⬜ | last to build, **exempt from being cut** |
 
@@ -807,11 +807,11 @@ stored** for the exclusion to be computable when the reads exist.
 
 ### ▶ What E1 left for E2 and F
 
-- ⚠️⚠️ **Two implementations of the routes, and nothing compares them.** `tools/dev_server.py` declares
-  the set — `REDIRECTS`, `BOARD_PATH`, `TEST_PATH` — and `forge/tests/test_dev_server_routes.py` drives a
-  real server against that declaration. **F writes the same rules again as an nginx server block**, and no
-  check can see both. It is the project's oldest defect shape, accepted knowingly: **F must copy from the
-  declaration rather than from memory**, and the reason is written in `do_GET` so F meets it there.
+- ✔ **The two implementations are compared now, and this item is closed.** `tools/dev_server.py`
+  declares `ROUTES`, each tagged `production` or `development`;
+  `forge/tests/test_dev_server_routes.py` drives the development server against it and
+  `forge/tests/test_nginx_serves_what_is_declared.py` drives nginx against **both halves of the tag**.
+  ⚠️ It was recorded here as accepted-and-unclosed for one day, and E3 is where it stopped being true.
 - ⚠️ **`/today` is not a 302.** A redirect status needs a request-time reader — forbidden on the play path
   by §23 — or a daily nginx reload, which is a moving part. If F wants the status code, that is the
   trade to argue then; it is not a defect to fix quietly.
@@ -851,10 +851,38 @@ becomes true, and where something can assert that it is.
   cache setting. **The enforcement exists today; the belt is waiting for something to thread it
   through.**
 
-### E3. nginx
+### ✔ E3. nginx — **the server block, built and tested 2026-08-24. Half of it is F's.**
 
-- Server block, TLS via certbot, rate limit per IP **without persisting IPs**, and the data layer
-  reachable only on the internal network.
+`deploy/nginx/boxscorepuzzle.conf`, a fifth sibling. ⚠️ **Not under `serve/`**: that is the served root,
+so a config file inside it is a config file nginx hands to anyone who asks. ⚠️ **And not in `publish/`**,
+which is *the serving side's executables* — a config is not an executable, and stretching that sentence
+is the trap `publish/`'s own creation note records.
+
+**✔ Verifiable on the laptop, and verified:**
+
+- the server block over `serve/`, in a container, at every URL both declarations name
+- every route's status and body — `/` and `/p/<id>` and `/today` answering 200, the board page's own
+  modules and stylesheets reachable **from the address the player is at**
+- every cache header against `docs/calendar.md`'s table, which the test parses rather than restates
+- `/ui/phone/*.html` giving **404** (v36-P3-48: implementation paths are never alternates)
+- an unknown `/p/<id>` giving the **server's 404** rather than a substitution (v36-P3-45)
+- ⚠️⚠️ **everything tagged `development` giving 404** — `/t/<mode>` in production hands a player
+  `?test=solved`, and a test asserting only the first half would pass an nginx that served it
+
+**⬜ Not verifiable here, and it is F's — named now rather than discovered at deployment:**
+
+| | why not here |
+|---|---|
+| TLS and certbot | no domain and no certificate |
+| DNS | no zone |
+| the `/api/events` and `/api/errors` proxy to `keep` with the shared token (F1.3b) | needs `keep` running and a deployment secret |
+| `keep` reachable only on the internal network | a property of the VPS's network, not of a file |
+| **IPs not persisted anywhere** | `access_log off` is a line and is checkable; *nowhere on the host* is not |
+| the rate limit's **number** | a limit tuned against a laptop is a figure with no measurement behind it (§7) |
+
+⚠️⚠️ **Those lines are absent from the config rather than present and unverified.** An untested line
+that looks finished is worse than a gap F has to fill deliberately — F inherits a config with a **named**
+untested half, which is the whole point of writing this down before building.
 
 ### ▶ Deliverable E — **the real routes and the real caching contract, running locally**
 
@@ -893,6 +921,11 @@ deployment is moving a known-good thing rather than discovering the difference i
   |---|---|---|
   | `docs/runbook-inventory.md` §5 | *"Copy the generation directory to the VPS. `forge/` never goes — **packages only**."* | `publish/` goes too, and the runbook is followed literally by somebody who has forgotten everything |
   | `CLAUDE.md` §33 | *"**Deployment ships `serve/` only** — generator code must never reach the VPS."* | the second half stays true and is the point; the first half does not |
+
+  ⚠️ **And `deploy/` makes it a third thing, added 2026-08-24.** E3's nginx server block lives there —
+  outside `serve/`, because a config inside the served root is a config nginx hands out. **Three
+  directories reach the VPS now**: `serve/`, `publish/` and `deploy/`. The rewrite F owes has to name
+  all three, and the half that must survive it is unchanged: *generator code must never reach the VPS*.
 
   ⚠️ **Deliberately not edited when `publish/` was built.** E1b is localhost-only, and §5 and §6b
   presuppose a serving VPS that F builds — editing them earlier would describe a deployment that does

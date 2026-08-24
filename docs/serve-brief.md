@@ -598,7 +598,18 @@ not one of the two public days, and the pages show `day.none` — **a different 
 and *there and refused* are different facts, and telling somebody their board is corrupt sends them to
 reload rather than to come back tomorrow. v36-P3-45, closed.
 
-## ⬜ Decision to record before anything is indexed: the URL and status-code contract — `v36-P3-48`
+## ✔ The URL and status-code contract — recorded before anything was built, implemented at E3
+
+⚠️⚠️ **Read this heading as the argument for the section, not as a status.** It was written as a
+decision to take *before* a server existed, precisely so the first nginx config would be written against
+a sentence rather than against the development server — and `deploy/nginx/boxscorepuzzle.conf` was.
+**Every row below is now asserted** by `forge/tests/test_nginx_serves_what_is_declared.py`.
+
+⚠️ **One row went stale within a day of E1 and nothing noticed** — `/today`, which said 302. A decision
+recorded before the work is exactly the kind that stops being re-read after it, which is the failure
+mode this section is otherwise the cure for.
+
+### The original entry, kept because the reasoning is what made it useful — `v36-P3-48`
 
 **URLs are the one thing that cannot be renamed after indexing**, only redirected from, forever. There
 is no production server yet, and `tools/dev_server.py` is the only executable statement of route

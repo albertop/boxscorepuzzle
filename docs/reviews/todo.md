@@ -1285,6 +1285,95 @@ inventory that may not exist.
 Both were refusing or timing out on healthy input. See the Pack A entry and the browser-suite entry.
 ---
 
+## 2026-08-24 — ⚠️⚠️ `/p/<id>` shipped as a blank page, and the route test passed on it
+
+**E1's canonical URL did not work.** `play.html` names its assets relatively — `main.js`, `board.css` —
+and a page served at `/p/409f...` resolves those against `/p/`. The dev server's prefix rewrite matched
+`startswith("/p/")`, so `/p/main.js` was answered with **`play.html` itself**: the browser asked for a
+module and was handed HTML, refused it on MIME, and rendered **an empty `#app` with no stylesheet.**
+
+**Two independent halves, both wrong:**
+
+| | |
+|---|---|
+| the pages named their assets relatively | so nothing could resolve from a second address |
+| the rewrite matched a bare prefix | so every one of those wrong addresses answered **200** with the wrong body |
+
+Either alone is visible. Together they produce a 200 for everything and a working-looking route.
+
+### ⚠️⚠️ The test passed throughout, and it is the shape this project records most
+
+`test_the_page_is_the_same_one_the_direct_address_serves` compared the bytes at `/p/<id>` against
+`play.html` and they matched — **exactly, always, by construction of the rewrite.** The assertion was
+true and the page was dead.
+
+**It asked *does this address serve the board page* and never *does the board page work here*.** That is
+the working-instrument-aimed-one-question-short shape `CLAUDE.md` already carries from the reveal's
+width checks: correct question, real DOM, true answer, and the property under judgement was not the one
+being measured.
+
+⚠️ **And `daily.js` had already met it.** Its data path was made absolute at E1 *for this exact reason* —
+the board page is served at two addresses, so a relative path depends on which one. **The HTML was not
+carried with it.** The fix was applied to one of the two things that name files, and the other was not
+looked at.
+
+### ⚠️⚠️ The sweep the instance demanded, and it found a second immediately
+
+**One instance found by accident means the class was never swept.** Two questions were asked of the
+whole tree.
+
+**Anything else naming a file relatively?** — **yes, and it was worse.** `ROUTES` in `daily.js` held
+`play.html`, `index.html`, `tutorial.html`. Linked from the landing page at `/`, those resolve to
+`/play.html` and `/tutorial.html`: **both buttons dead, on the address every visit lands at**, which is
+the entire way into the game. And `/tutorial` had **no production URL at all** while
+`docs/serve-flow.md` §1b says the tutorial is reachable from the landing page at any time.
+
+⚠️ **Safe, and checked rather than assumed:** `import "./board.js"` and CSS `url(...)` resolve against
+the **importing module's** or the **stylesheet's** URL, not the document's, so they are unaffected by
+which address served the page. Every one of them is under `/ui/phone/`.
+
+**Any other test comparing bytes instead of asking whether the artefact functions?** — the ROUTES one,
+and it was worse than a byte comparison: it fetched `../ui/phone/${file}`, **supplying the directory
+whose absence was the defect.** It could not have failed. It asserts the shape now — every value
+absolute, none ending `.html` — and `forge/tests/test_nginx_serves_what_is_declared.py` requests them
+from a server that has the routes, which is the only place the question is real.
+
+**Verified by breaking it**: with the filenames put back, the nginx test reports *the client links to
+play.html and nginx answers 400*.
+
+### What closed it
+
+- **Every page names its assets absolutely.** `/ui/phone/...`, not `main.js`.
+- **The rewrite is anchored**, `^/p/[0-9a-f]+/?$` — the same pattern `idInPath` uses, in both
+  implementations. A prefix that swallows everything under it is a soft-404 by another name: every
+  wrong address answering 200 with something that is not what was asked for.
+- **The test asks for what the page names.** It reads the modules and stylesheets out of the served HTML
+  and requires each to answer 200 with something that is not markup. Verified by putting the relative
+  paths back: it goes red naming `fonts.css`.
+
+⚠️ **Verified in a browser as well**, because the failure was a blank screen and no status code showed
+it: through nginx, `/today` → `/p/<id>` renders 169 cells with the stylesheet applied. The Browser pane
+was not displayed in that session, so this is DOM evidence rather than a picture — stated rather than
+glossed.
+
+---
+
+## 2026-08-24 — ⬜ The board's tab shows the player's date, not the puzzle's
+
+`main.js` sets the title with `shortDate(localIso(new Date()))` — **the visitor's own clock**, in
+user-facing text, on a board whose pointer may name a different day. On the development tree the pointer
+is 2026-09-02 and the tab reads *August 24*.
+
+⚠️ **It is the same class as `calendarDate`** — a date wearing the wrong clock — and it is deliberate in
+one respect: the title is applied **before** the puzzle loads, so a page whose puzzle fails still has a
+name (v36-P2-17). The honest fix is a generic title first and the calendar date once loaded, which
+touches the boot ordering.
+
+**Noticed while verifying E3's routes and written down rather than fixed**, because it is not E3. In
+production the two agree for most players most of the time and disagree across the rollover — which is
+the window `yesterday.json` exists for, so it is exactly when somebody is looking.
+---
+
 ## Where everything stands
 
 **40 reviews**, the last of them v40. ⚠⚠ **The finding total is deliberately not stated any more.**
