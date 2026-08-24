@@ -1,0 +1,17 @@
+# boxscore puzzle
+#
+# Two paths are disallowed here as well as carrying noindex in their own markup, and the duplication is
+# deliberate: a crawler that never fetches a page never reads its meta robots, so a puzzle URL arriving
+# from a shared link would be crawled before anything told it not to be.
+#
+# Section 7 keeps the teams and the date out of the URL and section 9 sells the archive. A crawlable
+# /p/<id> is a permanent public address for a puzzle meant to be one day old and then sold.
+
+User-agent: *
+Disallow: /p/
+Disallow: /today
+Disallow: /ui/
+Disallow: /engine/
+Disallow: /data/
+
+Sitemap: https://boxscorepuzzle.com/sitemap.xml

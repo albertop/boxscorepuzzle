@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Two pages, and that is the whole indexable site.
+
+  /p/<id> is deliberately absent: section 7 keeps the teams and the date out of the URL and section 9
+  sells the archive, so a puzzle has no permanent public address to list. /today is a redirect with no
+  content of its own.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://boxscorepuzzle.com/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://boxscorepuzzle.com/tutorial</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>

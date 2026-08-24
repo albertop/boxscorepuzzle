@@ -622,6 +622,27 @@ changed* — and that is a discipline rather than a gate.
 a narrow slice of it.** The slice is below. The general claim stands; the sentence that implied nothing
 could ever be written did not.
 
+### ⚠️⚠️ A file can be written successfully and contain the tool's own error page
+
+**`serve/favicon.svg` was 98 bytes of Chromium's XML parse-error screen, rasterised.** The comment
+block held em dashes written as `--`, which XML forbids inside a comment, so the browser refused the
+file and rendered *This page contains the following errors* — and the rasteriser screenshotted **that**,
+saved it as an icon, and reported `wrote favicon.ico (98 bytes)`.
+
+**Every signal was green.** The write succeeded. The exit code was zero. 98 bytes is small but an icon
+is small. **The only thing that said anything was opening the picture**, where the error page was in
+plain red text.
+
+⚠️ **It is the family this section is about, one level further in.** `nginx -t` reported on a config it
+was never given; `gh run list` reported on a commit it never matched; this reported on a document that
+was an error message. **In all three the tool did exactly what it was asked and could not say the
+subject was broken** — and here the subject was broken *by the file's own comments*, which no schema, no
+linter and no size check would look at.
+
+⚠️ **What caught it is the standing rule and not a new one:** *any change to how something looks is
+verified with a picture of it.* The picture was taken because the rule says to take it, not because
+anything looked wrong.
+
 ### ⚠️⚠️ The fourth arrived the same day, and this one DOES have a check
 
 **`gh run list --commit 7cc0518` returns nothing.** Not an error, not a warning, not a non-zero exit —

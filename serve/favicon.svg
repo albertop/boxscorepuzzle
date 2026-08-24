@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="boxscore puzzle">
+  <title>boxscore puzzle</title>
+  <desc>
+    The mark: a boxscore with one cell deduced.
+
+    It has to survive 16px, and that decides everything about it. A favicon is read at a size where
+    individual strokes disappear into texture, so the only things that carry are the ground colour, the
+    silhouette, and one high contrast element. Three columns by three rows is the most grid a 16px tile
+    holds before it blurs into a solid block.
+
+    The colours are the product's, not a palette chosen here. #1f362e is the header ground from
+    serve/ui/phone/tokens.css, the band across the top of every board, and white is the header ink. A
+    mark in colours the interface does not use is a mark that belongs to nothing.
+
+    The bright cell is the whole idea and there is exactly one. The product is deduction: a grid of
+    numbers where you work out the one you do not have. Two bright cells would read as a pattern; one
+    reads as the answer. It is bottom right because a boxscore's totals are, so the silhouette says "a
+    table that adds up" rather than "a window".
+
+    No digits. At 16px a numeral is three grey pixels, and a mark that needs to be read is a mark that
+    fails at the size it is actually used.
+
+    AT 16px THE DEDUCED CELL MERGES, and that was seen and priced rather than missed. Rendered at 16,
+    32, 48, 64, 128 and 180 and looked at on both a light and a dark ground: from 32px up the bright
+    cell separates cleanly and the mark reads as a boxscore with one answer in it. At 16px it reads as
+    a grid, which is still the product and still distinguishable from a ball or a diamond, but the idea
+    that makes it this product is gone. Accepted because a modern tab is 32px on any hidpi display and
+    16px is the icon in a bookmark list. If the 16px case ever matters more, the fix is fewer and
+    bigger cells, not a brighter one: the contrast is already maximal.
+
+    Written in desc rather than an XML comment on purpose: the first version put this in a comment,
+    every dash pair inside it made the file invalid XML, and the browser served a parse error page that
+    the rasteriser then turned into a 98 byte icon. The numbers said it was written. Only the picture
+    said it was an error page.
+  </desc>
+
+  <rect width="32" height="32" rx="7" fill="#1f362e"/>
+
+  <g fill="#ffffff" opacity="0.42">
+    <rect x="6"  y="6"  width="6" height="5" rx="1"/>
+    <rect x="13" y="6"  width="6" height="5" rx="1"/>
+    <rect x="20" y="6"  width="6" height="5" rx="1"/>
+    <rect x="6"  y="13" width="6" height="5" rx="1"/>
+    <rect x="13" y="13" width="6" height="5" rx="1"/>
+    <rect x="20" y="13" width="6" height="5" rx="1"/>
+    <rect x="6"  y="20" width="6" height="5" rx="1"/>
+    <rect x="13" y="20" width="6" height="5" rx="1"/>
+  </g>
+
+  <rect x="6" y="19" width="20" height="0.8" fill="#ffffff" opacity="0.55"/>
+
+  <rect x="20" y="20" width="6" height="5" rx="1" fill="#ffffff"/>
+</svg>

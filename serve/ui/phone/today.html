@@ -30,7 +30,34 @@
       the duplicate-URL space this route exists to collapse.
     -->
     <meta name="robots" content="noindex" />
-    <title>Boxscore Puzzle</title>
+    <!-- From the catalogue, not typed here. This page kept a title element with the words spelled in
+         after the other three had theirs removed for exactly that reason (C11, v36-P2-17): a
+         user-facing string in markup is invisible to every guard that reads `.js`, and the seam's blind
+         spot was a file extension. This file was in it.
+         `forge/tests/test_every_page_declares_itself.py` asserts it equals the catalogue's. -->
+    <title>boxscore puzzle — a daily baseball deduction</title>
+    <meta name="description" content="Rebuild today’s real major-league boxscore from the numbers that are left. One puzzle a day." />
+    <link rel="canonical" href="https://boxscorepuzzle.com/" />
+
+    <!-- Open Graph. og:image is static branding and never board state (`docs/serve-brief.md` 667). -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="boxscore puzzle" />
+    <meta property="og:title" content="boxscore puzzle — a daily baseball deduction" />
+    <meta property="og:description" content="Rebuild today’s real major-league boxscore from the numbers that are left. One puzzle a day." />
+    <meta property="og:url" content="https://boxscorepuzzle.com/" />
+    <meta property="og:image" content="https://boxscorepuzzle.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="boxscore puzzle" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="boxscore puzzle — a daily baseball deduction" />
+    <meta name="twitter:description" content="Rebuild today’s real major-league boxscore from the numbers that are left. One puzzle a day." />
+    <meta name="twitter:image" content="https://boxscorepuzzle.com/og-image.png" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#1f362e" />
     <link rel="stylesheet" href="/ui/phone/tokens.css" />
     <link rel="stylesheet" href="/ui/phone/landing.css" />
   </head>

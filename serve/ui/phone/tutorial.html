@@ -2,6 +2,42 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+    <!-- The declarative head. STATIC, and that is the whole point: `applyHead` sets the same
+         strings at runtime, and a crawler that does not execute scripts sees none of it. The
+         catalogue is still the source; `forge/tests/test_every_page_declares_itself.py` asserts
+         these match it, so this is two places with something checking rather than two places
+         drifting. -->
+    <title>How to play — boxscore puzzle</title>
+    <meta name="description" content="The five relations that solve every board, one at a time. No baseball knowledge needed.">
+    <link rel="canonical" href="https://boxscorepuzzle.com/tutorial">
+
+    <!-- Open Graph. og:image is STATIC BRANDING and never board state (`docs/serve-brief.md`
+         section 667): the scraper fetches server-side without the sharer's session, so a
+         dynamic image could not show their board even in principle, and section 7's rule that
+         the share never leaks the solution extends to a static image trivially and to a
+         dynamic one never. -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="boxscore puzzle">
+    <meta property="og:title" content="How to play — boxscore puzzle">
+    <meta property="og:description" content="The five relations that solve every board, one at a time. No baseball knowledge needed.">
+    <meta property="og:url" content="https://boxscorepuzzle.com/tutorial">
+    <meta property="og:image" content="https://boxscorepuzzle.com/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="boxscore puzzle">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="How to play — boxscore puzzle">
+    <meta name="twitter:description" content="The five relations that solve every board, one at a time. No baseball knowledge needed.">
+    <meta name="twitter:image" content="https://boxscorepuzzle.com/og-image.png">
+
+    <!-- The mark. SVG first for a tab that can take it, .ico because a browser asks for it
+         whether or not a page names one. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#1f362e">
+
 <!-- ⚠️⚠️ **Absolute asset paths, and relative ones left this page blank at `/p/<id>`.**
      A page served at more than one address cannot name its own files relatively: `main.js` from
      `/p/409f...` resolves to `/p/main.js`, which is not where it is. The dev server's prefix rewrite
