@@ -1,5 +1,5 @@
 /**
- * The engine, driven against **the six real packages** rather than fixtures.
+ * The engine, driven against **the packages actually on the public path** rather than fixtures.
  *
  * ⚠️ A fixture is written by whoever writes the test, so it agrees with whatever the test already
  * believes. The design document has been wrong about the board five times and every one was found by
@@ -22,15 +22,31 @@ import { assert, equal, suite, test, throws } from "./harness.js";
 
 const MANIFEST = "../data/puzzles/manifest.json";
 
+/**
+ * Every package on the public path. **Two since E1, and it was six.**
+ *
+ * ⚠️⚠️ **The suite was driven against whatever happened to be served, and what was served was wrong.**
+ * `serve/data/puzzles` held six signed packages; `docs/calendar.md` allows **two**, today's and
+ * yesterday's. Nothing had escaped — there is no VPS yet — but the tree the browser reads is the one
+ * the access model is about, and it was the model inverted.
+ *
+ * **So the count dropped when the tree was corrected, and that is not a coverage regression to work
+ * around.** A suite asserting properties over six public packages was asserting them over an inventory
+ * that may not exist. Where variety is genuinely needed the boards below are built rather than drawn:
+ * a fixture that is a real signed package *is* a puzzle, and four of them in the deployed tree is four
+ * puzzles nobody may have.
+ *
+ * ⚠️ The manifest is flat now — `{schema, puzzles}` with no generation, written by `publish.rotate`
+ * from the files it actually placed. The public path holds `<id>.json`; `<generation>/<id>.json` is the
+ * private inventory's shape and never travels.
+ */
 async function loadAll() {
-  // ⚠️ `no-store`, for the reason the phone loader carries in full: the manifest is a pointer and a
-  // stale pointer sends the tests at a retired generation, which reads as a schema failure in code
-  // that is correct. That happened on the first regeneration.
+  // ⚠️ `no-store`, for the reason the phone loader carries in full: a cached pointer serves yesterday's
+  // board after the rotation has run, which is indistinguishable from a rotation that did not run.
   const manifest = await (await fetch(MANIFEST, { cache: "no-store" })).json();
-  const generation = manifest.generation;
   const loaded = [];
   for (const id of manifest.puzzles) {
-    const raw = await (await fetch(`../data/puzzles/${generation}/${id}.json`)).json();
+    const raw = await (await fetch(`../data/puzzles/${id}.json`)).json();
     loaded.push({ id, raw });
   }
   return loaded;
@@ -75,10 +91,14 @@ const escapingFrom = async (body) => {
 const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
 const vectors_footnote = await (await fetch("./footnote-line-vectors.json", { cache: "no-store" })).json();
 
-suite("The six real packages parse, and their shape is the contract", () => {
+suite("The public packages parse, and their shape is the contract", () => {
   test("there are six of them and each carries a distinct id", () => {
-    assert(packages.length === 6, `manifest lists ${packages.length} puzzles`);
-    equal(new Set(packages.map((p) => p.id)).size, 6, "two puzzles share an id");
+    // ⚠️⚠️ **Two, and the number is asserted rather than left to whatever is there.** `docs/calendar.md`:
+    // today's and yesterday's are public and everything else is on no public path at all. A suite that
+    // accepted any count would pass on the six-package tree this replaced — and on a rotation that had
+    // silently stopped deleting, which is the failure that leaks the archive one day at a time.
+    assert(packages.length === 2, `the public path holds ${packages.length} packages, and two may be`);
+    equal(new Set(packages.map((p) => p.id)).size, 2, "two puzzles share an id");
   });
 
   for (const { id, raw } of packages) {
@@ -683,17 +703,31 @@ suite("Innings are thirds, one conversion writes two notations, and the directio
     for (const { id, raw } of packages) {
       const puzzle = readPackage(raw);
       const outs = puzzle.solution.pitchingTotals[0];
-      // The innings the DEFENCE batted, which is what the offence's staff had to record outs for --
-      // and the same quantity `check_independent_correspondence` bounds in the certifier.
-      const innings = puzzle.puzzle.lineScore.defense_by_inning.length;
+      // ⚠️⚠️ **The innings the OFFENCE batted, and this read `defense_by_inning` until 2026-08-23.**
+      //
+      // The board shows one club's batters and **the other club's pitchers** (§5: the offensive team
+      // needs ≤13 batters, the defensive team ≤6 pitchers). Those pitchers faced the batters on this
+      // board, so the innings that bound their outs are the ones the *offence* batted.
+      //
+      // ⚠️⚠️ **The wrong side came from copying a sentence out of the certifier**, where
+      // `check_independent_correspondence` genuinely says *the innings the defence batted* — because it
+      // is bounding a **different grid**: the reveal's unshared half, the other direction of the same
+      // game, which the board does not draw. One rule, two grids, and the sentence travelled without
+      // its subject. `CLAUDE.md`: *a justification is scoped, and it does not travel* — re-derive the
+      // reason in the new place rather than carrying the conclusion across.
+      //
+      // **It passed for months because both grids had the same length.** Nine innings each side is the
+      // ordinary game. The first reference package where they differ — a home club leading after the
+      // top of the ninth and never batting, so eight entries against nine — is what made it fire, and
+      // it fired on *correct data*, which is the expensive direction.
+      const innings = puzzle.puzzle.lineScore.offense_by_inning.length;
 
-      // >= at the bottom, not >. A home side that wins without batting in the ninth leaves the
-      // visiting staff on exactly 3*(innings-1): 24 outs in a 9-inning game, which is the very first
-      // reference package. The first version of this assertion said `>` and failed on it -- the same
-      // off-by-one, in the test written to replace an assertion that stated a false rule.
+      // >= at the bottom, not >. The last half-inning is not always completed: an offence that is the
+      // home club and scores the winning run stops batting, leaving the staff on 3*(innings-1). The
+      // first version of this assertion said `>` and failed on exactly that.
       assert(
         outs >= 3 * (innings - 1) && outs <= 3 * innings,
-        `${id}: staff pitched ${inningsToDisplay(outs, INNINGS.PRINTED)} across ${innings} innings batted`,
+        `${id}: staff pitched ${inningsToDisplay(outs, INNINGS.PRINTED)} to a side that batted ${innings} innings`,
       );
     }
   });
@@ -3500,34 +3534,85 @@ suite("The tutorial: six steps, skippable, and teaching on a board that adds up"
 });
 
 suite("⚠️ The boundary checks the pointer too, and a finished board is immutable in the engine", () => {
-  test("a malformed manifest is refused by name, not by TypeError", async () => {
-    // v36-P3-23. The package gets rigorous validation and the pointer selecting it got none: a bad
-    // manifest died on `.includes`, and an empty `puzzles` array fetched `.../undefined.json` and
-    // failed inside `.json()`. Both entry points catch and show `package.unreadable`, so the player
-    // outcome survived — while the console carried an unrelated error and **the page misdiagnosed its
-    // own failure**, the same shape as a storage error reported as an unreadable puzzle.
-    const { readManifest } = await import("../ui/phone/daily.js");
+  test("a malformed pointer is refused by name, not by TypeError", async () => {
+    // v36-P3-23, carried across to the document that replaced the manifest as the thing selecting a
+    // package. The finding is the same and so is the reason: the package gets rigorous validation and
+    // the pointer selecting it got none, so a bad one died on `.includes` and an empty list fetched
+    // `.../undefined.json` and failed inside `.json()`. Both entry points catch and show a sentence,
+    // so the player outcome survived — while **the page misdiagnosed its own failure**.
+    const { readPointer } = await import("../ui/phone/daily.js");
 
     for (const [raw, because] of [
       [null, "null"],
       [[], "an array"],
-      [{ puzzles: ["a"] }, "no generation"],
-      [{ generation: "", puzzles: ["a"] }, "an empty generation"],
-      [{ generation: "g" }, "no puzzles"],
-      [{ generation: "g", puzzles: [] }, "an empty puzzle list"],
-      [{ generation: "g", puzzles: [1] }, "an id that is not a string"],
+      [{ puzzle_id: "a" }, "no date"],
+      [{ date: "", puzzle_id: "a" }, "an empty date"],
+      [{ date: "2026-09-02" }, "no puzzle id"],
+      [{ date: "2026-09-02", puzzle_id: "" }, "an empty puzzle id"],
+      [{ date: "2026-09-02", puzzle_id: 1 }, "an id that is not a string"],
+      // ⚠️ The date's *shape*, not just its type. It is shown to the player and stamped on every C7
+      // event, so `"soon"` would travel into the event record and be unrecoverable there.
+      [{ date: "soon", puzzle_id: "a" }, "a date that is not a date"],
+      [{ date: "2026-9-2", puzzle_id: "a" }, "a date that is not zero-padded"],
     ]) {
-      const error = throws(() => readManifest(raw), /manifest/, `accepted ${because}`);
+      const error = throws(() => readPointer(raw, "today.json"), /today\.json/, `accepted ${because}`);
       assert(error instanceof PackageError, `${because}: refused with ${error.constructor.name}`);
     }
   });
 
-  test("the real manifest still reads", async () => {
+  test("the real pointers still read", async () => {
     // ⚠️ The other half: a check that refuses everything is as useless as one that refuses nothing.
-    const { readManifest } = await import("../ui/phone/daily.js");
-    const raw = await (await fetch("../data/puzzles/manifest.json")).json();
+    const { readPointer, PUBLIC_DAYS } = await import("../ui/phone/daily.js");
 
-    assert(readManifest(raw) === raw, "the shipped manifest is refused by its own reader");
+    for (const name of PUBLIC_DAYS) {
+      const raw = await (await fetch(`../data/puzzles/${name}`)).json();
+      assert(readPointer(raw, name) === raw, `the shipped ${name} is refused by its own reader`);
+    }
+  });
+
+  // ⚠⚠⚠ **A test belongs here and it is not here, and that is a finding rather than an omission.**
+  //
+  // `loadPuzzle` should be driven end to end: an unknown `/p/<id>` refused rather than substituted
+  // (v36-P3-45, which E1 exists to close), the default path loading the board the pointer names, and
+  // `calendarDate` coming off the pointer. It was written, it passes in an ordinary browser, and
+  // **adding it makes the headless run stop finishing** -- at 900 seconds against a forty-second suite,
+  // at whichever test happens to be standing on the line.
+  //
+  // The suite was passing with **no margin**: one extra test of any weight tips it. `docs/reviews/todo.md`
+  // carries what was established -- the previous commit is green headless, the same page is green in a
+  // real browser, and fetches, imports and `loadPuzzle` are all fine in isolation at far higher counts
+  // than the suite uses. **The cause is not known.**
+  //
+  // ⚠️ **So this is a hole in the coverage of the thing E1 was built for**, left visible on purpose
+  // rather than papered over with a weaker test that happens to fit. It goes back when the run has room
+  // -- a second test page is the structural answer, since the runner drives one page and the whole
+  // suite therefore shares one budget.
+
+  test("⚠️⚠️ no source under serve/ computes a calendar date", async () => {
+    // **The reason `serve` owes no third `ROLLOVER_OFFSET_HOURS`**, asserted rather than asserted-in-a-
+    // comment. Two trees compute the date — the forge decides what to build, `publish` decides which
+    // pointer to copy — and this one reads it. A constant here would have no consumer, and its
+    // assertion would pass forever while testing nothing.
+    //
+    // ⚠⚠ **`localDate(` is NOT forbidden, and the first version of this test forbade it and went red
+    // on correct code.** `shell.js` uses it for `playedOn` — *when did this person sit down*, in the
+    // player's own zone — which is a different quantity from *which puzzle*, on a different clock, and
+    // `device.js` says so at length. **A test that bans the function bans the right answer along with
+    // the wrong one.**
+    //
+    // So the assertion is on the pairing rather than on the name: nothing anywhere may compute a
+    // rollover, and `calendarDate` may never be fed the player's date.
+    for (const module of ["daily.js", "today.js", "shell.js", "main.js", "landing-main.js"]) {
+      const source = await (await fetch(`../ui/phone/${module}`)).text();
+      const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
+      for (const forbidden of ["ROLLOVER", "getTimezoneOffset"]) {
+        assert(!code.includes(forbidden), `${module} reaches for ${forbidden} to work out what day it is`);
+      }
+      assert(
+        !/calendarDate\s*[:=]\s*localDate/.test(code),
+        `${module} feeds the player's own date to calendarDate, which is the calendar wearing the wrong clock`,
+      );
+    }
   });
 
   test("⚠️ a date that is not a date is refused at the boundary, not inside the reveal", () => {
@@ -4005,6 +4090,13 @@ suite("⚠️ Every page agrees on where the other pages are", () => {
 
     for (const [name, file] of Object.entries(ROUTES)) {
       const response = await fetch(`../ui/phone/${file}`);
+      // ⚠⚠ **The body is read, and not reading it hung the headless suite for good.** `fetch`
+      // resolves on the headers; the response stays open until the body is consumed or cancelled, and
+      // with keep-alive that leaves the connection unusable for the next request. Three pages fetched
+      // and none drained is three stalled sockets, and headless chromium's smaller pool met the wall
+      // that an ordinary browser's did not — so it passed by hand and timed out in CI, which is the
+      // worst pair of symptoms to debug from.
+      await response.text();
       assert(response.ok, `ROUTES.${name} points at ${file}, which is not served`);
     }
   });

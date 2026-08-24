@@ -185,12 +185,16 @@
       "name": "a repeated slot reference",
       "mutate": [
         [
+          "slot_references[0]",
+          "5"
+        ],
+        [
           "slot_references[1]",
-          "1"
+          "5"
         ]
       ],
       "expect": "reject",
-      "because": "two rows answering to #1 makes a footnote attribution ambiguous, which is the field's whole purpose"
+      "because": "two rows answering to #5 makes a footnote attribution ambiguous, which is the field's whole purpose. BOTH entries are written on purpose: setting only the second produces a repeat only when the board happens to hold the matching value at the first. It did, for months, and stopped the day a regenerated board opened with a shared slot -- so the vector was passing on a property of the reference package rather than on anything it asserts."
     },
     {
       "name": "metadata absent",

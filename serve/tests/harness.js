@@ -66,6 +66,12 @@ export async function run(into) {
     section.querySelector("h2").textContent = group.name;
     for (const item of group.cases) {
       const line = document.createElement("p");
+      // ⚠⚠ **The running test's name, published before it runs.** A section is appended to the page
+      // only when its whole suite finishes, so *the last thing rendered* names the last suite that
+      // COMPLETED -- and a hang inside the next one leaves no trace at all. On 2026-08-23 that turned a
+      // single hung test into an hour of bisecting: the runner reported a silent timeout, the console
+      // was empty, and the page's own text pointed several tests too early.
+      globalThis.__running = `${group.name} / ${item.name}`;
       try {
         await item.body();
         line.className = "pass";
@@ -86,5 +92,6 @@ export async function run(into) {
   into.prepend(summary);
   // Read by the harness driver rather than scraped from the page text.
   globalThis.__results = { passed, failures };
+  globalThis.__running = null;
   document.title = summary.textContent;
 }

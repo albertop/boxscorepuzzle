@@ -13,7 +13,7 @@
 
 import { PackageError } from "../../engine/package.js";
 import { boot } from "./shell.js";
-import { loadPuzzle } from "./daily.js";
+import { NoPuzzle, loadPuzzle } from "./daily.js";
 import { localIso, shortDate, text } from "../../engine/strings.js";
 import { applyHead } from "./head.js";
 import { startUplink } from "../../engine/uplink.js";
@@ -58,8 +58,12 @@ try {
   const message = document.createElement("p");
   message.style.padding = "1rem";
   // The player sees the catalogued sentence; the console keeps what actually went wrong.
-  message.textContent = text("package.unreadable");
+  // ⚠⚠ **Two sentences, because *nothing there* and *there and refused* are different facts.**
+  // `NoPuzzle` is an absent or non-public address; `PackageError` is a document that arrived and was
+  // rejected. Telling a player their board is corrupt when it simply is not today's sends them to
+  // reload instead of to come back tomorrow -- the soft-404 wearing a sentence.
+  message.textContent = text(error instanceof NoPuzzle ? "day.none" : "package.unreadable");
   app.append(message);
-  if (error instanceof PackageError) console.error("package refused:", error.message);
+  if (error instanceof PackageError || error instanceof NoPuzzle) console.error("no board:", error.message);
   else throw error;
 }

@@ -9,7 +9,7 @@
  * removed after a check, the board being redrawn without selection, *See the boxscore* replacing the
  * pad, a restored finished session opening the reveal. None of it was exercised. v31-P2-01.
  *
- * `main.js` could not be imported without running it — it fetches a manifest at the top level and
+ * `main.js` could not be imported without running it — it fetches a pointer at the top level and
  * mounts into `#app`. Everything here takes its boundaries as arguments instead: the **root element**,
  * the **clock**, the **store** and the **document**. That is what makes the shell testable, and it is
  * also what a second interface will need (§33: one core, three screens).
@@ -62,9 +62,14 @@ export function boot({
   // event is the engine's to produce and the engine must not reach for either: it does not know what day
   // it is (C4) and it has no storage of its own.
   //
-  // ⚠️ `calendarDate` comes from the loader and is **null until `/today` exists** (E1). A null is the
-  // honest value — the alternative is `localDate(now)`, which would be *the player's* date wearing the
-  // calendar's name and would be wrong for anybody playing the archive or across a rollover.
+  // ⚠⚠ `calendarDate` comes from the loader, and since E1 it is **the date on the signed pointer** —
+  // written by the forge at generation, copied into the served root by `publish.rotate`. It is not
+  // computed here and it must never be: the alternative is `localDate(now)`, which would be *the
+  // player's* date wearing the calendar's name and would be wrong for anybody across a rollover.
+  //
+  // ⚠️ The default stays `null` rather than becoming required, because a caller that has no pointer
+  // — the tutorial's made-up board, a test — has no honest date to give, and `null` says so. What
+  // changed is that the *player's* path always has one.
   const game = createGame(puzzle, clock, {
     deviceId: deviceId(storage),
     calendarDate,

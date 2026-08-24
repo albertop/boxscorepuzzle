@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!--
+      /today — the redirect, and it is the whole of C6's second half.
+
+      ⚠️⚠️ **A static page rather than a service, because `/today` is the play path.** §23 forbids a
+      backend dependency there: a process answering this address is a process whose failure takes away
+      the only door into the game. `publish` is allowed to be an executable precisely because it is not
+      here — it runs once a day, writes files and exits, and if it dies the previous day's files still
+      serve.
+
+      ⚠️ **So this is not a 302 and that is a known cost.** A real redirect status needs something that
+      reads `today.json` per request, or an nginx reload per day. The first is the dependency above; the
+      second is a moving part in F. What this gives up is a cacheable redirect and a crawler-friendly
+      one, on a page nobody links to twice.
+
+      ⚠️ `noindex`, because the canonical address is `/p/<id>` (C6) and two addresses for one board is
+      the duplicate-URL space this route exists to collapse.
+    -->
+    <meta name="robots" content="noindex" />
+    <title>Boxscore Puzzle</title>
+    <link rel="stylesheet" href="tokens.css" />
+    <link rel="stylesheet" href="landing.css" />
+  </head>
+  <body>
+    <main id="today"></main>
+    <script type="module" src="today.js"></script>
+  </body>
+</html>

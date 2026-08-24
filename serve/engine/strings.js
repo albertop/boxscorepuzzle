@@ -82,6 +82,14 @@ const en = {
   "keypad.fraction_denominator": "3",
 
   "package.unreadable": "This puzzle could not be read.",
+  // ⚠⚠ **A different sentence from the one above, because they are different facts.** *Unreadable*
+  // says a package arrived and was refused; this says **nothing was there to read** -- the pointer is
+  // absent, or the address names a puzzle that is not one of the two public days.
+  //
+  // Collapsing them was the tempting move and it is the soft-404 wearing a sentence: a player who
+  // followed a friend's link to a board that is no longer public would be told the puzzle is corrupt,
+  // which sends them to reload rather than to come back tomorrow.
+  "day.none": "There is no puzzle at this address today.",
 
   // ---- finishing -------------------------------------------------------------------------------
   "done.check": "Check",
