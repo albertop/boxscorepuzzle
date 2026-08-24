@@ -22,7 +22,7 @@ import { browserStorage, createStore } from "../../engine/store.js";
 import { deviceId, localDate } from "../../engine/device.js";
 import { eventId } from "../../engine/outbox.js";
 import { shareRecord } from "../../engine/share.js";
-import { checkBoard, renderReference, renderReveal } from "./finish.js";
+import { checkBoard, formatDuration, renderReference, renderReveal } from "./finish.js";
 import { sendShare } from "./share-send.js";
 import { shareImage } from "./share-image.js";
 import { applySolvedTitle } from "./head.js";
@@ -304,7 +304,9 @@ export function boot({
   const shareResult = async (record) => {
     const image = await shareImage(puzzle, game);
     const file = new File([image], "boxscorepuzzle.png", { type: "image/png" });
-    const channel = await sendShare(file);
+    // ⚠️ The same `formatDuration` the reveal and the image use. One result must not have three
+    // numbers, and the sentence beside the image is where a mismatch would be most visible.
+    const channel = await sendShare(file, formatDuration(record.duration_ms));
     // ⚠️ `event_id` is the game's own id when there is a queue and null when there is not -- present
     // and null, never absent, which is what `keep` refuses by name.
     shares?.add(

@@ -14,7 +14,7 @@
  * `keep-api.md` states beside the column so nobody reads the figure as reach.
  */
 
-import { text } from "../../engine/strings.js";
+import { fill, text } from "../../engine/strings.js";
 
 /**
  * Where the share points. **The image says what was done; this says where to go and do it.**
@@ -38,10 +38,14 @@ const DESTINATION = () => new URL("/", location.href).href;
  * not reach the error queue or surface as a failure: the mechanism worked, and this returns `native`
  * because that is what it is measuring.
  *
+ * ⚠️ **`elapsed` is required and has no default.** A default would be a share going out with somebody
+ * else's time in it, or with an empty one — and the caller always has the record, so there is no case
+ * where a sensible default exists.
+ *
  * @returns {Promise<"native" | "clipboard">}
  */
-export async function sendShare(file, { navigatorRef = navigator, clipboardRef = navigator.clipboard } = {}) {
-  const payload = { files: [file], text: text("share.text"), url: DESTINATION() };
+export async function sendShare(file, elapsed, { navigatorRef = navigator, clipboardRef = navigator.clipboard } = {}) {
+  const payload = { files: [file], text: fill("share.text", { time: elapsed }), url: DESTINATION() };
   if (navigatorRef?.canShare?.({ files: [file] }) && navigatorRef.share) {
     try {
       await navigatorRef.share(payload);

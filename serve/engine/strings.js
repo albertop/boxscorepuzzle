@@ -121,7 +121,16 @@ const en = {
   // already carries the board and the three figures; this is the sentence a messaging app puts above
   // it, so it says what the thing is to somebody who has never seen one. It must not name the game,
   // the teams or the date — the recipient is a future player (§7).
-  "share.text": "I rebuilt this boxscore from arithmetic.",
+  //
+  // ⚠️⚠️ **It carries the time, so it goes through `fill` and not `text`.** An unfilled `{time}` throws
+  // rather than shipping — a share whose sentence read `in {time}` would go out to a stranger, once,
+  // and there is no second first impression. The value is `formatDuration`'s, the same one the reveal
+  // and the image print, so one result cannot be three numbers.
+  //
+  // ⚠️ *Your turn* is the whole growth mechanism in two words: the image says what was done and this
+  // says the recipient can do it. Naming the puzzle rather than describing the act is deliberate —
+  // somebody who has never seen one needs a thing to look for.
+  "share.text": "Solved today's Boxscore Puzzle in {time}. Your turn.",
   // ⚠️ Beside the time, because a shared result has to carry both. One minute with three hints and one
   // minute with none are two different results, and that is the whole reason hints are allowed at all.
   // ⚠️ **"Checks failed", and it read "Tries" for one commit.** The line counts presses of *Check* on a

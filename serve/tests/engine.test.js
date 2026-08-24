@@ -4801,9 +4801,13 @@ suite("The share: what leaves the device, and what must not", () => {
       share: async (payload) => seen.push(payload),
     };
 
-    equal(await sendShare(file, { navigatorRef }), "native");
+    equal(await sendShare(file, "1:23", { navigatorRef }), "native");
     equal(seen.length, 1, "the sheet was not opened");
     assert(seen[0].url.endsWith("/"), "the share points at the site, never at /p/<id>");
+    // ⚠️ The time is in the sentence, and it is the player's. A share reading `in {time}` would go to
+    // a stranger once, and there is no second first impression -- `fill` throws rather than ship it.
+    assert(seen[0].text.includes("1:23"), `the elapsed time is missing: ${seen[0].text}`);
+    assert(!seen[0].text.includes("{"), `an unfilled placeholder survived: ${seen[0].text}`);
   });
 
   test("⚠️⚠️ a browser that cannot take a file falls back rather than opening a sheet that fails", async () => {
@@ -4815,7 +4819,7 @@ suite("The share: what leaves the device, and what must not", () => {
     const navigatorRef = { canShare: () => false, share: async () => assert(false, "the sheet opened") };
 
     equal(
-      await sendShare(file, { navigatorRef, clipboardRef: { write: async (items) => written.push(items) } }),
+      await sendShare(file, "1:23", { navigatorRef, clipboardRef: { write: async (items) => written.push(items) } }),
       "clipboard",
     );
     equal(written.length, 1, "nothing reached the clipboard");
@@ -4832,7 +4836,7 @@ suite("The share: what leaves the device, and what must not", () => {
       },
     };
 
-    equal(await sendShare(file, { navigatorRef }), "native");
+    equal(await sendShare(file, "1:23", { navigatorRef }), "native");
   });
 
   test("⚠️ anything that is not a cancellation is a real fault and travels", async () => {
@@ -4847,7 +4851,7 @@ suite("The share: what leaves the device, and what must not", () => {
 
     let raised = null;
     try {
-      await sendShare(file, { navigatorRef });
+      await sendShare(file, "1:23", { navigatorRef });
     } catch (error) {
       raised = error;
     }
