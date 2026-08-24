@@ -802,7 +802,15 @@ def _refuse_a_different_board(entry: Entry, before: dict[str, object], after: di
     make every board look changed and the check would be dropped as noisy. Everything the signature is
     *over* is compared instead, field by field, which is the stronger statement.
     """
-    old_metadata = _metadata(before)
+    # ⚠️⚠️ **Stripped from BOTH sides, and it was stripped from one.** This was written for the original
+    # pass, where the published package had no admissibility facts and the rebuilt one did — so removing
+    # them from the new side made the two comparable. **They are on both sides now**, since the
+    # 2026-08-23 restamp, and removing them from only the new one made every package differ by
+    # construction: the schema-6 pass refused all 150 on its first board.
+    #
+    # ⚠️ These are the fields this pass is *allowed* to write, so they are excluded from the comparison
+    # symmetrically rather than compared against an assumption about which side has them.
+    old_metadata = {name: value for name, value in _metadata(before).items() if name not in ADMISSIBILITY}
     new_metadata = {name: value for name, value in _metadata(after).items() if name not in ADMISSIBILITY}
     # ⚠️ The rebuilt reveal minus what schema 6 adds, so an addition is not read as a different board.
     # Everything else in the block is still compared, including the printed boxscore.
