@@ -233,6 +233,215 @@ one is, void it and leave the assignment.
 
 ---
 
+## 5b. Standing up the stack on the VPS — **the one-time deployment**
+
+**Done once, on 2026-08-24, for `boxscorepuzzle.com`.** Written to be followed literally by somebody who
+has forgotten everything, because §5 above reintroduced the archive hole once by being read that way.
+
+⚠️⚠️ **The order matters in three places and each is called out.** Everything else can be done in any
+order.
+
+### The pieces
+
+| | what | where it runs |
+|---|---|---|
+| `bxcpze-serve` | nginx over the client, the routes, the cache rule, the `/api/` proxy | container, `127.0.0.1:3005` |
+| `bxcpze-keep` | the data layer | container, **no published port** |
+| `bxcpze-scheduler` | ofelia, its own, **not dglweb's** | container |
+| `bxcpze-publish` | the rotation. Runs once a day and exits | container, created by the scheduler |
+| the host's nginx | TLS, rate limit, security headers | the VPS itself |
+
+### 1. DNS
+
+`A` records for `boxscorepuzzle.com` and `www.boxscorepuzzle.com`. **First**, because certbot validates
+over HTTP and the name must resolve.
+
+    dig +short boxscorepuzzle.com
+
+### 2. The database and its role
+
+⚠️ **`bxcpze_keep`, not `keep`.** The VPS's Postgres is shared with four other sites; a database called
+`keep` claims a generic name in somebody else's instance. Underscore, not hyphen: a hyphen in a Postgres
+identifier needs double quotes at every use, for ever.
+
+    docker exec -it postgres-postgres-1 psql -U postgres -c "CREATE DATABASE bxcpze_keep;"
+    docker exec -i postgres-postgres-1 psql -U postgres -d bxcpze_keep < keep/migrations/001-initial.sql
+
+Then the role. ⚠️⚠️ **`SELECT, INSERT` and nothing else** — no `UPDATE`, no `DELETE`. C7 makes the event
+record irreversible, and this is the database enforcing it rather than the code:
+
+    CREATE ROLE bxcpze_keep LOGIN;
+    GRANT CONNECT ON DATABASE bxcpze_keep TO bxcpze_keep;
+    \c bxcpze_keep
+    GRANT USAGE ON SCHEMA public TO bxcpze_keep;
+    GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO bxcpze_keep;
+    ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+      GRANT SELECT, INSERT ON TABLES TO bxcpze_keep;
+
+The password is set interactively so it never enters shell history:
+`psql -U postgres` then `\password bxcpze_keep`.
+
+**Verify both directions**, because a grant that does not bite reads exactly like one that does:
+
+    psql -U bxcpze_keep -d bxcpze_keep -c "SELECT version FROM keep_schema;"   -- must say 1
+    psql -U bxcpze_keep -d bxcpze_keep -c "DELETE FROM events;"                -- must say permission denied
+
+⚠️ Those run over the container's Unix socket, which usually needs no password. **The TCP path is what
+`keep` uses**, so confirm the password works there too or the container fails to start for a reason that
+looks like a network problem.
+
+### 3. Build and transfer the images
+
+On the **laptop**, one per image:
+
+    .\tools\create_docker_image.ps1 -Image serve   -Version x.y.z
+    .\tools\create_docker_image.ps1 -Image keep    -Version x.y.z
+    .\tools\create_docker_image.ps1 -Image publish -Version x.y.z
+
+⚠️⚠️ **They are built here and never on the VPS.** A Docker **build context is a copy**: `docker build`
+ships the whole context to the daemon, so building `serve` on the server would put the repository there
+— `forge/` included — even though the image itself carries only `serve/`. `.dockerignore` is the second
+guard, an acceptance list, and the script refuses to build without it.
+
+Transfer `docker_images/` and run the three load scripts, which travel inside it. **They ask Docker
+whether the tag landed** rather than trusting the exit code.
+
+### 4. ⚠️⚠️ The published volume's ownership — **the step that is easy to skip**
+
+**Skip this and the rotation fails, every day, silently until somebody reads a log.**
+
+    docker run --rm -v boxscorepuzzle_puzzles:/p alpine chown -R 10002:10002 /p
+
+**Why it is needed at all:** Docker takes a **new** named volume's ownership from the image that first
+populates it, and that is `serve`. `serve.Dockerfile` chowns its copy of the published tree to 10002 —
+the uid the rotation runs as — so a volume created **after** that change is already correct.
+
+⚠️ **This step exists for a volume created before it.** `boxscorepuzzle_puzzles` was created on the
+first deploy, when `serve` still left the tree root-owned, and **an existing volume is never
+re-populated**: Docker only copies from the image when the volume is empty.
+
+**What the failure looks like, so it is recognised rather than debugged:**
+
+    PermissionError: [Errno 13] Permission denied: '/srv/public/<id>.json.pending'
+
+The container exits non-zero, the site keeps serving the old two packages perfectly, and **nothing else
+reports anything**. The inventory health endpoint is built to notice an empty public path; this one is
+not empty, it is stale — which is the state it cannot see.
+
+**How to tell it is done:**
+
+    docker run --rm -v boxscorepuzzle_puzzles:/p alpine ls -ln /p   # the numeric owner must be 10002
+
+### 5. The private inventory
+
+    /srv/boxscorepuzzle/inventory/     <- the generation directories from §5 above
+
+⚠️ **Not under the served root and not in any image.** Five months is a few megabytes, so it travels the
+same way the tars do — and an image carrying it would ship the whole archive on every deploy of a
+fifty-line program. The rotation mounts it **read-only**: `forge` on the laptop is the only thing that
+may write an inventory.
+
+### 6. The scheduler's config
+
+    sudo install -D -m 644 deploy/ofelia/rotation.ini /srv/boxscorepuzzle/ofelia/config.ini
+
+⚠️⚠️ **Its `image =` line names the version, and ofelia does not interpolate environment variables.**
+A deploy that loads a new `bxcpze-publish` and does not edit that line keeps running the old rotation —
+successfully, printing normally, exiting zero. `tools/deploy_bxcpze_publish_image.sh` refuses to finish
+while the two disagree, **but only on that path**: editing the INI by hand bypasses it. The design that
+would close it is recorded in the INI itself under *the option not taken*.
+
+### 7. The stack
+
+Portainer → *Stacks → Add stack*, named **`boxscorepuzzle`** — the volume takes its prefix from that
+name. Paste `deploy/compose.yaml`. Four variables, none with a default:
+
+    BXCPZE_SERVE_VERSION   BXCPZE_KEEP_VERSION   KEEP_SHARED_TOKEN   KEEP_DATABASE_URL
+
+⚠️ `publish` is **not** a service and has no variable here: the scheduler creates its container from the
+image the INI names, and deletes it afterwards.
+
+### 8. The host's nginx
+
+⚠️⚠️ **The zone before the site file.** A `limit_req` naming a zone that does not exist stops nginx from
+starting, and that takes every site on the box down, not this one.
+
+In `conf.d/`: `limit_req_zone $binary_remote_addr zone=bxcpze:10m rate=100r/s;`
+
+Then the site block — **one `location`, and it proxies and nothing else**. The routes, the cache
+headers and the `/api/` block all live in the container's config, which is the only place
+`forge/tests/test_nginx_serves_what_is_declared.py` can check them. A copy in the host block would be a
+second definition of a tested rule.
+
+⚠️ **`www` must not redirect before certbot runs.** HTTP-01 fetches a token from
+`http://www.…/.well-known/…`; a redirect to the apex sends the validator to a host that does not have
+that token, and issuance fails in a way that reads like a DNS problem. Serve both names, get the
+certificate, **then** add the redirect.
+
+    certbot --nginx -d boxscorepuzzle.com -d www.boxscorepuzzle.com
+
+---
+
+## 5c. ⚠️⚠️ Verify the rotation — **and the retirement is the one that matters**
+
+Run it once by hand rather than waiting for 08:15 UTC:
+
+    docker run --rm \
+      -v /srv/boxscorepuzzle/inventory:/srv/inventory:ro \
+      -v boxscorepuzzle_puzzles:/srv/public \
+      bxcpze-publish:x.y.z
+
+**What a good run says:**
+
+    rotated /srv/public to 2026-09-02
+      published: 2026-09-02, 2026-09-01
+      public now: 01b5a86231b30138, 409fad7a93cd8267
+      retired: d523dfdbc81c5ec2
+      health: green
+
+**Read all four lines. They are four different claims:**
+
+| line | what it establishes |
+|---|---|
+| `rotated … to <date>` | the serving date it decided, which is `now(UTC) + ROLLOVER_OFFSET_HOURS` |
+| `published` | it found pointers for today and yesterday |
+| **`retired`** | ⚠️⚠️ **it removed what should no longer be public** |
+| `health: green` | the public path holds what it should — read by the job itself, not left for a dashboard |
+
+### Why `retired` is the line that carries the access model
+
+**§9 sells the archive and §23 makes the day's puzzle a static file, and those pull opposite ways: a
+static file on a public path cannot be sold.** The resolution is that only today's and yesterday's
+packages exist on the public path — and *removing the third* is the whole of the enforcement.
+
+⚠️⚠️ **It is the one that fails silently.** A rotation that publishes correctly and retires nothing
+leaves the site working perfectly: the right puzzle is up, every check passes, players notice nothing.
+**And the archive grows one day at a time, permanently, on a public URL.**
+
+**So confirm it against the directory rather than against the log line:**
+
+    docker run --rm -v boxscorepuzzle_puzzles:/p alpine ls /p
+
+**Exactly five files**: two packages, `manifest.json`, `today.json`, `yesterday.json`. **A sixth is the
+leak**, whatever the log said.
+
+⚠️ `rotate()` is built by difference rather than by deleting a remembered third day — it computes the
+set that should be there and removes whatever else it finds. **So a run that has been broken for a week
+repairs the whole week the first time it succeeds**, which is what makes a missed run recoverable
+instead of permanent. It also means the check above is meaningful after *any* run, not just the first.
+
+### Then from outside
+
+    curl -sI https://boxscorepuzzle.com/data/puzzles/today.json | grep -i cache-control   # no-store
+    curl -s https://boxscorepuzzle.com/data/puzzles/manifest.json | head -c 200
+
+⚠️ And **the day after**, once: the scheduler is the half that has not been proved by running the job by
+hand.
+
+    docker logs bxcpze-scheduler --tail 20
+
+---
+
 ## 6. Why re-running is safe
 
 **Say it plainly because hesitating here is expensive:** running the build twice adds nothing the second

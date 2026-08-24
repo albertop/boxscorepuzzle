@@ -19,7 +19,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
-| **F** deployment | ⬜ **not met** | ✔ **F1 met** — both images, unprivileged and secretless, and the proxy tested end to end against a real `keep`. ⬜ **F2 and F3 need the VPS**: TLS, DNS, the compose file, and the health endpoints |
+| **F** deployment | ✔ **met 2026-08-24** | ✔ F1 the three images; ✔ **F2 — `boxscorepuzzle.com` live over TLS, `www` canonical, rate limit and security headers on the host, the stack in Portainer**; ✔ **F3 — the rotation's image, its own ofelia, verified by rotating for real**. ⬜ Its one-time deployment steps are `docs/runbook-inventory.md` §5b |
 | **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
 
 ⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand

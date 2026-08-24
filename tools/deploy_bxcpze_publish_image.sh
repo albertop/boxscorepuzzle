@@ -69,29 +69,91 @@ if ! docker images "$IMAGE:$VERSION" --format "{{.Repository}}:{{.Tag}}" | grep 
 fi
 
 echo "  verified  $IMAGE:$VERSION   $(docker images "$IMAGE:$VERSION" --format '{{.Size}}')"
+# ⚠️⚠️ **THE SCHEDULER'S CONFIG IS CHECKED, AND THIS REFUSES RATHER THAN CORRECTS.**
+#
+# Ofelia does not interpolate environment variables into an INI, so `publish`'s version is written out
+# in `config.ini` -- unlike `serve` and `keep`, whose versions are Portainer variables. **A deploy that
+# loads a new image and does not edit that line keeps running the old rotation: successfully, printing
+# normally, exiting zero, with last month's code.** It is the one thing in this deployment that can fall
+# behind with no signal at all.
+#
+# ⚠️⚠️ **It does not rewrite the file, and that is the decision rather than an omission.** A load that
+# silently changed what production runs is the opposite of a deploy: the image arriving on the host and
+# the host being told to use it are two acts, and collapsing them means nobody ever chose the second.
+#
+# ⚠️ **WHAT THIS COVERS AND WHAT IT DOES NOT.** It covers this script. Editing the INI by hand, loading
+# an image another way, or copying a tar and running `docker load` directly all bypass it completely.
+# **It makes forgetting loud on the path used almost every time; it does not close the class.** The
+# design that would close it is recorded in `deploy/ofelia/rotation.ini` under "the option not taken".
+CONFIG="/srv/boxscorepuzzle/ofelia/config.ini"
+
 echo ""
 echo "======================================"
-echo "Next"
+echo "The scheduler's config"
 echo "======================================"
 echo ""
-echo "  ⚠ publish is NOT a Portainer stack variable. Its version lives in the scheduler's config,"
-echo "  because ofelia does not interpolate environment variables into an INI."
+
+if [ ! -f "$CONFIG" ]; then
+    # ⚠️ Not an error: the config is installed once, and the first load of this image legitimately
+    # happens before it exists. Said out loud so its absence is not read as a passing check.
+    echo "  $CONFIG does not exist yet."
+    echo "  Install it before the scheduler can run anything:"
+    echo ""
+    echo "    sudo install -D -m 644 deploy/ofelia/rotation.ini $CONFIG"
+    echo ""
+    echo "  Then set its image line to bxcpze-publish:$VERSION and start the stack."
+else
+    # ⚠️ Anchored and asserted. A grep that matched nothing would leave CONFIGURED empty, and an empty
+    # string compared against a version is a mismatch reported for the wrong reason -- so the absence of
+    # the line is its own message rather than a confusing inequality.
+    CONFIGURED=$(grep -E '^[[:space:]]*image[[:space:]]*=[[:space:]]*bxcpze-publish:' "$CONFIG" | head -1 | sed 's/.*bxcpze-publish://; s/[[:space:]]*$//')
+
+    if [ -z "$CONFIGURED" ]; then
+        echo "  ERROR: $CONFIG names no bxcpze-publish image."
+        echo "  The scheduler cannot run the rotation. Add:"
+        echo ""
+        echo "    image = bxcpze-publish:$VERSION"
+        exit 1
+    fi
+
+    if [ "$CONFIGURED" != "$VERSION" ]; then
+        echo "  ERROR: the scheduler would run a different version than the one just loaded."
+        echo ""
+        echo "    loaded here : bxcpze-publish:$VERSION"
+        echo "    $CONFIG : bxcpze-publish:$CONFIGURED"
+        echo ""
+        echo "  Nothing has been changed. Loading an image and telling the host to use it are two"
+        echo "  separate acts, and this script does not take the second one for you."
+        echo ""
+        echo "    sudo sed -i 's|^\([[:space:]]*image[[:space:]]*=[[:space:]]*\)bxcpze-publish:.*|\1bxcpze-publish:$VERSION|' $CONFIG"
+        echo "    grep -n 'bxcpze-publish' $CONFIG"
+        echo "    docker restart bxcpze-scheduler"
+        echo ""
+        echo "  READ the grep. A sed that matches nothing exits zero and leaves the old tag."
+        exit 1
+    fi
+
+    echo "  $CONFIG names bxcpze-publish:$CONFIGURED -- the version just loaded."
+    echo "  Restart the scheduler so it picks up a changed config:"
+    echo ""
+    echo "    docker restart bxcpze-scheduler"
+fi
+
 echo ""
-echo "    sudo sed -i 's|^image = bxcpze-publish:.*|image = bxcpze-publish:'"$VERSION"'|' \\"
-echo "      /srv/boxscorepuzzle/ofelia/config.ini"
-echo "    grep -n '^image' /srv/boxscorepuzzle/ofelia/config.ini"
-echo "    docker restart bxcpze-scheduler"
+echo "======================================"
+echo "Run it once by hand"
+echo "======================================"
 echo ""
-echo "  READ the grep. A sed that matches nothing exits zero and leaves the old tag, and the rotation"
-echo "  then keeps succeeding, silently, with last month's code."
-echo ""
-echo "  Then run it once by hand rather than waiting for 08:15 UTC:"
+echo "  Rather than waiting for 08:15 UTC:"
 echo ""
 echo "    docker run --rm \\"
 echo "      -v /srv/boxscorepuzzle/inventory:/srv/inventory:ro \\"
 echo "      -v boxscorepuzzle_puzzles:/srv/public \\"
 echo "      bxcpze-publish:$VERSION"
 echo ""
-echo "  It prints what it published, what is public now, what it retired, and reads the health verdict"
-echo "  itself -- a non-zero exit means the public path is not what it should be."
+echo "  It prints what it published, what is public now, and WHAT IT RETIRED, then reads the health"
+echo "  verdict itself. A non-zero exit means the public path is not what it should be."
+echo ""
+echo "  ⚠ The retired line is the one to read. Two packages public and nothing else is the whole of"
+echo "  the access model: everything past yesterday is sold, not served."
 echo ""

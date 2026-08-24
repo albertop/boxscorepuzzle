@@ -99,10 +99,19 @@ export function renderReveal(puzzle, record, { onShare = null } = {}) {
   const head = document.createElement("div");
   head.className = "reveal-head";
 
+  // ⚠️⚠️ **The verdict and the share are one column, and the share sits directly under the sentence
+  // that earns it.** It was at the foot of the sheet beside *Back to the board*, which put the only
+  // growth mechanism the product has below a printed boxscore the player has to scroll past — and
+  // beside the control whose whole job is to leave. **Two buttons in a row make the reader choose
+  // between them; one under the verdict is an offer, and the way out is somewhere else entirely.**
+  const verdict = document.createElement("div");
+  verdict.className = "reveal-verdict";
+
   const title = document.createElement("h2");
   title.className = "reveal-title";
   title.textContent = text("reveal.title");
-  head.append(title);
+  verdict.append(title);
+  head.append(verdict);
 
   const result = document.createElement("div");
   result.className = "reveal-result";
@@ -220,7 +229,11 @@ export function renderReveal(puzzle, record, { onShare = null } = {}) {
     });
   }
 
-  actions.append(close, share);
+  // ⚠️ **The share goes under the verdict; only the way back is at the foot.** A row of two at the
+  // bottom is what this used to be, and `.reveal-close` is on its own now — see the note on
+  // `.reveal-actions`, whose equal-halves rule was written for a row that no longer exists.
+  verdict.append(share);
+  actions.append(close);
   sheet.append(actions);
   // ⚠️ **Built here, wired by the shell.** This used to call `panel.remove()` itself, which closes the
   // panel and nothing else — it cannot restore the focus the shell moved, cannot un-inert what the

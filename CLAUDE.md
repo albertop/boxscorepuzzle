@@ -65,7 +65,7 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
-| **F** deployment | ▶ **F1 done** | the two images and the proxy; ⬜ F2 and F3 need the VPS |
+| **F** deployment | ✔ **met 2026-08-24** | the three images, the site live over TLS, and the rotation with its own scheduler. `docs/runbook-inventory.md` §5b is the deployment |
 | **G** the share | ▶ **G1 and G2 built 2026-08-24**, and the `POST /shares` record with them; ⬜ **G3 — sent through WhatsApp, iMessage and X on a real phone** | last to build, **exempt from being cut**. G3 is the operator's and is what closes it |
 
 ⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
@@ -673,6 +673,26 @@ habit.
 **Fail closed at boundaries.** Verification that passes when its secret is missing, parsing that accepts
 malformed input and dies later, a driver that reports COMPLETE on a non-zero exit — all the same defect:
 the absence of a check reading as the presence of a passing one.
+
+**⚠️⚠️ A comment can assert a property nothing establishes, and it reads exactly like one that does.**
+This is the cheapest defect in the register to create and among the hardest to see, because the reviewer
+reads the sentence and the sentence is reasonable.
+
+`deploy/publish.Dockerfile` said the published path was *"mounted writable and owned by this uid"*. **No
+line anywhere made it so.** Docker takes a new named volume's ownership from the image that first
+populates it — `serve` — and `serve` left it root-owned, so the rotation died with `PermissionError` the
+first time it ran. **The comment was written three files away from this register's own warning about
+claims nothing checks**, by somebody who had recorded that warning the same afternoon.
+
+⚠️ **Reading either Dockerfile could not have found it**, and that is what separates this from an
+ordinary oversight: each file is internally consistent and neither states the other's half. **Running the
+rotation found it in one attempt.**
+
+**What closes it here is a guard, because the fact lives in two files:** a uid spelled in two Dockerfiles
+is two places encoding one thing. `forge/tests/test_the_images_build.py` asserts they agree, and it was
+**seen red both ways** — the numbers made to differ, and the `chown` removed entirely, each naming what
+it found. ⚠️ The guard covers this instance, not the class: *a comment claiming what nothing establishes*
+is not decidable from the text, for the same reason the near-neighbour class is not.
 
 **⚠️⚠️ A remedy that makes a symptom rarer is confirmed by the same evidence as one that removes it.**
 This is the hardest wrong answer in the register to detect, and it was one decision away from being

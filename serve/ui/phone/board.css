@@ -610,14 +610,30 @@ td.label.substitute { padding-left: 14px; }
   }
 }
 
-/* `Solved` on the left, the result boxed on the right. */
+/* `Solved` and the share on the left, the result boxed on the right. */
 .reveal-head {
   display: flex;
-  align-items: center;
+  /* ⚠️ `flex-start`, not `center`. With the share under the verdict the left column is taller than the
+     result box, and centring would push the sentence down to meet it — the operator asked for it
+     higher, and this is what puts it there rather than a margin fighting the alignment. */
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
   margin: 0 0 14px;
 }
+
+/* The verdict and the share, stacked. */
+.reveal-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  /* ⚠️ Takes the space the result box does not, so the share can be wide enough to read as a primary
+     action rather than sized to its own label. */
+  flex: 1;
+  min-width: 0;
+}
+
 .reveal-title {
   margin: 0;
   font-size: 20px;
@@ -817,6 +833,9 @@ td.label.substitute { padding-left: 14px; }
    saying one thing with nothing checking they agree is this project's most-recorded defect, and the
    copy is being made knowingly rather than discovered later — recorded in `docs/reviews/todo.md`. The
    fix is a shared button rule the three pages can reach, which is a change to three stylesheets. */
+/* ⚠️ **One button now, and the row is kept rather than removed.** `Back to the board` is the only
+   thing at the foot since the share moved under the verdict; a flex row of one is the same rendering
+   as no row, and keeping it means a second footer control does not have to reinvent the container. */
 .reveal-actions {
   display: flex;
   gap: 8px;
@@ -834,11 +853,19 @@ td.label.substitute { padding-left: 14px; }
   font: 600 16px/1 var(--face), system-ui, sans-serif;
 }
 
-/* ⚠️ **Equal halves, and the tutorial's 1:2 split was tried first.** At 375px that leaves the way back
-   121px wide and `Back to the board` breaks onto two lines against a single-line neighbour — a row of
-   two buttons at different heights, which reads as a mistake before it reads as a hierarchy. The
-   tutorial can afford the split because *Back* is one word. Seen in a picture, not computed. */
+/* ⚠️⚠️ **The equal-halves argument that used to be here is history, and it is kept as history.** The
+   two buttons were a row at the foot: an equal split was chosen because the tutorial's 1:2 left `Back
+   to the board` 121px wide at 375px, breaking onto two lines beside a single-line neighbour. **That
+   row no longer exists** — the share moved under the verdict — so the reasoning describes a layout the
+   product does not have, and is here so nobody re-derives it when a second footer button arrives.
+
+   ⚠️ It was also settled by looking at a picture rather than by computing widths, which is why it is
+   worth keeping at all. */
 .reveal-share {
+  /* ⚠️ Full width of the verdict column, not `flex: 1` in a row of two. It is the only offer on this
+     screen and the only growth mechanism the product has; sizing it to its own label would make it
+     read as secondary to a boxscore. */
+  align-self: stretch;
   display: flex;
   align-items: center;
   justify-content: center;

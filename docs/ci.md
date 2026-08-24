@@ -278,3 +278,46 @@ mechanisms for one property, named here so neither reads as broken.
 ⚠️ **It is blind to flags by construction, which is exactly where the current divergence lives.**
 `pytest` and `pytest --cov` are one entry, so this test cannot see coverage leaving the hook. That is
 named here and in the test's own docstring rather than left to be discovered.
+
+---
+
+## ⚠️⚠️ What stops a push, in practice — two conditions found on 2026-08-24
+
+**Neither was `ghcr.io`.** F1's network dependency is real and recorded above; these are different and
+both cost an afternoon before being named.
+
+### 1. The assistant's shell cannot reach Docker. **A standing condition, not an incident.**
+
+The hook starts a Postgres container so `keep`'s Postgres arm runs rather than skipping. The assistant's
+sandboxed shell **cannot reach `npipe:////./pipe/dockerDesktopLinuxEngine`**, so every push it runs fails
+at that step with `the daemon is not running`.
+
+**Every push from an assistant session must run with the sandbox disabled**, or it fails for a reason
+that has nothing to do with the code.
+
+⚠️⚠️ **The diagnosis was wrong first, and the way it was wrong is the lesson.** Two signals agreed on it:
+`docker info` said *the daemon is not running* — **which is the client's message, not a fact about the
+daemon** — and `com.docker.service` read `Stopped`, which is irrelevant under the WSL2 backend. The
+operator was asked to start a service that was not the problem. **Neither signal asked the only question
+that decides it:** is a container running. `docker ps` outside the sandbox answered in one attempt.
+
+### 2. The Postgres fixture's teardown kept its own list of tables
+
+`shares` went into `001-initial.sql` and not into
+`DROP TABLE IF EXISTS events, client_errors, keep_schema`. The table survived between tests, every
+Postgres case after the first died on `DuplicateTable`, and coverage fell to 94.87% against a 95% floor.
+
+⚠️⚠️ **It is the same shape as the three hand-maintained `.gitignore` lines that let `fifty-key.csv`
+through, on the same day, in the same session.** Three names spelled in one place and created in
+another, with nothing checking they agree. **Knowing the rule does not apply it** — this project has
+said so since the fourth regex.
+
+**And the teardown can enumerate, so it does.** It reads `pg_tables` for the current schema and drops
+what is there. The migration is now the only place a table is ever named, and a fifth one is dropped by
+existing rather than by somebody remembering a line in a fixture. **That is the difference from the
+`.gitignore` case, where the repair was a glob and a test rather than a longer list** — both replaced a
+maintained list with something derived.
+
+⚠️ **Only the hook could have caught it.** The SQLite arm passed all 78 cases, because its fixture builds
+a fresh in-memory database per test and has no teardown to forget. The engine that shares production's
+semantics is the one that needed a shared fixture.

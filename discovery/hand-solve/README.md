@@ -74,6 +74,7 @@ are enforced by `forge/tests/test_hand_solve_keys_are_ignored.py` rather than by
 | | | |
 |---|---|---|
 | `*key.csv` | **ignored, never committed** | it maps board → game, and the boards only measure anything if they are met blind |
+| `*solutions.pdf` | ✔ **tracked, and settled 2026-08-24** | see below |
 | `pack-a-difficulty.csv` | **tracked, must stay tracked** | it is the answers *out*, not the answers *in* |
 
 **The results file is safe to track precisely because the key is not.** Its columns are
@@ -87,6 +88,27 @@ in this directory that **no process can regenerate**. The packs rebuild from the
 rebuild from the packs, the keys rebuild with them — the verdicts exist once. `CLAUDE.md` §33 names the
 laptop as the single point of failure and the repository as the backup, and this is the same argument
 that keeps `docs/calendar.md` in Git while every generated package stays out of it.
+
+### ✔ The solutions PDFs are tracked on purpose — settled 2026-08-24
+
+**`solutions.pdf`, `fifty-solutions.pdf` and `ceiling-solutions.pdf` are in Git and stay there.** It was
+raised because the keys are ignored for blindness and a completed board defeats blindness more
+completely than a key does — a key names the game, a solutions page shows every answer.
+
+**The distinction that decides it is what each one contaminates, and it is not the same thing.**
+
+| | carries | how it contaminates |
+|---|---|---|
+| `key.csv` | game, season, **stall rung, `certified_by_3b`** | the **difficulty labels**. Knowing a board is rung 12 moves the rating **whether or not the reader tries to ignore it** |
+| `solutions.pdf` | the completed board, no names, **no difficulty** — `check_pdf.py` forbids `chain`, `stall`, `target`, `certified` and `difficulty:` on every page | the answers, and **only if it is opened before solving**. The README's own line is *after solving, not during* |
+
+**One poisons involuntarily and one only by choice.** That is why the key is the one held out of the
+repository, and it is a stronger reason than the file size or the format.
+
+⚠️ **The honest limit, stated so nobody re-derives it as a discovery:** the repository is one machine's
+working copy, so ignoring `key.csv` does not hide it from the operator either — it sits in the same
+directory. What ignoring buys is that the answers never enter the **history**, where they would travel
+with any copy of the repository for ever, including one handed to the stranger of B4.
 
 ⚠️ **It sat untracked and unignored for a day** and was found by comparing two `git status` outputs by
 eye. The ignore rule for the keys was three hand-maintained lines at the time and `fifty-key.csv` had
