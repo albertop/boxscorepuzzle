@@ -29,11 +29,64 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field, fields, replace
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Final, Self
 
 from boxscore_domain import MAX_INNINGS
+
+POINTER_SCHEMA: Final = 2
+"""The dated pointer's version, and the shape of the document is `pointer()` below.
+
+⚠️⚠️ **It is here, beside `SCHEMA_VERSION`, because TWO scripts write this document and they drifted the
+day it changed.** `build_inventory.write_pointers` dates the calendar and `write_reference_puzzles.
+write_pointers` dates six development boards from a fixed day; their own docstrings say the *dating* is
+deliberately not shared, and that is right. **The field set and the version are not the dating.** Adding
+`next_rotation` to one of them left the other writing a schema-1 document with the field missing --
+which the dev server then served, so the countdown could not appear locally and the browser test that
+reads *the real pointers* was reading a document production no longer writes.
+
+⚠️ **Version 2 exists so the client never computes a rollover.** E1.2 settled that `serve` consumes the
+calendar date and never derives it, and a browser test refuses any player-page source reaching for
+`ROLLOVER_OFFSET_HOURS` or a timezone offset. A countdown needs the boundary, and computing it in the
+browser would be a third spelling of that constant -- the debt E1.2 cancelled. So the forge writes the
+instant and the client subtracts: `Date.now()` is an absolute moment with no local calendar in it, so
+the client still derives nothing.
+"""
+
+
+def next_rotation(day: str, offset_hours: int) -> str:
+    """The instant `day` stops being the serving date, as an ISO moment in UTC.
+
+    ⚠️⚠️ **`offset_hours` is a parameter and this module spells no constant.** `ROLLOVER_OFFSET_HOURS`
+    lives with the scripts that own the calendar clock, each asserted against `docs/calendar.md`;
+    promoting it is recorded as owed in `docs/reviews/todo.md` and is deliberately not this change.
+    Taking it as an argument shares the *arithmetic* without moving the *decision*.
+
+    `serving_date()` is `now(UTC) + offset_hours`, so a date is current until the following date's
+    boundary -- which lands at `-offset_hours` hours UTC on the next day.
+
+    ⚠️ `Z` rather than `+00:00`: `Date.parse` accepts both, and this field is read by a browser far more
+    often than by anything else.
+    """
+    boundary = datetime.combine(date.fromisoformat(day), time.min, tzinfo=UTC) + timedelta(days=1, hours=-offset_hours)
+    return boundary.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def pointer(*, day: str, puzzle_id: str, generation: str, offset_hours: int) -> dict[str, object]:
+    """A dated pointer's body, unsigned. **The one place its fields and its version are written.**
+
+    The caller signs it and decides which date it carries; everything else about the document is here.
+    """
+    return {
+        "date": day,
+        "generation": generation,
+        "next_rotation": next_rotation(day, offset_hours),
+        "puzzle_id": puzzle_id,
+        "schema": POINTER_SCHEMA,
+    }
+
 
 SCHEMA_VERSION: Final = 6
 """What this code writes.

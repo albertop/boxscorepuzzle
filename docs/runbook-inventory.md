@@ -382,6 +382,38 @@ certificate, **then** add the redirect.
 
 ---
 
+## 5b-bis. ⚠️⚠️ Shipping a package schema change — **the order, and what now checks it**
+
+**A package version is a contract between two images that are pushed separately.** `serve` carries the
+client's `READABLE` and the packages are written by the forge; §33 gives them no shared code and no
+shared deployment cycle, so **the repository can be internally consistent while the VPS is one image
+behind in either direction, and both states look fine from inside either image.**
+
+| the order | what the player sees |
+|---|---|
+| new `serve` first, old packages still public | **every board dies** — the reader refuses its own site's packages at the boundary, and the page reports a corrupt package |
+| new packages first, old `serve` still deployed | **every board dies** — same rejection, opposite side |
+| either one, both replaced in the same window | fine |
+
+**There is no safe order. There is only a short window, and something that notices.**
+
+⚠️⚠️ **What notices is `publish.health`, since 2026-08-24.** It reads the `READABLE` literal out of
+`engine/package.js` in the served root and compares it against the `schema` of every package on the
+public path — **decidable there and nowhere else**, because the served root is the only place both
+halves exist at once. A test in `forge` cannot see what is deployed and neither can one in `serve`.
+
+**So the procedure is: push both images, then ask.**
+
+```bash
+docker exec bxcpze_publish python -m publish --inventory /inventory --public /public --health
+```
+
+⚠️ **Before that check existed this held because it was done carefully**, which is not a property of the
+system. The state on 2026-08-24 — repository at schema 6, VPS serving 5 with a client reading 5 — was
+safe by accident of nothing having been pushed yet.
+
+---
+
 ## 5c. ⚠️⚠️ Verify the rotation — **and the retirement is the one that matters**
 
 Run it once by hand rather than waiting for 08:15 UTC:

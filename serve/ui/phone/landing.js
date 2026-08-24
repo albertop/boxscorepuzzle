@@ -20,12 +20,71 @@
 
 import { battingCell, battingTotalCell } from "../../engine/columns.js";
 import { createGame, isSession } from "../../engine/game.js";
-import { localIso, longDate, text } from "../../engine/strings.js";
+import { fill, localIso, longDate, text } from "../../engine/strings.js";
 import { columnsFor, renderLineScore, renderSection } from "./board.js";
 import { ROUTES, withSearch } from "./daily.js";
 import { formatDuration } from "./finish.js";
 
-export function renderLanding({ puzzle, root, store, doc = document, today = new Date(), go = null }) {
+/**
+ * How long until `at`, as the sentence the landing shows.
+ *
+ * ⚠️⚠️ **`Date.parse` and subtraction, and nothing else — no calendar arithmetic anywhere.** Both sides
+ * are absolute instants: the forge wrote one, `now` is the other. A duration between two moments has no
+ * timezone and no rollover in it, which is what lets a tree forbidden to know `ROLLOVER_OFFSET_HOURS`
+ * render a countdown to a rollover.
+ *
+ * ⚠️⚠️ **At and past the boundary it says something else, and that case is the one worth writing down.**
+ * A countdown that reaches zero and keeps saying `in 0m` reads as stuck, and *past* zero it would count
+ * upward or show a negative — on a page that is open across midnight, which is the ordinary case for
+ * somebody who finished at eleven. The rotation takes a moment to run and a reload during it is what the
+ * player should do, so the sentence at zero says the puzzle is arriving.
+ *
+ * ⚠️ **Hours and minutes, never seconds.** A second-by-second countdown demands a timer, and a timer on
+ * this page runs for hours in a background tab to move a digit nobody is looking at. The line is
+ * accurate to the minute and is painted once, on arrival.
+ */
+export function untilRotation(at, now) {
+  const left = Date.parse(at) - now.getTime();
+  // ⚠️⚠️ **Under a minute, not at zero, and the difference is the last 59 seconds of every day.** The
+  // first version tested `left <= 0` and read correctly at the boundary and past it — and `Math.floor`
+  // makes anything under a minute `0`, so from 07:59:01 to 08:00:00 the page said **`Next puzzle in
+  // 0m`**, which is the exact sentence this branch exists to prevent.
+  //
+  // ⚠️ **It was not found by a test.** The boundary test asserted one minute before, at, and after, and
+  // was green — it checked the cases that had been thought of. It was found by printing the sentence at
+  // seven moments and reading them, which is this repository's most-recorded rule: look at the output.
+  if (left < 60_000) return text("landing.next_now");
+  const minutes = Math.floor(left / 60000);
+  const hours = Math.floor(minutes / 60);
+  // ⚠️ `hours` is dropped rather than shown as `0h`. `in 0h 14m` is a sentence nobody writes.
+  const span = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes % 60}m`;
+  return fill("landing.next_in", { time: span });
+}
+
+function paintCountdown(node, at, now) {
+  node.textContent = untilRotation(at, now);
+}
+
+export function renderLanding({
+  puzzle,
+  root,
+  store,
+  doc = document,
+  today = new Date(),
+  go = null,
+  // ⚠️⚠️ **Share is offered here and it is the second half of the exit.** A player who finishes leaves
+  // through `Go home` and arrives at a page that congratulates them and offers no way to tell anybody —
+  // so the one growth mechanism the product has would sit on a screen they have already left. The
+  // button is on both, and `share-result.js` is the one path under both.
+  //
+  // ⚠️ **Optional, and its absence hides the button rather than breaking it.** §23: the landing renders
+  // with no store, no queue and no network. A share needs a rasteriser and a send path; when the caller
+  // has not wired them there is nothing to press, which is different from a control that fails.
+  onShare = null,
+  // The instant today's board stops being today's, from the pointer. `null` when the pointer predates
+  // the field, and then there is no countdown — see `daily.js`.
+  nextRotation = null,
+}) {
   const page = doc.createElement("div");
   page.className = "landing";
   root.replaceChildren(page);
@@ -96,9 +155,14 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
   play.className = "landing-play";
   play.href = withSearch(ROUTES.board);
   // ⚠️ **The label changes when today is done.** Otherwise a returning player is offered a puzzle they
-  // have already solved, every day, which reads as the product not knowing who they are. `done.see_boxscore`
-  // rather than a second key: it is the same sentence the board uses for the same act.
-  play.textContent = finished ? text("done.see_boxscore") : text("landing.play");
+  // have already solved, every day, which reads as the product not knowing who they are.
+  //
+  // ⚠️⚠️ **`landing.see_board`, and it deliberately stops sharing a key with the board.** This was
+  // `done.see_boxscore`, with a comment calling the shared sentence deliberate — *the same sentence the
+  // board uses for the same act*. **It is not the same act.** From here the player goes to the BOARD,
+  // and the finished board is what then offers the boxscore. The old label named the second step from
+  // the first step's button.
+  play.textContent = finished ? text("landing.see_board") : text("landing.play");
 
   const when = doc.createElement("span");
   when.className = "landing-date";
@@ -119,7 +183,43 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
 
   const way = doc.createElement("div");
   way.className = "landing-way";
-  way.append(play, how);
+
+  // ⚠️⚠️ **Beside the way in, not below the congratulation, and the two placements are not equivalent.**
+  // Where `Play today's puzzle` sits is the one thing on this page a returning player is looking for; a
+  // share under the verdict two blocks down is a control they scroll past. On a finished day the row is
+  // the two things there are to do — read what you built, or tell somebody you built it.
+  //
+  // ⚠️ It is *only* on a finished day. Offering a share before there is a result to share would be a
+  // button that either lies or refuses, and a returning player meets it on every unfinished morning.
+  let share = null;
+  if (finished && onShare) {
+    share = doc.createElement("button");
+    share.type = "button";
+    share.className = "landing-share";
+    share.textContent = text("reveal.share");
+    // ⚠️⚠️ **Guarded against re-entry, exactly as the reveal's is.** `navigator.share` takes a moment
+    // and a second press during it opens a second sheet on some platforms and rejects the first on
+    // others — and it queues a second row for one act. Disabled *during* the send and never before it:
+    // if this button is on screen the game is over and it can always be shared.
+    let sharing = false;
+    share.addEventListener("click", async () => {
+      if (sharing) return;
+      sharing = true;
+      share.disabled = true;
+      try {
+        await onShare(restored);
+      } finally {
+        sharing = false;
+        share.disabled = false;
+      }
+    });
+    const row = doc.createElement("div");
+    row.className = "landing-way-row";
+    row.append(play, share);
+    way.append(row, how);
+  } else {
+    way.append(play, how);
+  }
   page.append(way);
 
   if (finished) {
@@ -133,6 +233,21 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
     time.textContent = formatDuration(restored.record().duration_ms);
     done.append(verdict, time);
     page.append(done);
+  }
+
+  // ⚠️⚠️ **The countdown, and it is the only retention beta 0 has.** A finished player has nothing left
+  // to do here; without a next time this page is where the product ends for the day. It says when to
+  // come back and it is the reason the exit is not a dead end.
+  //
+  // ⚠️ **Rendered only when the pointer carried the instant.** No fallback, no local computation: a
+  // countdown this tree worked out itself would be `serve` deriving a calendar fact, which E1.2 forbids
+  // and a browser test refuses by name.
+  let countdown = null;
+  if (finished && nextRotation !== null) {
+    countdown = doc.createElement("p");
+    countdown.className = "landing-next";
+    paintCountdown(countdown, nextRotation, today);
+    page.append(countdown);
   }
 
 
@@ -165,5 +280,5 @@ export function renderLanding({ puzzle, root, store, doc = document, today = new
     }
   }
 
-  return { page, play, how, later, finished, game: restored };
+  return { page, play, share, how, later, countdown, finished, game: restored };
 }

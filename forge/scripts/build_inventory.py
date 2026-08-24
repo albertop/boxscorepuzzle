@@ -82,6 +82,7 @@ from boxscore_forge.publication_key import publication_key  # noqa: E402
 # rewrites the line it sits on. And **re-run the linter after `--fix`, never before**: the run that said
 # *all checks passed* was describing the file as it was, and the fix is what broke it.
 from boxscore_package.format import SCHEMA_VERSION, Package  # noqa: E402
+from boxscore_package.format import pointer as pointer_body  # noqa: E402
 from boxscore_package.format import write as write_package  # noqa: E402
 from boxscore_package.signing import sign_manifest  # noqa: E402
 
@@ -388,6 +389,15 @@ MANIFEST = "manifest.json"
 listing -- a literal spelled twice is how it came to list itself."""
 
 MANIFEST_SCHEMA = 1
+"""The manifest's version. **The manifest only, since 2026-08-24.**
+
+⚠️⚠️ **This named the pointer's version too, and that was a recorded defect before it cost anything.**
+One constant for two documents means a field added to either forces a version bump on both -- so the
+pointer gaining `next_rotation` would have republished every manifest under a version 2 that describes
+no change to it, and a reader checking manifests would have had to accept a number that meant nothing.
+
+`docs/reviews/todo.md` carried it as *two on `MANIFEST_SCHEMA`*; this is where it came due.
+"""
 
 DAYS = "days"
 """Where the per-date pointers go, inside the generation.
@@ -432,19 +442,31 @@ def write_pointers(calendar: Calendar, out: Path, key: Ed25519PrivateKey) -> int
             # assignment and stops counting.
             (days / f"{entry.date}.json").unlink(missing_ok=True)
             continue
-        pointer = sign_manifest(
-            {
-                "date": entry.date,
-                "puzzle_id": entry.puzzle_id,
-                # ⚠️ **The generation that produced this package**, which after a top-up is not the one
-                # being written now. `Entry.assigned` has recorded it since the calendar existed; the
-                # defect was that nothing read it.
-                "generation": entry.assigned,
-                "schema": MANIFEST_SCHEMA,
-            },
+        # ⚠️ **The body comes from `boxscore_package.format`, and it used to be spelled here.** Two
+        # scripts write this document; `write_reference_puzzles` writes the development batch. Their
+        # *dating* is deliberately separate and their *field set* is one contract, and adding
+        # `next_rotation` to this one and not the other is what proved it.
+        # ⚠️ **The body comes from `boxscore_package.format`, and it used to be spelled here.** Two
+        # scripts write this document; `write_reference_puzzles` writes the development batch. Their
+        # *dating* is deliberately separate and their *field set* is one contract, and adding
+        # `next_rotation` to this one and leaving the other at schema 1 is what proved it.
+        #
+        # ⚠️ `generation` is **the one that produced this package**, which after a top-up is not the one
+        # being written now. `Entry.assigned` has recorded it since the calendar existed; the defect was
+        # that nothing read it.
+        #
+        # ⚠️ `ROLLOVER_OFFSET_HOURS` is passed rather than imported by the helper: this is one of the two
+        # trees that owns the calendar clock, and `docs/calendar.md` is what both assert against.
+        signed = sign_manifest(
+            pointer_body(
+                day=entry.date,
+                puzzle_id=entry.puzzle_id,
+                generation=entry.assigned,
+                offset_hours=ROLLOVER_OFFSET_HOURS,
+            ),
             key,
         )
-        (days / f"{entry.date}.json").write_text(json.dumps(pointer, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+        (days / f"{entry.date}.json").write_text(json.dumps(signed, indent=1, sort_keys=True) + "\n", encoding="utf-8")
         written += 1
     return written
 

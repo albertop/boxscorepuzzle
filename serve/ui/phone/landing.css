@@ -116,6 +116,60 @@ body {
   text-decoration: none;
 }
 
+/* ⚠️⚠️ **The finished day's two controls, side by side, where the single button sits otherwise.**
+   `See the board` and `Share` are the two things there are to do on a day already solved, and this is
+   the one place on the page a returning player looks. On an unfinished day the row does not exist and
+   `.landing-play` is on its own — which is why the flex lives here and not on the button. */
+.landing-way-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.landing-way-row .landing-play {
+  flex: 1;
+  /* ⚠️ The button centres its own label with `text-align`, and that leaves the label at the top of a
+     stretched box once it is a flex item beside a shorter control. It has to centre both ways here. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ⚠️⚠️ **Same height and same weight as the button beside it, in the outline treatment.** The share is
+   the only growth mechanism the product has (`docs/beta-0.md`), and a quieter or shorter control beside
+   the primary one reads as an afterthought. It is outlined rather than filled because two filled
+   buttons of equal weight give a player no first move. */
+.landing-share {
+  flex: 0 0 auto;
+  min-height: 56px;
+  padding: 0 18px;
+  box-sizing: border-box;
+  border: 2px solid var(--header-ground);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--header-ground);
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ⚠️ Disabled only *during* a send, never before one. If this button is on screen the game is over and
+   the result can always be shared — the reveal's share carries the same rule and the same reason. */
+.landing-share:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* ⚠️ The reason to come back, under the verdict it follows. Quiet, because it is information rather
+   than an offer — and it is the only retention beta 0 has. */
+.landing-next {
+  margin: 6px 2px 0;
+  font-size: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .landing-date {
   display: block;
   margin-top: 2px;

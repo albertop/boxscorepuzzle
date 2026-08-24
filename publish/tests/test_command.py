@@ -19,6 +19,7 @@ import pytest
 from publish.__main__ import main
 from publish.rotate import MANIFEST, TODAY, YESTERDAY
 from tests.conftest import FIRST as _FIRST
+from tests.conftest import deploy_client as _deploy
 
 
 def _run(monkeypatch: pytest.MonkeyPatch, *arguments: str) -> None:
@@ -31,7 +32,7 @@ class TestItRotates:
         self, inventory: Callable[..., Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         private = inventory(tmp_path, days=6)
-        public = tmp_path / "public"
+        public = _deploy(tmp_path / "serve")
         when = _FIRST + timedelta(days=3)
 
         _run(monkeypatch, "--inventory", str(private), "--public", str(public), "--date", when.isoformat())
@@ -56,7 +57,15 @@ class TestItRotates:
         private = inventory(tmp_path, days=6)
         when = _FIRST + timedelta(days=3)
 
-        _run(monkeypatch, "--inventory", str(private), "--public", str(tmp_path / "public"), "--date", when.isoformat())
+        _run(
+            monkeypatch,
+            "--inventory",
+            str(private),
+            "--public",
+            str(_deploy(tmp_path / "serve")),
+            "--date",
+            when.isoformat(),
+        )
 
         printed = capsys.readouterr().out
         assert when.isoformat() in printed, "the run did not say which day it published"
@@ -69,7 +78,7 @@ class TestItRotates:
         by this. `--date` exists to reproduce a day, never to choose one — a fixed development tree needs
         it, and a pointer the forge never wrote cannot be published whatever it says."""
         private = inventory(tmp_path, days=6)
-        public = tmp_path / "public"
+        public = _deploy(tmp_path / "serve")
         chosen = _FIRST + timedelta(days=2)
         monkeypatch.setattr("publish.__main__.serving_date", lambda: chosen)
 
@@ -92,7 +101,7 @@ class TestItRefuses:
                 "--inventory",
                 str(private),
                 "--public",
-                str(tmp_path / "public"),
+                str(_deploy(tmp_path / "serve")),
                 "--date",
                 date(2030, 1, 1).isoformat(),
             )
@@ -106,7 +115,7 @@ class TestItRefuses:
         `inspect()` could not see until v40-P1-01.
         """
         private = inventory(tmp_path, days=6)
-        public = tmp_path / "public"
+        public = _deploy(tmp_path / "serve")
         when = _FIRST + timedelta(days=3)
         # A rotation that finishes and leaves a third package: more than the access model allows.
         _run(monkeypatch, "--inventory", str(private), "--public", str(public), "--date", when.isoformat())

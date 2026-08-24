@@ -20,7 +20,7 @@ it. ⚠️ Where the two differ, this file says so.
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
 | **F** deployment | ✔ **met 2026-08-24** | ✔ F1 the three images; ✔ **F2 — `boxscorepuzzle.com` live over TLS, `www` canonical, rate limit and security headers on the host, the stack in Portainer**; ✔ **F3 — the rotation's image, its own ofelia, verified by rotating for real**. ⬜ Its one-time deployment steps are `docs/runbook-inventory.md` §5b |
-| **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be |
+| **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be. ⚠️ **G4 was added after G closed**, from the operator playing the finished product and finding no way out of it |
 
 ⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
 stops everything — and G, which cannot be dropped for time.
@@ -1062,6 +1062,32 @@ the finished game — not a priority.
 | ✔ **G2** | `navigator.share` where `canShare` takes the file, the clipboard where it does not — and a cancelled sheet is not an error |
 | ✔ **the record** | `keep`'s `POST /shares`, its own event because the share happens after the game is uploaded and the insert that makes a retry free ignores a second arrival |
 | ✔ **G3** | **run by the operator and it arrived intact** — WhatsApp, iMessage and X, opened on a real phone. ⚠️ This is the half no local harness could supply: the compression, the colour profile, the aspect ratio and the scaling are every property under test, and a generate-and-inspect check is the instrument supplying them itself |
+
+### ✔ ⚠️⚠️ G4. The way out — **built 2026-08-24, and it was not on this list**
+
+**Found by the operator playing the finished product**: *es como un loop … uno manda el app hasta donde
+el otro, se siente que el usuario está atrapado.* Every route from a finished game led to another part of
+the finished game — the landing to the board, the board to the boxscore, the boxscore back to the board.
+**There was no exit**, and the page a finished player most needs is the landing, which carries the
+archive, the streak and the subscription when they exist.
+
+| | |
+|---|---|
+| ✔ **G4.1** | `Go home` in the reveal's foot, which is now **two rows**: the two exits that stay inside the product, then the one that leaves it for Baseball Reference |
+| ✔ **G4.2** | **a share on the finished landing**, beside *See the board* and in the row the single button occupies otherwise — the exit is half a fix if the place it exits *to* offers nothing |
+| ✔ **G4.3** | **a countdown** to the next puzzle, read from the pointer's `next_rotation` (`POINTER_SCHEMA` 2) and never computed in the browser. The only retention beta 0 has |
+| ✔ **G4.4** | **one share path for both surfaces** — `share-result.js`. It was a closure inside `shell.js`, and a second screen offering *Share* would otherwise have meant exporting the shell's insides or writing the sequence twice |
+
+⚠️⚠️ **Nothing on this plan could have found it.** G1 to G3 each name an artefact and ask whether it is
+right; this is a property of the **journey between them**, and every screen in it was correct on its own.
+It is the same class as the metric that measured the board rather than the game: *a person doing the task
+and comparing the feeling against the design.*
+
+⚠️ **And it cost a real defect elsewhere the moment it was built**: `next_rotation` went into
+`build_inventory`'s pointer writer and not into `write_reference_puzzles`'s, so the development batch
+stayed at schema 1 with the field missing — two writers of one document, each internally consistent,
+neither stating the other's half. `forge/tests/test_the_two_pointer_writers_agree.py` is the guard, and
+`boxscore_package.format.pointer` is now the one place the body is built.
 
 ⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
 that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read

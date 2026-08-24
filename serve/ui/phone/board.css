@@ -833,16 +833,26 @@ td.label.substitute { padding-left: 14px; }
    saying one thing with nothing checking they agree is this project's most-recorded defect, and the
    copy is being made knowingly rather than discovered later — recorded in `docs/reviews/todo.md`. The
    fix is a shared button rule the three pages can reach, which is a change to three stylesheets. */
-/* ⚠️ **One button now, and the row is kept rather than removed.** `Back to the board` is the only
-   thing at the foot since the share moved under the verdict; a flex row of one is the same rendering
-   as no row, and keeping it means a second footer control does not have to reinvent the container. */
+/* ⚠️⚠️ **A column of rows, not a row of buttons.** The foot carries three exits and the split is by
+   KIND rather than by fitting: the first row is where you can go *inside* the product — the board, and
+   home — and the second leaves it for somebody else's site.
+
+   ⚠️ Three across at 375px puts every label on two lines, and `See the game` beside two in-product
+   controls reads as a third of the same kind when it is not. */
 .reveal-actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 12px;
 }
 
+.reveal-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
 .reveal-close,
+.reveal-home,
 .reveal-reference,
 .reveal-share {
   flex: 1;
@@ -852,6 +862,15 @@ td.label.substitute { padding-left: 14px; }
   background: var(--key);
   color: var(--ink);
   font: 600 16px/1 var(--face), system-ui, sans-serif;
+  /* ⚠️⚠️ **Two of these are anchors and two are buttons, and the anchors need this by hand.** A
+     `<button>` centres its label and strips its underline from the user agent; an `<a>` does neither,
+     so without this `Go home` renders as a bare blue link wedged between two buttons — which is what
+     the first photograph of this footer showed. They are one row and must not read as two kinds. */
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 /* ⚠️⚠️ **The equal-halves argument that used to be here is history, and it is kept as history.** The
@@ -885,14 +904,11 @@ td.label.substitute { padding-left: 14px; }
    ⚠️ Re-entry while the image builds is a flag in `finish.js`, not the attribute: a button that greys
    out for a second with no explanation reads as broken. */
 
-/* ⚠️ **An `<a>` drawn as a button, so the two at the foot read as one row.** `display: flex` with the
-   centring is what a `<button>` gets from the user agent and an anchor does not; without it the label
-   sits at the top left of a 50px box. */
+/* ⚠️ **The one that leaves the product, on its own line and a shade quieter than the two above it.**
+   Same height and same target: it is a third exit, not a footnote. The centring and the underline are
+   handled in the shared rule above, which is where the anchors and the buttons are reconciled. */
 .reveal-reference {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
+  opacity: 0.82;
 }
 
 .reveal-share svg {

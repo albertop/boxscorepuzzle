@@ -44,10 +44,43 @@ any of them. A landing page only the newcomer sees is a landing page for a produ
 
 ### ⚠️ The button changes when today is already played
 
-*See the boxscore* rather than *Play* — or the time achieved. Otherwise a returning player is offered a
-puzzle he has already solved, **every day**, which reads as the product not knowing who he is. The state
-is already there: §6 persists the finished session and §7 reopens it read-only, so this is a label
-reading state that exists rather than new machinery.
+*See the board* rather than *Play* — with the time achieved below it. Otherwise a returning player is
+offered a puzzle he has already solved, **every day**, which reads as the product not knowing who he is.
+The state is already there: §6 persists the finished session and §7 reopens it read-only, so this is a
+label reading state that exists rather than new machinery.
+
+⚠️ **It says *See the board*, not *See the boxscore*, and the two are a step apart.** This document said
+the second one and the code shared the board's own key for it. From here the player goes to the **board**;
+the finished board is what then offers the boxscore. The old label named the second step from the first
+step's button.
+
+### ✔ ⚠️⚠️ The finished day also carries a share and a countdown — **built 2026-08-24**
+
+**Because the way out of the reveal arrives here**, and it arrived at a page that congratulated the
+player and gave them nothing to do. Three screens pushed inward and none pushed out: the landing sent
+you to the board, the finished board sent you to the boxscore, and the boxscore sent you back to the
+board. The exit (§7c) is only half a fix if the place it exits *to* is a dead end.
+
+| | |
+|---|---|
+| **the share** | beside *See the board*, in the row the single button occupies otherwise — **the one place a returning player looks.** Under the verdict two blocks down is a control they scroll past. It is the only growth mechanism the product has, so it does not sit where it is scrolled past |
+| **the countdown** | *Next puzzle in 6h 12m*, under the verdict. **The only retention beta 0 has** — a finished player has nothing left to do here, and without a next time this page is where the product ends for the day |
+
+⚠️ **The share is on a finished day only.** Offering one before there is a result is a button that
+either lies or refuses, and a returning player would meet it every unfinished morning.
+
+⚠️⚠️ **The countdown is read from the pointer and never computed here.** E1.2 settled that `serve`
+consumes calendar facts and derives none, and a browser test refuses any player-page source reaching for
+`ROLLOVER_OFFSET_HOURS` or a timezone offset — so the forge writes `next_rotation` (`POINTER_SCHEMA` 2)
+and the client subtracts. `Date.now()` is an absolute moment with no local calendar in it. **A pointer
+written before that field simply has no countdown**, which is what an absent fact is worth; a landing
+that refused to render because it cannot say when tomorrow arrives would have traded the product for an
+ornament.
+
+⚠️ **Painted once, on arrival, to the minute.** A second-by-second countdown needs a timer, and a timer
+here runs for hours in a background tab to move a digit nobody is looking at. At the boundary and past it
+the line says *Today's puzzle is arriving* rather than *in 0m* or a negative — the page is open across
+midnight in the ordinary case, which is somebody who finished at eleven.
 
 ### Nothing else yet
 
@@ -359,6 +392,35 @@ the player reconstructed.
 
 The reveal is where the names appear for the first time. Nothing during play is labelled by name (§7);
 rows are positions throughout, and the boxscore at the end is the answer to *whose game was this*.
+
+---
+
+## ✔ 7c. Three exits from the reveal, and one of them leaves — **built 2026-08-24**
+
+**The reveal's foot is two rows, and the split is by kind rather than by fitting.**
+
+```
+[ See the board ]  [ Go home ]
+[      See the game            ]
+```
+
+The first row is where the player can go **inside** the product; the second leaves it for Baseball
+Reference. Three across at 375px puts every label on two lines, and *See the game* beside two in-product
+controls reads as a third of the same kind when it is not.
+
+⚠️⚠️ **`Go home` is the whole point of this section and it did not exist.** Every route from a finished
+game returned to another part of the finished game, so a player who had done the day's puzzle was
+circling — *see the boxscore, back to the board, see the boxscore*. **There was no exit.** The landing
+carries the archive, the streak and the subscription when they exist (§1), which makes it the page a
+finished player most needs to reach and the one they could not.
+
+⚠️ **`Go home`, not *Landing page*.** Nobody outside this repository calls it a landing page; the product
+name is what that screen already shows on arrival, so a button repeating it says nothing new. What the
+player wants at that moment is the way out, which is a place and a verb — and it completes a row of three
+verbs rather than two buttons and a label.
+
+⚠️ **The share is under the verdict, not in the foot.** It belongs to the sentence that earns it, and a
+share beside the way out makes the player choose between leaving and telling somebody.
 
 ---
 

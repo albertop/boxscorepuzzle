@@ -28,6 +28,7 @@ import pytest
 
 from boxscore_forge.calendar import CalendarError, void
 from boxscore_package.format import SCHEMA_VERSION
+from boxscore_package.format import pointer as pointer_body
 
 _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 _TODAY = date(2026, 9, 1)
@@ -884,7 +885,20 @@ class TestWhatTheClientMaySee:
         days = _generation(tmp_path) / builder.DAYS
         pointer = json.loads(next(days.glob("*.json")).read_text(encoding="utf-8"))
 
-        assert set(pointer) == {"date", "puzzle_id", "generation", "schema", "signature"}
+        # ⚠️⚠️ **Named against `format.pointer` rather than spelled again**, and the spelled version is
+        # what fired when `next_rotation` arrived. That firing was correct -- this is the leak guard and
+        # a new field is exactly what it must notice -- but a hand-written set means every legitimate
+        # addition edits a test that then asserts nothing it did not already know. Taking the expected
+        # keys from the one place the body is built keeps the assertion about *the pointer not growing a
+        # list*, which is what it is for, while the signature is the only thing the writer adds.
+        assert set(pointer) == set(pointer_body(day="2026-09-02", puzzle_id="x", generation="y", offset_hours=-8)) | {
+            "signature"
+        }
+        # ⚠️ And the half that a derived set cannot carry: whatever the fields are, none of them is a
+        # collection. A pointer that grew a `puzzles` array would be the manifest again, served to the
+        # browser, with the leak restored and nothing to notice it.
+        for name, value in pointer.items():
+            assert not isinstance(value, (list, dict)), f"{name} is a collection; a pointer names one day"
 
     def test_a_pointer_names_the_generation_that_owns_its_package(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

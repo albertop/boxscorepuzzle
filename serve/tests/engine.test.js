@@ -17,7 +17,7 @@ import {
 } from "../engine/columns.js";
 import { createGame } from "../engine/game.js";
 import { PackageError, readPackage } from "../engine/package.js";
-import { CATALOGS, keys, text, useCatalog } from "../engine/strings.js";
+import { CATALOGS, fill, keys, text, useCatalog } from "../engine/strings.js";
 import { assert, equal, suite, test, throws } from "./harness.js";
 
 const MANIFEST = "../data/puzzles/manifest.json";
@@ -3158,7 +3158,10 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
 });
 
 suite("The landing page, which every visit lands on", () => {
-  const mount = async (raw, { session = null, today = new Date("2026-08-21T12:00:00") } = {}) => {
+  const mount = async (
+    raw,
+    { session = null, today = new Date("2026-08-21T12:00:00"), nextRotation = null, onShare = undefined } = {},
+  ) => {
     const { renderLanding } = await import("../ui/phone/landing.js");
     const { createStore } = await import("../engine/store.js");
     const { readPackage } = await import("../engine/package.js");
@@ -3173,8 +3176,17 @@ suite("The landing page, which every visit lands on", () => {
     });
     if (session) store.save(puzzle.id, session);
     const went = [];
-    const view = renderLanding({ puzzle, root, store, today, go: (href) => went.push(href) });
-    return { ...view, root, puzzle, went, teardown: () => root.remove() };
+    const shared = [];
+    const view = renderLanding({
+      puzzle,
+      root,
+      store,
+      today,
+      nextRotation,
+      go: (href) => went.push(href),
+      onShare: onShare === undefined ? (game) => shared.push(game) : onShare,
+    });
+    return { ...view, root, puzzle, went, shared, teardown: () => root.remove() };
   };
 
   /** A finished session for this package: every blank correct, and the clock frozen. */
@@ -3193,6 +3205,125 @@ suite("The landing page, which every visit lands on", () => {
     game.finish();
     return game.snapshot();
   };
+
+  test("⚠️⚠️ a finished day offers the way back to the board AND the way to tell somebody", async () => {
+    // **This is the exit out of the loop, and both halves of it.** Three screens pushed inward and none
+    // pushed out: the landing sent you to the board, the finished board to the boxscore, the boxscore
+    // back to the board. `Go home` is the exit; it arrives at a page that congratulates the player and
+    // — before this — offered them nothing to do with it. The one growth mechanism the product has was
+    // on the screen they had just left.
+    const view = await mount(packages[0].raw, { session: await solvedSession(packages[0].raw) });
+
+    assert(view.finished, "the fixture is not a finished session");
+    assert(view.share !== null, "a solved day offers no share; the exit leads to a dead end");
+    equal(view.play.textContent.startsWith(text("landing.see_board")), true, "the way in is still an offer to play");
+
+    // ⚠️ **Side by side, in the place the single button occupies otherwise.** Where `Play today’s
+    // puzzle` sits is the one thing a returning player looks for; a share two blocks below the verdict
+    // is a control they scroll past. The placement is the feature, so the test asserts the container.
+    const row = view.page.querySelector(".landing-way-row");
+    assert(row !== null, "there is no row; the two controls are stacked somewhere else");
+    equal(row.contains(view.play), true, "the way in is not in the row");
+    equal(row.contains(view.share), true, "the share is not beside it");
+
+    view.teardown();
+  });
+
+  test("⚠️ an unfinished day offers no share, because there is no result to share", async () => {
+    // A share before there is a result is a button that either lies or refuses, and a returning player
+    // meets it every unfinished morning. The absence is the assertion.
+    const view = await mount(packages[0].raw);
+
+    equal(view.finished, false);
+    assert(view.share === null, "an unsolved day offers a share");
+    assert(view.page.querySelector(".landing-way-row") === null, "the finished-day row is drawn anyway");
+    equal(view.play.textContent.startsWith(text("landing.play")), true);
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ the share is guarded against a second press and is never disabled before the first", async () => {
+    // `navigator.share` takes a moment; a second press during it opens a second sheet on some platforms
+    // and queues a second row for one act. **Disabled during the send and never before it** — if the
+    // button is on screen the game is over and the result can always be shared. The reveal’s share
+    // carries the same rule, and it is the rule the operator asked for by name.
+    let release = null;
+    const calls = [];
+    const view = await mount(packages[0].raw, {
+      session: await solvedSession(packages[0].raw),
+      onShare: (game) => {
+        calls.push(game);
+        return new Promise((resolve) => {
+          release = resolve;
+        });
+      },
+    });
+
+    equal(view.share.disabled, false, "the share is disabled before it has been pressed");
+    view.share.click();
+    await Promise.resolve();
+    equal(calls.length, 1);
+    equal(view.share.disabled, true, "the share stays live during its own send");
+
+    view.share.click();
+    await Promise.resolve();
+    equal(calls.length, 1, "a second press during the send started a second share");
+
+    release();
+    await Promise.resolve();
+    await Promise.resolve();
+    equal(view.share.disabled, false, "the share never comes back");
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ the countdown is read from the pointer and is absent when the pointer has none", async () => {
+    // **E1.2: `serve` consumes calendar facts and derives none.** The instant comes from the forge,
+    // which is the tree allowed to know `ROLLOVER_OFFSET_HOURS`. A pointer written before
+    // `POINTER_SCHEMA` 2 does not carry it — and then there is no countdown, which is what an absent
+    // fact is worth. A landing that refuses to render because it cannot say when tomorrow arrives has
+    // traded the product for an ornament.
+    const session = await solvedSession(packages[0].raw);
+    const today = new Date("2026-08-21T12:00:00Z");
+
+    const withIt = await mount(packages[0].raw, { session, today, nextRotation: "2026-08-22T08:00:00Z" });
+    assert(withIt.countdown !== null, "the pointer carried the instant and nothing counts down");
+    equal(withIt.countdown.textContent, fill("landing.next_in", { time: "20h 0m" }));
+    withIt.teardown();
+
+    const without = await mount(packages[0].raw, { session, today, nextRotation: null });
+    assert(without.countdown === null, "a pointer with no instant produced a countdown anyway");
+    without.teardown();
+
+    // ⚠️ And an unfinished day has no countdown either: the player has something to do now.
+    const playing = await mount(packages[0].raw, { today, nextRotation: "2026-08-22T08:00:00Z" });
+    assert(playing.countdown === null, "an unsolved day counts down to the next puzzle");
+    playing.teardown();
+  });
+
+  test("⚠️⚠️ the countdown at the boundary says the puzzle is arriving, never `in 0m` and never a negative", async () => {
+    // **The page is open across midnight in the ordinary case** — somebody who finished at eleven. A
+    // countdown that reaches zero and keeps saying `in 0m` reads as stuck, and past zero it would count
+    // upward or show a negative. The rotation takes a moment and a reload during it is the right move.
+    const { untilRotation } = await import("../ui/phone/landing.js");
+    const at = "2026-08-22T08:00:00Z";
+
+    equal(untilRotation(at, new Date("2026-08-22T07:59:00Z")), fill("landing.next_in", { time: "1m" }));
+    equal(untilRotation(at, new Date("2026-08-22T08:00:00Z")), text("landing.next_now"));
+    // ⚠️⚠️ **The last 59 seconds, and this line is the whole reason the test was not enough.** The three
+    // cases above were green while `07:59:50` said **`Next puzzle in 0m`** — `Math.floor` makes anything
+    // under a minute zero, so the sentence this test exists to forbid appeared every day for a minute,
+    // in the window the test stepped over. Found by printing the line at seven moments and reading them.
+    equal(untilRotation(at, new Date("2026-08-22T07:59:50Z")), text("landing.next_now"));
+    equal(untilRotation(at, new Date("2026-08-22T07:59:01Z")), text("landing.next_now"));
+    equal(untilRotation(at, new Date("2026-08-22T07:58:59Z")), fill("landing.next_in", { time: "1m" }));
+    equal(untilRotation(at, new Date("2026-08-22T08:00:30Z")), text("landing.next_now"));
+    equal(untilRotation(at, new Date("2026-08-22T09:30:00Z")), text("landing.next_now"));
+
+    // ⚠️ `0h 14m` is a sentence nobody writes, so the hours are dropped rather than shown as zero.
+    equal(untilRotation(at, new Date("2026-08-22T07:46:00Z")), fill("landing.next_in", { time: "14m" }));
+    equal(untilRotation(at, new Date("2026-08-21T21:00:00Z")), fill("landing.next_in", { time: "11h 0m" }));
+  });
 
   test("it says what this is and what it is not, and shows a board", async () => {
     const view = await mount(packages[0].raw);
@@ -3560,6 +3691,47 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     }
   });
 
+  test("⚠️⚠️ next_rotation is optional and is checked when it is there, never parsed downstream", async () => {
+    // **Both halves are decided and neither is obvious.**
+    //
+    // **Optional**, because a pointer written before `POINTER_SCHEMA` 2 does not carry it and is
+    // otherwise perfectly serviceable. The field feeds a countdown; a landing that refuses to render
+    // because it cannot say when tomorrow arrives has traded the product for an ornament.
+    //
+    // **Checked when present**, because the alternative is `Date.parse` answering `NaN` three modules
+    // later and the page rendering `NaNh NaNm` — a malformed value producing a *displayed wrong answer*
+    // rather than a refusal. Validate at the boundary, not downstream.
+    const { readPointer } = await import("../ui/phone/daily.js");
+    const good = { date: "2026-09-02", puzzle_id: "a" };
+
+    assert(readPointer({ ...good }, "today.json") !== null, "a pointer without the field is refused");
+
+    for (const [value, because] of [
+      ["soon", "a word"],
+      ["", "an empty string"],
+      [1_756_800_000_000, "a number of milliseconds"],
+      [null, "null, which is not the same as absent"],
+      [{}, "an object"],
+      // ⚠️⚠️ **This is the only case the `typeof` clause catches on its own, and it was missing.**
+      // Mutating the guard showed every other case above being caught by `Date.parse` alone — `"soon"`,
+      // `""`, `null` and `{}` all stringify to something unparseable, so the type check was asserted by
+      // nothing. `[2026]` stringifies to `"2026"`, **which parses as a valid year**, so an array reaches
+      // the countdown as a real instant unless the type is checked. A guard with two clauses needs a
+      // case for each; one clause covering every case in the list means the other is untested.
+      [[2026], "an array whose text happens to parse"],
+    ]) {
+      const error = throws(
+        () => readPointer({ ...good, next_rotation: value }, "today.json"),
+        /next_rotation/,
+        `accepted ${because}`,
+      );
+      assert(error instanceof PackageError, `${because}: refused with ${error.constructor.name}`);
+    }
+
+    const ok = readPointer({ ...good, next_rotation: "2026-09-03T08:00:00Z" }, "today.json");
+    equal(ok.next_rotation, "2026-09-03T08:00:00Z");
+  });
+
   test("the real pointers still read", async () => {
     // ⚠️ The other half: a check that refuses everything is as useless as one that refuses nothing.
     const { readPointer, PUBLIC_DAYS } = await import("../ui/phone/daily.js");
@@ -3599,6 +3771,28 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     equal(idInPath("/p/NOTHEX"), null, "a segment that is not an opaque id was accepted");
   });
 
+  /**
+   * Every module `serve/ui/phone/` ships. **Named here because a browser cannot list a directory**, and
+   * checked against the real one by `forge/tests/test_the_date_guard_sweeps_every_module.py`.
+   */
+  const PLAYER_MODULES = [
+    "board.js",
+    "daily.js",
+    "finish.js",
+    "head.js",
+    "landing-main.js",
+    "landing.js",
+    "main.js",
+    "share-image.js",
+    "share-result.js",
+    "share-send.js",
+    "shell.js",
+    "testmode.js",
+    "today.js",
+    "tutorial-main.js",
+    "tutorial.js",
+  ];
+
   test("⚠️⚠️ no source under serve/ computes a calendar date", async () => {
     // **The reason `serve` owes no third `ROLLOVER_OFFSET_HOURS`**, asserted rather than asserted-in-a-
     // comment. Two trees compute the date — the forge decides what to build, `publish` decides which
@@ -3613,7 +3807,13 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     //
     // So the assertion is on the pairing rather than on the name: nothing anywhere may compute a
     // rollover, and `calendarDate` may never be fed the player's date.
-    for (const module of ["daily.js", "today.js", "shell.js", "main.js", "landing-main.js"]) {
+    // ⚠️⚠️ **Every module under `ui/phone/`, and the list was five of fifteen.** `landing.js` was absent
+    // and it is the file that gained the countdown — the one piece of date arithmetic added since this
+    // guard was written, in the one module the guard did not look at. **A list maintained by hand beside
+    // a directory** is the same shape as the page list two suites over, and a browser cannot enumerate a
+    // directory to fix it here. `forge/tests/test_the_date_guard_sweeps_every_module.py` is what asserts
+    // this list names every file, and it was seen red by deleting an entry.
+    for (const module of PLAYER_MODULES) {
       const source = await (await fetch(`../ui/phone/${module}`)).text();
       const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
       for (const forbidden of ["ROLLOVER", "getTimezoneOffset"]) {
@@ -3886,7 +4086,10 @@ suite("⚠️⚠️ C11 over what the player actually reads, not over what the c
     );
   });
 
-  const PAGES = ["index.html", "play.html", "tutorial.html"];
+  // ⚠️ `today.html` was absent from this list and it is the page that kept a hardcoded title
+  // longest — the guard existed for exactly that defect and did not look at the file that still
+  // had it. A list of pages maintained by hand beside a directory of pages.
+  const PAGES = ["index.html", "play.html", "tutorial.html", "today.html"];
 
   /**
    * ⚠️⚠️ **The seam's blind spot was a file extension.**
@@ -3900,13 +4103,27 @@ suite("⚠️⚠️ C11 over what the player actually reads, not over what the c
    * The elements checked are the ones that carry copy. `<meta charset>`, `viewport` and `lang` carry
    * identifiers rather than language and are not translated — `lang` in particular **must** be in the
    * markup, because a crawler and a screen reader need it before any script runs.
+   *
+   * ⚠️⚠️ **AND THAT LAST SENTENCE TURNED OUT TO COVER MORE THAN `lang`.** The declarative head — the
+   * title, the description and the `og:`/`twitter:` tags — is read by scrapers and search crawlers that
+   * **do not run scripts**, so `applyHead` setting them at runtime reaches every human and no machine.
+   * A share carries a URL beside its image, and with those tags absent the card is a bare domain.
+   *
+   * **So they are in the markup, and this scan no longer reports them.** What replaces the report is
+   * stricter than it was: the test below asserts each one **equals the catalogue's value**, so the
+   * markup holds a copy that cannot drift rather than a copy nobody checks. C11 is *no user-facing
+   * string is spelled in code* — a copy the catalogue owns and a guard compares is not a second
+   * spelling, and a copy nothing compares is exactly what v36-P2-17 was.
+   *
+   * ⚠️ **The exemption is by tag, not by file.** `aria-label`, `placeholder`, `alt` and `title=` are
+   * still refused everywhere: they are read by a human through a running page, which is the case
+   * `applyHead` already serves.
    */
+  const HEAD_TAGS_A_CRAWLER_NEEDS = ["description", "og:title", "og:description", "og:site_name", "og:image:alt"];
   const copyInMarkup = (source) =>
     [
-      ...[...source.matchAll(/<title>([^<]*)<\/title>/gi)].map(([, one]) => `<title>${one}`),
-      ...[...source.matchAll(/<meta\s+name="(description|og:[a-z:]+)"[^>]*content="([^"]+)"/gi)].map(
-        ([, name, one]) => `<meta ${name}>${one}`,
-      ),
+      // ⚠️ `<title>` and the declarative metas are deliberately absent from this list. See the note
+      // above and `the declarative head repeats the catalogue exactly` below, which is what covers them.
       ...[...source.matchAll(/(?:aria-label|placeholder|alt|title)="([^"]*[A-Za-z]\s+\S[^"]*)"/gi)].map(
         ([, one]) => `attribute: ${one}`,
       ),
@@ -3925,10 +4142,46 @@ suite("⚠️⚠️ C11 over what the player actually reads, not over what the c
     );
   });
 
+  test("⚠️⚠️ the declarative head repeats the catalogue exactly, never a second wording", async () => {
+    // **This is what lets the markup hold a copy at all.** The head has to be static because a scraper
+    // does not run scripts; the copy is only acceptable while something compares it, and this is that
+    // something. Drift here is a search result and a share card saying what the page does not.
+    const { text } = await import("../engine/strings.js");
+    const TITLES = {
+      "index.html": "page.landing.title",
+      "tutorial.html": "page.tutorial.title",
+      "play.html": "page.landing.title",
+      "today.html": "page.landing.title",
+    };
+
+    for (const page of PAGES) {
+      const source = await (await fetch(`../ui/phone/${page}`)).text();
+      const title = /<title>([^<]*)<\/title>/i.exec(source);
+      assert(title !== null, `${page} ships no <title>; a search result then shows whatever is inferred`);
+      equal(title[1], text(TITLES[page]), `${page} titles itself outside the catalogue`);
+
+      const meta = (name) =>
+        (new RegExp(`<meta\\s+(?:name|property)="${name}"[^>]*content="([^"]*)"`, "i").exec(source) ?? [])[1];
+
+      // ⚠️ The preview and the tab must agree. A card that says something the page does not is a
+      // promise broken in one click, and it is invisible to anyone who does not share.
+      equal(meta("og:title"), title[1], `${page}'s preview and tab disagree about the page`);
+      equal(meta("og:description"), meta("description"), `${page}'s preview and search result disagree`);
+      assert(meta("description"), `${page} ships no description`);
+    }
+  });
+
   test("⚠️ the markup scan catches the defect it was written for, and spares what belongs there", () => {
-    // The exact line all three pages carried, and the exact lines they still carry.
-    equal(copyInMarkup("<title>boxscore</title>").length, 1);
-    equal(copyInMarkup('<meta name="description" content="Rebuild a real boxscore.">').length, 1);
+    // ⚠️ **The title is no longer reported by this scan and the confirmation says so**, rather than
+    // being quietly deleted: a crawler needs it in the markup, and the test above is what holds it to
+    // the catalogue. What this scan still refuses is copy a *running page* would put there.
+    equal(copyInMarkup("<title>boxscore</title>").length, 0);
+    equal(copyInMarkup('<meta name="description" content="Rebuild a real boxscore.">').length, 0);
+
+    // ⚠️⚠️ **What is left is the half `applyHead` can serve, and the line between them is who reads it.**
+    // A crawler reads the head before any script runs, so the head is markup and the test above holds it
+    // to the catalogue. Everything below is read by a human through a *running* page — there is no
+    // moment at which a screen reader has the `alt` and not the module that could have set it.
     equal(copyInMarkup('<img alt="A finished boxscore sheet">').length, 1);
 
     // ⚠️ The other half, and the half that decides whether this guard survives: a scan that fires on

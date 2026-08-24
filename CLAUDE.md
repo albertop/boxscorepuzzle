@@ -715,6 +715,51 @@ is two places encoding one thing. `forge/tests/test_the_images_build.py` asserts
 it found. ⚠️ The guard covers this instance, not the class: *a comment claiming what nothing establishes*
 is not decidable from the text, for the same reason the near-neighbour class is not.
 
+**⚠️⚠️ A contract between two images that are pushed separately has no safe order, only a window.** A
+package schema is one: §33 gives `forge` and `serve` no shared code and no shared deployment cycle, so
+the client's `READABLE` and the packages' `schema` are two spellings in two images. **Push either one
+alone and every board dies** — the reader refuses its own site's packages, in whichever direction the
+mismatch runs.
+
+⚠️ **The repository can be perfectly consistent while the VPS is one image behind**, and on 2026-08-24 it
+was: schema 6 in the tree, schema 5 served by a client reading 5. Nothing was broken and nothing asserted
+that it would stay that way. **It held because the deployment had not happened yet**, which is not a
+property of the system.
+
+**What can check it is the health verdict and only the health verdict**, because the served root is the
+one place both halves exist at once — a test in `forge` cannot see what is deployed and neither can one
+in `serve`. `publish.health` reads the `READABLE` literal out of the served `engine/package.js` and
+compares it against every public package. ⚠️ **A missing reader is a fault rather than a skip**: packages
+published into a directory with no client beside them is a deployment, not a pass.
+
+**⚠️⚠️ Two writers of one document drift the day either one changes, and each file stays internally
+consistent while they do.** This is the two-Dockerfiles-and-a-uid shape again, and it recurred on
+2026-08-24 in the tree that records it.
+
+`forge` has two scripts that write a dated pointer: `build_inventory` dates the calendar,
+`write_reference_puzzles` dates six development boards from a fixed day. **Their own docstrings say the
+*dating* is deliberately not shared, and that is correct.** The field set and the version are not the
+dating — and when the pointer gained `next_rotation` and went to schema 2, only the calendar writer was
+changed. The development batch kept writing schema 1 with the field absent, **which is the batch the dev
+server and the browser suite read**: the countdown could not appear locally, and a browser test named
+*the real pointers still read* was reading a document production no longer produces, green the whole
+time.
+
+⚠️ **Reading either script could not have found it.** Each is right about its own half and neither
+states the other's. What found it was **trying to photograph the feature and getting a page without it**.
+
+**The repair is the one the uid got: the fact lives in two files, so it lives in neither.**
+`boxscore_package.format.pointer` builds the body and both writers call it;
+`forge/tests/test_the_two_pointer_writers_agree.py` refuses a writer that spells a pointer field itself,
+and was seen red by putting the literal back.
+
+⚠️⚠️ **And the exactness guard fired correctly and still had to be rewritten.** A test asserting the
+pointer's field set *by name* is the leak guard — a pointer that grew a `puzzles` array would be the
+manifest again, served to the browser — so it going red on a new field is the guard working. But a
+hand-written set means every legitimate addition edits it, and the edited test then asserts only what
+its editor already believed. **It takes the expected keys from the body helper now and asserts separately
+that no value is a collection**, which is the property it was actually protecting.
+
 **⚠️⚠️ A remedy that makes a symptom rarer is confirmed by the same evidence as one that removes it.**
 This is the hardest wrong answer in the register to detect, and it was one decision away from being
 taken on 2026-08-23.

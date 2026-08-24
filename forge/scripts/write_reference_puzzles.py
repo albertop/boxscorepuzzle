@@ -64,6 +64,7 @@ from boxscore_forge.publication_key import (  # noqa: E402
     publication_key,
 )
 from boxscore_package.format import Package, read, write  # noqa: E402
+from boxscore_package.format import pointer as pointer_body  # noqa: E402
 from boxscore_package.signing import sign_manifest  # noqa: E402
 from boxscore_verify.certify import certify_for_publication  # noqa: E402
 
@@ -125,6 +126,22 @@ construction** rather than by resemblance: what the browser loads on the laptop 
 will load on the VPS, produced by the same executable.
 
 ⚠️ Gitignored, like `forge/inventory/`. The *rotated* two are what Git carries."""
+
+ROLLOVER_OFFSET_HOURS = -8
+"""The clock that defines which puzzle is today's. **`docs/calendar.md` is the decision and the reason.**
+
+⚠️⚠️ **A second spelling inside `forge`, and it is deliberate rather than sloppy — but only because a
+test compares them.** `build_inventory` owns the calendar clock and this script owns a fixed-date
+development batch; importing that module for one integer would pull the pool, the generator and the
+calendar in behind it, which is a real coupling bought with a constant.
+
+**What makes two spellings safe here is that they are in one tree, so a test CAN compare them**, and
+`test_the_two_pointer_writers_agree.py` does -- against each other *and* against `docs/calendar.md`.
+That is the difference from the `publish` copy, which no test can reach across a deployment boundary and
+which therefore cites the document alone.
+
+⚠️ Promoting the value out of both is recorded as owed in `docs/reviews/todo.md` and is not this change.
+"""
 
 REFERENCE_FIRST = date(2026, 9, 1)
 """The first date the reference pointers are dated from. **A fixed date, never `today`.**
@@ -404,7 +421,21 @@ def write_pointers(generation_dir: Path, ids: list[str], generation: str, key: E
         stale.unlink()
     for offset, puzzle_id in enumerate(ids):
         when = (REFERENCE_FIRST + timedelta(days=offset)).isoformat()
-        document = sign_manifest({"date": when, "puzzle_id": puzzle_id, "generation": generation, "schema": 1}, key)
+        # ⚠️⚠️ **The same body `build_inventory` writes, from the one place its fields live.** This was
+        # `{"date", "puzzle_id", "generation", "schema": 1}` spelled here, and when the pointer gained
+        # `next_rotation` and went to schema 2 **only the other writer was changed** -- so the batch the
+        # dev server and the browser suite read was a document production no longer produces. The
+        # countdown could not appear locally and *the real pointers still read* was reading the wrong
+        # real pointer.
+        document = sign_manifest(
+            pointer_body(
+                day=when,
+                puzzle_id=puzzle_id,
+                generation=generation,
+                offset_hours=ROLLOVER_OFFSET_HOURS,
+            ),
+            key,
+        )
         (days / f"{when}.json").write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return len(ids)
 

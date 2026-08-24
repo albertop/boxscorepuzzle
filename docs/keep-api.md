@@ -159,6 +159,30 @@ whether it was ever pasted. A row here means *the player pressed Share and the m
 else** — the shape `CLAUDE.md` records under *what the player does when the number goes up*. Whoever
 reports on this table states the limit with the figure or the figure is misleading.
 
+#### ⚠️⚠️ A second press does not make a second row, and `channel` is therefore the FIRST channel
+
+`share_id` is `<device_id>:<puzzle_id>` — **the device and the puzzle, and nothing else.** With
+`ON CONFLICT DO NOTHING` behind it, that means a player who presses *Share* three times leaves **one
+row**, and the `channel` on it is whichever mechanism answered the **first** time. A player who copies
+to the clipboard and then shares natively is recorded as `clipboard`.
+
+**Three surfaces can now produce that press** and all three go through one function
+(`serve/ui/phone/share-result.js`), so this holds wherever it is pressed:
+
+| | |
+|---|---|
+| the reveal | the screen the player reaches by finishing |
+| the landing, on a day already solved | added with the exit, because a player who leaves the reveal must still be able to tell somebody |
+| a reopened board's reveal | the same screen again, on a later visit |
+
+**So the column means *shared at least once*, and it is deliberately not a count.** A counter would be
+the honest alternative and it costs the free retry: `POST /shares` is retried after a lost response, and
+a counter cannot tell a retry from a second press — it would inflate the one number the growth mechanism
+has, in the direction that flatters it. Idempotence is worth more here than the second press.
+
+⚠️ **Whoever reports on `channel` states this**, or the split reads as a preference when it is a record
+of which sheet opened first.
+
 #### The two fields that carry decisions
 
 | | |

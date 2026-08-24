@@ -11,6 +11,7 @@ import { browserStorage, createStore } from "../../engine/store.js";
 import { text } from "../../engine/strings.js";
 import { NoPuzzle, loadPuzzle } from "./daily.js";
 import { renderLanding } from "./landing.js";
+import { shareResult } from "./share-result.js";
 import { applyHead } from "./head.js";
 import { startUplink } from "../../engine/uplink.js";
 
@@ -42,11 +43,37 @@ const store = createStore(storage);
 // ⚠️ **The landing page reports its own errors and drains the queue too** (C3, C4). Every visit lands
 // here, so a visitor who never opens a board is still the visit where yesterday's undelivered event goes
 // out — and an exception on this page is the one most likely to stop somebody reaching the game at all.
-startUplink({ storage });
+// ⚠️ **Its return is captured now, and it was discarded.** The landing shares, so it needs the same
+// three things the board's entry point takes from here — the device, the share queue and the event
+// queue — and the call was already being made for the drain.
+const uplink = startUplink({ storage });
 
 try {
-  const { puzzle } = await loadPuzzle();
-  renderLanding({ puzzle, root, store });
+  const { puzzle, nextRotation } = await loadPuzzle();
+  renderLanding({
+    puzzle,
+    root,
+    store,
+    nextRotation,
+    // ⚠️⚠️ **The same function the reveal's Share calls, with the same four arguments.** Not a second
+    // send path: one rasteriser, one sentence, one row. `game` is the restored board `renderLanding`
+    // hands back, because the image is drawn from cells and the record carries only a duration.
+    // ⚠️⚠️ **Named one by one, and a spread of `uplink` here was wrong in a way nothing would have
+    // reported.** `startUplink` calls the event queue `events` and `shareResult` calls it `outbox`, so
+    // `...uplink` passes `shares` and `device` correctly and leaves `outbox` undefined — which is a
+    // legal value meaning *there is no queue*, so every share from this page would have recorded
+    // `event_id: null` and looked exactly like a share from a device with no outbox. `main.js` already
+    // maps it by hand for the board; this is the same map.
+    onShare: (game) =>
+      shareResult({
+        puzzle,
+        game,
+        record: game.record(),
+        shares: uplink.shares,
+        outbox: uplink.events,
+        device: uplink.device,
+      }),
+  });
 } catch (error) {
   root.replaceChildren();
   const message = document.createElement("p");

@@ -29,6 +29,7 @@ import {
   PRINTED_PITCHING,
   inningsToDisplay,
 } from "../../engine/columns.js";
+import { ROUTES } from "./daily.js";
 import { fill, longDate, text } from "../../engine/strings.js";
 import { renderLineScore } from "./board.js";
 
@@ -256,8 +257,28 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // ⚠️ **The share goes under the verdict; the foot carries the two ways out.** The share was here,
   // beside `Back to the board`, and moving it left this row for what it should have held all along:
   // the way back to the board and the way on to the game itself.
+  // ⚠️⚠️ **The way out of the loop, and it is what this whole change is for.** Three screens pushed
+  // inward and none pushed out: the landing sent you to the board, the finished board sent you to the
+  // boxscore, and the boxscore sent you back to the board. A player who finished had no exit that was
+  // not a return.
+  const home = document.createElement("a");
+  home.className = "reveal-home";
+  home.href = ROUTES.landing;
+  home.textContent = text("reveal.home");
+
+  // ⚠️ **The share is under the verdict, not in the foot.** Placed there when it went live: it belongs
+  // to the sentence that earns it, and a share beside the way out makes the player choose between
+  // leaving and telling somebody.
   verdict.append(share);
-  actions.append(close, reference);
+
+  // ⚠️⚠️ **Two rows, and the split is by kind rather than by fitting.** The first row is where you can
+  // go *inside* the product; the second leaves it for somebody else's site. Three across at 375px puts
+  // every label on two lines, and `See the game` beside two in-product controls reads as a third of the
+  // same kind when it is not.
+  const inside = document.createElement("div");
+  inside.className = "reveal-actions-row";
+  inside.append(close, home);
+  actions.append(inside, reference);
   sheet.append(actions);
   // ⚠️ **Built here, wired by the shell.** This used to call `panel.remove()` itself, which closes the
   // panel and nothing else — it cannot restore the focus the shell moved, cannot un-inert what the

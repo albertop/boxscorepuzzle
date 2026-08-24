@@ -16,6 +16,7 @@ job that has not run since Tuesday; a date alone passes a directory quietly accu
 """
 
 import json
+import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -93,7 +94,62 @@ def inspect(public: Path, today: date) -> Verdict:
         elif named[1] is None or not (public / f"{named[1]}.json").is_file():
             faults.append(f"{YESTERDAY} names {named[1]} and no such package is public")
 
+    faults.extend(_the_client_can_read_what_is_public(public, packages))
+
     return Verdict(healthy=not faults, faults=tuple(faults))
+
+
+def _the_client_can_read_what_is_public(public: Path, packages: list[str]) -> list[str]:
+    """⚠️⚠️ **Can the browser that is deployed beside these files actually parse them?**
+
+    **This is the one deployment failure the other checks cannot see, and it is the seventeen-inning
+    shape at deployment scale.** Every question above is about the *set* -- how many, which date, does
+    the named file exist -- and all four pass on a directory of perfectly-formed packages the client
+    refuses at its first boundary. A package schema is a contract between two trees that share no code
+    and no deployment cycle (§33), so **each holds its own `READABLE` and nothing compared them**: the
+    forge's is `boxscore_package.format.READABLE`, the client's is a literal in `engine/package.js`, and
+    they are in different images that are pushed separately.
+
+    On 2026-08-24 the two were 6 and 5. The site was fine -- both deployed halves were 5 -- and the
+    repository had moved to 6 in both, so **the only way to be broken was to push one image and not the
+    other**, in either order. Nothing asserted it. It held because the operator did it carefully, which
+    is not a property of the system.
+
+    ⚠️⚠️ **It is decidable here and nowhere else**, which is why it lives in the health verdict rather
+    than in a test. A test in `forge` cannot see what is deployed and a test in `serve` cannot either;
+    **the served root holds both halves at once**, and this runs against the served root.
+
+    ⚠️ **A missing reader is a fault, not a skip.** `serve` not being there at all is a deployment that
+    published packages into a directory nobody serves -- and *the absence of the evidence must not read
+    as the evidence*.
+    """
+    reader = public.parents[1] / "engine" / "package.js" if len(public.parents) > 1 else None
+    if reader is None or not reader.is_file():
+        return [f"{reader} is not there; the packages are public and no client is deployed beside them"]
+
+    readable = re.search(r"const READABLE = \[([\d,\s]*)\]", reader.read_text(encoding="utf-8"))
+    if readable is None or not readable[1].strip():
+        # ⚠️ The literal moved or was emptied. **Refused rather than assumed**: a check that cannot find
+        # its subject reports on nothing, and `nginx -t` approving a config it was never given is the
+        # register's own instance of believing that answer.
+        return [f"{reader.name} declares no READABLE versions; this check cannot say what the client reads"]
+
+    accepted = {int(one) for one in readable[1].split(",") if one.strip()}
+    faults = []
+    for name in packages:
+        try:
+            schema = json.loads((public / f"{name}.json").read_text(encoding="utf-8")).get("schema")
+        except (OSError, ValueError):
+            faults.append(f"{name}.json is public and is not readable JSON")
+            continue
+        if schema not in accepted:
+            # The whole point, and the message names both sides: which way round the mismatch is decides
+            # which image is behind, and that is the difference between a diagnosis and a bisect.
+            faults.append(
+                f"{name}.json is schema {schema} and the deployed client reads {sorted(accepted)}; "
+                f"every board is a controlled rejection"
+            )
+    return faults
 
 
 def _pointer(pointer: Path) -> tuple[str, str | None] | None:

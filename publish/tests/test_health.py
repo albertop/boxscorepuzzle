@@ -13,13 +13,17 @@ from pathlib import Path
 from publish.health import PUBLIC_LIMIT, inspect
 from publish.rotate import TODAY, YESTERDAY, rotate
 from tests.conftest import FIRST as _FIRST
+from tests.conftest import PACKAGE_SCHEMA
 from tests.conftest import build_inventory as _inventory
+from tests.conftest import deploy_client as _deploy
 
 
 def _rotated(tmp_path: Path, *, days: int = 6, offset: int = 3) -> tuple[Path, date]:
     """A public path in the state a working rotation leaves it in."""
     inventory = _inventory(tmp_path, days=days)
-    public = tmp_path / "public"
+    # ⚠️ Under a served root with a client in it, because `inspect` asks whether that client can read
+    # what is here. See `deploy_client`.
+    public = _deploy(tmp_path / "serve")
     when = _FIRST + timedelta(days=offset)
     rotate(inventory, public, when)
     return public, when
@@ -37,7 +41,7 @@ class TestWhatItPasses:
     def test_the_first_day_is_healthy_with_only_one_package(self, tmp_path: Path) -> None:
         """⚠️ The limit is a ceiling, not a quota. One package is the calendar's first date, not a fault."""
         inventory = _inventory(tmp_path, days=3)
-        public = tmp_path / "public"
+        public = _deploy(tmp_path / "serve")
         rotate(inventory, public, _FIRST)
 
         assert inspect(public, _FIRST).healthy
@@ -220,3 +224,73 @@ class TestWhatItLooksAt:
 
         assert not verdict.healthy
         assert any("not a directory" in fault for fault in verdict.faults)
+
+
+class TestTheDeployedClientCanReadWhatIsPublic:
+    """⚠️⚠️ **The one deployment failure the other four questions cannot see.**
+
+    Every question above is about the *set* — how many packages, which date, does the named file exist.
+    All four pass on a directory of perfectly-formed packages the deployed browser refuses at its first
+    boundary, because a package schema is a contract between two trees that share no code and no
+    deployment cycle (§33): each holds its own `READABLE`, in its own image, pushed separately.
+
+    On 2026-08-24 the repository was at 6 and the VPS was serving 5 with a client that read 5 — both
+    halves consistent, the site fine, and **the only way to break it was to push one image and not the
+    other, in either order.** Nothing asserted it. It held because the operator did it carefully, which
+    is not a property of the system. This is that property.
+    """
+
+    def test_a_client_that_reads_what_is_served_is_healthy(self, tmp_path: Path) -> None:
+        public, when = _rotated(tmp_path)
+
+        assert inspect(public, when).healthy
+
+    def test_a_client_behind_the_packages_is_a_fault_naming_both_sides(self, tmp_path: Path) -> None:
+        """The `serve` image is stale: new packages, old reader. Every board is a controlled rejection."""
+        public, when = _rotated(tmp_path)
+        _deploy(tmp_path / "serve", readable=PACKAGE_SCHEMA - 1)
+
+        faults = inspect(public, when).faults
+
+        assert faults, "a client that cannot read a single public package is healthy"
+        # ⚠️ Both numbers, because which way round the mismatch is decides which image is behind — and
+        # that is the difference between a diagnosis and a bisect.
+        assert any(f"schema {PACKAGE_SCHEMA}" in fault for fault in faults), faults
+        assert any(f"reads [{PACKAGE_SCHEMA - 1}]" in fault for fault in faults), faults
+
+    def test_a_client_ahead_of_the_packages_is_the_same_fault(self, tmp_path: Path) -> None:
+        """⚠️ **The other order, and it is the one that nearly happened.** The `serve` image ships first
+        with the new reader while the rotation has not yet published new packages."""
+        public, when = _rotated(tmp_path)
+        _deploy(tmp_path / "serve", readable=PACKAGE_SCHEMA + 1)
+
+        assert not inspect(public, when).healthy
+
+    def test_no_client_beside_the_packages_is_a_fault_and_not_a_skip(self, tmp_path: Path) -> None:
+        """⚠️⚠️ **The absence of the evidence must not read as the evidence.** A check that quietly
+        passes when it cannot find its subject is the `nginx -t` approval three times over."""
+        public, when = _rotated(tmp_path)
+        (tmp_path / "serve" / "engine" / "package.js").unlink()
+
+        faults = inspect(public, when).faults
+
+        assert any("no client is deployed" in fault for fault in faults), faults
+
+    def test_a_client_declaring_no_versions_is_refused_rather_than_assumed(self, tmp_path: Path) -> None:
+        """The literal moved or was emptied. **This check then reports on nothing**, and says so."""
+        public, when = _rotated(tmp_path)
+        (tmp_path / "serve" / "engine" / "package.js").write_text("const READABLE = [];", encoding="utf-8")
+
+        faults = inspect(public, when).faults
+
+        assert any("declares no READABLE" in fault for fault in faults), faults
+
+    def test_an_unreadable_package_is_named_rather_than_crashing_the_check(self, tmp_path: Path) -> None:
+        """A half-written file on the public path. The verdict must survive it and say which one."""
+        public, when = _rotated(tmp_path)
+        victim = next(public.glob("p*.json"))
+        victim.write_text("{not json", encoding="utf-8")
+
+        faults = inspect(public, when).faults
+
+        assert any(victim.name in fault and "readable JSON" in fault for fault in faults), faults

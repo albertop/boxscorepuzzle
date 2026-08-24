@@ -107,16 +107,40 @@ const en = {
   // ---- the reveal ------------------------------------------------------------------------------
   // The heading, and the panel's accessible name. It says what the player did rather than what the
   // board is: the payoff is the object in front of them, not a verdict on their performance.
+  // ⚠️⚠️ **THE SAME SENTENCE LIVES TWICE IN THIS CATALOGUE, AND THAT MADE A PLACEMENT UNREADABLE.**
+  // `landing.finished` is also "You rebuilt it." — the reveal congratulates a player who just finished,
+  // and the landing congratulates one who finished earlier today. Two screens, two moments, one
+  // sentence.
+  //
+  // **A search for the text finds both, and a search for the key finds the wrong one.** An instruction
+  // to put a control *under the line that says "You rebuilt it."* was read against the landing twice
+  // before anybody checked which module renders which key. It is `finish.js` that renders this one.
+  //
+  // ⚠️ **They are not merged, and that is deliberate.** They read alike today and they are different
+  // statements: one is a verdict on a game just ended, the other is a status on a page. The day either
+  // gains a word -- a streak, a time, a next-puzzle line -- a shared key would force the other to take
+  // it too.
   "reveal.title": "You rebuilt it.",
   "reveal.time": "Your time",
   // ⚠️ The clock is invisible during play (§26) and appears here for the first time. The label says
   // whose time it is, because the comparison against other players is the paid feature and this is
   // not it.
-  "reveal.close": "Back to the board",
+  // ⚠️⚠️ **A verb, like the other two.** The footer is three actions -- See the board, Go home, See
+  // the game -- and the moment one of them is a noun the row reads as two buttons and a label.
+  "reveal.close": "See the board",
+  // ⚠️⚠️ **`Go home`, and `Landing page` was our vocabulary rather than the player's.** Nobody outside
+  // this repository calls it a landing page; the product name is what that screen already shows on
+  // arrival, so a button repeating it says nothing new. What the player wants at that moment is the
+  // way out, which is a place and a verb.
+  "reveal.home": "Go home",
   // ⚠️ **The destination is named, not the act.** *See the full game* would describe what any link
   // does; a reader deciding whether to leave the page wants to know where to. §29 delegates the
   // narrative to whoever already has it, and this is the name of whoever that is.
-  "reveal.reference": "Baseball Reference",
+  // ⚠️⚠️ **It must not name the provider.** Two reasons and either decides it: the destination can
+  // change, and a label naming Baseball Reference would have to be re-labelled the day it does. And it
+  // completes a series the product already has -- **the board is the grid, the boxscore is the reveal,
+  // the game is the real thing** -- so three screens end up saying what they are in the same shape.
+  "reveal.reference": "See the game",
   // ⚠️ **Live since G.** It was drawn and inert for weeks so the shape of the finished screen would be
   // the shape it keeps — the reveal is where a player decides whether to show anyone, and discovering
   // that decision late would have moved every other control. What it does now is `share-send.js`.
@@ -289,6 +313,18 @@ const en = {
   // is the thing that makes it a product rather than a puzzle.
   "landing.not_trivia": "No trivia, no guessing. A new puzzle every day.",
   "landing.play": "Play today\u2019s puzzle",
+  // ⚠️⚠️ **`See the board`, and it deliberately stops matching the board's own label.** This used to be
+  // `done.see_boxscore` with a comment calling the shared sentence deliberate — *the same sentence the
+  // board uses for the same act*. **It is not the same act.** From here the player goes to the BOARD;
+  // the finished board is what then offers the boxscore. The old label named the second step from the
+  // first step's button.
+  "landing.see_board": "See the board",
+  // ⚠️ The countdown, and it is the only retention beta 0 has. `{time}` is filled from the pointer's
+  // `next_rotation`, never computed here — `serve` reads calendar facts and does not derive them.
+  "landing.next_in": "Next puzzle in {time}",
+  // ⚠️ **At the boundary itself, and for the minute after.** A countdown that reaches zero and keeps
+  // saying `in 0m` reads as stuck; this is what it says while the rotation is happening.
+  "landing.next_now": "Today\u2019s puzzle is arriving.",
   "landing.how_to_play": "How to play",
   // Shown in place of the tagline's call to action once today is done, beside the time.
   "landing.finished": "You rebuilt it.",
