@@ -885,15 +885,13 @@ class TestWhatTheClientMaySee:
         days = _generation(tmp_path) / builder.DAYS
         pointer = json.loads(next(days.glob("*.json")).read_text(encoding="utf-8"))
 
-        # ⚠️⚠️ **Named against `format.pointer` rather than spelled again**, and the spelled version is
-        # what fired when `next_rotation` arrived. That firing was correct -- this is the leak guard and
-        # a new field is exactly what it must notice -- but a hand-written set means every legitimate
-        # addition edits a test that then asserts nothing it did not already know. Taking the expected
-        # keys from the one place the body is built keeps the assertion about *the pointer not growing a
-        # list*, which is what it is for, while the signature is the only thing the writer adds.
-        assert set(pointer) == set(pointer_body(day="2026-09-02", puzzle_id="x", generation="y", offset_hours=-8)) | {
-            "signature"
-        }
+        # ⚠️⚠️ **Named against `format.pointer` rather than spelled again.** A hand-written set is the
+        # leak guard -- a pointer that grew a `puzzles` array would be the manifest again, served to the
+        # browser -- and it fires on every legitimate addition too, so whoever adds a field edits the
+        # test and it then asserts only what its editor already believed. Taking the expected keys from
+        # the one place the body is built keeps the assertion about *the pointer not growing a list*,
+        # which is what it is for; the signature is the only thing the writer adds.
+        assert set(pointer) == set(pointer_body(day="2026-09-02", puzzle_id="x", generation="y")) | {"signature"}
         # ⚠️ And the half that a derived set cannot carry: whatever the fields are, none of them is a
         # collection. A pointer that grew a `puzzles` array would be the manifest again, served to the
         # browser, with the leak restored and nothing to notice it.

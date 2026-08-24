@@ -153,8 +153,28 @@ body {
 .landing-way-row .landing-share {
   flex: 1 1 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   justify-content: center;
+}
+
+/* ⚠️ **The two contents stack differently and that is the only thing they do not share.** `See the
+   board` puts the date under its label, so it is a column; `Share` puts the mark beside its label, so
+   it is a row. Everything else — ground, ink, radius, type, height, half the row — is the one rule. */
+.landing-way-row .landing-play {
+  flex-direction: column;
+}
+
+.landing-way-row .landing-share {
+  gap: 8px;
+}
+
+/* ⚠️ Sized in the button rather than in the svg, exactly as `.reveal-share svg` is: the mark is drawn
+   in `currentColor` and has no size of its own, so a viewBox with no box renders at the user agent's
+   default 300px and blows the row apart. */
+.landing-share svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 /* ⚠️ Disabled only *during* a send, never before one. If this button is on screen the game is over and
@@ -168,14 +188,6 @@ body {
   cursor: default;
 }
 
-/* ⚠️ The reason to come back, under the verdict it follows. Quiet, because it is information rather
-   than an offer — and it is the only retention beta 0 has. */
-.landing-next {
-  margin: 6px 2px 0;
-  font-size: 14px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
 
 .landing-date {
   display: block;

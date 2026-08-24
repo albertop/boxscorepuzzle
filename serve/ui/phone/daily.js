@@ -71,22 +71,6 @@ export function readPointer(raw, where) {
   // `YYYY-MM-DD`, because the value is shown to the player and is stamped on every C7 event. A pointer
   // carrying `"soon"` would travel into the event record and be unrecoverable there.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw.date)) fail(`date is ${JSON.stringify(raw.date)}, expected YYYY-MM-DD`);
-
-  // ⚠️⚠️ **`next_rotation` is optional and checked when present, and both halves are decided.**
-  //
-  // **Optional**, because a pointer written before `POINTER_SCHEMA` 2 does not carry it and is otherwise
-  // perfectly serviceable — the field feeds a countdown, and a landing page that refuses to render
-  // because it cannot say when tomorrow arrives has traded the product for an ornament. What an absent
-  // value costs is the countdown line, which is exactly what it is worth.
-  //
-  // **Checked when present**, because the alternative is `Date.parse` returning `NaN` and a countdown
-  // rendering `NaNh NaNm` — a malformed value producing a *displayed* wrong answer rather than a
-  // refusal. Validate at the boundary, not downstream.
-  if (raw.next_rotation !== undefined) {
-    if (typeof raw.next_rotation !== "string" || Number.isNaN(Date.parse(raw.next_rotation))) {
-      fail(`next_rotation is ${JSON.stringify(raw.next_rotation)}, expected an ISO instant`);
-    }
-  }
   return raw;
 }
 
@@ -199,15 +183,6 @@ export async function loadPuzzle(pathname = location.pathname) {
     puzzle: readPackage(await response.json()),
     calendarDate: chosen.date,
     id: chosen.puzzle_id,
-    // ⚠️⚠️ **The instant the day turns, read rather than computed, and that is the whole point of the
-    // field.** E1.2 settled that `serve` consumes calendar facts and derives none, and a browser test
-    // refuses any player-page source that reaches for `ROLLOVER_OFFSET_HOURS` or a timezone offset. A
-    // countdown needs the boundary; computing it here would be a third spelling of a constant that
-    // exists in two trees, in the tree that is not allowed to know it.
-    //
-    // ⚠️ `null` rather than absent when the pointer predates it, so a caller destructuring this gets a
-    // value that says *no* instead of `undefined`, which reads as a field nobody set.
-    nextRotation: chosen.next_rotation ?? null,
   };
 }
 

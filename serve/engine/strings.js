@@ -319,12 +319,6 @@ const en = {
   // the finished board is what then offers the boxscore. The old label named the second step from the
   // first step's button.
   "landing.see_board": "See the board",
-  // ⚠️ The countdown, and it is the only retention beta 0 has. `{time}` is filled from the pointer's
-  // `next_rotation`, never computed here — `serve` reads calendar facts and does not derive them.
-  "landing.next_in": "Next puzzle in {time}",
-  // ⚠️ **At the boundary itself, and for the minute after.** A countdown that reaches zero and keeps
-  // saying `in 0m` reads as stuck; this is what it says while the rotation is happening.
-  "landing.next_now": "Today\u2019s puzzle is arriving.",
   "landing.how_to_play": "How to play",
   // Shown in place of the tagline's call to action once today is done, beside the time.
   "landing.finished": "You rebuilt it.",

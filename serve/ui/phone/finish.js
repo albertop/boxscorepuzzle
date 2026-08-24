@@ -319,9 +319,17 @@ function referenceUrl(gameId) {
  * ⚠️ **The three-node mark, not the square-with-an-arrow.** The latter is Apple's and reads as a
  * system affordance on iOS and as nothing anywhere else; this one is what the web uses and what an
  * Android handset shows for the same act. The product is phone-first on both.
+ *
+ * ⚠️⚠️ **Exported since the landing gained a Share, and the alternative was a second copy of a drawing.**
+ * Two surfaces offer this act and they must offer the same mark: a player who learns the icon on the
+ * reveal has to recognise it on the landing. A hand-drawn twin would drift the first time either is
+ * touched and nothing would notice — this project's most-recorded defect, in a shape where the symptom
+ * is *the same button looks like two different buttons*, which is exactly how it was found.
+ *
+ * ⚠️ `doc` for the reason every other renderer here takes it: a test drives the real thing.
  */
-function shareIcon() {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+export function shareIcon(doc = document) {
+  const svg = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "none");
   svg.setAttribute("stroke", "currentColor");
@@ -331,14 +339,14 @@ function shareIcon() {
   svg.setAttribute("aria-hidden", "true");
   svg.setAttribute("focusable", "false");
   for (const [cx, cy] of [[18, 5], [6, 12], [18, 19]]) {
-    const node = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    const node = doc.createElementNS("http://www.w3.org/2000/svg", "circle");
     node.setAttribute("cx", String(cx));
     node.setAttribute("cy", String(cy));
     node.setAttribute("r", "3");
     svg.append(node);
   }
   for (const [x1, y1, x2, y2] of [[8.6, 10.5, 15.4, 6.5], [8.6, 13.5, 15.4, 17.5]]) {
-    const link = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    const link = doc.createElementNS("http://www.w3.org/2000/svg", "line");
     link.setAttribute("x1", String(x1));
     link.setAttribute("y1", String(y1));
     link.setAttribute("x2", String(x2));

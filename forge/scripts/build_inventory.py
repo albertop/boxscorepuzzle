@@ -455,14 +455,11 @@ def write_pointers(calendar: Calendar, out: Path, key: Ed25519PrivateKey) -> int
         # being written now. `Entry.assigned` has recorded it since the calendar existed; the defect was
         # that nothing read it.
         #
-        # ⚠️ `ROLLOVER_OFFSET_HOURS` is passed rather than imported by the helper: this is one of the two
-        # trees that owns the calendar clock, and `docs/calendar.md` is what both assert against.
         signed = sign_manifest(
             pointer_body(
                 day=entry.date,
                 puzzle_id=entry.puzzle_id,
                 generation=entry.assigned,
-                offset_hours=ROLLOVER_OFFSET_HOURS,
             ),
             key,
         )

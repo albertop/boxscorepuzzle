@@ -127,22 +127,6 @@ will load on the VPS, produced by the same executable.
 
 ⚠️ Gitignored, like `forge/inventory/`. The *rotated* two are what Git carries."""
 
-ROLLOVER_OFFSET_HOURS = -8
-"""The clock that defines which puzzle is today's. **`docs/calendar.md` is the decision and the reason.**
-
-⚠️⚠️ **A second spelling inside `forge`, and it is deliberate rather than sloppy — but only because a
-test compares them.** `build_inventory` owns the calendar clock and this script owns a fixed-date
-development batch; importing that module for one integer would pull the pool, the generator and the
-calendar in behind it, which is a real coupling bought with a constant.
-
-**What makes two spellings safe here is that they are in one tree, so a test CAN compare them**, and
-`test_the_two_pointer_writers_agree.py` does -- against each other *and* against `docs/calendar.md`.
-That is the difference from the `publish` copy, which no test can reach across a deployment boundary and
-which therefore cites the document alone.
-
-⚠️ Promoting the value out of both is recorded as owed in `docs/reviews/todo.md` and is not this change.
-"""
-
 REFERENCE_FIRST = date(2026, 9, 1)
 """The first date the reference pointers are dated from. **A fixed date, never `today`.**
 
@@ -432,7 +416,6 @@ def write_pointers(generation_dir: Path, ids: list[str], generation: str, key: E
                 day=when,
                 puzzle_id=puzzle_id,
                 generation=generation,
-                offset_hours=ROLLOVER_OFFSET_HOURS,
             ),
             key,
         )

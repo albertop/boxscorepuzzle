@@ -739,14 +739,14 @@ consistent while they do.** This is the two-Dockerfiles-and-a-uid shape again, a
 `forge` has two scripts that write a dated pointer: `build_inventory` dates the calendar,
 `write_reference_puzzles` dates six development boards from a fixed day. **Their own docstrings say the
 *dating* is deliberately not shared, and that is correct.** The field set and the version are not the
-dating — and when the pointer gained `next_rotation` and went to schema 2, only the calendar writer was
-changed. The development batch kept writing schema 1 with the field absent, **which is the batch the dev
-server and the browser suite read**: the countdown could not appear locally, and a browser test named
-*the real pointers still read* was reading a document production no longer produces, green the whole
-time.
+dating — and when the pointer gained a field, only the calendar writer was changed. The development
+batch kept writing the old shape, **which is the batch the dev server and the browser suite read**, so a
+browser test named *the real pointers still read* was reading a document production no longer produces,
+green the whole time.
 
 ⚠️ **Reading either script could not have found it.** Each is right about its own half and neither
-states the other's. What found it was **trying to photograph the feature and getting a page without it**.
+states the other's. What found it was **trying to photograph the feature and getting a page without
+it**.
 
 **The repair is the one the uid got: the fact lives in two files, so it lives in neither.**
 `boxscore_package.format.pointer` builds the body and both writers call it;

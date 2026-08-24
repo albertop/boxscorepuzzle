@@ -1075,19 +1075,13 @@ archive, the streak and the subscription when they exist.
 |---|---|
 | ✔ **G4.1** | `Go home` in the reveal's foot, which is now **two rows**: the two exits that stay inside the product, then the one that leaves it for Baseball Reference |
 | ✔ **G4.2** | **a share on the finished landing**, beside *See the board* and in the row the single button occupies otherwise — the exit is half a fix if the place it exits *to* offers nothing |
-| ✔ **G4.3** | **a countdown** to the next puzzle, read from the pointer's `next_rotation` (`POINTER_SCHEMA` 2) and never computed in the browser. The only retention beta 0 has |
-| ✔ **G4.4** | **one share path for both surfaces** — `share-result.js`. It was a closure inside `shell.js`, and a second screen offering *Share* would otherwise have meant exporting the shell's insides or writing the sequence twice |
+| ✔ **G4.3** | **one share path for both surfaces** — `share-result.js`. It was a closure inside `shell.js`, and a second screen offering *Share* would otherwise have meant exporting the shell's insides or writing the sequence twice |
+| ✔ **G4.4** | **one button in two copies**, not two treatments — and the reveal's own share mark, imported rather than redrawn. A player who learns the icon on the reveal has to recognise it on the landing |
 
 ⚠️⚠️ **Nothing on this plan could have found it.** G1 to G3 each name an artefact and ask whether it is
 right; this is a property of the **journey between them**, and every screen in it was correct on its own.
 It is the same class as the metric that measured the board rather than the game: *a person doing the task
 and comparing the feeling against the design.*
-
-⚠️ **And it cost a real defect elsewhere the moment it was built**: `next_rotation` went into
-`build_inventory`'s pointer writer and not into `write_reference_puzzles`'s, so the development batch
-stayed at schema 1 with the field missing — two writers of one document, each internally consistent,
-neither stating the other's half. `forge/tests/test_the_two_pointer_writers_agree.py` is the guard, and
-`boxscore_package.format.pointer` is now the one place the body is built.
 
 ⚠️⚠️ **The blur radius was set by looking at the picture and the first value was wrong in the direction
 that matters.** At 2.2px a digit at this size is a smudge with no shape, so the player's own cells read

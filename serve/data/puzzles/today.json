@@ -1,8 +1,7 @@
 {
  "date": "2026-09-02",
  "generation": "38db750feca2",
- "next_rotation": "2026-09-03T08:00:00Z",
  "puzzle_id": "409fad7a93cd8267",
- "schema": 2,
- "signature": "18b30f56057758985f7decb0986a6ed3786d1dfa9c34e0209dfca495d1525bd6679cf3ed29c2967cf0973510aae6262c4aefbf72dcc302c54b045877744dc108"
+ "schema": 1,
+ "signature": "3fe9b651eb185a6cc44bbeb7a3108182953e586c45d611ee4b234ee1c3896fa2b02ceef483119793169a43da218ee6d939ea958880b47047977895221fec890f"
 }

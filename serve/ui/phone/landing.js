@@ -20,50 +20,10 @@
 
 import { battingCell, battingTotalCell } from "../../engine/columns.js";
 import { createGame, isSession } from "../../engine/game.js";
-import { fill, localIso, longDate, text } from "../../engine/strings.js";
+import { localIso, longDate, text } from "../../engine/strings.js";
 import { columnsFor, renderLineScore, renderSection } from "./board.js";
 import { ROUTES, withSearch } from "./daily.js";
-import { formatDuration } from "./finish.js";
-
-/**
- * How long until `at`, as the sentence the landing shows.
- *
- * ⚠️⚠️ **`Date.parse` and subtraction, and nothing else — no calendar arithmetic anywhere.** Both sides
- * are absolute instants: the forge wrote one, `now` is the other. A duration between two moments has no
- * timezone and no rollover in it, which is what lets a tree forbidden to know `ROLLOVER_OFFSET_HOURS`
- * render a countdown to a rollover.
- *
- * ⚠️⚠️ **At and past the boundary it says something else, and that case is the one worth writing down.**
- * A countdown that reaches zero and keeps saying `in 0m` reads as stuck, and *past* zero it would count
- * upward or show a negative — on a page that is open across midnight, which is the ordinary case for
- * somebody who finished at eleven. The rotation takes a moment to run and a reload during it is what the
- * player should do, so the sentence at zero says the puzzle is arriving.
- *
- * ⚠️ **Hours and minutes, never seconds.** A second-by-second countdown demands a timer, and a timer on
- * this page runs for hours in a background tab to move a digit nobody is looking at. The line is
- * accurate to the minute and is painted once, on arrival.
- */
-export function untilRotation(at, now) {
-  const left = Date.parse(at) - now.getTime();
-  // ⚠️⚠️ **Under a minute, not at zero, and the difference is the last 59 seconds of every day.** The
-  // first version tested `left <= 0` and read correctly at the boundary and past it — and `Math.floor`
-  // makes anything under a minute `0`, so from 07:59:01 to 08:00:00 the page said **`Next puzzle in
-  // 0m`**, which is the exact sentence this branch exists to prevent.
-  //
-  // ⚠️ **It was not found by a test.** The boundary test asserted one minute before, at, and after, and
-  // was green — it checked the cases that had been thought of. It was found by printing the sentence at
-  // seven moments and reading them, which is this repository's most-recorded rule: look at the output.
-  if (left < 60_000) return text("landing.next_now");
-  const minutes = Math.floor(left / 60000);
-  const hours = Math.floor(minutes / 60);
-  // ⚠️ `hours` is dropped rather than shown as `0h`. `in 0h 14m` is a sentence nobody writes.
-  const span = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes % 60}m`;
-  return fill("landing.next_in", { time: span });
-}
-
-function paintCountdown(node, at, now) {
-  node.textContent = untilRotation(at, now);
-}
+import { formatDuration, shareIcon } from "./finish.js";
 
 export function renderLanding({
   puzzle,
@@ -81,9 +41,6 @@ export function renderLanding({
   // with no store, no queue and no network. A share needs a rasteriser and a send path; when the caller
   // has not wired them there is nothing to press, which is different from a control that fails.
   onShare = null,
-  // The instant today's board stops being today's, from the pointer. `null` when the pointer predates
-  // the field, and then there is no countdown — see `daily.js`.
-  nextRotation = null,
 }) {
   const page = doc.createElement("div");
   page.className = "landing";
@@ -196,7 +153,11 @@ export function renderLanding({
     share = doc.createElement("button");
     share.type = "button";
     share.className = "landing-share";
-    share.textContent = text("reveal.share");
+    // ⚠️⚠️ **The reveal's own icon, imported rather than redrawn.** A player learns this mark on the
+    // reveal and has to recognise it here; two hand-drawn twins drift the first time either is touched
+    // and nothing notices. It is decorative — `aria-hidden` on the svg — and `reveal.share` carries the
+    // meaning, which is why both surfaces share the catalogue key as well as the drawing.
+    share.append(shareIcon(doc), doc.createTextNode(text("reveal.share")));
     // ⚠️⚠️ **Guarded against re-entry, exactly as the reveal's is.** `navigator.share` takes a moment
     // and a second press during it opens a second sheet on some platforms and rejects the first on
     // others — and it queues a second row for one act. Disabled *during* the send and never before it:
@@ -235,20 +196,6 @@ export function renderLanding({
     page.append(done);
   }
 
-  // ⚠️⚠️ **The countdown, and it is the only retention beta 0 has.** A finished player has nothing left
-  // to do here; without a next time this page is where the product ends for the day. It says when to
-  // come back and it is the reason the exit is not a dead end.
-  //
-  // ⚠️ **Rendered only when the pointer carried the instant.** No fallback, no local computation: a
-  // countdown this tree worked out itself would be `serve` deriving a calendar fact, which E1.2 forbids
-  // and a browser test refuses by name.
-  let countdown = null;
-  if (finished && nextRotation !== null) {
-    countdown = doc.createElement("p");
-    countdown.className = "landing-next";
-    paintCountdown(countdown, nextRotation, today);
-    page.append(countdown);
-  }
 
 
   // ⚠️⚠️ **Empty and deliberate. Do not remove as unused** (C9, C8, C10). The archive, the streak and
@@ -280,5 +227,5 @@ export function renderLanding({
     }
   }
 
-  return { page, play, share, how, later, countdown, finished, game: restored };
+  return { page, play, share, how, later, finished, game: restored };
 }

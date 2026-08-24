@@ -3160,7 +3160,7 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
 suite("The landing page, which every visit lands on", () => {
   const mount = async (
     raw,
-    { session = null, today = new Date("2026-08-21T12:00:00"), nextRotation = null, onShare = undefined } = {},
+    { session = null, today = new Date("2026-08-21T12:00:00"), onShare = undefined } = {},
   ) => {
     const { renderLanding } = await import("../ui/phone/landing.js");
     const { createStore } = await import("../engine/store.js");
@@ -3182,7 +3182,6 @@ suite("The landing page, which every visit lands on", () => {
       root,
       store,
       today,
-      nextRotation,
       go: (href) => went.push(href),
       onShare: onShare === undefined ? (game) => shared.push(game) : onShare,
     });
@@ -3225,6 +3224,26 @@ suite("The landing page, which every visit lands on", () => {
     assert(row !== null, "there is no row; the two controls are stacked somewhere else");
     equal(row.contains(view.play), true, "the way in is not in the row");
     equal(row.contains(view.share), true, "the share is not beside it");
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ the landing's share carries the reveal's own mark, not a second drawing of it", async () => {
+    // **A player learns the icon on the reveal and has to recognise it on the landing.** Two hand-drawn
+    // twins are one edit away from being two different buttons for one act, and nothing would notice —
+    // which is how this was found: the operator looked at the landing and said the icon was missing.
+    //
+    // The assertion is that the two are the **same drawing**, not that each has one. `shareIcon()` is
+    // exported from `finish.js` and both call it; comparing the rendered markup is what catches a copy.
+    const { shareIcon } = await import("../ui/phone/finish.js");
+    const view = await mount(packages[0].raw, { session: await solvedSession(packages[0].raw) });
+
+    const drawn = view.share.querySelector("svg");
+    assert(drawn !== null, "the landing's share has no mark; the reveal's has one");
+    equal(drawn.outerHTML, shareIcon().outerHTML, "the landing draws a different mark from the reveal");
+    // ⚠️ Decorative: the label carries the meaning, so a screen reader must not read the mark as well.
+    equal(drawn.getAttribute("aria-hidden"), "true");
+    assert(view.share.textContent.includes(text("reveal.share")), "the mark replaced the label");
 
     view.teardown();
   });
@@ -3275,54 +3294,6 @@ suite("The landing page, which every visit lands on", () => {
     equal(view.share.disabled, false, "the share never comes back");
 
     view.teardown();
-  });
-
-  test("⚠️⚠️ the countdown is read from the pointer and is absent when the pointer has none", async () => {
-    // **E1.2: `serve` consumes calendar facts and derives none.** The instant comes from the forge,
-    // which is the tree allowed to know `ROLLOVER_OFFSET_HOURS`. A pointer written before
-    // `POINTER_SCHEMA` 2 does not carry it — and then there is no countdown, which is what an absent
-    // fact is worth. A landing that refuses to render because it cannot say when tomorrow arrives has
-    // traded the product for an ornament.
-    const session = await solvedSession(packages[0].raw);
-    const today = new Date("2026-08-21T12:00:00Z");
-
-    const withIt = await mount(packages[0].raw, { session, today, nextRotation: "2026-08-22T08:00:00Z" });
-    assert(withIt.countdown !== null, "the pointer carried the instant and nothing counts down");
-    equal(withIt.countdown.textContent, fill("landing.next_in", { time: "20h 0m" }));
-    withIt.teardown();
-
-    const without = await mount(packages[0].raw, { session, today, nextRotation: null });
-    assert(without.countdown === null, "a pointer with no instant produced a countdown anyway");
-    without.teardown();
-
-    // ⚠️ And an unfinished day has no countdown either: the player has something to do now.
-    const playing = await mount(packages[0].raw, { today, nextRotation: "2026-08-22T08:00:00Z" });
-    assert(playing.countdown === null, "an unsolved day counts down to the next puzzle");
-    playing.teardown();
-  });
-
-  test("⚠️⚠️ the countdown at the boundary says the puzzle is arriving, never `in 0m` and never a negative", async () => {
-    // **The page is open across midnight in the ordinary case** — somebody who finished at eleven. A
-    // countdown that reaches zero and keeps saying `in 0m` reads as stuck, and past zero it would count
-    // upward or show a negative. The rotation takes a moment and a reload during it is the right move.
-    const { untilRotation } = await import("../ui/phone/landing.js");
-    const at = "2026-08-22T08:00:00Z";
-
-    equal(untilRotation(at, new Date("2026-08-22T07:59:00Z")), fill("landing.next_in", { time: "1m" }));
-    equal(untilRotation(at, new Date("2026-08-22T08:00:00Z")), text("landing.next_now"));
-    // ⚠️⚠️ **The last 59 seconds, and this line is the whole reason the test was not enough.** The three
-    // cases above were green while `07:59:50` said **`Next puzzle in 0m`** — `Math.floor` makes anything
-    // under a minute zero, so the sentence this test exists to forbid appeared every day for a minute,
-    // in the window the test stepped over. Found by printing the line at seven moments and reading them.
-    equal(untilRotation(at, new Date("2026-08-22T07:59:50Z")), text("landing.next_now"));
-    equal(untilRotation(at, new Date("2026-08-22T07:59:01Z")), text("landing.next_now"));
-    equal(untilRotation(at, new Date("2026-08-22T07:58:59Z")), fill("landing.next_in", { time: "1m" }));
-    equal(untilRotation(at, new Date("2026-08-22T08:00:30Z")), text("landing.next_now"));
-    equal(untilRotation(at, new Date("2026-08-22T09:30:00Z")), text("landing.next_now"));
-
-    // ⚠️ `0h 14m` is a sentence nobody writes, so the hours are dropped rather than shown as zero.
-    equal(untilRotation(at, new Date("2026-08-22T07:46:00Z")), fill("landing.next_in", { time: "14m" }));
-    equal(untilRotation(at, new Date("2026-08-21T21:00:00Z")), fill("landing.next_in", { time: "11h 0m" }));
   });
 
   test("it says what this is and what it is not, and shows a board", async () => {
@@ -3691,47 +3662,6 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     }
   });
 
-  test("⚠️⚠️ next_rotation is optional and is checked when it is there, never parsed downstream", async () => {
-    // **Both halves are decided and neither is obvious.**
-    //
-    // **Optional**, because a pointer written before `POINTER_SCHEMA` 2 does not carry it and is
-    // otherwise perfectly serviceable. The field feeds a countdown; a landing that refuses to render
-    // because it cannot say when tomorrow arrives has traded the product for an ornament.
-    //
-    // **Checked when present**, because the alternative is `Date.parse` answering `NaN` three modules
-    // later and the page rendering `NaNh NaNm` — a malformed value producing a *displayed wrong answer*
-    // rather than a refusal. Validate at the boundary, not downstream.
-    const { readPointer } = await import("../ui/phone/daily.js");
-    const good = { date: "2026-09-02", puzzle_id: "a" };
-
-    assert(readPointer({ ...good }, "today.json") !== null, "a pointer without the field is refused");
-
-    for (const [value, because] of [
-      ["soon", "a word"],
-      ["", "an empty string"],
-      [1_756_800_000_000, "a number of milliseconds"],
-      [null, "null, which is not the same as absent"],
-      [{}, "an object"],
-      // ⚠️⚠️ **This is the only case the `typeof` clause catches on its own, and it was missing.**
-      // Mutating the guard showed every other case above being caught by `Date.parse` alone — `"soon"`,
-      // `""`, `null` and `{}` all stringify to something unparseable, so the type check was asserted by
-      // nothing. `[2026]` stringifies to `"2026"`, **which parses as a valid year**, so an array reaches
-      // the countdown as a real instant unless the type is checked. A guard with two clauses needs a
-      // case for each; one clause covering every case in the list means the other is untested.
-      [[2026], "an array whose text happens to parse"],
-    ]) {
-      const error = throws(
-        () => readPointer({ ...good, next_rotation: value }, "today.json"),
-        /next_rotation/,
-        `accepted ${because}`,
-      );
-      assert(error instanceof PackageError, `${because}: refused with ${error.constructor.name}`);
-    }
-
-    const ok = readPointer({ ...good, next_rotation: "2026-09-03T08:00:00Z" }, "today.json");
-    equal(ok.next_rotation, "2026-09-03T08:00:00Z");
-  });
-
   test("the real pointers still read", async () => {
     // ⚠️ The other half: a check that refuses everything is as useless as one that refuses nothing.
     const { readPointer, PUBLIC_DAYS } = await import("../ui/phone/daily.js");
@@ -3807,12 +3737,12 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     //
     // So the assertion is on the pairing rather than on the name: nothing anywhere may compute a
     // rollover, and `calendarDate` may never be fed the player's date.
-    // ⚠️⚠️ **Every module under `ui/phone/`, and the list was five of fifteen.** `landing.js` was absent
-    // and it is the file that gained the countdown — the one piece of date arithmetic added since this
-    // guard was written, in the one module the guard did not look at. **A list maintained by hand beside
-    // a directory** is the same shape as the page list two suites over, and a browser cannot enumerate a
-    // directory to fix it here. `forge/tests/test_the_date_guard_sweeps_every_module.py` is what asserts
-    // this list names every file, and it was seen red by deleting an entry.
+    // ⚠️⚠️ **Every module under `ui/phone/`, and the list was five of fifteen.** Ten files this guard
+    // names as its subject were never read, `landing.js` among them. **A list maintained by hand beside
+    // a directory**, which is the shape the page list two suites over has as well — and a browser cannot
+    // enumerate a directory to fix it here. `forge/tests/test_the_date_guard_sweeps_every_module.py` is
+    // what asserts this list names every file, in both directions, and it was seen red by deleting an
+    // entry and by leaving a stale one.
     for (const module of PLAYER_MODULES) {
       const source = await (await fetch(`../ui/phone/${module}`)).text();
       const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "");
