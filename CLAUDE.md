@@ -61,20 +61,34 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | | | |
 |---|---|---|
 | **A** inventory and calendar | ✔ complete | the batch, the calendar, the runbook |
-| **B** the hand-solve gate | ▶ B1 and B2 done, **B2 answered: the ladder does not order**; **B3's first half passed — 16/16 solved, none guessed**; ⬜ **B3's stratified sample**, ⬜ B4 | ⚠⚠ **still what blocks beta 0** — three strata almost untested |
+| **B** the hand-solve gate | ✔ **met 2026-08-24** | **16/16 solved by hand, none guessed**, all 16 uncertified by 3b; **B2 answered: the ladder does not order**. ⛔ the stratified sample and B4 **withdrawn** — ⚠️ three strata untested and accepted |
 | **C** client identity, events, errors | ✔ complete | device id, the C7 record, the upload queue, error reports |
 | **D** the data layer | ✔ complete | `keep/`, its own container |
-| **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⬜ its untestable half is F's |
+| **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⤴ its untestable half was F's, and F is met |
 | **F** deployment | ✔ **met 2026-08-24** | the three images, the site live over TLS, and the rotation with its own scheduler. `docs/runbook-inventory.md` §5b is the deployment |
 | **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be |
 
-⚠⚠ **The milestone is waiting on one thing and it is not code.** The hand-solve pack is **the operator's**,
-and it is the only verification of human derivability that exists: layer 3 propagates intervals to a fixed
+⚠️⚠️ **Every group is met, and B closed by being rewritten rather than by more solving.** The hand-solve
+pack was the only verification of human derivability that exists — layer 3 propagates intervals to a fixed
 point over forty-odd simultaneous relations, which is stronger than any person, so a board can pass every
-check and still be underivable. **One board failing by hand stops everything**, and its N is still open.
+check and still be underivable. **Sixteen boards were solved by hand and none was guessed**, which is the
+falsification test that assumption needed and it survived.
 
-⬜ **Also the operator's, and neither blocks E:** B3's N and stratum quotas, and a plausible ceiling on a
-client-reported duration (`docs/reviews/todo.md`).
+⚠️⚠️ **The stratified sample was withdrawn on 2026-08-24 and it is not coming back.** The operator now has
+complete command of the identities and every board reads the same to him, so he is **no longer an
+instrument that discriminates** — the same fact that produced B2's null result. B's deliverable was
+rewritten to say what the evidence carries before it was marked, because marking it against the old
+sentence would have put a claim the work does not support in the document that defines what done means.
+
+⚠️⚠️ **What that leaves is accepted, not overlooked, and `docs/beta-0-plan.md`'s Deliverable B carries it
+in full.** Three strata went untested — **`batting_order` at 1 board of 16 against 7% of the inventory,
+six-pitcher boards at 0 of 4, pre-1950 at 0** — so a board in one of them can pass all four layers and be
+humanly underivable. **An impossible board does not read as a fault in the game; it reads as not being
+good enough, and the person who concludes that leaves without telling anyone.** If a beta 0 player
+reports a board they could not finish, those three strata are the first place to look.
+
+⬜ **Still the operator's and blocking nothing:** a plausible ceiling on a client-reported duration
+(`docs/reviews/todo.md`).
 
 ---
 
@@ -1347,17 +1361,22 @@ was. When a gate, an era window, or a data change empties a sample, the script s
 ⚠️⚠️ **"The fifty-board pack" named three different things and one of its numbers came from a retired
 design.** Resolved 2026-08-22, and the three are separate work with separate sizes:
 
-| | asks | size | axis |
-|---|---|---|---|
-| **the gate** | are these boards derivable by a person at all | **Pack A's sixteen plus a derivability-only sample over the shipping inventory**; ⬜ that sample's N is open | stalls |
-| **Pack A** | does the difficulty ordering match felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | stalls |
-| **the stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread |
+| | asks | size | axis | 2026-08-24 |
+|---|---|---|---|---|
+| **the gate** | are these boards derivable by a person at all | **Pack A's sixteen**, and the derivability sample over the shipping inventory is **⛔ withdrawn** | stalls | ✔ **met, 16/16, none guessed** |
+| **Pack A** | does the difficulty ordering match felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | stalls | ✔ answered, and the answer is **no** |
+| **the stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | ⛔ **withdrawn** — calibration, never a gate |
 
 **Where *fifty* came from:** `build_pack.py`'s `audit()` asserts fifty boards with every rung at its
 quota **on the chain axis**, and the generator stopped targeting chain. The number and the axis are both
 from the superseded design. ⚠️ **Sixteen is not the answer either** — Pack A is a calibration instrument
-and four boards per rung says something about a rung, not about the generator. `docs/beta-0.md` carries
-the reasoning and the open N.
+and four boards per rung says something about a rung, not about the generator.
+
+⚠️⚠️ **And the sample that would have been the right size is withdrawn rather than sized, so the sentence
+above is now a description of what the gate is missing rather than of work owed.** The instrument was a
+person; the operator has complete command of the identities and every board reads the same to him, so he
+cannot produce a discriminating reading — which is the same fact that made Pack A's ordering result null.
+`docs/beta-0-plan.md`'s Deliverable B is the rewritten claim and carries the three untested strata.
 
 **Anything acting as a launch gate is asserted, not printed.** The hand-solve pack must
 assert its quotas after selection — chain rungs, era allowance, uncertified share, one board per game —

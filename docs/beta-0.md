@@ -171,10 +171,14 @@ closed. **The group was met against the work it did, and the second run is the o
    code.* **Done 2026-08-24** — the rotation, the two public paths, the routes over them, and the server
    block with its cache rule. ⤴ E2 folded into E3. ⬜ **What is left of E3 is F's**: TLS, DNS, the proxy
    to `keep`, and the properties of a host rather than of a file.
-5. ⬜ **The share** — last to build, **held to the same standard as everything else in the milestone.**
+5. ✔ **The share** — last to build, **held to the same standard as everything else in the milestone**,
+   and it was: **G3 ran through WhatsApp, iMessage and X from a real phone and it arrived intact.**
+   **Done 2026-08-24.**
 
-⚠️ **What is left is items 4 and 5, plus the hand-solve gate**, which is the operator's and is the one
-thing here that no command produces.
+✔ **Nothing on this list is left, and the hand-solve gate closed on 2026-08-24** — sixteen boards solved
+by hand with none guessed, and the stratified sample withdrawn because the operator no longer
+discriminates between boards. `docs/beta-0-plan.md`'s Deliverable B is the rewritten statement and carries
+the residual risk it leaves.
 
 ### ⚠️⚠️ The share is last and it does not get cut
 
@@ -274,9 +278,9 @@ from a retired design.** Found while writing this document down.
 
 | | what it asks | size | axis | status |
 |---|---|---|---|---|
-| **The gate** | are the boards humanly derivable at all | — | — | **undefined, see below** |
+| **The gate** | are the boards humanly derivable at all | **16** — Pack A doubled as the whole of it | stalls | ✔ **met 2026-08-24, 16/16 solved, none guessed.** ⛔ The stratified sample below is **withdrawn** |
 | **Pack A** | does the difficulty ordering correspond to felt difficulty | **16** — four each at rungs 5, 8, 11, 12 | **stalls** | ✔ **built 2026-08-23, solved 2026-08-24.** The answer is no: rho = +0.202, 4.5% of the variance (`docs/reviews/todo.md`) |
-| **The stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | designed, not built |
+| **The stranger's ten** | does the operator's scale agree with somebody who is not him | 10 | spread | ⛔ **withdrawn 2026-08-24** — calibration, never a gate |
 
 **Where *fifty* came from, and why it was stale.** `build_pack.py`'s `audit()` asserted fifty boards with
 **every rung at its quota on the chain axis** — and the generator had stopped targeting chain. **So the
@@ -298,6 +302,24 @@ exists would be the shape `CLAUDE.md` records under *a pack that claims to satis
 shipping inventory** — no survey, no ranking sheet, just *did it solve without guessing*. Those sheets are
 far cheaper per board than a calibration sheet, which is what makes a larger N affordable. **The two
 questions are separate and only one of them is a gate.**
+
+### ⛔ ⚠️⚠️ Reversed 2026-08-24: the sample is withdrawn and the gate is Pack A's sixteen
+
+**The paragraph above is kept because its reasoning is correct and it is why the open N was never
+answered — not because the plan still holds.** Everything it says about sixteen being the wrong size for
+a confidence statement about the generator remains true. **What changed is that no size is available.**
+
+**The instrument is a person, and that person stopped being able to discriminate.** The operator now has
+complete command of the identities and every board reads the same to him — which is exactly what produced
+B2's null result, and it disqualifies him from the derivability sample by the same argument. **There is no
+second instrument**: B4 existed because he could not give himself a stranger's reading, and B4 is
+withdrawn too.
+
+**So the gate closes on what it has: sixteen boards, none guessed, all sixteen uncertified by 3b.** That
+is a real falsification test — one failure would have falsified the assumption and there was none — and
+it is not the confidence statement this section asks for. ⚠️ **Saying which of the two it is, is the whole
+of marking it honestly**, and `docs/beta-0-plan.md`'s Deliverable B says it there, together with the three
+strata that went untested and what it costs if one of them holds an underivable board.
 
 #### ⚠️⚠️ The derivability sample is a falsification test, not a rate estimate — and that sets its shape
 

@@ -92,17 +92,42 @@ class TestTheFrontPageAgreesWithThePlan:
         assert re.search(r"\d{4}-\d{2}-\d{2}", heading), f"no date in {heading!r}"
 
     @pytest.mark.parametrize("path", [_FRONT_PAGE, _PLAN])
-    def test_neither_table_marks_the_gate_complete(self, path: Path) -> None:
+    def test_the_gate_is_never_marked_complete_without_naming_what_was_withdrawn(self, path: Path) -> None:
         """⚠️⚠️ B is the one row whose value is a claim about the *product*, not about the work.
 
-        The hand-solve pack is the only verification of human derivability there is, and it is the
-        operator's. **B1 is done and B1 is mine**, so a status cell reading `B1 ✔` in a column that
-        means *is this group met* was a true sentence in a place where it says something false. It was
-        there, and it is the reason this case is narrower than the one above.
+        **This case used to refuse the marking outright**, and it was right to: the hand-solve pack is
+        the only verification of human derivability there is, it is the operator's, and a cell reading
+        `B1 ✔` in a column meaning *is this group met* was a true sentence in a place where it said
+        something false.
+
+        ⚠️⚠️ **The operator closed B on 2026-08-24 and the premise expired, so the guard is pointed at
+        the risk that replaced it.** B was met by **sixteen boards solved by hand**, and the stratified
+        derivability sample its own deliverable promised was **withdrawn** -- the instrument is a person,
+        and he no longer discriminates between boards. **A cell that says only `met` therefore reads as
+        *the sample passed*, which is the false sentence one step along**: a later reader would take B's
+        tick as covering the inventory when it covers sixteen boards and leaves three strata untouched.
+
+        So the marking is allowed and it must carry its own qualification. Not a style rule -- it is the
+        difference between a milestone that closed and one that was declared closed.
         """
         heading = _FRONT_PAGE_HEADING if path == _FRONT_PAGE else _PLAN_HEADING
+        if _DONE not in _table_under(path, heading)["B"]:
+            return
 
-        assert _DONE not in _table_under(path, heading)["B"], (
-            f"{path.name} marks B complete. The hand-solve gate is outstanding and it blocks beta 0; "
-            f"B1 being done is not the group being met."
+        # ⚠️ **The whole row, not the status cell.** The tick is in one column and what qualifies it is
+        # in the next; a guard reading only the first would be asserting a property of the half that
+        # cannot carry it -- and would pass on a row that says `met` and nothing else.
+        text = path.read_text(encoding="utf-8")
+        section = text.split(heading, 1)[1].split(chr(10) + "## ", 1)[0]
+        cell = next(line for line in section.splitlines() if (m := _ROW.match(line)) and m[1] == "B")
+
+        assert "withdrawn" in cell.lower(), (
+            f"{path.name} marks B met without saying the stratified sample was withdrawn. The tick then "
+            f"reads as the sample having passed, and it did not run."
+        )
+        # ⚠️ And the count, because *16/16* is what makes the scope of the claim visible at a glance. A
+        # cell saying `met` and `withdrawn` and no number still hides how much was actually solved.
+        assert "16" in cell, (
+            f"{path.name} marks B met without naming how many boards were solved; the tick then covers "
+            f"an unstated amount of evidence."
         )

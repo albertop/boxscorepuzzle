@@ -15,15 +15,22 @@ it. ⚠️ Where the two differ, this file says so.
 | | | |
 |---|---|---|
 | **A** inventory and calendar | ✔ **met** | A3.2 (the curve) deferred by decision |
-| **B** the hand-solve gate | ⬜ **not met** | B1 and B2 done; **B3's first half passed — 16/16 solved, none guessed**. ⬜ B3's stratified sample and B4 remain: afternoons of solving by hand |
+| **B** the hand-solve gate | ✔ **met 2026-08-24** | **16/16 solved by hand, none guessed**, 16 of 16 uncertified by 3b; **B2 answered — the ladder does not order**. ⛔ The stratified sample and B4 **withdrawn** the same day: the operator no longer discriminates between boards, so he is not the instrument they needed. ⚠️ Three strata untested and the risk is written into the deliverable |
 | **C** client identity and events | ✔ **met** | `outbox.js`, `report.js`, `uplink.js`; verified in a browser, and every mutation caught by a named test |
 | **D** the data layer | ✔ **met** | `keep/`, 77 tests, 100% on both engines |
 | **E** serving for real | ✔ **met** | the rotation and the health verdict, the two public paths, the routes over them, and the server block with its cache rule — every URL of both declarations checked against a real nginx running over `serve/`. ⤴ E2 folded into E3. **The deliverable was *running locally* and it does**; TLS, DNS and the proxy to `keep` were always F's and are not an unfinished part of this |
 | **F** deployment | ✔ **met 2026-08-24** | ✔ F1 the three images; ✔ **F2 — `boxscorepuzzle.com` live over TLS, `www` canonical, rate limit and security headers on the host, the stack in Portainer**; ✔ **F3 — the rotation's image, its own ofelia, verified by rotating for real**. ⬜ Its one-time deployment steps are `docs/runbook-inventory.md` §5b |
 | **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be. ⚠️ **G4 was added after G closed**, from the operator playing the finished product and finding no way out of it |
 
-⚠️ **The two things that gate beta 0 rather than merely being in it:** B3 — one board failing by hand
-stops everything — and G, which cannot be dropped for time.
+⚠️⚠️ **All seven groups are met, 2026-08-24.** The two that *gated* the milestone rather than merely
+being in it — B3, where one board failing by hand would have stopped everything, and G, which could not
+be dropped for time — are the two that closed last, and neither was waived: sixteen boards were solved
+and none was guessed, and the share was sent through three apps from a real phone and arrived intact.
+
+⚠️ **B closed by having its deliverable rewritten, not by more solving**, and that distinction is the
+one thing about this table not to lose. The stratified derivability sample was withdrawn because the
+instrument was a person who stopped discriminating between boards. **What that leaves untested is three
+strata, and the acceptance is written into Deliverable B rather than carried here.**
 
 ⚠️ **The gate has not run.** *These boards are solvable by a person* is still an assumption; the four
 validation layers say the numbers agree with each other, which is a different claim.
@@ -38,7 +45,7 @@ point at, it did not finish.**
 | | deliverable |
 |---|---|
 | **A** | five months of dated, signed inventory, **and the runbook that produces the next five** |
-| **B** | a verdict on whether the inventory is humanly solvable, and a difficulty scale that means something |
+| **B** | a verdict on whether the inventory is humanly solvable, and a difficulty scale that does not order |
 | **C** | a client producing a complete, identified event and surviving its own failures, with no backend |
 | **D** | a running service that stores events and refuses to run wrong |
 | **E** | the real routes and the real caching contract, running locally |
@@ -495,36 +502,74 @@ at all**: it would have produced boards against a retired axis, or failed its ow
 - **B3.2** Stratify over what could break the assumption: stall rungs weighted hard, era, roster shape
   (⚠️ especially boards that only became eligible when the pitcher cap went to six), and boards that
   depend on the **batting order** family.
-- **B3.3** ⬜ **N and the stratum quotas are open**, and `audit()` asserts them after selection.
+- ⛔ **B3.2 and B3.3 are withdrawn, 2026-08-24.** Not deferred. See the deliverable below.
 - ✔ **B3's first half passed 2026-08-24: sixteen of sixteen solved, none by guessing.** Pack A doubles
   as the first tranche of the gate, and this is what the gate exists to test — one failure would have
   falsified the assumption that layer 3 without backtracking implies human derivability. There was none,
   and all sixteen are uncertified by 3b, so nothing leaned on the weaker solver.
-- ⬜ **The stratified sample has not run, and Pack A does not substitute for it.** It left three strata
-  almost untouched, and they are the three named here as where the assumption is weakest:
+- ⛔ **The stratified sample is withdrawn, 2026-08-24, and Pack A does not substitute for it.** It left
+  three strata almost untouched, and they are the three named here as where the assumption is weakest:
   **`batting_order` — 1 board of 16, against 10 of the 150 published (7%)**, and it is the one relation
   that cannot be read off a boxscore; **six pitchers — 0 boards, against 4 published**; **pre-1950 — 0
-  boards**. Rungs and era were covered adequately.
-- **Done when:** every board in the sample solved by hand without guessing. **One failure stops the
-  milestone** — it falsifies the assumption the publication rule rests on.
+  boards**. Rungs and era were covered adequately. The residual risk this leaves is written into the
+  deliverable below rather than left here, because it is a property of what B *delivered*.
+- **Met by:** sixteen boards solved by hand, none guessed. See the deliverable.
 
-### B4. The stranger's ten
+### ⛔ B4. The stranger's ten — **withdrawn 2026-08-24**
 
 - Ten boards across the curve, solved by somebody who knows baseball and nothing about this project. It
-  is the one contrast the operator cannot give himself. **Calibration, not a gate.**
+  was the one contrast the operator cannot give himself. **Calibration, never a gate** — it was to say
+  what the difficulty scale means to a stranger, not whether the boards can be solved.
+- ⛔ **Withdrawn.** It is not blocking anything and it never was; carrying it as open would leave B
+  unable to close on an item its own line calls calibration.
 
-### ▶ Deliverable B — **a verdict on whether the inventory is humanly solvable, and a difficulty scale that means something**
+### ✔ Deliverable B — **met 2026-08-24: sixteen boards derived by hand, and a difficulty scale that does not order**
 
-Two artefacts. **The gate's verdict:** every board in the stratified sample solved by hand without
-guessing — or a stop, with the board that failed. **And Pack A's sheets plus the ranking**, which is the
-only thing that tests whether the stall scale corresponds to felt difficulty.
+⚠️⚠️ **This deliverable was rewritten on the day it was met, and the rewrite is the honest half of the
+marking.** It promised *every board of the stratified sample solved by hand without guessing*. **That
+sample does not exist and will not.** Marking B met against the old sentence would have left a claim the
+work does not support in the document that defines what done means — which is the shape `CLAUDE.md`
+records as the worst place for a false rule. So the sentence changed to what the evidence carries.
 
-**What it makes possible:** shipping at all. Until this exists, *the puzzle is solvable* is an assumption
-the four layers cannot check.
+### What B actually delivered
 
-⚠️ **What it does not give:** a difficulty threshold. The operator is a sample of one with complete
-command of the identities; what he finds easy will be easy for very few. **The absolute question is
-answered by beta 0's own event records**, which is group C.
+| | |
+|---|---|
+| **the gate's verdict** | **16 boards solved by hand, none guessed.** Not a rate — a falsification test of *layer 3 finishing without backtracking implies a person can derive the board*. One failure would have falsified it; there was none |
+| **the class they came from** | **16 of the 16 are uncertified by layer 3b**, the weaker solver that does not finish them. Nothing here leaned on the one layer that asks the same question with less power. ⚠️ Observed in `key.csv`'s `certified_by_3b` column, not taken from a comment: `build_pack.py`'s note saying *15 of 16* describes the **unfiltered draw** on the day the quota was removed, not the pack that was built |
+| **the scale** | **B2 answered, and the answer is no.** Spearman rho(target stalls, felt difficulty) = **+0.202** at n=16, against a two-tailed 5% critical value near 0.50. Every rung contains a board rated 2, rung 12 included. **The ladder as built does not order by felt difficulty** |
+| ⛔ **the stratified sample** | **withdrawn 2026-08-24.** The operator has complete command of the identities and every board now reads the same to him, so **he is no longer an instrument that discriminates** — which is what closed B2's reading and closes this the same way. Not deferred |
+| ⛔ **B4, the stranger's ten** | **withdrawn the same day.** It was calibration, never a gate |
+
+### ⚠️⚠️ The residual risk, which is part of this deliverable and not a footnote
+
+**Three strata went untested, and they are the three the design named as where the assumption is
+weakest.**
+
+| stratum | Pack A | published inventory |
+|---|---|---|
+| **`batting_order`** | **1 board of 16** | 10 of 150 — **7%** — and it is the one relation that cannot be read off a boxscore |
+| **six pitchers** | **0 boards** | 4 of 150 — the boards that only became eligible when the cap went to six |
+| **pre-1950** | **0 boards** | the pack's oldest is **1954**, and `PRE_1950_ALLOWANCE = 2` reserved two seats no generation filled |
+
+**Layer 3 propagates intervals to a fixed point over forty-odd simultaneous relations, which is stronger
+than any person.** A board in those three strata can therefore pass all four validation layers and be
+**humanly underivable**, and nothing has looked at one.
+
+⚠️⚠️ **The cost if it happens is not what it looks like.** An impossible board does not read as a fault
+in the game. **It reads as not being good enough, and the person who concludes that leaves without
+telling anyone** — so the failure arrives as a visitor who does not come back, with no report attached.
+
+**This is accepted, not overlooked.** It was measured, named, and taken knowingly, and the sample that
+would have closed it was withdrawn for a stated reason rather than forgotten. ⚠️ **If a beta 0 player
+reports a board they could not finish, those three strata are the first place to look**, and that is
+the recovery this acceptance rests on.
+
+### What B does not give
+
+⚠️ **A difficulty threshold.** The operator is a sample of one with complete command of the identities;
+what he finds easy will be easy for very few. **The absolute question is answered by beta 0's own event
+records**, which is group C — and that is now the only instrument left pointed at difficulty at all.
 
 ---
 
