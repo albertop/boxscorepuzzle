@@ -8,7 +8,12 @@ it. ⚠️ Where the two differ, this file says so.
 
 ---
 
-## Where it stands — last checked **2026-08-23**
+## ✔ Complete — **all seven groups met 2026-08-24**
+
+**Nothing below is outstanding.** The table is kept as the record of what each group was and what closed
+it; `docs/beta-0.md` carries what being met does and does not claim.
+
+## Where it stands — last checked **2026-08-24**
 
 ⚠️ **`CLAUDE.md` carries a pointer to this table and a test asserts the two call the same groups complete** — in both directions, because the front page overstating sends a session past work still to be done and understating sends it looking for code that already exists. **This one is the authority.**
 

@@ -34,7 +34,17 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 
 ⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
 
-**First milestone: `docs/beta-0.md`. Read it to know what counts as done.** The free daily game,
+**⚠️⚠️ Current milestone: `docs/beta-1.md` — DESKTOP. Opened 2026-08-24.** One puzzle, a second
+interface. **It is the first time `serve-brief.md`'s central claim can be false**: if the engine really
+knows nothing about screens, beta 1 touches `ui/` and nothing under `engine/` — so the diff is the
+evidence, and *`engine/` was not touched* is half of what closes it. ⚠️ **§6 is the rule most likely to
+break by accident here**, because everything it forbids becomes cheap the moment the screen is wide: six
+data columns, the same board on every screen, more whitespace rather than more content. The constraints
+were never only about width.
+
+**First milestone: `docs/beta-0.md` — ✔ MET 2026-08-24.** Read it to know what counted as done, and what
+being met does not claim: the game is *ready*, not *proven*, and the last defects were all found by the
+operator using the live site rather than by a test. The free daily game,
 complete, on the VPS, given to friends and family — landing, tutorial, board, check, reveal, share,
 persistence, event upload, and **a calendar with real inventory**. No accounts, no Stripe, no archive, no
 streaks, no `canAccess()`. ⚠️ **The large piece is the one that has never been run: generation at volume,
@@ -67,6 +77,13 @@ whether to trust the rest of the row. **Keep it short — a paragraph per group 
 | **E** serving for real | ✔ complete | the two public paths, the routes over them, and the server block; ⤴ E2 folded into E3. ⤴ its untestable half was F's, and F is met |
 | **F** deployment | ✔ **met 2026-08-24** | the three images, the site live over TLS, and the rotation with its own scheduler. `docs/runbook-inventory.md` §5b is the deployment |
 | **G** the share | ✔ **met 2026-08-24** | the masked board, the PNG, the sheet, the `POST /shares` record — and **G3: sent through WhatsApp, iMessage and X from a real phone, and it arrived intact**. It was exempt from being cut and it did not have to be |
+
+⚠️⚠️ **BETA 0 IS MET — 2026-08-24.** All seven groups. The site is live at `boxscorepuzzle.com` over
+TLS, rotating on its own schedule from 150 dates of real inventory. **The milestone is the thing being
+ready, not the thing being proven** — it has not been handed to anybody yet, and every defect found in
+its last hours came from the operator using the live site: a share image with no background at all, a
+footer wearing another product's buttons, a landing button that led to the wrong screen. **The table
+below is the record of what closed each group, not a list of work.**
 
 ⚠️⚠️ **Every group is met, and B closed by being rewritten rather than by more solving.** The hand-solve
 pack was the only verification of human derivability that exists — layer 3 propagates intervals to a fixed

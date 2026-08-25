@@ -1,6 +1,20 @@
-# Beta 0 — the free daily game, complete, on the VPS
+# Beta 0 — ✔ **MET 2026-08-24**
 
-**The first milestone, and it changes what counts as done.** Stated 2026-08-22.
+**The first milestone, and it changes what counts as done.** Stated 2026-08-22, met two days later.
+
+⚠️⚠️ **It is met by the definition below and by nothing looser.** The free daily game is live at
+`boxscorepuzzle.com`, over TLS, rotating on its own schedule from five months of real inventory: landing,
+tutorial, board, keypad, hints, reference sheet, check, reveal, share, persistence, the event record
+uploading, client errors reported, and a calendar with a puzzle for every date from today to 2027-01-20.
+All seven groups of `beta-0-plan.md` are met.
+
+⚠️ **What it does not mean.** It has not been given to friends and family yet, and the last defects were
+found by the operator using the live site rather than by any test — a share image with no background, a
+footer whose buttons belonged to another product, a landing button that led to the wrong screen. **The
+milestone is the thing being ready, not the thing being proven**, and the proving is what handing it to
+people is for.
+
+**The successor is `docs/beta-1.md`: desktop.**
 
 **The whole daily loop working end to end, deployed, and given to friends and family.** Not a demo —
 **the game as it will be**, for the free daily puzzle only.
