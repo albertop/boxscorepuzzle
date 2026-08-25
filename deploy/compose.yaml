@@ -177,6 +177,44 @@ services:
   # `bxcpze-publish` and deletes it afterwards; a service would be a container that exits by design,
   # which reads in `docker ps` exactly like one that keeps crashing. `deploy/ofelia/rotation.ini` is
   # the whole definition.
+  # ⚠️⚠️ **A service that is not meant to stay up, and it exists so ofelia has a CONTAINER to start.**
+  #
+  # `job-run` with an `image` **always pulls**, and every image here is local: `forge/` never leaves the
+  # laptop, so nothing is in a registry and the pull fails with `repository does not exist`. ofelia 0.3.22
+  # ignores `pull = false` in the INI. **What it does honour is `container`** -- start this one, wait, and
+  # leave it stopped until tomorrow.
+  #
+  # ⚠️ **`restart: "no"` and it is load-bearing.** The rotation runs once and exits; anything else would
+  # restart it in a loop. It runs once when the stack comes up, which is the first rotation of a deploy,
+  # and after that only when the scheduler starts it.
+  #
+  # ⚠️ **This is also what puts the publisher's version in Portainer.** It used to be spelled by hand in
+  # `ofelia/config.ini` because ofelia reads no environment (v42-P2-02) -- so loading a new image and
+  # telling the host to use it were two acts, and the second was easy to forget. Now it is the same
+  # variable as the other two.
+  publish:
+    # ⚠️⚠️ **A stopped container is also what keeps the image alive.** `publish` used to run with `--rm`
+    # and no service, so it never had a container -- and Docker counts an image with no container as
+    # unused. **A prune on this shared host took it**, and the daily rotation then failed with `pull
+    # access denied`, which reads like a registry problem and was a deleted image. Declaring the service
+    # is what makes the image referenced.
+    image: bxcpze-publish:${BXCPZE_PUBLISH_VERSION:?the version that was loaded, e.g. 1.2026.2}
+    container_name: bxcpze-publish
+    restart: "no"
+    init: true
+    volumes:
+      # Read-only, and the private inventory is a host path rather than a volume: it is rsynced from the
+      # laptop and nothing in the stack may write to it.
+      - /srv/boxscorepuzzle/inventory:/srv/inventory:ro
+      - puzzles:/srv/public
+    command: ["--inventory", "/srv/inventory", "--public", "/srv/public"]
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    # ⚠️ The health verdict asks the deployed site over HTTP for its client (v42-P2-01), so the job has to
+    # be on the network the site is on.
+    networks: [backend]
+
   scheduler:
     # Pinned by digest, the operator's own convention for this image.
     image: mcuadros/ofelia@sha256:efcbe2c5cf658a25de6443c1462d653f9cc03791d642e01fc6c638a00f97e492

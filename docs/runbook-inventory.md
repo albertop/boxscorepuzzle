@@ -317,6 +317,30 @@ morning is the one failure a rollback does not undo). It asks the schema version
 up and says `keep expects schema 2 and the database says 1`. That is a deployment fault stating itself,
 which is the whole reason it is a refusal and not a warning.
 
+### 3c. ⚠️⚠️ The scheduler needs `userns_mode: host`, and the rotation starts a **container**
+
+**Two things that made the daily rotation impossible, both invisible until it ran for real on
+2026-08-25.** F3 was marked met on a manual `docker run`, which proves the publisher works and says
+nothing about the scheduler — **the first real firing was eight days later, at 08:15, with nobody
+watching.**
+
+**The daemon on this host has user-namespace remapping on** (`docker info` lists `name=userns`). Container
+root is not host root, so `/var/run/docker.sock` appears inside the scheduler as `nobody:nobody` and every
+job fails with `connect: permission denied`. `userns_mode: "host"` on that one service opts it out.
+
+⚠️ **What that costs, so it is a decision and not a default.** It returns that container's root to the
+host's root. In practice it changes little — **it already has the Docker socket mounted, which is
+root-equivalent** — but this is a shared VPS and the exception is deliberate.
+
+**And `job-run` with an `image` always pulls.** ofelia 0.3.22 is the latest release and ignores
+`pull = false`; every image here is local, so the pull fails with `repository does not exist`, which reads
+like a missing image and is the opposite. The job names a `container` declared in `compose.yaml` instead.
+
+⚠️⚠️ **Then the image really was missing, which is the finding worth keeping.** `publish` ran with `--rm`
+and had no service, so it never had a container — and **Docker counts an image with no container as
+unused**. A prune on this host removed it, along with every superseded `serve` and `keep` tag. A daily job
+whose image any cleanup may reap is not a deployment; the stopped container is what references it.
+
 ### 4. ⚠️⚠️ The published volume's ownership — **the step that is easy to skip**
 
 **Skip this and the rotation fails, every day, silently until somebody reads a log.**

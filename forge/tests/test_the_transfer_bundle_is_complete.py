@@ -49,29 +49,6 @@ def test_the_scheduler_config_travels() -> None:
     assert "rotation.ini" in _copied_into_the_bundle()
 
 
-def test_the_publisher_is_not_advertised_as_a_portainer_variable() -> None:
-    """⚠️⚠️ The other half of v42-P2-02, and it is a *true-looking* instruction rather than a missing file.
-
-    The completion message told the operator to set `BXCPZE_PUBLISH_VERSION` in Portainer. `compose.yaml`
-    has no such variable -- ofelia reads no environment and the publisher's version lives in
-    `rotation.ini` -- so following it is a successful-looking action that changes nothing about the image
-    the scheduler runs.
-    """
-    compose = _COMPOSE.read_text(encoding="utf-8")
-    build = _BUILD.read_text(encoding="utf-8")
-
-    declared = set(re.findall(r"BXCPZE_(\w+)_VERSION", compose))
-    assert declared, "compose declares no version variables; this test would pass over nothing"
-    assert "PUBLISH" not in declared, "compose grew a publish version; this test is now the stale half"
-
-    advertised = re.search(r"BXCPZE_\$\(\$Image\.ToUpper\(\)\)_VERSION", build)
-    assert advertised, "the completion message no longer names a version variable; check this guard"
-    # The generic line must be reachable only for the images that actually have one.
-    assert 'if ($Image -eq "publish")' in build, (
-        "the completion message is unconditional again; a publish build is told to set a variable compose does not have"
-    )
-
-
 def test_no_join_path_is_given_more_than_two_arguments() -> None:
     """⚠️⚠️ **The guard above read the string and never asked whether the script runs.**
 
@@ -93,23 +70,61 @@ def test_no_join_path_is_given_more_than_two_arguments() -> None:
         assert len(arguments) <= 2, f"Join-Path takes two arguments and got {len(arguments)}: {line.strip()}"
 
 
-def test_the_rotation_job_joins_the_network_the_site_is_on() -> None:
-    """⚠️⚠️ **v42-P2-01's other half, and it was written and then not applied.**
+def test_every_image_has_its_version_in_one_place() -> None:
+    """⚠️⚠️ **v42-P2-02's other half, and the repair went further than the finding.**
 
-    The health check asks `http://bxcpze-serve:8080/engine/package.js` -- a container name, resolvable
-    only on the network the site is on. `job-run` starts a container with no network unless told, so
-    without this line the fix is present in the image and the check still cannot reach anything: it
-    reports *no client is deployed* exactly as before, and the repair reads as having failed.
+    The finding was that the completion message told the operator to set `BXCPZE_PUBLISH_VERSION` in
+    Portainer while `compose.yaml` had no such variable -- ofelia reads no environment, so the
+    publisher's version was spelled by hand in `ofelia/config.ini`. The first fix branched the message.
 
-    ⚠️ **The edit that adds it raised an AssertionError and the failure was passed over**, and the deploy
-    found it -- the operator grepped the installed file and the line was not there. A guard is cheaper
-    than a grep at the point of no return.
+    **The real repair came from somewhere else.** ofelia 0.3.22 always pulls when a job names an `image`,
+    and every image here is local, so the rotation could never start at all -- it had never run once.
+    Giving ofelia a CONTAINER declared in `compose.yaml` fixed that, and took the version with it.
+    **All three images now carry their version the same way**, which is what the branch existed to work
+    around.
+
+    ⚠️ So this asserts the property rather than the workaround.
+    """
+    compose = _COMPOSE.read_text(encoding="utf-8")
+    build = _BUILD.read_text(encoding="utf-8")
+
+    offered = re.search(r'ValidateSet\(([^)]*)\)', build)
+    assert offered, "the build script offers no images; this test would pass over nothing"
+    buildable = {name.strip().strip('"').upper() for name in offered[1].split(",") if name.strip()}
+    assert buildable, "no image names parsed out of the build script"
+
+    declared = set(re.findall(r"BXCPZE_(\w+)_VERSION", compose))
+    assert buildable <= declared, f"no version variable in compose for {sorted(buildable - declared)}"
+
+
+def test_the_rotation_starts_a_container_and_never_names_an_image() -> None:
+    """⚠️⚠️ **ofelia pulls whenever a job names an image, and every image here is local.**
+
+    `forge/` never leaves the laptop and nothing is in a registry, so the pull fails with `repository
+    does not exist` -- which reads like a missing image and is the opposite: it is there, and ofelia went
+    looking elsewhere. `pull = false` is ignored by 0.3.22.
+
+    **The rotation had therefore never run.** F3 was marked met on a manual `docker run`, which proves
+    the publisher works and says nothing about the scheduler, and the first real firing was eight days
+    later at 08:15 with nobody watching.
     """
     ini = (_ROOT / "deploy" / "ofelia" / "rotation.ini").read_text(encoding="utf-8")
+    compose = _COMPOSE.read_text(encoding="utf-8")
+
     block = ini.split('[job-run "rotate"]', 1)
     assert len(block) == 2, "there is no rotate job; this test would pass over nothing"
     body = block[1].split("[", 1)[0]
 
-    assert re.search(r"^network\s*=\s*\S+", body, re.MULTILINE), (
-        "the rotate job declares no network; its health check cannot resolve the site by container name"
+    assert not re.search(r"^\s*image\s*=", body, re.MULTILINE), (
+        "the rotate job names an image again; ofelia will try to pull it and every image here is local"
+    )
+    named = re.search(r"^\s*container\s*=\s*(\S+)", body, re.MULTILINE)
+    assert named, "the rotate job starts nothing"
+    assert f"container_name: {named[1]}" in compose, (
+        f"{named[1]} is not declared in compose.yaml; the scheduler would start a container nobody creates"
+    )
+    # ⚠️ `delete = true` would work exactly once: the container is gone and tomorrow says `no such
+    # container`, a day after the change that caused it.
+    assert re.search(r"^\s*delete\s*=\s*false", body, re.MULTILINE), (
+        "the rotate job deletes its container; there would be nothing to start tomorrow"
     )
