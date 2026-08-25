@@ -1,5 +1,54 @@
 # Review backlog
 
+## ⬜ 2026-08-24 - `PAGES` in the C11 guard is still a hand-written list beside a directory
+
+**Recorded, not built. Noticed while closing the same shape one file over, and left open deliberately.**
+
+`serve/tests/engine.test.js` scans every shipped page for player-visible copy in its markup. Its subject
+is a literal list, and `today.html` was missing from it -- **the page that kept a hardcoded title
+longest**, so the guard existed for exactly that defect and did not look at the file that still had it.
+The name was added. **Nothing asserts the list is complete**, so the next page added to `ui/phone/` is
+unscanned in the same way and the guard stays green.
+
+### Why it is not closed here
+
+`PLAYER_MODULES` in the same file had the same defect on the same day -- five of fifteen -- and
+`forge/tests/test_the_date_guard_sweeps_every_module.py` closes it by reading the directory, in both
+directions: a shipped file missing from the list, and a stale name that would fetch a 404 whose body
+contains none of the forbidden strings and therefore **passes**. The same test shape works here and is
+about ten lines.
+
+⚠️ **This is the sixth instance of *a hand-maintained list beside its source of truth*** -- after the
+three `.gitignore` key lines, `keep`'s Postgres teardown table list, `ROUTES` holding filenames, the
+pointer's field set, and `PLAYER_MODULES`. **Nothing sweeps for the shape and probably nothing can**: the
+decidable slice is *a literal list of filenames that all exist in one directory containing more*, which
+fires on any legitimately scoped list, and a threshold that rejects real data gets loosened until it
+says nothing. What works is the discipline -- **every such list gets its comparison in the same commit**
+-- and this row is the instance where that was not done.
+
+## ⬜ 2026-08-24 - `publish.health`'s READABLE check reports after rotating, and could refuse before
+
+**Recorded, not built.**
+
+`__main__.py` calls `inspect()` **after** `rotate()`. By the time the client-can-read-this comparison
+runs, the mismatched package is already on the public path and already being served: the verdict is a
+report about a state it can no longer refuse, which is the orphan-count shape. It exits non-zero and it
+lands in Ofelia's log, which nobody reads until something else has already gone wrong.
+
+### What a refusal would and would not buy
+
+**It closes one of the two orders and not the other.** *Packages ahead of the client* -- the rotation
+publishing schema N+1 into a volume served by a client that reads N -- is the order that happens **at
+08:15 UTC with nobody watching**, and a pre-flight read of the deployed `READABLE` would stop it: the
+day does not rotate, players keep yesterday's readable board, and `inspect` then says *the rotation has
+not run*, which is loud and true. *Client ahead of packages* cannot be closed from here at all, because
+loading an image does not run `publish`.
+
+⚠️ **It must be scoped or it becomes the 1964-board abort.** A refusal on *this package's schema* is
+right; a refusal because the reader could not be found or parsed is a check that cannot answer blocking
+every rotation for ever. Those two cases publish-and-report.
+
+
 ## ⬜ 2026-08-24 - event retention is unbounded, on a Postgres four other sites share
 
 **Raised by the operator while the stack was being deployed, asking whether anything in it grows until
