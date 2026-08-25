@@ -220,7 +220,21 @@ const cdata = (text) => `<![CDATA[${text.replaceAll("]]>", "]]]]><![CDATA[>")}]]
  * rather than a second definition of *the player put this here*.
  */
 const SHARE_CSS = `
-  .share-sheet { width: ${WIDTH}px; background: var(--surface); color: var(--ink);
+  /* ⚠️⚠️ **\`--paper\`, and this said \`--surface\` -- A TOKEN THAT DOES NOT EXIST.** It was defined
+     nowhere and used here alone, so it resolved to nothing and the sheet had NO BACKGROUND: the PNG
+     came out transparent everywhere the board did not paint, and what a receiver saw was **their own
+     chat showing through the boxscore**. On a dark bubble that reads as a dark board with the blurred
+     cells glowing white, which is exactly how it was reported -- and it looked different in every app,
+     because the background was never ours.
+     ⚠️ Nothing could catch it: an undefined custom property is not an error, it is an empty value, and
+     \`background: \` with an empty value is legal CSS that paints nothing. The image was produced, was
+     the right size, and was valid. **Only looking at one in a chat window said otherwise.** */
+  /* ⚠️ The wrapper, not only the sheet. The height is measured in CSS pixels and the canvas is that
+     times the scale, so rounding leaves a sliver at the bottom that the sheet does not cover — four
+     transparent pixels of the receiver's chat along the edge of every share. The paper goes on the page
+     as well, so there is nothing to show through however the rounding falls. */
+  .share-page { background: var(--paper); min-height: 100%; }
+  .share-sheet { width: ${WIDTH}px; background: var(--paper); color: var(--ink);
                  padding: 12px 10px 14px; box-sizing: border-box; }
   .share-board .cell.filled { filter: blur(${BLUR}px); }
   .share-result { display: flex; gap: 14px; justify-content: center; align-items: baseline;
@@ -262,10 +276,26 @@ export async function shareImage(puzzle, game, { random } = {}) {
     const css = await inlinedCss();
     const markup = new XMLSerializer().serializeToString(sheet);
     const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" ` +
+      // ⚠️⚠️ **`data-theme="light"`, and it is the difference between a shared image and a private one.**
+      // The sheet is rasterised in the SENDER'S browser under the SENDER'S stylesheets, so a phone in
+      // dark mode baked a dark board into the PNG and sent it to everybody. **A share is a printed
+      // artefact**: it lands in a stranger's chat, beside a stranger's wallpaper, and it must look the
+      // same whoever made it. The sender's display preference is not a property of the thing shared.
+      //
+      // ⚠️ **It uses the opt-out `tokens.css` already has** rather than restating the palette here.
+      // The dark block is guarded as `:root:not([data-theme="light"])`, and inside an SVG document
+      // `:root` is this `<svg>` element -- so marking it turns the guard off and the light values on,
+      // with no second copy of a palette to drift.
+      //
+      // ⚠️ It was found by looking at two shares side by side: one made on an iPhone came out mixed --
+      // a dark ground under light cells, the blur reading as white smears -- and one made on an Android
+      // came out coherently dark. **Neither is what a receiver should get**, and the difference between
+      // them is only which platform resolved what.
+      `<svg xmlns="http://www.w3.org/2000/svg" data-theme="light" width="${WIDTH}" height="${height}" ` +
       `viewBox="0 0 ${WIDTH} ${height}">` +
       `<foreignObject width="100%" height="100%">` +
-      `<div xmlns="http://www.w3.org/1999/xhtml"><style>${cdata(css + SHARE_CSS)}</style>${markup}</div>` +
+      `<div xmlns="http://www.w3.org/1999/xhtml" class="share-page">` +
+      `<style>${cdata(css + SHARE_CSS)}</style>${markup}</div>` +
       `</foreignObject></svg>`;
     return await rasterise(svg, WIDTH, height);
   } finally {

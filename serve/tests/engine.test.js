@@ -4950,6 +4950,39 @@ suite("⚠️⚠️ The share image is actually produced, with the real styleshe
     assert(blob.size > 2000, `the image is ${blob.size} bytes, which is too small to be a board`);
   });
 
+  test("⚠️⚠️ the sheet is opaque: a share must not let the receiver's chat show through it", async () => {
+    // **`background: var(--surface)` -- a token defined NOWHERE.** It resolved to nothing, so the sheet
+    // had no background and the PNG was transparent everywhere the board did not paint. What a receiver
+    // saw was **their own chat behind the boxscore**: on a dark bubble, a dark board with the blurred
+    // cells glowing white, different in every app because the background was never ours.
+    //
+    // ⚠️ **Nothing static could catch it.** An undefined custom property is not an error, it is an empty
+    // value, and `background: ` with an empty value is legal CSS that paints nothing. The image was
+    // produced, was the right size, and was valid. Only looking at one in a chat window said otherwise —
+    // so this asks the pixels.
+    const { shareImage } = await import("../ui/phone/share-image.js");
+    const { createGame } = await import("../engine/game.js");
+    const puzzle = readPackage(packages[0].raw);
+
+    const blob = await shareImage(puzzle, createGame(puzzle), { random: () => 0.5 });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    canvas.getContext("2d").drawImage(bitmap, 0, 0);
+    const at = (x, y) => canvas.getContext("2d").getImageData(x, y, 1, 1).data;
+
+    // ⚠️ The margin, not the middle. The board paints its own cells; the defect was the paper AROUND
+    // them, which is most of the image and the part a chat bubble shows through.
+    for (const [x, y] of [
+      [4, Math.floor(bitmap.height / 2)],
+      [bitmap.width - 4, Math.floor(bitmap.height / 2)],
+      [Math.floor(bitmap.width / 2), bitmap.height - 4],
+    ]) {
+      equal(at(x, y)[3], 255, `the sheet is transparent at ${x},${y}; a receiver would see their own chat`);
+    }
+  });
+
   test("⚠️⚠️ a stylesheet containing markup characters still produces an image", async () => {
     // The regression itself, as a case. A comment mentioning `<button>` is ordinary prose in a
     // stylesheet and must never be able to break a share.
