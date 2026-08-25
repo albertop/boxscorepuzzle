@@ -253,6 +253,33 @@ count above is written to prevent.
 
 ## ⬜ 2026-08-23 - the pre-push hook does not test the commits it is gating
 
+### ⚠️⚠️ 2026-08-24 — demonstrated three times in one day, and the third cost a push
+
+**Recorded as evidence. Not acted on; the decision is the operator's and it is unchanged.**
+
+The gap this row describes is abstract until it bites, and it bit three times in one session — every
+time because a push was launched in the background and the tree was edited while the hook read it.
+
+| | what the hook was gating | what it actually read | outcome |
+|---|---|---|---|
+| 1 | `de277aa`, the landing's two controls | that tree **plus** an unfinished share-icon change | **`pre-push: clean` and the push landed.** The icon change was not in the commit; the hook validated a mixture that was never a commit |
+| 2 | `c3fe7d9`, removing the countdown | that tree plus the two new `todo.md` rows | landed; `todo.md` was not in it and needed its own commit |
+| 3 | `ab57635`, the `todo.md` rows | that tree **plus** B being marked met in `beta-0-plan.md` and `CLAUDE.md` | ⛔ **the push failed.** `test_neither_table_marks_the_gate_complete` fired on a working-tree edit that was not being pushed at all |
+
+⚠️⚠️ **The first one is the dangerous shape and the third is the harmless one.** A failure that stops
+the push is loud and self-correcting. **`pre-push: clean` over a tree that is not the commit is a green
+report about something that was never pushed** — and it is indistinguishable, in the log, from a real
+one.
+
+⚠️ **And the wrapper lied about it.** The background command ended `; echo "EXIT=$?"`, and the task
+notification reported **exit code 0 over a failed push** — the `echo` succeeded. Only the log's own
+`EXIT=1` line and `git ls-remote` said otherwise, which is this file's own rule about exit codes,
+demonstrated on the tool built to watch a push.
+
+**The cheap discipline, which needs no change to the hook:** do not touch the tree while a push is
+running. That is what was violated three times, by somebody who had recorded the row above.
+
+
 **`docs/ci.md` carries the full account and the evidence.** Recorded here because it is an open decision,
 not because the reasoning belongs in two places.
 
