@@ -70,3 +70,46 @@ def test_the_publisher_is_not_advertised_as_a_portainer_variable() -> None:
     assert 'if ($Image -eq "publish")' in build, (
         "the completion message is unconditional again; a publish build is told to set a variable compose does not have"
     )
+
+
+def test_no_join_path_is_given_more_than_two_arguments() -> None:
+    """⚠️⚠️ **The guard above read the string and never asked whether the script runs.**
+
+    `Join-Path $rootDir "deploy" "ofelia" "rotation.ini"` satisfies every assertion in this file --
+    `rotation.ini` is named, it is copied to `$dockerImagesDir` -- and **Windows PowerShell 5.1 takes
+    exactly two arguments**, so the script died at that line with a positional-parameter error. The
+    operator hit it on the first build. *Serves the right bytes* and *works here* are different
+    properties, and only one of them is what a build script is for.
+
+    ⚠️ Checked by counting arguments rather than by running PowerShell: the suite runs on Ubuntu in CI,
+    and a test that skips where it cannot run is a check that never fires on the platform it matters on.
+    """
+    for line in _BUILD.read_text(encoding="utf-8").splitlines():
+        call = re.search(r"Join-Path\s+(.+?)\)", line)
+        if call is None:
+            continue
+        # `$var` or a quoted string; anything past the second is what PowerShell 5.1 refuses.
+        arguments = re.findall(r'"[^"]*"|\$\w+', call[1])
+        assert len(arguments) <= 2, f"Join-Path takes two arguments and got {len(arguments)}: {line.strip()}"
+
+
+def test_the_rotation_job_joins_the_network_the_site_is_on() -> None:
+    """⚠️⚠️ **v42-P2-01's other half, and it was written and then not applied.**
+
+    The health check asks `http://bxcpze-serve:8080/engine/package.js` -- a container name, resolvable
+    only on the network the site is on. `job-run` starts a container with no network unless told, so
+    without this line the fix is present in the image and the check still cannot reach anything: it
+    reports *no client is deployed* exactly as before, and the repair reads as having failed.
+
+    ⚠️ **The edit that adds it raised an AssertionError and the failure was passed over**, and the deploy
+    found it -- the operator grepped the installed file and the line was not there. A guard is cheaper
+    than a grep at the point of no return.
+    """
+    ini = (_ROOT / "deploy" / "ofelia" / "rotation.ini").read_text(encoding="utf-8")
+    block = ini.split('[job-run "rotate"]', 1)
+    assert len(block) == 2, "there is no rotate job; this test would pass over nothing"
+    body = block[1].split("[", 1)[0]
+
+    assert re.search(r"^network\s*=\s*\S+", body, re.MULTILINE), (
+        "the rotate job declares no network; its health check cannot resolve the site by container name"
+    )

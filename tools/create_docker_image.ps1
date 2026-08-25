@@ -165,7 +165,7 @@ Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_publish_image.sh") -Destinatio
 # never in the transfer**. On a fresh VPS that leaves ofelia with no bind-mounted config, so the daily
 # rotation never starts, and a manual first rotation makes launch day look correct while the puzzle
 # silently stops changing the next morning.
-Copy-Item (Join-Path $rootDir "deploy" "ofelia" "rotation.ini") -Destination $dockerImagesDir -Force
+Copy-Item (Join-Path $rootDir "deploy/ofelia/rotation.ini") -Destination $dockerImagesDir -Force
 
 Write-Host ""
 Write-Host "Docker image creation completed successfully!"
