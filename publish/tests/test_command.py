@@ -22,7 +22,20 @@ from tests.conftest import FIRST as _FIRST
 from tests.conftest import deploy_client as _deploy
 
 
-def _run(monkeypatch: pytest.MonkeyPatch, *arguments: str) -> None:
+def _client(tmp_path: Path) -> str:
+    """Where `deploy_client` put the client. See `_run`, and v42-P2-01."""
+    return str(tmp_path / "serve" / "engine" / "package.js")
+
+
+def _run(monkeypatch: pytest.MonkeyPatch, *arguments: str, client: str | None = None) -> None:
+    """⚠️ `--client` is always passed, because its default is the deployed site on the backend network.
+
+    v42-P2-01 replaced a path derived from `--public` with an explicit one; a test that let the default
+    stand would be asking a URL that does not resolve here, and the health check would report *no client
+    is deployed* about a tree that has one.
+    """
+    if client is not None:
+        arguments = (*arguments, "--client", client)
     monkeypatch.setattr("sys.argv", ["publish", *arguments])
     main()
 
@@ -35,7 +48,16 @@ class TestItRotates:
         public = _deploy(tmp_path / "serve")
         when = _FIRST + timedelta(days=3)
 
-        _run(monkeypatch, "--inventory", str(private), "--public", str(public), "--date", when.isoformat())
+        _run(
+            monkeypatch,
+            "--inventory",
+            str(private),
+            "--public",
+            str(public),
+            "--date",
+            when.isoformat(),
+            client=_client(tmp_path),
+        )
 
         assert json.loads((public / TODAY).read_text(encoding="utf-8"))["date"] == when.isoformat()
         assert (
@@ -63,6 +85,8 @@ class TestItRotates:
             str(private),
             "--public",
             str(_deploy(tmp_path / "serve")),
+            "--client",
+            _client(tmp_path),
             "--date",
             when.isoformat(),
         )
@@ -82,7 +106,7 @@ class TestItRotates:
         chosen = _FIRST + timedelta(days=2)
         monkeypatch.setattr("publish.__main__.serving_date", lambda: chosen)
 
-        _run(monkeypatch, "--inventory", str(private), "--public", str(public))
+        _run(monkeypatch, "--inventory", str(private), "--public", str(public), client=_client(tmp_path))
 
         assert json.loads((public / TODAY).read_text(encoding="utf-8"))["date"] == chosen.isoformat()
 
@@ -102,6 +126,8 @@ class TestItRefuses:
                 str(private),
                 "--public",
                 str(_deploy(tmp_path / "serve")),
+                "--client",
+                _client(tmp_path),
                 "--date",
                 date(2030, 1, 1).isoformat(),
             )
@@ -118,12 +144,30 @@ class TestItRefuses:
         public = _deploy(tmp_path / "serve")
         when = _FIRST + timedelta(days=3)
         # A rotation that finishes and leaves a third package: more than the access model allows.
-        _run(monkeypatch, "--inventory", str(private), "--public", str(public), "--date", when.isoformat())
+        _run(
+            monkeypatch,
+            "--inventory",
+            str(private),
+            "--public",
+            str(public),
+            "--date",
+            when.isoformat(),
+            client=_client(tmp_path),
+        )
         (public / "an-extra-package.json").write_text("{}", encoding="utf-8")
         monkeypatch.setattr("publish.__main__.rotate", lambda *_a: _NOTHING)
 
         with pytest.raises(SystemExit, match="not healthy"):
-            _run(monkeypatch, "--inventory", str(private), "--public", str(public), "--date", when.isoformat())
+            _run(
+                monkeypatch,
+                "--inventory",
+                str(private),
+                "--public",
+                str(public),
+                "--date",
+                when.isoformat(),
+                client=_client(tmp_path),
+            )
 
 
 class _Nothing:

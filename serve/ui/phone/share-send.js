@@ -44,9 +44,26 @@ const DESTINATION = () => new URL("/", location.href).href;
  *
  * @returns {Promise<"native" | "clipboard">}
  */
-export async function sendShare(file, elapsed, { navigatorRef = navigator, clipboardRef = navigator.clipboard } = {}) {
-  const payload = { files: [file], text: fill("share.text", { time: elapsed }), url: DESTINATION() };
-  if (navigatorRef?.canShare?.({ files: [file] }) && navigatorRef.share) {
+export async function sendShare(image, elapsed, { navigatorRef = navigator, clipboardRef = navigator.clipboard } = {}) {
+  // ⚠️⚠️ **`image` is a PROMISE and that is the whole of v42-P2-03.** It used to be a resolved `File`,
+  // and `shareResult` awaited the rasteriser before calling this -- three stylesheets, three fonts, an
+  // SVG serialise and a canvas. **The clipboard write then began several tasks after the click**, and a
+  // browser that gates image writes on transient activation refuses it. The player pressed Share, waited
+  // for the image, and got nothing: the handler is `async` so there is no failure state on screen, the
+  // button simply came back.
+  //
+  // ⚠️ **The comment below already said to hand `ClipboardItem` a promise, and the code handed it a
+  // blob.** A comment asserting a property nothing establishes, in the file whose whole job is that
+  // property. It is the shape `CLAUDE.md` records for the Dockerfile that claimed a uid owned a volume.
+  //
+  // ⚠️ **The native branch still awaits, and that is correct rather than an oversight.** `canShare({files})`
+  // has to be given a file to answer at all, and the share sheet is opened by the browser rather than
+  // written to a gated surface -- it survives the await on every platform this ships to. **Only the
+  // clipboard is activation-gated**, so only the clipboard needs the promise form.
+  const probe = new File([], "boxscorepuzzle.png", { type: "image/png" });
+  if (navigatorRef?.canShare?.({ files: [probe] }) && navigatorRef.share) {
+    const file = await image;
+    const payload = { files: [file], text: fill("share.text", { time: elapsed }), url: DESTINATION() };
     try {
       await navigatorRef.share(payload);
     } catch (refused) {
@@ -56,7 +73,8 @@ export async function sendShare(file, elapsed, { navigatorRef = navigator, clipb
     }
     return "native";
   }
-  await copyToClipboard(file, clipboardRef);
+  // ⚠️ Not awaited before this call. `copyToClipboard` starts the write in this turn and awaits inside.
+  await copyToClipboard(image, clipboardRef);
   return "clipboard";
 }
 
@@ -72,9 +90,14 @@ export async function sendShare(file, elapsed, { navigatorRef = navigator, clipb
  * clipboard write that is not begun in the same turn as the user gesture; handing it the promise rather
  * than the resolved blob is what keeps the write inside that turn.
  */
-async function copyToClipboard(file, clipboardRef) {
+async function copyToClipboard(image, clipboardRef) {
   if (!clipboardRef?.write || typeof ClipboardItem === "undefined") {
     throw new Error("share: neither a share sheet nor an image clipboard is available");
   }
-  await clipboardRef.write([new ClipboardItem({ "image/png": file })]);
+  // ⚠️⚠️ **`write` is CALLED here, synchronously, and awaited afterwards.** That ordering is the fix:
+  // the browser sees the write begin in the same task as the click, and resolves the promise inside
+  // `ClipboardItem` afterwards. Awaiting the image first and then calling `write` is the defect, and the
+  // two read almost identically.
+  const written = clipboardRef.write([new ClipboardItem({ "image/png": image })]);
+  await written;
 }

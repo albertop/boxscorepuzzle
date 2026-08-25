@@ -18,6 +18,18 @@ from tests.conftest import build_inventory as _inventory
 from tests.conftest import deploy_client as _deploy
 
 
+def _client(tmp_path: Path) -> str:
+    """Where `deploy_client` put the client, handed to `inspect` rather than derived from `public`.
+
+    ⚠️⚠️ **v42-P2-01.** `inspect` used to work this out as `public.parents[1] / "engine" / "package.js"`,
+    and these tests passed because the fixture builds exactly that relationship. **In production ofelia
+    mounts the volume at `/srv/public`**, so the derived path was `/engine/package.js` and every rotation
+    ended red. The fixture was supplying the very property under judgement -- this register's padded text
+    dump, in a directory layout.
+    """
+    return str(tmp_path / "serve" / "engine" / "package.js")
+
+
 def _rotated(tmp_path: Path, *, days: int = 6, offset: int = 3) -> tuple[Path, date]:
     """A public path in the state a working rotation leaves it in."""
     inventory = _inventory(tmp_path, days=days)
@@ -33,7 +45,7 @@ class TestWhatItPasses:
     def test_a_freshly_rotated_path_is_healthy(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
 
-        verdict = inspect(public, when)
+        verdict = inspect(public, when, _client(tmp_path))
 
         assert verdict.healthy, verdict.faults
         assert verdict.faults == ()
@@ -44,7 +56,7 @@ class TestWhatItPasses:
         public = _deploy(tmp_path / "serve")
         rotate(inventory, public, _FIRST)
 
-        assert inspect(public, _FIRST).healthy
+        assert inspect(public, _FIRST, _client(tmp_path)).healthy
 
 
 class TestTheDeleteThatDidNotHappen:
@@ -55,7 +67,7 @@ class TestTheDeleteThatDidNotHappen:
         public, when = _rotated(tmp_path)
         (public / "p20260830.json").write_text("{}", encoding="utf-8")
 
-        verdict = inspect(public, when)
+        verdict = inspect(public, when, _client(tmp_path))
 
         assert not verdict.healthy
         assert any("packages are public" in fault for fault in verdict.faults), verdict.faults
@@ -65,7 +77,7 @@ class TestTheDeleteThatDidNotHappen:
         public, when = _rotated(tmp_path)
         (public / "p20260830.json").write_text("{}", encoding="utf-8")
 
-        assert any("p20260830" in fault for fault in inspect(public, when).faults)
+        assert any("p20260830" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
     def test_the_limit_is_the_documented_two(self, tmp_path: Path) -> None:
         """⚠️ Not a number this file invents: today's and yesterday's, and a third day is the archive
@@ -76,7 +88,7 @@ class TestTheDeleteThatDidNotHappen:
         for extra in range(PUBLIC_LIMIT + 1):
             (public / f"x{extra}.json").write_text("{}", encoding="utf-8")
 
-        assert not inspect(public, when).healthy
+        assert not inspect(public, when, _client(tmp_path)).healthy
 
 
 class TestTheRunThatDidNotHappen:
@@ -86,7 +98,7 @@ class TestTheRunThatDidNotHappen:
         first."""
         public, when = _rotated(tmp_path)
 
-        verdict = inspect(public, when + timedelta(days=1))
+        verdict = inspect(public, when + timedelta(days=1), _client(tmp_path))
 
         assert not verdict.healthy
         assert any("has not run" in fault for fault in verdict.faults), verdict.faults
@@ -94,7 +106,7 @@ class TestTheRunThatDidNotHappen:
     def test_the_fault_names_both_dates(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
 
-        faults = inspect(public, when + timedelta(days=2)).faults
+        faults = inspect(public, when + timedelta(days=2), _client(tmp_path)).faults
 
         assert any(when.isoformat() in fault and (when + timedelta(days=2)).isoformat() in fault for fault in faults)
 
@@ -102,20 +114,20 @@ class TestTheRunThatDidNotHappen:
         public, when = _rotated(tmp_path)
         (public / TODAY).unlink()
 
-        assert any("is missing" in fault for fault in inspect(public, when).faults)
+        assert any("is missing" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
     def test_an_unreadable_pointer_turns_it_red_rather_than_passing(self, tmp_path: Path) -> None:
         """⚠️ Fail closed. A pointer that will not parse must not read as *the date is fine*."""
         public, when = _rotated(tmp_path)
         (public / TODAY).write_text("{not json", encoding="utf-8")
 
-        assert any("not a readable pointer" in fault for fault in inspect(public, when).faults)
+        assert any("not a readable pointer" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
     def test_a_pointer_that_is_not_an_object_turns_it_red(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
         (public / TODAY).write_text('["2026-09-04"]', encoding="utf-8")
 
-        assert any("not a readable pointer" in fault for fault in inspect(public, when).faults)
+        assert any("not a readable pointer" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
 
 class TestThePointerIsFollowed:
@@ -134,7 +146,7 @@ class TestThePointerIsFollowed:
         named = json.loads((public / TODAY).read_text(encoding="utf-8"))["puzzle_id"]
         (public / f"{named}.json").unlink()
 
-        verdict = inspect(public, when)
+        verdict = inspect(public, when, _client(tmp_path))
 
         assert not verdict.healthy
         assert any(named in fault and "404" in fault for fault in verdict.faults)
@@ -146,7 +158,7 @@ class TestThePointerIsFollowed:
             if package.name != TODAY:
                 package.unlink()
 
-        assert not inspect(public, when).healthy
+        assert not inspect(public, when, _client(tmp_path)).healthy
 
     def test_a_pointer_with_no_puzzle_id_turns_it_red(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
@@ -154,14 +166,14 @@ class TestThePointerIsFollowed:
         del pointer["puzzle_id"]
         (public / TODAY).write_text(json.dumps(pointer), encoding="utf-8")
 
-        assert any("names no puzzle" in fault for fault in inspect(public, when).faults)
+        assert any("names no puzzle" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
     def test_yesterday_is_followed_too(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
         named = json.loads((public / YESTERDAY).read_text(encoding="utf-8"))["puzzle_id"]
         (public / f"{named}.json").unlink()
 
-        assert any(named in fault for fault in inspect(public, when).faults)
+        assert any(named in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
     def test_a_first_day_with_no_yesterday_stays_green(self, tmp_path: Path) -> None:
         """⚠️ The other direction, and the reason the yesterday check is guarded. §9's two days are a
@@ -170,7 +182,7 @@ class TestThePointerIsFollowed:
         public, when = _rotated(tmp_path, offset=0)
 
         assert not (public / YESTERDAY).is_file()
-        assert inspect(public, when).healthy
+        assert inspect(public, when, _client(tmp_path)).healthy
 
     def test_an_unreadable_yesterday_turns_it_red(self, tmp_path: Path) -> None:
         """⚠️ Yesterday's pointer gets the same two questions as today's. A pointer that will not parse
@@ -178,7 +190,10 @@ class TestThePointerIsFollowed:
         public, when = _rotated(tmp_path)
         (public / YESTERDAY).write_text("{not json", encoding="utf-8")
 
-        assert any(YESTERDAY in fault and "not a readable pointer" in fault for fault in inspect(public, when).faults)
+        assert any(
+            YESTERDAY in fault and "not a readable pointer" in fault
+            for fault in inspect(public, when, _client(tmp_path)).faults
+        )
 
     def test_a_pointer_whose_date_is_not_a_string_is_unreadable(self, tmp_path: Path) -> None:
         """⚠️ An object with a numeric `date` parses and answers nothing. Fail closed: *unreadable*,
@@ -186,7 +201,7 @@ class TestThePointerIsFollowed:
         public, when = _rotated(tmp_path)
         (public / TODAY).write_text('{"date": 20260904, "puzzle_id": "x"}', encoding="utf-8")
 
-        assert any("not a readable pointer" in fault for fault in inspect(public, when).faults)
+        assert any("not a readable pointer" in fault for fault in inspect(public, when, _client(tmp_path)).faults)
 
 
 class TestTheTwoQuestionsAreIndependent:
@@ -196,7 +211,7 @@ class TestTheTwoQuestionsAreIndependent:
     def test_the_count_is_quiet_when_only_the_date_is_wrong(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
 
-        faults = inspect(public, when + timedelta(days=1)).faults
+        faults = inspect(public, when + timedelta(days=1), _client(tmp_path)).faults
 
         assert not any("packages are public" in fault for fault in faults), faults
 
@@ -204,7 +219,7 @@ class TestTheTwoQuestionsAreIndependent:
         public, when = _rotated(tmp_path)
         (public / "p20260830.json").write_text("{}", encoding="utf-8")
 
-        faults = inspect(public, when).faults
+        faults = inspect(public, when, _client(tmp_path)).faults
 
         assert not any("has not run" in fault for fault in faults), faults
 
@@ -216,11 +231,11 @@ class TestWhatItLooksAt:
         public, when = _rotated(tmp_path)
 
         assert {found.name for found in public.glob("*.json")} > {TODAY, YESTERDAY}
-        assert inspect(public, when).healthy
+        assert inspect(public, when, _client(tmp_path)).healthy
 
     def test_a_missing_public_directory_is_a_fault_rather_than_an_exception(self, tmp_path: Path) -> None:
         """A health endpoint that raises reports nothing; it has to answer."""
-        verdict = inspect(tmp_path / "never-created", _FIRST)
+        verdict = inspect(tmp_path / "never-created", _FIRST, _client(tmp_path))
 
         assert not verdict.healthy
         assert any("not a directory" in fault for fault in verdict.faults)
@@ -243,14 +258,14 @@ class TestTheDeployedClientCanReadWhatIsPublic:
     def test_a_client_that_reads_what_is_served_is_healthy(self, tmp_path: Path) -> None:
         public, when = _rotated(tmp_path)
 
-        assert inspect(public, when).healthy
+        assert inspect(public, when, _client(tmp_path)).healthy
 
     def test_a_client_behind_the_packages_is_a_fault_naming_both_sides(self, tmp_path: Path) -> None:
         """The `serve` image is stale: new packages, old reader. Every board is a controlled rejection."""
         public, when = _rotated(tmp_path)
         _deploy(tmp_path / "serve", readable=PACKAGE_SCHEMA - 1)
 
-        faults = inspect(public, when).faults
+        faults = inspect(public, when, _client(tmp_path)).faults
 
         assert faults, "a client that cannot read a single public package is healthy"
         # ⚠️ Both numbers, because which way round the mismatch is decides which image is behind — and
@@ -264,7 +279,7 @@ class TestTheDeployedClientCanReadWhatIsPublic:
         public, when = _rotated(tmp_path)
         _deploy(tmp_path / "serve", readable=PACKAGE_SCHEMA + 1)
 
-        assert not inspect(public, when).healthy
+        assert not inspect(public, when, _client(tmp_path)).healthy
 
     def test_no_client_beside_the_packages_is_a_fault_and_not_a_skip(self, tmp_path: Path) -> None:
         """⚠️⚠️ **The absence of the evidence must not read as the evidence.** A check that quietly
@@ -272,7 +287,7 @@ class TestTheDeployedClientCanReadWhatIsPublic:
         public, when = _rotated(tmp_path)
         (tmp_path / "serve" / "engine" / "package.js").unlink()
 
-        faults = inspect(public, when).faults
+        faults = inspect(public, when, _client(tmp_path)).faults
 
         assert any("no client is deployed" in fault for fault in faults), faults
 
@@ -281,7 +296,7 @@ class TestTheDeployedClientCanReadWhatIsPublic:
         public, when = _rotated(tmp_path)
         (tmp_path / "serve" / "engine" / "package.js").write_text("const READABLE = [];", encoding="utf-8")
 
-        faults = inspect(public, when).faults
+        faults = inspect(public, when, _client(tmp_path)).faults
 
         assert any("declares no READABLE" in fault for fault in faults), faults
 
@@ -291,6 +306,80 @@ class TestTheDeployedClientCanReadWhatIsPublic:
         victim = next(public.glob("p*.json"))
         victim.write_text("{not json", encoding="utf-8")
 
-        faults = inspect(public, when).faults
+        faults = inspect(public, when, _client(tmp_path)).faults
 
         assert any(victim.name in fault and "readable JSON" in fault for fault in faults), faults
+
+
+class TestTheClientIsAskedWhereItActuallyIs:
+    """⚠️⚠️ **v42-P2-01: the check could never find the client in production and nobody could tell.**
+
+    `inspect` derived the reader as `public.parents[1] / "engine" / "package.js"` -- the development
+    layout. Ofelia mounts the volume at `/srv/public`, so that resolved to `/engine/package.js` in a
+    container holding only `/app`. **Every rotation wrote its files and then exited non-zero saying no
+    client was deployed**, which is the one signal separating a healthy nightly run from a broken one.
+
+    The old tests all passed, because the fixture built the very directory relationship whose absence was
+    the defect -- an instrument supplying the property under judgement.
+    """
+
+    def test_the_production_mount_no_longer_derives_a_path_that_cannot_exist(self, tmp_path: Path) -> None:
+        """The failing case, stated as the mount ofelia actually uses."""
+
+        derived = Path("/srv/public").parents[1] / "engine" / "package.js"
+        assert str(derived).replace("\\", "/") == "/engine/package.js", "the old derivation is not what broke"
+
+        # And the repair: the caller says where the client is, so the mount cannot decide it.
+        public, when = _rotated(tmp_path)
+        assert inspect(public, when, _client(tmp_path)).healthy
+
+    def test_the_default_client_is_the_deployed_site_not_a_path_beside_the_volume(self) -> None:
+        """⚠️ Asserted so the derivation cannot come back as a 'simplification'.
+
+        A default that is a path is a default that works in a checkout and fails in the container this
+        code actually runs in, silently, every night.
+        """
+        from publish.health import DEFAULT_CLIENT  # noqa: PLC0415
+
+        assert DEFAULT_CLIENT.startswith("http://"), "the default client is a path again"
+        assert "bxcpze-serve" in DEFAULT_CLIENT, "the default does not name the container that serves it"
+
+    def test_a_client_answered_over_http_is_read(self, tmp_path: Path) -> None:
+        """The production shape, exercised: the site answers and the check reads what it said."""
+        from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer  # noqa: PLC0415
+        from threading import Thread  # noqa: PLC0415
+
+        body = f"const READABLE = [{PACKAGE_SCHEMA}];".encode()
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *_: object) -> None:
+                """Quiet: the test's output is the assertion, not the server's access log."""
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            public, when = _rotated(tmp_path)
+            url = f"http://127.0.0.1:{server.server_address[1]}/engine/package.js"
+
+            assert inspect(public, when, url).healthy
+        finally:
+            server.shutdown()
+
+    def test_a_client_that_does_not_answer_is_a_fault_and_never_a_skip(self, tmp_path: Path) -> None:
+        """⚠️⚠️ **The absence of the evidence must not read as the evidence.**
+
+        A site that cannot be reached is a deployment that published packages nobody serves. Reporting
+        healthy there would be the fail-open shape this whole check exists to close.
+        """
+        public, when = _rotated(tmp_path)
+        # Port 1 on loopback: nothing listens, and it fails fast rather than waiting out the timeout.
+        verdict = inspect(public, when, "http://127.0.0.1:1/engine/package.js")
+
+        assert not verdict.healthy
+        assert any("no client is deployed" in fault for fault in verdict.faults), verdict.faults

@@ -1764,7 +1764,7 @@ collide with anything, and a cleanup filter that matches somebody else's contain
 
 ## Where everything stands
 
-**41 reviews**, the last of them v41. ⚠⚠ **The finding total is deliberately not stated any more.**
+**42 reviews**, the last of them v42. ⚠⚠ **The finding total is deliberately not stated any more.**
 
 This paragraph read *"twenty-nine reviews, 135 findings"* for ten reviews after it stopped being true, and
 the section below already records that **the count in this file has been wrong three times — mine.** A

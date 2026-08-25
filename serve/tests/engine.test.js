@@ -5008,6 +5008,65 @@ suite("The share: what leaves the device, and what must not", () => {
     equal(written.length, 1, "nothing reached the clipboard");
   });
 
+  test("⚠️⚠️ the clipboard write begins before the image exists, or the gesture is already gone", async () => {
+    // **v42-P2-03.** `shareResult` used to await the rasteriser -- three stylesheets, three fonts, an
+    // SVG serialise and a canvas -- and only then call `sendShare`, which called `clipboard.write()`.
+    // On a browser that gates image clipboard writes on transient activation the write is refused,
+    // several tasks after the click that authorised it. The player waits for the image and gets
+    // nothing: the handler is `async`, so there is no failure state on screen.
+    //
+    // ⚠️⚠️ **The old tests could not see it**, and that is the finding rather than the bug. They called
+    // `sendShare` with a file already in hand and a mock clipboard with no activation rule, so the
+    // ordering under test never existed in them. **This asserts the order, which is the property.**
+    const { sendShare } = await import("../ui/phone/share-send.js");
+
+    let resolveImage = null;
+    const image = new Promise((resolve) => {
+      resolveImage = resolve;
+    });
+    let calledBeforeTheImage = null;
+    const clipboardRef = {
+      write: (items) => {
+        calledBeforeTheImage = true;
+        // The promise form: `ClipboardItem` holds the pending image, and this resolves later.
+        return Promise.resolve(items);
+      },
+    };
+    const navigatorRef = { canShare: () => false, share: async () => assert(false, "the sheet opened") };
+
+    const sent = sendShare(image, "1:23", { navigatorRef, clipboardRef });
+    // Let `sendShare` run up to its first real await. If it awaited the image first, `write` has not
+    // been called and never will be until the line below.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert(calledBeforeTheImage, "clipboard.write() waited for the image; the click's activation is gone by then");
+
+    resolveImage(new File([new Blob(["x"])], "b.png", { type: "image/png" }));
+    equal(await sent, "clipboard");
+  });
+
+  test("⚠️ the native branch may await the image, because only the clipboard is activation-gated", async () => {
+    // The other half, so the fix is not read as *never await anywhere*. `canShare({files})` must be
+    // given a file to answer at all, and the share sheet is opened by the browser rather than written
+    // to a gated surface. The probe is empty: `canShare` asks about the type, not the bytes.
+    const { sendShare } = await import("../ui/phone/share-send.js");
+    const seen = [];
+    const navigatorRef = {
+      canShare: ({ files }) => {
+        seen.push(files[0].type);
+        return true;
+      },
+      share: async (payload) => seen.push(payload.files[0].size),
+    };
+
+    const file = new File([new Blob(["xyz"])], "b.png", { type: "image/png" });
+    equal(await sendShare(Promise.resolve(file), "1:23", { navigatorRef }), "native");
+
+    equal(seen[0], "image/png", "canShare was asked about something other than a PNG");
+    equal(seen[1], 3, "the sheet was handed the probe instead of the real image");
+  });
+
   test("⚠️ a cancelled sheet is not an error -- the mechanism worked", async () => {
     const { sendShare } = await import("../ui/phone/share-send.js");
     const file = new File([new Blob(["x"])], "b.png", { type: "image/png" });

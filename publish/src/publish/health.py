@@ -20,8 +20,24 @@ import re
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
+from urllib.request import urlopen
 
 from publish.rotate import MANIFEST, TODAY, YESTERDAY
+
+CLIENT_TIMEOUT_SECONDS = 5
+"""How long to wait for the deployed client to answer.
+
+⚠️ Short on purpose. This runs after the rotation has already written, so a slow answer must not hold
+the job open; **not answering in five seconds is itself the fault** the check exists to report.
+"""
+
+DEFAULT_CLIENT = "http://bxcpze-serve:8080/engine/package.js"
+"""Where the deployed client is, on the backend network. **The production default.**
+
+⚠️ A URL rather than a path, because `publish` and `serve` are separate images (§33) and the rotation's
+container holds only `/app`. Asking the running site what its client reads is also the stronger
+question: it is the same bytes a browser gets.
+"""
 
 PUBLIC_LIMIT = 2
 """How many packages may be on the public path. **Today's and yesterday's** (`docs/calendar.md`).
@@ -40,7 +56,7 @@ class Verdict:
     faults: tuple[str, ...]
 
 
-def inspect(public: Path, today: date) -> Verdict:
+def inspect(public: Path, today: date, client: str = DEFAULT_CLIENT) -> Verdict:
     """Is the public path what the access model says it must be?
 
     ⚠️ `today` is an argument for the same reason it is in `rotate()`: a check that asks the machine what
@@ -94,12 +110,31 @@ def inspect(public: Path, today: date) -> Verdict:
         elif named[1] is None or not (public / f"{named[1]}.json").is_file():
             faults.append(f"{YESTERDAY} names {named[1]} and no such package is public")
 
-    faults.extend(_the_client_can_read_what_is_public(public, packages))
+    faults.extend(_the_client_can_read_what_is_public(client, public, packages))
 
     return Verdict(healthy=not faults, faults=tuple(faults))
 
 
-def _the_client_can_read_what_is_public(public: Path, packages: list[str]) -> list[str]:
+def _read_client(client: str) -> str | None:
+    """The deployed `package.js`, from a URL or a path. `None` when it is not there.
+
+    ⚠️ **Both forms, because the two callers are genuinely different.** Production asks the running site
+    over the backend network; a developer checking a local tree hands it a file. Neither is a fallback
+    for the other -- a URL that fails does not then try a path, because *the absence of the evidence
+    must not read as the evidence*.
+    """
+    if client.startswith(("http://", "https://")):
+        try:
+            with urlopen(client, timeout=CLIENT_TIMEOUT_SECONDS) as answer:  # noqa: S310 - scheme checked above
+                body: bytes = answer.read()
+                return body.decode("utf-8")
+        except (OSError, ValueError):
+            return None
+    path = Path(client)
+    return path.read_text(encoding="utf-8") if path.is_file() else None
+
+
+def _the_client_can_read_what_is_public(client: str, public: Path, packages: list[str]) -> list[str]:
     """⚠️⚠️ **Can the browser that is deployed beside these files actually parse them?**
 
     **This is the one deployment failure the other checks cannot see, and it is the seventeen-inning
@@ -122,17 +157,33 @@ def _the_client_can_read_what_is_public(public: Path, packages: list[str]) -> li
     ⚠️ **A missing reader is a fault, not a skip.** `serve` not being there at all is a deployment that
     published packages into a directory nobody serves -- and *the absence of the evidence must not read
     as the evidence*.
-    """
-    reader = public.parents[1] / "engine" / "package.js" if len(public.parents) > 1 else None
-    if reader is None or not reader.is_file():
-        return [f"{reader} is not there; the packages are public and no client is deployed beside them"]
 
-    readable = re.search(r"const READABLE = \[([\d,\s]*)\]", reader.read_text(encoding="utf-8"))
+    ⚠️⚠️ **`client` is given, and deriving it from `public` was v42-P2-01.** The old line was
+    `public.parents[1] / "engine" / "package.js"`, which is the *development* layout: it works when
+    `public` is `serve/data/puzzles` and the tree is a checkout. **In production ofelia mounts the
+    volume at `/srv/public`**, so `parents[1]` is `/` and the reader resolved to `/engine/package.js` --
+    a path that cannot exist in a container holding only `/app`. Every rotation therefore wrote its
+    files and then exited non-zero saying no client was deployed, which is the one signal separating a
+    healthy nightly run from a broken one, permanently red.
+
+    ⚠️ **The unit fixture built the development layout and passed**, which is this register's *instrument
+    supplying the property under judgement*: the test constructed the very directory relationship whose
+    absence was the defect.
+
+    **So the caller says where the client is.** In production that is a URL on the backend network --
+    the deployed site answering for its own client, which is a stronger question than reading a file
+    that happens to sit nearby.
+    """
+    source = _read_client(client)
+    if source is None:
+        return [f"{client} is not there; the packages are public and no client is deployed beside them"]
+
+    readable = re.search(r"const READABLE = \[([\d,\s]*)\]", source)
     if readable is None or not readable[1].strip():
         # ⚠️ The literal moved or was emptied. **Refused rather than assumed**: a check that cannot find
         # its subject reports on nothing, and `nginx -t` approving a config it was never given is the
         # register's own instance of believing that answer.
-        return [f"{reader.name} declares no READABLE versions; this check cannot say what the client reads"]
+        return [f"{client} declares no READABLE versions; this check cannot say what the client reads"]
 
     accepted = {int(one) for one in readable[1].split(",") if one.strip()}
     faults = []

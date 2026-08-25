@@ -37,8 +37,11 @@ export async function shareResult({
   send = sendShare,
   draw = shareImage,
 }) {
-  const image = await draw(puzzle, game);
-  const file = new File([image], "boxscorepuzzle.png", { type: "image/png" });
+  // ⚠️⚠️ **Started, not awaited — v42-P2-03.** This used to `await draw(...)` and hand `sendShare` a
+  // finished `File`, which put the clipboard write several tasks after the click and lost the transient
+  // activation a gated browser requires. `sendShare` decides the channel first and awaits the image on
+  // the branch that can afford to.
+  const file = draw(puzzle, game).then((image) => new File([image], "boxscorepuzzle.png", { type: "image/png" }));
   // ⚠️ The same `formatDuration` the reveal and the image use. One result must not have three numbers,
   // and the sentence beside the image is where a mismatch would be most visible.
   const channel = await send(file, formatDuration(record.duration_ms));

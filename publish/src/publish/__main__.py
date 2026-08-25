@@ -18,7 +18,7 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-from publish.health import inspect
+from publish.health import DEFAULT_CLIENT, inspect
 from publish.rotate import RotationError, rotate, serving_date
 
 
@@ -27,6 +27,13 @@ def main() -> None:
     parser.add_argument("--inventory", required=True, type=Path, help="the private inventory of generations")
     parser.add_argument("--public", required=True, type=Path, help="the served root")
     parser.add_argument("--date", default="", help="the serving date, ISO; default is the one the clock gives")
+    # ⚠️ v42-P2-01. This used to be derived from `--public`, which only worked in a checkout: in
+    # production the volume is at `/srv/public` and the derived path was `/engine/package.js`.
+    parser.add_argument(
+        "--client",
+        default=DEFAULT_CLIENT,
+        help="the deployed engine/package.js, as a URL or a path; default is the site on the backend network",
+    )
     arguments = parser.parse_args()
 
     when = date.fromisoformat(arguments.date) if arguments.date else serving_date()
@@ -49,7 +56,7 @@ def main() -> None:
     # is a 404 on the only game the product has, and it is the state F3 exists for. Asking immediately
     # turns it into an exit code the job's own log carries, instead of a red dashboard nobody is
     # looking at yet.
-    verdict = inspect(arguments.public, when)
+    verdict = inspect(arguments.public, when, arguments.client)
     if not verdict.healthy:
         message = "rotation finished and the public path is not healthy: " + "; ".join(verdict.faults)
         raise SystemExit(message)

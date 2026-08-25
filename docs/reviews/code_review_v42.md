@@ -63,6 +63,35 @@ None is carried forward into v42.
 - **Recommended fix:** Choose the fallback before awaiting image generation and begin `clipboard.write()` synchronously from the click task, using `new ClipboardItem({"image/png": imagePromise})`. Alternatively pre-render and cache the file when the solved view appears so both native share and clipboard invocation begin with a ready file. Add an ordering test that requires `clipboard.write()` to be called before the injected image promise resolves, then perform one real-browser fallback check; a mock that accepts every write cannot validate activation.
 - **Blast radius:** Sharing from the solved reveal and from the finished landing page on browsers using the clipboard fallback. The native file-share path and the privacy masking of the generated image are unchanged.
 
+## Disposition — **all three closed 2026-08-24**, and each was seen red first
+
+⚠️ **The review ran no commands; every finding here was reproduced by running one before it was fixed.**
+
+- **v42-P2-01 — confirmed and fixed.** `Path("/srv/public").parents[1]` is `/`, so the reader resolved to
+  `/engine/package.js` in a container holding only `/app`. `inspect()` takes an explicit `client` now,
+  defaulting to `http://bxcpze-serve:8080/engine/package.js`, and `rotation.ini` joins the `backend`
+  network so the job can ask the running site. **Asking the deployed site is also the stronger question**
+  than reading a file that happened to sit nearby. Four tests, seen red two ways: the default turned back
+  into a path, and a missing client turned back into a pass.
+- **v42-P2-02 — confirmed and fixed.** `create_docker_image.ps1` copied three load scripts and not
+  `rotation.ini`, and the loader told the operator to install from a path that never travelled. It
+  travels now, the loader points at `$SCRIPT_DIR`, and the completion message branches: a `publish` build
+  is told to edit the INI and restart the scheduler rather than to set `BXCPZE_PUBLISH_VERSION`, **which
+  `compose.yaml` does not have**. `forge/tests/test_the_transfer_bundle_is_complete.py` reads the
+  loader's own install instruction rather than keeping a list, and was seen red both ways.
+- **v42-P2-03 — confirmed and fixed.** `sendShare` takes the image as a **promise** and calls
+  `clipboard.write()` synchronously from the click, resolving inside `ClipboardItem`. The native branch
+  still awaits, because `canShare({files})` needs a file and the share sheet is not activation-gated.
+  ⚠️ **The comment above `copyToClipboard` already described the correct design while the code did the
+  opposite** — a comment asserting a property nothing establishes, in the file whose whole job is that
+  property. Two tests: one asserts `write()` is called before the image resolves and was seen red by
+  restoring the await; one asserts the sheet gets the real image and not the empty probe.
+
+⚠️ **Two defects were found while fixing these and are not part of the review.** A fourth file naming
+`001-initial.sql` (`forge/tests/test_the_proxy_reaches_keep.py`) — three were repaired in `keep/tests/`
+and the category was not enumerated, which is the rule `CLAUDE.md` records by name. And `todo.md` still
+said 41 reviews.
+
 ## Reviewer-hat coverage
 
 - **Python Principal Developer:** Reviewed forge, publish, and keep boundaries, error handling, determinism, typing conventions, publication health, and current Python conventions. `v42-P2-01` is filed under Docker because the defect is created by the production container topology, not by the pure health rules in isolation.

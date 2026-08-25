@@ -159,10 +159,29 @@ Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_serve_image.sh")   -Destinatio
 Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_keep_image.sh")    -Destination $dockerImagesDir -Force
 Copy-Item (Join-Path $PSScriptRoot "deploy_bxcpze_publish_image.sh") -Destination $dockerImagesDir -Force
 
+# ⚠️⚠️ **v42-P2-02: the scheduler's config has to travel too, and it did not.** The sentence above says
+# one transfer of docker_images/ brings everything the server needs; `deploy_bxcpze_publish_image.sh`
+# then tells the operator to install the scheduler from `deploy/ofelia/rotation.ini` -- **a path that was
+# never in the transfer**. On a fresh VPS that leaves ofelia with no bind-mounted config, so the daily
+# rotation never starts, and a manual first rotation makes launch day look correct while the puzzle
+# silently stops changing the next morning.
+Copy-Item (Join-Path $rootDir "deploy" "ofelia" "rotation.ini") -Destination $dockerImagesDir -Force
+
 Write-Host ""
 Write-Host "Docker image creation completed successfully!"
 Write-Host ""
 Write-Host "  1. Transfer docker_images/ to the VPS (only the tars you rebuilt need to travel)."
 Write-Host "  2. On the server:  chmod +x deploy_bxcpze_$($Image)_image.sh && ./deploy_bxcpze_$($Image)_image.sh"
-Write-Host "  3. Portainer -> Stacks -> boxscorepuzzle -> BXCPZE_$($Image.ToUpper())_VERSION=$Version -> redeploy."
+# ⚠️⚠️ **`publish` is not a Portainer variable and telling the operator it is was v42-P2-02.**
+# `compose.yaml` has BXCPZE_SERVE_VERSION and BXCPZE_KEEP_VERSION and no BXCPZE_PUBLISH_VERSION: ofelia
+# reads no environment, so the publisher's version lives in `rotation.ini`. The old line gave the
+# operator a successful-looking action that changed nothing about the image the scheduler runs.
+if ($Image -eq "publish") {
+    Write-Host "  3. Update the image line in /srv/boxscorepuzzle/ofelia/config.ini to bxcpze-publish:$Version,"
+    Write-Host "     then:  docker restart bxcpze-scheduler"
+    Write-Host "     (rotation.ini travelled with this bundle; the load script checks the two agree.)"
+}
+else {
+    Write-Host "  3. Portainer -> Stacks -> boxscorepuzzle -> BXCPZE_$($Image.ToUpper())_VERSION=$Version -> redeploy."
+}
 Write-Host ""

@@ -41,7 +41,7 @@ fi
 # beside it -- and a script that says "expected in docker_images/" while looking somewhere else sends
 # the reader to the wrong folder.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TAR_FILE="$SCRIPT_DIR/$IMAGE-$VERSION.tar"
+TAR_FILE="$SCRIPT_DIR/images/$IMAGE-$VERSION.tar"
 
 if [ ! -f "$TAR_FILE" ]; then
     echo "Error: Tar file not found at $TAR_FILE"
@@ -99,7 +99,7 @@ if [ ! -f "$CONFIG" ]; then
     echo "  $CONFIG does not exist yet."
     echo "  Install it before the scheduler can run anything:"
     echo ""
-    echo "    sudo install -D -m 644 deploy/ofelia/rotation.ini $CONFIG"
+    echo "    sudo install -D -m 644 $SCRIPT_DIR/rotation.ini $CONFIG"
     echo ""
     echo "  Then set its image line to bxcpze-publish:$VERSION and start the stack."
 else

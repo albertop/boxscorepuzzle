@@ -29,7 +29,14 @@ import pytest
 from tests.conftest import DOCKER_PREFIX, nginx_base_image, nginx_environment_flags
 
 _ROOT = Path(__file__).resolve().parents[2]
-_MIGRATION = _ROOT / "keep" / "migrations" / "001-initial.sql"
+# ⚠️⚠️ **Every migration in order, not a named one, and this was the FOURTH file naming `001-initial`.**
+# Three were repaired in `keep/tests/` and this one was missed -- fixing the instance in hand instead of
+# enumerating the category, which `CLAUDE.md` records by name. A test that builds schema 1 and starts a
+# `keep` image expecting 2 fails as five container errors, which is a loud way to find it and not the
+# way it should have been found.
+_MIGRATIONS = sorted((_ROOT / "keep" / "migrations").glob("*.sql"))
+assert _MIGRATIONS, "no migrations found; the container below would start against an empty database"
+_MIGRATION_SQL = chr(10).join(path.read_text(encoding="utf-8") for path in _MIGRATIONS)
 _TEMPLATE = _ROOT / "deploy" / "nginx" / "boxscorepuzzle.conf.template"
 _NGINX = nginx_base_image()
 """⚠️ Read from `deploy/serve.Dockerfile`, never spelled. See `nginx_base_image`."""
@@ -160,7 +167,7 @@ def stack() -> Iterator[tuple[int, str, str, str]]:
             "ON_ERROR_STOP=1",
             # ⚠️ The migration arrives on **stdin**, not as `-c`. A multi-statement script with comments
             # through `-c` exited 2 without saying which statement it disliked.
-            stdin=_MIGRATION.read_text(encoding="utf-8"),
+            stdin=_MIGRATION_SQL,
         )
 
         _docker(
