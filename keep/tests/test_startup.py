@@ -14,13 +14,17 @@ from keep.auth import TOKEN_VARIABLE, MisconfiguredError
 from keep.main import build
 from keep.store import SchemaMismatchError, SqliteStore
 
-_MIGRATION = Path(__file__).resolve().parents[1] / "migrations" / "001-initial.sql"
+# ⚠️ Every migration in order, not a named one. A test naming `001-initial.sql` beside a directory
+# of migrations builds a database production has moved past, and stays green while doing it.
+_MIGRATIONS = sorted((Path(__file__).resolve().parents[1] / "migrations").glob("*.sql"))
+assert _MIGRATIONS, "no migrations found; every test below would build an empty database"
+_MIGRATION_SQL = chr(10).join(path.read_text(encoding="utf-8") for path in _MIGRATIONS)
 GOOD = "t" * 40
 
 
 def migrated() -> SqliteStore:
     connection = sqlite3.connect(":memory:")
-    connection.executescript(_MIGRATION.read_text(encoding="utf-8"))
+    connection.executescript(_MIGRATION_SQL)
     return SqliteStore(connection)
 
 

@@ -36,7 +36,11 @@ from keep.store import (
     Store,
 )
 
-_MIGRATION = Path(__file__).resolve().parents[1] / "migrations" / "001-initial.sql"
+# ⚠️ Every migration in order, not a named one. A test naming `001-initial.sql` beside a directory
+# of migrations builds a database production has moved past, and stays green while doing it.
+_MIGRATIONS = sorted((Path(__file__).resolve().parents[1] / "migrations").glob("*.sql"))
+assert _MIGRATIONS, "no migrations found; every test below would build an empty database"
+_MIGRATION_SQL = chr(10).join(path.read_text(encoding="utf-8") for path in _MIGRATIONS)
 POSTGRES_VARIABLE = "KEEP_TEST_POSTGRES"
 
 
@@ -84,7 +88,7 @@ def a_share(share_id: str = "s-1", *, event_id: str | None = "e-1") -> Share:
 @pytest.fixture
 def sqlite_store() -> Iterator[Store]:
     connection = sqlite3.connect(":memory:")
-    connection.executescript(_MIGRATION.read_text(encoding="utf-8"))
+    connection.executescript(_MIGRATION_SQL)
     yield SqliteStore(connection)
     connection.close()
 
@@ -134,7 +138,7 @@ def postgres_store() -> Iterator[Store]:
             # key between two of these would make the drop order matter.
             names = ", ".join(f'"{table}"' for table in existing)
             cursor.execute(f"DROP TABLE IF EXISTS {names} CASCADE")
-        cursor.execute(_MIGRATION.read_text(encoding="utf-8"))
+        cursor.execute(_MIGRATION_SQL)
     connection.commit()
     yield PostgresStore(connection)
     connection.close()
@@ -246,7 +250,9 @@ class TestWhatItRefusesToStartAgainst:
         connection.execute("CREATE TABLE keep_schema (version INTEGER NOT NULL)")
         connection.execute("INSERT INTO keep_schema (version) VALUES (99)")
 
-        with pytest.raises(SchemaMismatchError, match="expects schema 1"):
+        # ⚠️ From `SCHEMA_VERSION`, not spelled. A literal here has to be edited on every migration, and
+        # the edited test then asserts only what its editor already believed.
+        with pytest.raises(SchemaMismatchError, match=f"expects schema {SCHEMA_VERSION}"):
             SqliteStore(connection).require_schema()
 
     def test_the_refusal_says_migrations_are_manual(self) -> None:

@@ -306,6 +306,17 @@ guard, an acceptance list, and the script refuses to build without it.
 Transfer `docker_images/` and run the three load scripts, which travel inside it. **They ask Docker
 whether the tag landed** rather than trusting the exit code.
 
+### 3b. ⚠️⚠️ Run the migrations before starting `keep` — **it refuses to start otherwise**
+
+`keep` **never migrates on boot** (`data-layer.md` §7: a deploy that alters the database at three in the
+morning is the one failure a rollback does not undo). It asks the schema version and refuses.
+
+    psql "$KEEP_DATABASE_URL" -f keep/migrations/002-received-at.sql
+
+**What the refusal looks like, so it is recognised rather than debugged:** the container will not come
+up and says `keep expects schema 2 and the database says 1`. That is a deployment fault stating itself,
+which is the whole reason it is a refusal and not a warning.
+
 ### 4. ⚠️⚠️ The published volume's ownership — **the step that is easy to skip**
 
 **Skip this and the rotation fails, every day, silently until somebody reads a log.**

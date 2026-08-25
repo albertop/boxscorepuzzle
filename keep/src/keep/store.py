@@ -23,7 +23,7 @@ from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from typing import Any
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 """What this code expects the database to be.
 
 ⚠️⚠️ **Migrations are manual and startup refuses a mismatch** (`data-layer.md` §7), and neither half
