@@ -189,23 +189,24 @@
   }
 }
 
-/* ⚠️⚠️ **One button, defined once, and its VALUES are the ones the product already had.**
-   `tokens.css` is the only stylesheet all three pages load, which is what makes this the place it can
-   live at all.
+/* ⚠️⚠️ **One button, one treatment, for every page.** `tokens.css` is the only stylesheet all three
+   pages load, which is what makes this the place it can live at all.
 
-   ⚠️⚠️ **The first version of this rule invented a size and that was the whole mistake.** It took 56px,
-   a 12px radius and 17px type from `.landing-play` and called them the app's button. `.landing-play` is
-   the LANDING'S HERO -- one control, alone, that a first-time visitor is looking for -- and it is the
-   only place in the product shaped that way. **The app's ordinary button is `.tutorial-back` /
-   `.tutorial-next`: 50px, a 10px radius, a 1px rule, 16px at weight 600** -- and the reveal's footer was
-   already exactly that before any of this was written. Nothing was wrong with its look; a fourth
-   spelling of it was.
+   ⚠️⚠️ **Green with a slim white rule, and getting here took three wrong turns worth recording.**
 
-   **So this rule is that button, moved rather than redesigned**, and the copies in `board.css` and
-   `landing.css` are gone instead of a fifth being added.
+   The first version invented a size -- 56px and a 12px radius, taken from `.landing-play`, which is the
+   LANDING'S HERO and the only control in the product shaped that way. Calling the hero's measurements
+   the standard is what made the reveal's footer wrong in the first place.
 
-   Two treatments, and the rule is the same everywhere: **the plain form for the way back, `--filled`
-   for the way onward.** */
+   The second used `--header-ground` for the filled form and a grey-ruled `--key` for the rest. Two
+   problems: `#1f362e` is the CHROME colour -- the band behind a section heading -- and at button size it
+   reads as black rather than as this product's green; and a white button with a grey rule beside a
+   near-black one reads as two kinds of thing when they are alternatives.
+
+   **`--fenway` is the product's green**: the scoreboard's, named for where it comes from, and the colour
+   a player looks at for the whole game. `--scoreboard-rule` is the slim white line the scoreboard draws
+   its own divisions with. **The button is the scoreboard, made pressable**, which is why it needs no
+   second treatment: every button is the same object and the label says what it does. */
 .app-button {
   display: flex;
   flex-direction: column;
@@ -214,20 +215,16 @@
   min-height: 50px;
   padding: 8px 12px;
   box-sizing: border-box;
-  border: 1px solid var(--rule-strong);
+  /* ⚠️ 1px, not 2. It is a rule, not an outline -- thick enough to separate the button from the paper
+     and thin enough that three of them in a footer do not read as a grid. */
+  border: 1px solid var(--scoreboard-rule);
   border-radius: 10px;
-  background: var(--key);
-  color: var(--ink);
+  background: var(--fenway);
+  color: var(--scoreboard-ink);
   font: 600 16px/1.15 var(--face), system-ui, sans-serif;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-}
-
-.app-button--filled {
-  border-color: var(--header-ground);
-  background: var(--header-ground);
-  color: var(--header-ink);
 }
 
 /* ⚠️ Only while an action is running. A control disabled before it has been pressed is a promise the

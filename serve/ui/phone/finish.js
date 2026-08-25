@@ -206,7 +206,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
 
   const close = document.createElement("button");
   close.type = "button";
-  close.className = "app-button app-button--filled reveal-close";
+  close.className = "app-button reveal-close";
   close.textContent = text("reveal.close");
 
   // ⚠️⚠️ **Live since G, and it is never `disabled`.** It was drawn and disabled for weeks while there
@@ -222,7 +222,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // visible reason. The guard is invisible and the control stays live.
   const share = document.createElement("button");
   share.type = "button";
-  share.className = "app-button app-button--filled reveal-share";
+  share.className = "app-button reveal-share";
   // ⚠️ The icon is decorative and the label carries the meaning, so it is hidden from the accessibility
   // tree — a screen reader announcing "image, Share" reads the same thing twice.
   share.append(shareIcon(), document.createTextNode(text("reveal.share")));
@@ -613,7 +613,7 @@ export function renderReference() {
 
   const close = document.createElement("button");
   close.type = "button";
-  close.className = "app-button app-button--filled reveal-close";
+  close.className = "app-button reveal-close";
   close.textContent = text("reference.close");
   sheet.append(close);
   // ⚠️ Wired by the shell, for the reason on the other renderer's close button.

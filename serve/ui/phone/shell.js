@@ -339,7 +339,7 @@ export function boot({
     footer.remove();
     const again = doc.createElement("button");
     again.type = "button";
-    again.className = "again";
+    again.className = "app-button again";
     again.textContent = text("done.see_boxscore");
     again.addEventListener("click", () => showReveal(game.record(), again));
     app.append(again);

@@ -2733,7 +2733,11 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     assert(!shell.root.querySelector(".keypad button.check"), "Check survived completion, so this is not that path");
 
     press(shell.root, ".reveal-close");
-    equal(document.activeElement.className, "again", "closing left focus nowhere; the opener was gone");
+    // ⚠️ `contains`, not `===`. Every button carries `.app-button` plus its own name.
+    assert(
+      document.activeElement.classList.contains("again"),
+      `closing left focus nowhere; the opener was gone: ${document.activeElement.className}`,
+    );
 
     shell.teardown();
   });
