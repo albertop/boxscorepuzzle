@@ -1,7 +1,7 @@
 [
  {
   "assigned": "gen6a8b8fed",
-  "date": "2026-09-01",
+  "date": "2026-08-24",
   "direction": "WS1",
   "game_id": "WS1191306130",
   "puzzle_id": "409fad7a93cd8267",
@@ -9,7 +9,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-02",
+  "date": "2026-08-25",
   "direction": "BOS",
   "game_id": "BOS195408220",
   "puzzle_id": "01b5a86231b30138",
@@ -17,7 +17,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-03",
+  "date": "2026-08-26",
   "direction": "BOS",
   "game_id": "BOS195408200",
   "puzzle_id": "97fe02667fde39ee",
@@ -25,7 +25,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-04",
+  "date": "2026-08-27",
   "direction": "WS1",
   "game_id": "BAL195409100",
   "puzzle_id": "9961887c9af7ba89",
@@ -33,7 +33,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-05",
+  "date": "2026-08-28",
   "direction": "CHA",
   "game_id": "BAL195409250",
   "puzzle_id": "42313ac5076cf241",
@@ -41,7 +41,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-06",
+  "date": "2026-08-29",
   "direction": "BOS",
   "game_id": "BOS195408280",
   "puzzle_id": "f2bf1dfc3b453b45",
@@ -49,7 +49,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-07",
+  "date": "2026-08-30",
   "direction": "SLN",
   "game_id": "BRO195408050",
   "puzzle_id": "1e607655172bca59",
@@ -57,7 +57,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-08",
+  "date": "2026-08-31",
   "direction": "SLN",
   "game_id": "BRO195408040",
   "puzzle_id": "3676737e145c39a0",
@@ -65,7 +65,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-09",
+  "date": "2026-09-01",
   "direction": "BAL",
   "game_id": "BOS195408260",
   "puzzle_id": "5f9755ce7aecf52e",
@@ -73,7 +73,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-10",
+  "date": "2026-09-02",
   "direction": "BOS",
   "game_id": "BOS195408240",
   "puzzle_id": "9eda1ca8b360d21f",
@@ -81,7 +81,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-11",
+  "date": "2026-09-03",
   "direction": "BRO",
   "game_id": "BRO195408200",
   "puzzle_id": "c649a339c01dc4e1",
@@ -89,7 +89,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-12",
+  "date": "2026-09-04",
   "direction": "CLE",
   "game_id": "BOS195408291",
   "puzzle_id": "f690b66157130fcb",
@@ -97,7 +97,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-13",
+  "date": "2026-09-05",
   "direction": "WS1",
   "game_id": "BOS195408121",
   "puzzle_id": "3a7a3cf56f70dce2",
@@ -105,7 +105,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-14",
+  "date": "2026-09-06",
   "direction": "WS1",
   "game_id": "BOS195408112",
   "puzzle_id": "1f0135c529e7ba27",
@@ -113,7 +113,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-15",
+  "date": "2026-09-07",
   "direction": "BAL",
   "game_id": "BAL195409210",
   "puzzle_id": "76430f8f2a504a67",
@@ -121,7 +121,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-16",
+  "date": "2026-09-08",
   "direction": "PHI",
   "game_id": "BRO195408221",
   "puzzle_id": "f5136e3d783ab081",
@@ -129,7 +129,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-17",
+  "date": "2026-09-09",
   "direction": "PHI",
   "game_id": "BRO195408222",
   "puzzle_id": "d9df7ccf43c49b6e",
@@ -137,7 +137,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-18",
+  "date": "2026-09-10",
   "direction": "BRO",
   "game_id": "BRO195408060",
   "puzzle_id": "a8cd5168a2c046e0",
@@ -145,7 +145,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-19",
+  "date": "2026-09-11",
   "direction": "PHI",
   "game_id": "BRO195408160",
   "puzzle_id": "443cccaaad73d61e",
@@ -153,7 +153,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-20",
+  "date": "2026-09-12",
   "direction": "NYA",
   "game_id": "BAL195409080",
   "puzzle_id": "99c5155f6b0c9597",
@@ -161,7 +161,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-21",
+  "date": "2026-09-13",
   "direction": "BOS",
   "game_id": "BOS196408210",
   "puzzle_id": "0054e49dc9deb3e9",
@@ -169,7 +169,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-22",
+  "date": "2026-09-14",
   "direction": "BOS",
   "game_id": "WS1191305301",
   "puzzle_id": "d523dfdbc81c5ec2",
@@ -177,7 +177,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-23",
+  "date": "2026-09-15",
   "direction": "BAL",
   "game_id": "BAL196409301",
   "puzzle_id": "76cce8aa615b6281",
@@ -185,7 +185,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-24",
+  "date": "2026-09-16",
   "direction": "LAA",
   "game_id": "BAL196409201",
   "puzzle_id": "f318c112c3f75681",
@@ -193,7 +193,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-25",
+  "date": "2026-09-17",
   "direction": "DET",
   "game_id": "BOS196408250",
   "puzzle_id": "c0b45da94988c94f",
@@ -201,7 +201,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-26",
+  "date": "2026-09-18",
   "direction": "DET",
   "game_id": "BOS196408260",
   "puzzle_id": "646b93b97712e719",
@@ -209,7 +209,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-27",
+  "date": "2026-09-19",
   "direction": "NYA",
   "game_id": "BOS196408222",
   "puzzle_id": "ee6ceec234e723bd",
@@ -217,7 +217,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-28",
+  "date": "2026-09-20",
   "direction": "CHA",
   "game_id": "BOS196408140",
   "puzzle_id": "daecbb404d927398",
@@ -225,7 +225,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-29",
+  "date": "2026-09-21",
   "direction": "BAL",
   "game_id": "BAL196409180",
   "puzzle_id": "12b8a04c837f4a35",
@@ -233,7 +233,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-09-30",
+  "date": "2026-09-22",
   "direction": "WS2",
   "game_id": "BAL196409302",
   "puzzle_id": "647e8a46545da81c",
@@ -241,7 +241,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-01",
+  "date": "2026-09-23",
   "direction": "KC1",
   "game_id": "BAL196409112",
   "puzzle_id": "90fc9775cc976076",
@@ -249,7 +249,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-02",
+  "date": "2026-09-24",
   "direction": "CLE",
   "game_id": "BOS196409301",
   "puzzle_id": "69eec7b21fa6afb3",
@@ -257,7 +257,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-03",
+  "date": "2026-09-25",
   "direction": "BAL",
   "game_id": "BAL196408282",
   "puzzle_id": "959cf1c9bf1b9973",
@@ -265,7 +265,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-04",
+  "date": "2026-09-26",
   "direction": "MIN",
   "game_id": "BOS196409200",
   "puzzle_id": "94e70ca17edce6ca",
@@ -273,7 +273,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-05",
+  "date": "2026-09-27",
   "direction": "BAL",
   "game_id": "BAL196408120",
   "puzzle_id": "8c319c87beb2a157",
@@ -281,7 +281,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-06",
+  "date": "2026-09-28",
   "direction": "KC1",
   "game_id": "BOS196409140",
   "puzzle_id": "d30749df6e0f1757",
@@ -289,7 +289,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-07",
+  "date": "2026-09-29",
   "direction": "BOS",
   "game_id": "BAL196408110",
   "puzzle_id": "2f9305b56635faf0",
@@ -297,7 +297,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-08",
+  "date": "2026-09-30",
   "direction": "NYA",
   "game_id": "BAL196408140",
   "puzzle_id": "41d4f92d72256cb2",
@@ -305,7 +305,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-09",
+  "date": "2026-10-01",
   "direction": "NYA",
   "game_id": "BAL196408150",
   "puzzle_id": "314554ebdc647e74",
@@ -313,7 +313,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-10",
+  "date": "2026-10-02",
   "direction": "BOS",
   "game_id": "BOS196409130",
   "puzzle_id": "64898eac77de0624",
@@ -321,7 +321,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-11",
+  "date": "2026-10-03",
   "direction": "BOS",
   "game_id": "BOS196409180",
   "puzzle_id": "f0a56e4e0b7abb17",
@@ -329,7 +329,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-12",
+  "date": "2026-10-04",
   "direction": "BOS",
   "game_id": "BOS196409160",
   "puzzle_id": "49f152410a7ba7f8",
@@ -337,7 +337,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-13",
+  "date": "2026-10-05",
   "direction": "PHI",
   "game_id": "ATL197408180",
   "puzzle_id": "39d3991e54dca1f4",
@@ -345,7 +345,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-14",
+  "date": "2026-10-06",
   "direction": "SLA",
   "game_id": "SLA192310020",
   "puzzle_id": "0ed0aad8886544ca",
@@ -353,7 +353,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-15",
+  "date": "2026-10-07",
   "direction": "ATL",
   "game_id": "ATL197408190",
   "puzzle_id": "029af23825ff7698",
@@ -361,7 +361,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-16",
+  "date": "2026-10-08",
   "direction": "ATL",
   "game_id": "ATL197408210",
   "puzzle_id": "a2feca19d34391e1",
@@ -369,7 +369,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-17",
+  "date": "2026-10-09",
   "direction": "ATL",
   "game_id": "ATL197408200",
   "puzzle_id": "45179f418357adb1",
@@ -377,7 +377,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-18",
+  "date": "2026-10-10",
   "direction": "ATL",
   "game_id": "ATL197409080",
   "puzzle_id": "4f91ca6b542bfabd",
@@ -385,7 +385,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-19",
+  "date": "2026-10-11",
   "direction": "ATL",
   "game_id": "ATL197409030",
   "puzzle_id": "2bae4de62cb37c2e",
@@ -393,7 +393,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-20",
+  "date": "2026-10-12",
   "direction": "ATL",
   "game_id": "ATL197409021",
   "puzzle_id": "8e04432992e602e8",
@@ -401,7 +401,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-21",
+  "date": "2026-10-13",
   "direction": "LAN",
   "game_id": "ATL197409090",
   "puzzle_id": "c8d04d74e44f47d8",
@@ -409,7 +409,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-22",
+  "date": "2026-10-14",
   "direction": "ATL",
   "game_id": "ATL197409282",
   "puzzle_id": "f74b86194eca0cc7",
@@ -417,7 +417,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-23",
+  "date": "2026-10-15",
   "direction": "HOU",
   "game_id": "ATL197409290",
   "puzzle_id": "f8bf6971378b0d92",
@@ -425,7 +425,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-24",
+  "date": "2026-10-16",
   "direction": "BOS",
   "game_id": "BOS197408200",
   "puzzle_id": "3b563298f0d0026c",
@@ -433,7 +433,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-25",
+  "date": "2026-10-17",
   "direction": "BOS",
   "game_id": "BOS197408210",
   "puzzle_id": "4b2fa9956898eb6a",
@@ -441,7 +441,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-26",
+  "date": "2026-10-18",
   "direction": "BAL",
   "game_id": "BAL197409280",
   "puzzle_id": "5511e68637c0de49",
@@ -449,7 +449,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-27",
+  "date": "2026-10-19",
   "direction": "BAL",
   "game_id": "BAL197409290",
   "puzzle_id": "80af637da67a90ea",
@@ -457,7 +457,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-28",
+  "date": "2026-10-20",
   "direction": "BOS",
   "game_id": "BOS197408020",
   "puzzle_id": "4bfb10037d22d9c4",
@@ -465,7 +465,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-29",
+  "date": "2026-10-21",
   "direction": "BOS",
   "game_id": "BOS197408010",
   "puzzle_id": "2479e5e91cbb4646",
@@ -473,7 +473,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-30",
+  "date": "2026-10-22",
   "direction": "BAL",
   "game_id": "BAL197409140",
   "puzzle_id": "86baaef4d5d94fc7",
@@ -481,7 +481,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-10-31",
+  "date": "2026-10-23",
   "direction": "MIN",
   "game_id": "BOS197408170",
   "puzzle_id": "ba4512bd1e9940fd",
@@ -489,7 +489,7 @@
  },
  {
   "assigned": "gen6a8b8fed",
-  "date": "2026-11-01",
+  "date": "2026-10-24",
   "direction": "BOS",
   "game_id": "BOS195408111",
   "puzzle_id": "fbd34576c4e3f15d",
@@ -497,7 +497,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-02",
+  "date": "2026-10-25",
   "direction": "BOS",
   "game_id": "BOS197408180",
   "puzzle_id": "57f37b66691ef758",
@@ -505,7 +505,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-03",
+  "date": "2026-10-26",
   "direction": "PIT",
   "game_id": "ATL198408150",
   "puzzle_id": "3fc55972850d588f",
@@ -513,7 +513,7 @@
  },
  {
   "assigned": "gen6a8b8fed",
-  "date": "2026-11-04",
+  "date": "2026-10-27",
   "direction": "WS1",
   "game_id": "WS1191306140",
   "puzzle_id": "e309ea26aab71afc",
@@ -521,7 +521,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-05",
+  "date": "2026-10-28",
   "direction": "SLN",
   "game_id": "ATL198408290",
   "puzzle_id": "7082a11c829cdb41",
@@ -529,7 +529,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-06",
+  "date": "2026-10-29",
   "direction": "ATL",
   "game_id": "ATL198408120",
   "puzzle_id": "52dd54e20e9cd837",
@@ -537,7 +537,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-07",
+  "date": "2026-10-30",
   "direction": "SDN",
   "game_id": "ATL198408102",
   "puzzle_id": "60e448ca7e1757ba",
@@ -545,7 +545,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-08",
+  "date": "2026-10-31",
   "direction": "CIN",
   "game_id": "ATL198409190",
   "puzzle_id": "47d34fb62bb8edb0",
@@ -553,7 +553,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-09",
+  "date": "2026-11-01",
   "direction": "HOU",
   "game_id": "ATL198409040",
   "puzzle_id": "bd8e8d30beb9b3ec",
@@ -561,7 +561,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-10",
+  "date": "2026-11-02",
   "direction": "ATL",
   "game_id": "ATL198409200",
   "puzzle_id": "5e3190308aa09dd1",
@@ -569,7 +569,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-11",
+  "date": "2026-11-03",
   "direction": "NYA",
   "game_id": "BAL198409250",
   "puzzle_id": "2e33a1a1113bd8f2",
@@ -577,7 +577,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-12",
+  "date": "2026-11-04",
   "direction": "BOS",
   "game_id": "BOS198408210",
   "puzzle_id": "248bed48544d278d",
@@ -585,7 +585,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-13",
+  "date": "2026-11-05",
   "direction": "BOS",
   "game_id": "BOS198408260",
   "puzzle_id": "8549393858ffae8c",
@@ -593,7 +593,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-14",
+  "date": "2026-11-06",
   "direction": "TEX",
   "game_id": "BOS198408030",
   "puzzle_id": "7bfdc227aa12b433",
@@ -601,7 +601,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-15",
+  "date": "2026-11-07",
   "direction": "BOS",
   "game_id": "BOS198408250",
   "puzzle_id": "05b0e89cf8df00d2",
@@ -609,7 +609,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-16",
+  "date": "2026-11-08",
   "direction": "CLE",
   "game_id": "BOS198408240",
   "puzzle_id": "a6e5b3c0730edbb1",
@@ -617,7 +617,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-17",
+  "date": "2026-11-09",
   "direction": "KCA",
   "game_id": "BOS198408200",
   "puzzle_id": "495bd2ce8ecc73c3",
@@ -625,7 +625,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-18",
+  "date": "2026-11-10",
   "direction": "BAL",
   "game_id": "BAL198409242",
   "puzzle_id": "9528b4f5ba97425a",
@@ -633,7 +633,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-19",
+  "date": "2026-11-11",
   "direction": "KCA",
   "game_id": "BOS198408220",
   "puzzle_id": "73f5a1b518df2fe3",
@@ -641,7 +641,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-20",
+  "date": "2026-11-12",
   "direction": "BOS",
   "game_id": "BAL198409230",
   "puzzle_id": "8dc440717e971f23",
@@ -649,7 +649,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-21",
+  "date": "2026-11-13",
   "direction": "BAL",
   "game_id": "BAL198409200",
   "puzzle_id": "47d0a940c5e0e2cc",
@@ -657,7 +657,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-22",
+  "date": "2026-11-14",
   "direction": "BOS",
   "game_id": "BAL198409210",
   "puzzle_id": "263d98e4ab2fc694",
@@ -665,7 +665,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-23",
+  "date": "2026-11-15",
   "direction": "TOR",
   "game_id": "BOS199408011",
   "puzzle_id": "0006f0f29764d0e2",
@@ -673,7 +673,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-24",
+  "date": "2026-11-16",
   "direction": "TOR",
   "game_id": "BOS199408020",
   "puzzle_id": "1b5b6049d76e0674",
@@ -681,7 +681,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-25",
+  "date": "2026-11-17",
   "direction": "BOS",
   "game_id": "BOS199408030",
   "puzzle_id": "0d73db630919352f",
@@ -689,7 +689,7 @@
  },
  {
   "assigned": "gen6a8b8fed",
-  "date": "2026-11-26",
+  "date": "2026-11-18",
   "direction": "NYA",
   "game_id": "WS1191306201",
   "puzzle_id": "52a5a586443bfa68",
@@ -697,7 +697,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-27",
+  "date": "2026-11-19",
   "direction": "BOS",
   "game_id": "BOS199408012",
   "puzzle_id": "e42d3ff00ce6a0a5",
@@ -705,7 +705,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-28",
+  "date": "2026-11-20",
   "direction": "BOS",
   "game_id": "BOS199408061",
   "puzzle_id": "700a58f4e266171e",
@@ -713,7 +713,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-29",
+  "date": "2026-11-21",
   "direction": "BOS",
   "game_id": "BOS199408072",
   "puzzle_id": "8b62e7734105fb85",
@@ -721,7 +721,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-11-30",
+  "date": "2026-11-22",
   "direction": "BOS",
   "game_id": "BOS199408071",
   "puzzle_id": "abb114a3c5f931c7",
@@ -729,7 +729,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-01",
+  "date": "2026-11-23",
   "direction": "CLE",
   "game_id": "BOS199408062",
   "puzzle_id": "7cf0af091c671418",
@@ -737,7 +737,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-02",
+  "date": "2026-11-24",
   "direction": "TEX",
   "game_id": "BOS199406040",
   "puzzle_id": "e77d56d2f4e3c4c7",
@@ -745,7 +745,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-03",
+  "date": "2026-11-25",
   "direction": "TEX",
   "game_id": "BOS199406050",
   "puzzle_id": "35923c27ff64149a",
@@ -753,7 +753,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-04",
+  "date": "2026-11-26",
   "direction": "CLE",
   "game_id": "BAL199407262",
   "puzzle_id": "f1872f9f3a91ceb7",
@@ -761,7 +761,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-05",
+  "date": "2026-11-27",
   "direction": "BAL",
   "game_id": "BAL199407300",
   "puzzle_id": "3a2eae18b01e65e7",
@@ -769,7 +769,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-06",
+  "date": "2026-11-28",
   "direction": "CLE",
   "game_id": "BAL199407281",
   "puzzle_id": "9da45e530a6b7e31",
@@ -777,7 +777,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-07",
+  "date": "2026-11-29",
   "direction": "TEX",
   "game_id": "BOS199406030",
   "puzzle_id": "f6aaec0090fb399d",
@@ -785,7 +785,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-08",
+  "date": "2026-11-30",
   "direction": "BAL",
   "game_id": "BAL199407261",
   "puzzle_id": "ac8d87ee2fefeead",
@@ -793,7 +793,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-09",
+  "date": "2026-12-01",
   "direction": "NYA",
   "game_id": "BOS199406280",
   "puzzle_id": "e51639494b0b4f91",
@@ -801,7 +801,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-10",
+  "date": "2026-12-02",
   "direction": "MIN",
   "game_id": "BOS199406130",
   "puzzle_id": "353ff72f84020204",
@@ -809,7 +809,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-11",
+  "date": "2026-12-03",
   "direction": "TOR",
   "game_id": "BAL199407310",
   "puzzle_id": "6add522cc8b75682",
@@ -817,7 +817,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-12",
+  "date": "2026-12-04",
   "direction": "OAK",
   "game_id": "BAL199407070",
   "puzzle_id": "bb5d7b162cb1c217",
@@ -825,7 +825,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-13",
+  "date": "2026-12-05",
   "direction": "TEX",
   "game_id": "TEX200309120",
   "puzzle_id": "097d24977be090c4",
@@ -833,7 +833,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-14",
+  "date": "2026-12-06",
   "direction": "TEX",
   "game_id": "TEX200309130",
   "puzzle_id": "f34b39444c86e601",
@@ -841,7 +841,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-15",
+  "date": "2026-12-07",
   "direction": "BOS",
   "game_id": "SEA200308160",
   "puzzle_id": "a279c5fe4c857570",
@@ -849,7 +849,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-16",
+  "date": "2026-12-08",
   "direction": "CHA",
   "game_id": "SEA200308010",
   "puzzle_id": "3a1598ad3911cec7",
@@ -857,7 +857,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-17",
+  "date": "2026-12-09",
   "direction": "WS1",
   "game_id": "WS1193305180",
   "puzzle_id": "d9cf5682be2562a2",
@@ -865,7 +865,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-18",
+  "date": "2026-12-10",
   "direction": "PHI",
   "game_id": "SFN200308090",
   "puzzle_id": "766f057d422c52d5",
@@ -873,7 +873,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-19",
+  "date": "2026-12-11",
   "direction": "MON",
   "game_id": "SDN200308240",
   "puzzle_id": "346492810eca0261",
@@ -881,7 +881,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-20",
+  "date": "2026-12-12",
   "direction": "TEX",
   "game_id": "TEX200309190",
   "puzzle_id": "36432ed5dd6114b2",
@@ -889,7 +889,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-21",
+  "date": "2026-12-13",
   "direction": "SEA",
   "game_id": "SEA200308260",
   "puzzle_id": "b3796293d68d7aa0",
@@ -897,7 +897,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-22",
+  "date": "2026-12-14",
   "direction": "TBA",
   "game_id": "SEA200308270",
   "puzzle_id": "b0cf4b10a5dd3f92",
@@ -905,7 +905,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-23",
+  "date": "2026-12-15",
   "direction": "TEX",
   "game_id": "TEX200309020",
   "puzzle_id": "fe71764d575d208e",
@@ -913,7 +913,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-24",
+  "date": "2026-12-16",
   "direction": "TEX",
   "game_id": "TEX200309010",
   "puzzle_id": "2b4444b144c0fe68",
@@ -921,7 +921,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-25",
+  "date": "2026-12-17",
   "direction": "SFN",
   "game_id": "SFN200308220",
   "puzzle_id": "e04d1bd955471d49",
@@ -929,7 +929,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-26",
+  "date": "2026-12-18",
   "direction": "SEA",
   "game_id": "SEA200308150",
   "puzzle_id": "65c9054113642b61",
@@ -937,7 +937,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-27",
+  "date": "2026-12-19",
   "direction": "TOR",
   "game_id": "SEA200308110",
   "puzzle_id": "338bde50d02261b0",
@@ -945,7 +945,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-28",
+  "date": "2026-12-20",
   "direction": "SEA",
   "game_id": "SEA200308120",
   "puzzle_id": "f478b3ee9bd2ba46",
@@ -953,7 +953,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-29",
+  "date": "2026-12-21",
   "direction": "SEA",
   "game_id": "SEA200308130",
   "puzzle_id": "d135d4a45e2d8759",
@@ -961,7 +961,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-30",
+  "date": "2026-12-22",
   "direction": "SFN",
   "game_id": "SFN200308080",
   "puzzle_id": "7742a017c8ee796f",
@@ -969,7 +969,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2026-12-31",
+  "date": "2026-12-23",
   "direction": "OAK",
   "game_id": "TEX200309140",
   "puzzle_id": "235b249fa85ad0f7",
@@ -977,7 +977,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-01",
+  "date": "2026-12-24",
   "direction": "TEX",
   "game_id": "TEX200309200",
   "puzzle_id": "41e89d62292dad44",
@@ -985,7 +985,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-02",
+  "date": "2026-12-25",
   "direction": "NYN",
   "game_id": "WAS201307261",
   "puzzle_id": "2be37503413f2681",
@@ -993,7 +993,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-03",
+  "date": "2026-12-26",
   "direction": "LAN",
   "game_id": "WAS201307210",
   "puzzle_id": "63e97d3e562532ee",
@@ -1001,7 +1001,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-04",
+  "date": "2026-12-27",
   "direction": "WAS",
   "game_id": "WAS201307010",
   "puzzle_id": "9b4084180c9e201d",
@@ -1009,7 +1009,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-05",
+  "date": "2026-12-28",
   "direction": "WAS",
   "game_id": "WAS201307070",
   "puzzle_id": "e08c9e8eb86a4224",
@@ -1017,7 +1017,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-06",
+  "date": "2026-12-29",
   "direction": "WAS",
   "game_id": "WAS201307040",
   "puzzle_id": "308118461d1fd621",
@@ -1025,7 +1025,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-07",
+  "date": "2026-12-30",
   "direction": "COL",
   "game_id": "WAS201306220",
   "puzzle_id": "d1bcf683a82320ec",
@@ -1033,7 +1033,7 @@
  },
  {
   "assigned": "gen6a8b8fed",
-  "date": "2027-01-08",
+  "date": "2026-12-31",
   "direction": "DET",
   "game_id": "WS1191306070",
   "puzzle_id": "00773538d2a34ecd",
@@ -1041,7 +1041,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-09",
+  "date": "2027-01-01",
   "direction": "NYN",
   "game_id": "WAS201306050",
   "puzzle_id": "cba263065c280591",
@@ -1049,7 +1049,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-10",
+  "date": "2027-01-02",
   "direction": "WAS",
   "game_id": "WAS201306200",
   "puzzle_id": "7e128a54d1bbe568",
@@ -1057,7 +1057,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-11",
+  "date": "2027-01-03",
   "direction": "PIT",
   "game_id": "SDN201308200",
   "puzzle_id": "5091d1f6339c15e2",
@@ -1065,7 +1065,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-12",
+  "date": "2027-01-04",
   "direction": "BAL",
   "game_id": "SFN201308110",
   "puzzle_id": "9af555b49fc112f1",
@@ -1073,7 +1073,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-13",
+  "date": "2027-01-05",
   "direction": "TEX",
   "game_id": "TEX201309100",
   "puzzle_id": "70c8bddac07bfb8f",
@@ -1081,7 +1081,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-14",
+  "date": "2027-01-06",
   "direction": "SDN",
   "game_id": "SDN201308170",
   "puzzle_id": "7ba770d4802548cb",
@@ -1089,7 +1089,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-15",
+  "date": "2027-01-07",
   "direction": "BOS",
   "game_id": "SFN201308190",
   "puzzle_id": "31d886b1dabcf772",
@@ -1097,7 +1097,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-16",
+  "date": "2027-01-08",
   "direction": "MIL",
   "game_id": "SEA201308090",
   "puzzle_id": "1f6c9daa40157117",
@@ -1105,7 +1105,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-17",
+  "date": "2027-01-09",
   "direction": "TEX",
   "game_id": "SEA201308270",
   "puzzle_id": "6105c5a802114552",
@@ -1113,7 +1113,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-18",
+  "date": "2027-01-10",
   "direction": "TEX",
   "game_id": "SEA201308260",
   "puzzle_id": "90e7368c27371389",
@@ -1121,7 +1121,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-19",
+  "date": "2027-01-11",
   "direction": "SEA",
   "game_id": "SEA201308280",
   "puzzle_id": "46abed1c751157a2",
@@ -1129,7 +1129,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-20",
+  "date": "2027-01-12",
   "direction": "SFN",
   "game_id": "SFN201308240",
   "puzzle_id": "e05011874203bb9a",
@@ -1137,7 +1137,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-21",
+  "date": "2027-01-13",
   "direction": "MIL",
   "game_id": "SEA201308100",
   "puzzle_id": "24ff319e2ed3ea98",
@@ -1145,7 +1145,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-22",
+  "date": "2027-01-14",
   "direction": "SDN",
   "game_id": "SDN201308020",
   "puzzle_id": "032770189d73374b",
@@ -1153,7 +1153,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-23",
+  "date": "2027-01-15",
   "direction": "TBA",
   "game_id": "TOR202310010",
   "puzzle_id": "5079de3f48de0f48",
@@ -1161,7 +1161,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-24",
+  "date": "2027-01-16",
   "direction": "COL",
   "game_id": "WAS202307240",
   "puzzle_id": "79c2431ea726ed2e",
@@ -1169,7 +1169,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-25",
+  "date": "2027-01-17",
   "direction": "TEX",
   "game_id": "WAS202307070",
   "puzzle_id": "0234cab9dc864b5b",
@@ -1177,7 +1177,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-26",
+  "date": "2027-01-18",
   "direction": "WAS",
   "game_id": "WAS202307090",
   "puzzle_id": "6a4ba7900d490ec5",
@@ -1185,7 +1185,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-27",
+  "date": "2027-01-19",
   "direction": "WAS",
   "game_id": "WAS202307080",
   "puzzle_id": "41b1b2aa00cc54b7",
@@ -1193,7 +1193,7 @@
  },
  {
   "assigned": "gen6a8a4aa0",
-  "date": "2027-01-28",
+  "date": "2027-01-20",
   "direction": "CIN",
   "game_id": "WAS202307050",
   "puzzle_id": "2d1845578c4e3b4c",
