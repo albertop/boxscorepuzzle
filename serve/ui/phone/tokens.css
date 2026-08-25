@@ -189,43 +189,45 @@
   }
 }
 
-/* ⚠️⚠️ **One button, defined once, for every page.** `tokens.css` is the only stylesheet all three
-   pages load, which is what makes this the place it can live at all.
+/* ⚠️⚠️ **One button, defined once, and its VALUES are the ones the product already had.**
+   `tokens.css` is the only stylesheet all three pages load, which is what makes this the place it can
+   live at all.
 
-   **It replaces four copies.** `.landing-play`, `.landing-share`, `.tutorial-back`/`.tutorial-next` and
-   the reveal's footer each spelled the same look, in two stylesheets, with nothing checking they agreed
-   — and they did not: the reveal was 50px tall with a 1px grey border and 16px type while everything
-   else was 56px with a 12px radius and 17px. **The player earns their way to the reveal and it was the
-   one screen whose buttons belonged to a different product.** `board.css` recorded the copy as knowingly
-   made and owed to `todo.md`; this is it coming due.
+   ⚠️⚠️ **The first version of this rule invented a size and that was the whole mistake.** It took 56px,
+   a 12px radius and 17px type from `.landing-play` and called them the app's button. `.landing-play` is
+   the LANDING'S HERO -- one control, alone, that a first-time visitor is looking for -- and it is the
+   only place in the product shaped that way. **The app's ordinary button is `.tutorial-back` /
+   `.tutorial-next`: 50px, a 10px radius, a 1px rule, 16px at weight 600** -- and the reveal's footer was
+   already exactly that before any of this was written. Nothing was wrong with its look; a fourth
+   spelling of it was.
 
-   Two treatments and the rule is the same everywhere: **a dark ground for the way onward, an outline for
-   the way back.** */
+   **So this rule is that button, moved rather than redesigned**, and the copies in `board.css` and
+   `landing.css` are gone instead of a fifth being added.
+
+   Two treatments, and the rule is the same everywhere: **the plain form for the way back, `--filled`
+   for the way onward.** */
 .app-button {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 56px;
-  padding: 10px 12px;
+  min-height: 50px;
+  padding: 8px 12px;
   box-sizing: border-box;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  font: 700 17px/1.15 var(--face), system-ui, sans-serif;
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--key);
+  color: var(--ink);
+  font: 600 16px/1.15 var(--face), system-ui, sans-serif;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
 }
 
 .app-button--filled {
+  border-color: var(--header-ground);
   background: var(--header-ground);
   color: var(--header-ink);
-}
-
-.app-button--outline {
-  background: var(--paper);
-  color: var(--header-ground);
-  border-color: var(--header-ground);
 }
 
 /* ⚠️ Only while an action is running. A control disabled before it has been pressed is a promise the

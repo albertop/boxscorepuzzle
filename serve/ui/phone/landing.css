@@ -114,10 +114,19 @@ body {
    The paragraph above stands: both are filled, because on a finished day there is no first move to give.
    What is left here is this page's own business -- its type size and the user-agent reset a `<button>`
    needs and an `<a>` does not. */
+/* ⚠️⚠️ **This is the landing's HERO, and it is bigger than the app's button on purpose.** The rest of
+   the product uses `.app-button` at 50px and 16px; these two are 56px, a 12px radius and 18px because
+   they are the one thing a visitor arriving at the front door is looking for. **That difference is the
+   reason `.app-button` must not be defined from them** -- taking the hero's measurements and calling
+   them the standard is what made the reveal's footer wrong. */
 .landing-play,
 .landing-share {
   margin: 0;
+  min-height: 56px;
+  padding: 12px;
+  border-radius: 12px;
   font-size: 18px;
+  font-weight: 700;
   -webkit-appearance: none;
   appearance: none;
 }

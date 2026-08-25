@@ -898,12 +898,12 @@ td.label.substitute { padding-left: 14px; }
    ⚠️ Re-entry while the image builds is a flag in `finish.js`, not the attribute: a button that greys
    out for a second with no explanation reads as broken. */
 
-/* ⚠️ **The one that leaves the product, on its own line and a shade quieter than the two above it.**
-   Same height and same target: it is a third exit, not a footnote. The centring and the underline are
-   handled in the shared rule above, which is where the anchors and the buttons are reconciled. */
-.reveal-reference {
-  opacity: 0.82;
-}
+/* ⚠️⚠️ **`opacity: 0.82` stood here and it made two buttons of one kind look like two kinds.** The
+   reasoning was that the exit leaving the product should be a shade quieter than the two that stay
+   inside it. **On screen it just read as broken** -- `Go home` and `See the game` are the same
+   treatment, side by side and one above the other, and one of them was faded. The row is what tells the
+   player these are alternatives; a difference that carries no meaning is noise in the one place it
+   cannot be. It has its own line, which is the distinction actually worth drawing. */
 
 .reveal-share svg {
   width: 18px;

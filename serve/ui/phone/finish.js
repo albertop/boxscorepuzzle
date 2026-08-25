@@ -248,7 +248,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // one through `window.opener` and can navigate it — a page the player left could replace the game
   // behind them.
   const reference = document.createElement("a");
-  reference.className = "app-button app-button--outline reveal-reference";
+  reference.className = "app-button reveal-reference";
   reference.href = referenceUrl(reveal.gameId);
   reference.target = "_blank";
   reference.rel = "noopener noreferrer";
@@ -262,7 +262,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // boxscore, and the boxscore sent you back to the board. A player who finished had no exit that was
   // not a return.
   const home = document.createElement("a");
-  home.className = "app-button app-button--outline reveal-home";
+  home.className = "app-button reveal-home";
   home.href = ROUTES.landing;
   home.textContent = text("reveal.home");
 
