@@ -250,7 +250,7 @@ def _git(*arguments: str) -> str:
         return subprocess.run(  # noqa: S603
             ["git", "-C", str(_ROOT), *arguments],  # noqa: S607
             capture_output=True,
-            text=True,
+            text=True, encoding="utf-8",
             check=True,
             timeout=10,
         ).stdout.strip()

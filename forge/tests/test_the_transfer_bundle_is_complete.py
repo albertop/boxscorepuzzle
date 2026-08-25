@@ -88,7 +88,7 @@ def test_every_image_has_its_version_in_one_place() -> None:
     compose = _COMPOSE.read_text(encoding="utf-8")
     build = _BUILD.read_text(encoding="utf-8")
 
-    offered = re.search(r'ValidateSet\(([^)]*)\)', build)
+    offered = re.search(r"ValidateSet\(([^)]*)\)", build)
     assert offered, "the build script offers no images; this test would pass over nothing"
     buildable = {name.strip().strip('"').upper() for name in offered[1].split(",") if name.strip()}
     assert buildable, "no image names parsed out of the build script"

@@ -56,7 +56,7 @@ def _keys() -> list[Path]:
 
 
 def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(("git", *arguments), cwd=_ROOT, capture_output=True, text=True, check=False)
+    return subprocess.run(("git", *arguments), cwd=_ROOT, capture_output=True, text=True, encoding="utf-8", check=False)
 
 
 def test_the_rule_that_ignores_the_keys_exists_and_is_asked_about_a_real_shape() -> None:

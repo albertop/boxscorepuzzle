@@ -87,6 +87,7 @@ def _docker() -> str | None:
             ["docker", "info", "--format", "{{.ServerVersion}}"],
             capture_output=True,
             text=True,
+            encoding="utf-8",
             timeout=30,
             check=False,
         )
@@ -130,6 +131,7 @@ def _serve(conf: Path) -> Iterator[int]:
         ],
         capture_output=True,
         text=True,
+        encoding="utf-8",
         check=True,
         timeout=180,
     )

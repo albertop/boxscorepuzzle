@@ -38,7 +38,9 @@ _PUBLIC = _ROOT / "serve" / "data" / "puzzles"
 
 
 def _docker(*arguments: str, check: bool = True, timeout: int = 900) -> subprocess.CompletedProcess[str]:
-    finished = subprocess.run(["docker", *arguments], capture_output=True, text=True, check=False, timeout=timeout)
+    finished = subprocess.run(
+        ["docker", *arguments], capture_output=True, text=True, encoding="utf-8", check=False, timeout=timeout
+    )
     if check and finished.returncode != 0:
         message = f"docker {' '.join(arguments[:2])} failed ({finished.returncode}): {finished.stderr[-500:]}"
         raise AssertionError(message)

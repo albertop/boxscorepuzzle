@@ -172,7 +172,7 @@ delete it again.
 
 def run_suite() -> subprocess.CompletedProcess:
     return subprocess.run(  # noqa: S603
-        PYTEST, capture_output=True, text=True, check=False, cwd=ROOT, timeout=900
+        PYTEST, capture_output=True, text=True, encoding="utf-8", check=False, cwd=ROOT, timeout=900
     )
 
 

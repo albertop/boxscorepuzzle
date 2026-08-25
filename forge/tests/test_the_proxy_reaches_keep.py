@@ -47,7 +47,21 @@ def _docker(
     *arguments: str, check: bool = True, timeout: int = 300, stdin: str | None = None
 ) -> subprocess.CompletedProcess[str]:
     finished = subprocess.run(
-        ["docker", *arguments], capture_output=True, text=True, check=False, timeout=timeout, input=stdin
+        ["docker", *arguments],
+        capture_output=True,
+        text=True,
+        # ⚠️⚠️ **Named, because `text=True` alone means *whatever this machine's locale is* -- cp1252 on
+        # Windows.** The migrations carry `⚠️` and em dashes, and piping them into `psql` raised
+        # `UnicodeEncodeError: 'charmap' codec can't encode characters`. **The thread writing stdin died
+        # holding the pipe, so `psql` sat waiting for input that would never arrive and the call timed
+        # out after five minutes** -- reported as `TimeoutExpired`, which names the wrong thing entirely.
+        #
+        # ⚠️ This is `CLAUDE.md`'s cp1252 class in a place its guard does not reach: that one is a static
+        # check over every `print` argument, and this is a subprocess's stdin.
+        encoding="utf-8",
+        check=False,
+        timeout=timeout,
+        input=stdin,
     )
     if check and finished.returncode != 0:
         # ⚠️ `CalledProcessError` prints the command and swallows what the command said, which on a

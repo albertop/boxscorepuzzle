@@ -38,7 +38,7 @@ def _modules_after(statement: str) -> set[str]:
     )
     # The program is built in this file from a literal statement; nothing here comes from outside.
     result = subprocess.run(  # noqa: S603
-        [sys.executable, "-c", program], capture_output=True, text=True, check=True
+        [sys.executable, "-c", program], capture_output=True, text=True, encoding="utf-8", check=True
     )
     return set(result.stdout.split())
 
