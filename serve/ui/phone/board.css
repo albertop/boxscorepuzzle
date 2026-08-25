@@ -851,26 +851,23 @@ td.label.substitute { padding-left: 14px; }
   gap: 8px;
 }
 
+/* ⚠️⚠️ **The look lives in `tokens.css` as `.app-button` now, and this rule used to spell it.** The
+   reveal was 50px tall with a 1px grey border and 16px type while every other screen in the product was
+   56px with a 12px radius and 17px — the one screen the player reaches by earning it, wearing a
+   different product's buttons. Four copies of that look existed; `tokens.css` is the only stylesheet all
+   three pages load, so it is where one copy can serve them.
+
+   ⚠️ **Two of these are anchors and two are buttons**, which the shared rule reconciles: an anchor
+   centres nothing and keeps its underline unless told. That reconciliation is why the rule cannot be
+   only a colour.
+
+   What stays here is placement — how wide they are and how they share a row — which is this screen's
+   business and nobody else's. */
 .reveal-close,
 .reveal-home,
 .reveal-reference,
 .reveal-share {
   flex: 1;
-  min-height: 50px;
-  border: 1px solid var(--rule-strong);
-  border-radius: 10px;
-  background: var(--key);
-  color: var(--ink);
-  font: 600 16px/1 var(--face), system-ui, sans-serif;
-  /* ⚠️⚠️ **Two of these are anchors and two are buttons, and the anchors need this by hand.** A
-     `<button>` centres its label and strips its underline from the user agent; an `<a>` does neither,
-     so without this `Go home` renders as a bare blue link wedged between two buttons — which is what
-     the first photograph of this footer showed. They are one row and must not read as two kinds. */
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
 }
 
 /* ⚠️⚠️ **The equal-halves argument that used to be here is history, and it is kept as history.** The
@@ -886,13 +883,10 @@ td.label.substitute { padding-left: 14px; }
      screen and the only growth mechanism the product has; sizing it to its own label would make it
      read as secondary to a boxscore. */
   align-self: stretch;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* ⚠️ A row rather than the shared rule's column: this one puts the share mark beside its label, where
+     the others stack a label over a date. It is the only difference between them. */
+  flex-direction: row;
   gap: 8px;
-  border-color: var(--header-ground);
-  background: var(--header-ground);
-  color: var(--header-ink);
 }
 
 /* ⚠️⚠️ **There is no `:disabled` rule for this button, and its absence is the decision.** It had one

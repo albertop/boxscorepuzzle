@@ -110,25 +110,14 @@ body {
    ⚠️ **Shared here rather than restated**, and `board.css` records why at length: this look already has
    four spellings across two stylesheets with nothing checking they agree, and it is the most-repeated
    defect in this project. A fifth was not going to be added to fix a mismatch caused by the fourth. */
+/* ⚠️ **The look is `.app-button` in `tokens.css` now**, which is the fifth spelling not being written.
+   The paragraph above stands: both are filled, because on a finished day there is no first move to give.
+   What is left here is this page's own business -- its type size and the user-agent reset a `<button>`
+   needs and an `<a>` does not. */
 .landing-play,
 .landing-share {
-  display: block;
   margin: 0;
-  padding: 15px 12px;
-  min-height: 56px;
-  box-sizing: border-box;
-  /* ⚠️ An `<a>` and a `<button>` in one rule. The anchor needs the underline removed and the button
-     needs its user-agent border, font and background overridden; neither inherits what the other has,
-     so both sides are spelled and the pair renders identically. */
-  border: 0;
-  border-radius: 12px;
-  background: var(--header-ground);
-  color: var(--header-ink);
-  font-family: inherit;
   font-size: 18px;
-  font-weight: 700;
-  text-align: center;
-  text-decoration: none;
   -webkit-appearance: none;
   appearance: none;
 }
@@ -152,9 +141,6 @@ body {
 .landing-way-row .landing-play,
 .landing-way-row .landing-share {
   flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ⚠️ **The two contents stack differently and that is the only thing they do not share.** `See the
@@ -164,7 +150,10 @@ body {
   flex-direction: column;
 }
 
+/* ⚠️ A row rather than the shared rule's column: this one puts the share mark beside its label, where
+   the other stacks a label over a date. It is the only difference between them. */
 .landing-way-row .landing-share {
+  flex-direction: row;
   gap: 8px;
 }
 
@@ -179,14 +168,8 @@ body {
 
 /* ⚠️ Disabled only *during* a send, never before one. If this button is on screen the game is over and
    the result can always be shared — the reveal's share carries the same rule and the same reason. */
-.landing-share {
-  cursor: pointer;
-}
-
-.landing-share:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
+/* ⚠️ `cursor` and the disabled treatment are `.app-button`'s, in `tokens.css`. They were spelled here
+   and are the kind of duplicate that survives because nothing disagrees until somebody changes one. */
 
 
 .landing-date {

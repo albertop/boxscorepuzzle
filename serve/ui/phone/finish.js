@@ -206,7 +206,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
 
   const close = document.createElement("button");
   close.type = "button";
-  close.className = "reveal-close";
+  close.className = "app-button app-button--filled reveal-close";
   close.textContent = text("reveal.close");
 
   // ⚠️⚠️ **Live since G, and it is never `disabled`.** It was drawn and disabled for weeks while there
@@ -222,7 +222,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // visible reason. The guard is invisible and the control stays live.
   const share = document.createElement("button");
   share.type = "button";
-  share.className = "reveal-share";
+  share.className = "app-button app-button--filled reveal-share";
   // ⚠️ The icon is decorative and the label carries the meaning, so it is hidden from the accessibility
   // tree — a screen reader announcing "image, Share" reads the same thing twice.
   share.append(shareIcon(), document.createTextNode(text("reveal.share")));
@@ -248,7 +248,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // one through `window.opener` and can navigate it — a page the player left could replace the game
   // behind them.
   const reference = document.createElement("a");
-  reference.className = "reveal-reference";
+  reference.className = "app-button app-button--outline reveal-reference";
   reference.href = referenceUrl(reveal.gameId);
   reference.target = "_blank";
   reference.rel = "noopener noreferrer";
@@ -262,7 +262,7 @@ export function renderReveal(puzzle, record, { onShare } = {}) {
   // boxscore, and the boxscore sent you back to the board. A player who finished had no exit that was
   // not a return.
   const home = document.createElement("a");
-  home.className = "reveal-home";
+  home.className = "app-button app-button--outline reveal-home";
   home.href = ROUTES.landing;
   home.textContent = text("reveal.home");
 
@@ -613,7 +613,7 @@ export function renderReference() {
 
   const close = document.createElement("button");
   close.type = "button";
-  close.className = "reveal-close";
+  close.className = "app-button app-button--filled reveal-close";
   close.textContent = text("reference.close");
   sheet.append(close);
   // ⚠️ Wired by the shell, for the reason on the other renderer's close button.

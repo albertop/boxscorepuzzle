@@ -434,11 +434,19 @@ export function boot({
   // is sealed by `restore` and cannot be restarted; this is the other half, which is drawing what the
   // player already earned instead of asking them to press Check again. v30-P1-03.
   if (game.isFinished()) {
-    // Footer and all, then the clipping the player earned. Same call the mid-session finish makes, so
-    // a board that reopens finished and a board that finishes while you watch cannot offer different
-    // things — which is what two copies of this chrome used to make possible.
+    // Footer and all. Same call the mid-session finish makes, so a board that reopens finished and a
+    // board that finishes while you watch cannot offer different things — which is what two copies of
+    // this chrome used to make possible.
+    //
+    // ⚠️⚠️ **The reveal is NOT opened here, and it used to be.** Reopening drew the boxscore over the
+    // board immediately, so *See the board* on the landing page led to the reveal — the one screen it
+    // does not name. **Arriving here is a request for the board**; the reveal is what `See the
+    // boxscore` in the footer is for, and it is one tap away.
+    //
+    // ⚠️ **This does not reopen v30-P1-03.** That finding was the clock resuming on a solved puzzle and
+    // the board coming back looking unplayed. The clock is sealed by `restore` and the chrome is drawn
+    // by the line above; neither depended on the reveal being on screen.
     finishedChrome();
-    showReveal(game.record());
   }
 
   const attention = followAttention({ clock, save: remember, doc, target: app });

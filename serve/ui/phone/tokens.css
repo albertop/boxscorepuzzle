@@ -188,3 +188,49 @@
     --header-ground: #16281f;
   }
 }
+
+/* ⚠️⚠️ **One button, defined once, for every page.** `tokens.css` is the only stylesheet all three
+   pages load, which is what makes this the place it can live at all.
+
+   **It replaces four copies.** `.landing-play`, `.landing-share`, `.tutorial-back`/`.tutorial-next` and
+   the reveal's footer each spelled the same look, in two stylesheets, with nothing checking they agreed
+   — and they did not: the reveal was 50px tall with a 1px grey border and 16px type while everything
+   else was 56px with a 12px radius and 17px. **The player earns their way to the reveal and it was the
+   one screen whose buttons belonged to a different product.** `board.css` recorded the copy as knowingly
+   made and owed to `todo.md`; this is it coming due.
+
+   Two treatments and the rule is the same everywhere: **a dark ground for the way onward, an outline for
+   the way back.** */
+.app-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  font: 700 17px/1.15 var(--face), system-ui, sans-serif;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.app-button--filled {
+  background: var(--header-ground);
+  color: var(--header-ink);
+}
+
+.app-button--outline {
+  background: var(--paper);
+  color: var(--header-ground);
+  border-color: var(--header-ground);
+}
+
+/* ⚠️ Only while an action is running. A control disabled before it has been pressed is a promise the
+   screen cannot keep, and the share carries that rule by name. */
+.app-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

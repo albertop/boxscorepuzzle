@@ -2663,7 +2663,12 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     const opened = shell.root.querySelector(".reference");
 
     assert(opened.contains(document.activeElement), "focus stayed behind the panel it opened");
-    equal(document.activeElement.className, "reveal-close", "focus did not land on an actionable control");
+    // ⚠️ `contains`, not `===`. Every button in the product carries `.app-button` plus its own name, so
+    // an exact-match assertion breaks the day a shared look arrives — which is what it did.
+    assert(
+      document.activeElement.classList.contains("reveal-close"),
+      `focus did not land on an actionable control: ${document.activeElement.className}`,
+    );
     const behind = [...shell.root.children].filter((child) => child !== opened);
     assert(behind.length > 0, "nothing was behind the panel, so this proves nothing");
     assert(behind.every((child) => child.inert), "the board behind the modal is still focusable");
@@ -2733,9 +2738,18 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     shell.teardown();
   });
 
-  test("⚠️⚠️ a restored finished session opens finished, with no pad and no way to type", async () => {
+  test("⚠️⚠️ a restored finished session opens on the BOARD, sealed, with no pad and the boxscore one tap away", async () => {
     // The ordinary reopen, which is the path persistence exists for and the one that used to hand back
-    // an editable board and a running clock.
+    // an editable board and a running clock (v30-P1-03).
+    //
+    // ⚠️⚠️ **It used to draw the reveal over the board on arrival, and that was wrong for the way in.**
+    // The landing's `See the board` goes here, and it landed the player on the boxscore — the one screen
+    // its label does not name. **Arriving is a request for the board.** The reveal is what the footer's
+    // `See the boxscore` is for.
+    //
+    // ⚠️ **v30-P1-03 is not reopened by this and the test says which half is which.** That finding was
+    // the clock resuming and the board coming back editable; both are asserted below and both still
+    // hold. Only the automatic opening of the reveal is gone.
     const first = await bootShell(packages[0].raw);
     fill(first);
     press(first.root, ".keypad button.check");
@@ -2745,11 +2759,18 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
     const second = await bootShell(packages[0].raw, { session: saved, now: { at: 9_000_000 } });
 
-    assert(second.root.querySelector(".reveal"), "a finished session reopened without its boxscore");
-    equal(second.root.querySelector(".reveal-time-figure").textContent, earned, "the restored time is not the earned one");
+    assert(!second.root.querySelector(".reveal"), "reopening drew the boxscore over the board again");
     assert(!second.root.querySelector(".keypad"), "a finished session came back with a keypad");
     equal(second.game.isFinished(), true);
     equal(second.clock.isSealed(), true, "the restored clock was not sealed");
+
+    // ⚠️ And the way to it, because removing the automatic open is only right while the manual one
+    // exists. A finished board with no route to the reveal would throw away what the player earned.
+    const again = second.root.querySelector(".again");
+    assert(again, "a finished board offers no way to the boxscore it earned");
+    press(second.root, ".again");
+    assert(second.root.querySelector(".reveal"), "the way to the boxscore does not open it");
+    equal(second.root.querySelector(".reveal-time-figure").textContent, earned, "the restored time is not the earned one");
 
     second.teardown();
   });
@@ -4900,6 +4921,54 @@ suite("The uplink: one storage, one device, both queues, in the one place three 
     for (const file of ["main.js", "landing-main.js", "tutorial-main.js"]) {
       const source = await (await fetch(`../ui/phone/${file}`)).text();
       assert(/startUplink\(/.test(source), `${file} never starts the uplink, so it reports nothing`);
+    }
+  });
+});
+
+suite("⚠️⚠️ The share image is actually produced, with the real stylesheets", () => {
+  test("a real package rasterises to a PNG", async () => {
+    // **`share-image.js` had NO test, and prose broke it in production.** The sheets are concatenated
+    // into a `<style>` inside an SVG `foreignObject`, which is parsed as XML -- so one bare `<` ends the
+    // element early and the whole SVG is refused. Two CSS comments written the same day contained
+    // `<button>` and `<a>`, and **both share buttons stopped working on the live site**: the only growth
+    // mechanism the product has, broken by a comment.
+    //
+    // ⚠️ **Nothing static could have caught it.** The CSS was valid, the JavaScript was valid, the
+    // package was valid, and every existing test passed. What was missing was *doing the thing*: build
+    // the image from the real sheets and see whether it comes out.
+    const { shareImage } = await import("../ui/phone/share-image.js");
+    const { createGame } = await import("../engine/game.js");
+    const puzzle = readPackage(packages[0].raw);
+
+    const blob = await shareImage(puzzle, createGame(puzzle), { random: () => 0.5 });
+
+    equal(blob.type, "image/png");
+    assert(blob.size > 2000, `the image is ${blob.size} bytes, which is too small to be a board`);
+  });
+
+  test("⚠️⚠️ a stylesheet containing markup characters still produces an image", async () => {
+    // The regression itself, as a case. A comment mentioning `<button>` is ordinary prose in a
+    // stylesheet and must never be able to break a share.
+    //
+    // ⚠️ Injected into the real sheet rather than into a copy of the builder: the defect lived in how
+    // the builder consumes the sheets, so a test that assembles its own SVG would be testing itself.
+    const { shareImage } = await import("../ui/phone/share-image.js");
+    const { createGame } = await import("../engine/game.js");
+    const puzzle = readPackage(packages[0].raw);
+
+    const hostile = document.createElement("style");
+    // Every character that ends a node in XML, in the places CSS legitimately carries them.
+    hostile.textContent = [
+      "/* an `<a>` and a `<button>` in one rule, and A & B */",
+      '.share-hostile::after { content: "<not markup> & ]]> "; }',
+    ].join(String.fromCharCode(10));
+    document.head.append(hostile);
+    try {
+      const blob = await shareImage(puzzle, createGame(puzzle), { random: () => 0.5 });
+      equal(blob.type, "image/png");
+      assert(blob.size > 2000, "the image came out too small to be a board");
+    } finally {
+      hostile.remove();
     }
   });
 });

@@ -191,6 +191,28 @@ async function embedFonts(css) {
 }
 
 /**
+ * Stylesheet text, wrapped so the SVG parser cannot read it as markup.
+ *
+ * ⚠️⚠️ **Without this, one `<` in a CSS COMMENT kills the share.** The sheets are concatenated into a
+ * `<style>` inside a `foreignObject`, and that document is parsed as XML: a bare `<` ends the element
+ * early and the whole SVG is refused. `rasterise` then reports *the SVG did not load* with no idea why.
+ *
+ * **It happened.** Comments reading ``a `<button>` centres its label`` and ``an `<a>` and a `<button>`
+ * in one rule`` were written into `board.css` and `landing.css`, and **both share buttons stopped
+ * working in production** -- the only growth mechanism the product has, broken by prose. It is the
+ * favicon defect exactly: a comment invalidating the document it explains.
+ *
+ * ⚠️ **CDATA rather than escaping or stripping comments.** Escaping means knowing every character that
+ * matters; stripping comments means a parser for CSS and would still miss `<` in a `content:` value.
+ * CDATA says *none of this is markup*, which is the actual claim.
+ *
+ * ⚠️ `]]>` is the one sequence CDATA cannot hold, so it is split across two sections -- the standard
+ * form, and it always works. **Not a refusal**: a share that fails is worse than one that costs six
+ * characters, and this cannot produce a wrong image, only a valid one.
+ */
+const cdata = (text) => `<![CDATA[${text.replaceAll("]]>", "]]]]><![CDATA[>")}]]>`;
+
+/**
  * What the image adds on top of the board's own styles.
  *
  * ⚠️ `.cell.filled` is the blur's target and `.given` is deliberately untouched: `paint()` sets exactly
@@ -243,7 +265,7 @@ export async function shareImage(puzzle, game, { random } = {}) {
       `<svg xmlns="http://www.w3.org/2000/svg" width="${WIDTH}" height="${height}" ` +
       `viewBox="0 0 ${WIDTH} ${height}">` +
       `<foreignObject width="100%" height="100%">` +
-      `<div xmlns="http://www.w3.org/1999/xhtml"><style>${css}${SHARE_CSS}</style>${markup}</div>` +
+      `<div xmlns="http://www.w3.org/1999/xhtml"><style>${cdata(css + SHARE_CSS)}</style>${markup}</div>` +
       `</foreignObject></svg>`;
     return await rasterise(svg, WIDTH, height);
   } finally {

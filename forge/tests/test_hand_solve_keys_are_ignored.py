@@ -59,13 +59,31 @@ def _git(*arguments: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(("git", *arguments), cwd=_ROOT, capture_output=True, text=True, check=False)
 
 
-def test_the_sweep_finds_keys_to_check() -> None:
-    """⚠️ A check over an empty set passes forever. Assert the subject was there.
+def test_the_rule_that_ignores_the_keys_exists_and_is_asked_about_a_real_shape() -> None:
+    """⚠️⚠️ **The rule, not the instances — and the first version asserted the instances.**
 
-    This project records three cases of a validator reporting success about nothing. If the pack is
-    ever rebuilt under different filenames, this fails loudly instead of going quietly green.
+    *A check over an empty set passes forever*, so this file must prove it had a subject. The first
+    version proved it by asserting `_keys()` is non-empty, **and that is a property of the operator's
+    laptop rather than of the repository**: the keys are ignored, so a fresh clone has none, and CI
+    failed on the one machine where their absence is exactly what the rule guarantees.
+
+    ⚠️ **The rule itself is decidable anywhere.** `git check-ignore` answers about a *path*, not about a
+    file that exists, so a name that has never been written can be asked. That makes the subject present
+    on every machine and keeps the assertion honest: if the ignore line is deleted, this fails in CI and
+    on the laptop alike.
+
+    The parametrised cases below still check every key that *is* on disk. They are the stronger check
+    where they can run and they are empty in CI, which is why this one has to carry the guarantee.
     """
-    assert _keys(), f"no *key.csv under {_PACK}; this test would pass over an empty set"
+    # A name matching the rule's shape and deliberately not one that exists.
+    hypothetical = _PACK.relative_to(_ROOT) / "no-such-pack-key.csv"
+    result = _git("check-ignore", "-v", str(hypothetical))
+
+    assert result.returncode == 0, (
+        f"nothing ignores {hypothetical}. The rule that keeps answer keys out of Git is gone, and the "
+        f"per-file cases below would pass over an empty set without noticing."
+    )
+    assert ".gitignore" in result.stdout, f"the rule is not in .gitignore: {result.stdout.strip()}"
 
 
 @pytest.mark.parametrize("key", _keys(), ids=lambda path: path.name)

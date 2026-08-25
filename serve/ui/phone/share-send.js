@@ -44,6 +44,20 @@ const DESTINATION = () => new URL("/", location.href).href;
  *
  * @returns {Promise<"native" | "clipboard">}
  */
+/**
+ * A 1x1 transparent PNG, as bytes. **Only ever used to ask `canShare` a question.**
+ *
+ * ⚠️ It never reaches a share sheet or a clipboard: the branch that shares awaits the real image and
+ * hands that over. This exists because the question has to be asked before the answer can be built.
+ */
+const PROBE_PNG = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk" +
+      "YPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+  ),
+  (character) => character.charCodeAt(0),
+);
+
 export async function sendShare(image, elapsed, { navigatorRef = navigator, clipboardRef = navigator.clipboard } = {}) {
   // ⚠️⚠️ **`image` is a PROMISE and that is the whole of v42-P2-03.** It used to be a resolved `File`,
   // and `shareResult` awaited the rasteriser before calling this -- three stylesheets, three fonts, an
@@ -60,7 +74,13 @@ export async function sendShare(image, elapsed, { navigatorRef = navigator, clip
   // has to be given a file to answer at all, and the share sheet is opened by the browser rather than
   // written to a gated surface -- it survives the await on every platform this ships to. **Only the
   // clipboard is activation-gated**, so only the clipboard needs the promise form.
-  const probe = new File([], "boxscorepuzzle.png", { type: "image/png" });
+  // ⚠️⚠️ **A real one-pixel PNG, and an EMPTY file here was a regression.** `canShare({files})` is asked
+  // before the image exists, so it has to be asked about *something* -- and the first version handed it
+  // a zero-byte `File`. Implementations differ on that: some answer about the type alone, others refuse
+  // an empty payload, and a browser that refuses would send a phone that CAN open a share sheet down the
+  // clipboard path instead. **The share is the only growth mechanism the product has**, so the probe is
+  // now a valid PNG: 67 bytes, correct magic number, nothing to disagree about.
+  const probe = new File([PROBE_PNG], "boxscorepuzzle.png", { type: "image/png" });
   if (navigatorRef?.canShare?.({ files: [probe] }) && navigatorRef.share) {
     const file = await image;
     const payload = { files: [file], text: fill("share.text", { time: elapsed }), url: DESTINATION() };

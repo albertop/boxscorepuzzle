@@ -109,7 +109,7 @@ export function renderLanding({
   const finished = restored.isFinished();
 
   const play = doc.createElement("a");
-  play.className = "landing-play";
+  play.className = "app-button app-button--filled landing-play";
   play.href = withSearch(ROUTES.board);
   // ⚠️ **The label changes when today is done.** Otherwise a returning player is offered a puzzle they
   // have already solved, every day, which reads as the product not knowing who they are.
@@ -152,7 +152,7 @@ export function renderLanding({
   if (finished && onShare) {
     share = doc.createElement("button");
     share.type = "button";
-    share.className = "landing-share";
+    share.className = "app-button app-button--filled landing-share";
     // ⚠️⚠️ **The reveal's own icon, imported rather than redrawn.** A player learns this mark on the
     // reveal and has to recognise it here; two hand-drawn twins drift the first time either is touched
     // and nothing notices. It is decorative — `aria-hidden` on the svg — and `reveal.share` carries the
