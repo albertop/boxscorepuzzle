@@ -21,9 +21,10 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 """What this code expects the database to be.
 
 ⚠️⚠️ **Migrations are manual and startup refuses a mismatch** (`data-layer.md` §7), and neither half
@@ -172,13 +173,33 @@ _EVENT_COLUMNS = (
     "duration_ms", "hints", "errors", "failed_checks", "highest_technique", "solved", "assisted",
 )  # fmt: skip
 
-_ERROR_COLUMNS = ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent")
+RECEIVED_AT = "received_at"
+"""The column `keep` stamps on arrival. **Written here, in UTC, never by a database default.**
 
-_SHARE_COLUMNS = ("share_id", "device_id", "puzzle_id", "event_id", "channel", "shared_on")
+⚠️⚠️ **`DEFAULT CURRENT_TIMESTAMP` meant two different things.** Postgres renders a `timestamptz` into a
+TEXT column **in the session's timezone** -- the first production rows read `...-04` -- and SQLite yields
+UTC with no offset. One migration, one column, two formats, and a purge comparing strings across them.
+
+**One line of Python removes the class**: both engines store the identical value, and a forgotten
+timezone cannot come back through a default nobody reads.
+"""
+
+
+def _now() -> str:
+    """Arrival, as an ISO instant in UTC. ⚠️ `Z`, and seconds: the column is compared as a string."""
+    return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+_ERROR_COLUMNS = ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent", RECEIVED_AT)
+
+_SHARE_COLUMNS = ("share_id", "device_id", "puzzle_id", "event_id", "channel", "shared_on", RECEIVED_AT)
 
 
 def _row(item: Event | ErrorReport | Share, columns: tuple[str, ...]) -> tuple[Any, ...]:
-    return tuple(getattr(item, column) for column in columns)
+    # ⚠️⚠️ **`received_at` is stamped here and comes from no dataclass field.** It is what `keep` observed,
+    # not what the client claimed, and a retention policy must not be steerable from a browser. Both
+    # engines take the identical string, which is the whole point of it not being a database default.
+    return tuple(_now() if column == RECEIVED_AT else getattr(item, column) for column in columns)
 
 
 class SqliteStore(Store):

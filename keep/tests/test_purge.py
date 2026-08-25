@@ -7,6 +7,7 @@ cost the paid feature. Every case below checks the event count is unchanged.
 
 from __future__ import annotations
 
+import re
 import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -14,6 +15,7 @@ from pathlib import Path
 import pytest
 
 from keep.purge import RETENTION_DAYS, purge
+from keep.store import Share
 
 _MIGRATIONS = sorted((Path(__file__).resolve().parents[1] / "migrations").glob("*.sql"))
 assert _MIGRATIONS, "no migrations found; every test below would run against an empty database"
@@ -95,3 +97,52 @@ def test_a_row_arriving_today_survives_every_window(db: sqlite3.Connection) -> N
     _seed(db, "client_errors", "today", 0)
 
     assert purge(db, now=NOW, placeholder="?") == {"shares": 0, "client_errors": 0}
+
+
+def test_received_at_is_utc_from_the_application(db: sqlite3.Connection) -> None:
+    """⚠️⚠️ **`DEFAULT CURRENT_TIMESTAMP` meant two different things, and production got the wrong one.**
+
+    In Postgres it is a `timestamptz`; casting it into a TEXT column renders it **in the session's
+    timezone**, and the first rows on the live database read `2026-08-24 23:28:02.569817-04`. In SQLite
+    the same keyword yields `2026-08-25 03:28:02`, UTC, no offset. **One migration, one column, two
+    formats** -- and the purge compares that column as a string against a cutoff computed in UTC, so it
+    was four hours out and correct only by accident of the year sorting first.
+
+    The value comes from `_now()` now. This asserts the shape, because the shape is the contract: the
+    comparison in `purge()` is lexicographic, and two spellings of the same instant do not compare.
+    """
+    from keep.store import SqliteStore  # noqa: PLC0415
+
+    store = SqliteStore(db)
+    store.store_shares(
+        [Share(share_id="s", device_id="d", puzzle_id="p", event_id=None, channel="native", shared_on=None)]
+    )
+
+    stamped = db.execute("SELECT received_at FROM shares").fetchone()[0]
+
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", stamped), (
+        f"received_at is {stamped!r}; the purge compares this as a string and needs one spelling"
+    )
+    # ⚠️ And that it is actually UTC rather than merely shaped like it. A local clock formatted with a
+    # `Z` is the same defect with better manners.
+    assert (
+        abs(
+            (
+                datetime.strptime(stamped, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC) - datetime.now(tz=UTC)
+            ).total_seconds()
+        )
+        < 120
+    ), f"received_at is {stamped!r}, which is not the current UTC instant"
+
+
+def test_no_database_default_can_put_a_local_time_back(db: sqlite3.Connection) -> None:
+    """⚠️ The other half: an insert that forgets the column must not silently get one from the database.
+
+    The empty-string default exists only because SQLite refuses a NOT NULL column without one. If it ever
+    starts producing values again, the two-format defect is back and nothing else would notice.
+    """
+    db.execute("INSERT INTO shares (share_id, device_id, puzzle_id, channel) VALUES ('x', 'd', 'p', 'native')")
+
+    assert db.execute("SELECT received_at FROM shares WHERE share_id = 'x'").fetchone()[0] == "", (
+        "the database supplied a received_at; that is where the timezone came from last time"
+    )

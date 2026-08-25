@@ -312,6 +312,13 @@ whether the tag landed** rather than trusting the exit code.
 morning is the one failure a rollback does not undo). It asks the schema version and refuses.
 
     psql "$KEEP_DATABASE_URL" -f keep/migrations/002-received-at.sql
+    psql "$KEEP_DATABASE_URL" -f keep/migrations/003-received-at-is-utc.sql
+
+⚠️⚠️ **003 deletes every row in the three tables, and that is intended.** 002 stamped `received_at` with
+`DEFAULT CURRENT_TIMESTAMP`, which Postgres renders **in the session's timezone** while SQLite renders it
+in UTC — so the column held two formats and the purge compared them as strings. The rows it removes are
+the operator's own testing from before the site was given to anybody; converting them would keep two
+spellings alive in one column to save nothing.
 
 **What the refusal looks like, so it is recognised rather than debugged:** the container will not come
 up and says `keep expects schema 2 and the database says 1`. That is a deployment fault stating itself,

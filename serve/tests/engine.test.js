@@ -3185,7 +3185,13 @@ suite("⚠️ The reveal is a printed boxscore, not the board with names attache
 suite("The landing page, which every visit lands on", () => {
   const mount = async (
     raw,
-    { session = null, today = new Date("2026-08-21T12:00:00"), onShare = undefined } = {},
+    {
+      session = null,
+      today = new Date("2026-08-21T12:00:00"),
+      onShare = undefined,
+      deviceId = "device-1",
+      calendarDate = "2026-08-21",
+    } = {},
   ) => {
     const { renderLanding } = await import("../ui/phone/landing.js");
     const { createStore } = await import("../engine/store.js");
@@ -3207,6 +3213,8 @@ suite("The landing page, which every visit lands on", () => {
       root,
       store,
       today,
+      deviceId,
+      calendarDate,
       go: (href) => went.push(href),
       onShare: onShare === undefined ? (game) => shared.push(game) : onShare,
     });
@@ -3249,6 +3257,36 @@ suite("The landing page, which every visit lands on", () => {
     assert(row !== null, "there is no row; the two controls are stacked somewhere else");
     equal(row.contains(view.play), true, "the way in is not in the row");
     equal(row.contains(view.share), true, "the share is not beside it");
+
+    view.teardown();
+  });
+
+  test("⚠️⚠️ a share from the landing names the event it came from, not `anonymous`", async () => {
+    // **Three of the first five shares in production reached `keep` as `anonymous:<puzzle>`**, matching
+    // no event that exists. `landing.js` built its game with `createGame(puzzle)` and no identity, so
+    // `record()` came back with `device_id`, `calendar_date` and `played_on` all null — and
+    // `eventId(record)` is `${record.device_id ?? "anonymous"}:${record.puzzle_id}`.
+    //
+    // ⚠️⚠️ **A value that looks like a link and points at nothing.** The column was populated, so nothing
+    // read as broken, and 60% of the shares were unattributable. The share is the one growth mechanism
+    // the product has and measuring it is what beta 0 is for.
+    //
+    // ⚠️ Found in the data rather than by a test: counting rows in `shares` and asking whether each
+    // `event_id` matched an `events` row. **Nothing in the client could have noticed** — both sides were
+    // doing exactly what they were told.
+    const { eventId } = await import("../engine/outbox.js");
+    const view = await mount(packages[0].raw, {
+      session: await solvedSession(packages[0].raw),
+      deviceId: "device-7",
+      calendarDate: "2026-08-21",
+    });
+
+    const record = view.game.record();
+
+    equal(record.device_id, "device-7", "the landing's game has no device; its share would be anonymous");
+    equal(record.calendar_date, "2026-08-21", "the landing's game does not know which day's puzzle it is");
+    assert(record.played_on, "the landing's game has no played_on; the share cannot say which day it was");
+    assert(!eventId(record).startsWith("anonymous:"), `the share would name ${eventId(record)}`);
 
     view.teardown();
   });

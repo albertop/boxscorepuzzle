@@ -49,11 +49,15 @@ const store = createStore(storage);
 const uplink = startUplink({ storage });
 
 try {
-  const { puzzle } = await loadPuzzle();
+  const { puzzle, calendarDate } = await loadPuzzle();
   renderLanding({
     puzzle,
     root,
     store,
+    // ⚠️ Both, because `record()` needs all three and the third is the clock. Without them a share from
+    // this page names `anonymous:<puzzle>` and matches no event -- see `landing.js`.
+    calendarDate,
+    deviceId: uplink.device,
     // ⚠️⚠️ **The same function the reveal's Share calls, with the same four arguments.** Not a second
     // send path: one rasteriser, one sentence, one row. `game` is the restored board `renderLanding`
     // hands back, because the image is drawn from cells and the record carries only a duration.

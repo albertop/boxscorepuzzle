@@ -20,6 +20,7 @@
 
 import { battingCell, battingTotalCell } from "../../engine/columns.js";
 import { createGame, isSession } from "../../engine/game.js";
+import { localDate } from "../../engine/device.js";
 import { localIso, longDate, text } from "../../engine/strings.js";
 import { columnsFor, renderLineScore, renderSection } from "./board.js";
 import { ROUTES, withSearch } from "./daily.js";
@@ -41,6 +42,10 @@ export function renderLanding({
   // with no store, no queue and no network. A share needs a rasteriser and a send path; when the caller
   // has not wired them there is nothing to press, which is different from a control that fails.
   onShare = null,
+  // ⚠️ The three fields `record()` needs. See `restored` below: without them the share it produces names
+  // an event that does not exist.
+  deviceId = null,
+  calendarDate = null,
 }) {
   const page = doc.createElement("div");
   page.className = "landing";
@@ -104,7 +109,19 @@ export function renderLanding({
   // ⚠️ **Asked of the engine, never read off the snapshot.** Whether a board is finished is
   // `game.isFinished()` — a snapshot field this page interpreted itself would be a second copy of that
   // rule, on the one screen where being wrong means offering a solved puzzle as if it were new.
-  const restored = createGame(puzzle);
+  // ⚠️⚠️ **The same identity the board builds its game with, and this used to pass NONE.**
+  // `createGame(puzzle)` gives a game whose `record()` has `device_id`, `calendar_date` and `played_on`
+  // all null -- and the share built from it takes its `event_id` from
+  // `${record.device_id ?? "anonymous"}:${record.puzzle_id}`. **Three of the first five shares in
+  // production reached `keep` as `anonymous:<puzzle>`, matching no event that exists.**
+  //
+  // ⚠️ **A value that looks like a link and points at nothing** is worse than a null: the column was
+  // populated, so nothing looked wrong, and 60% of the shares were unattributable. The share is the one
+  // growth mechanism the product has, and measuring it is what beta 0 is for.
+  //
+  // ⚠️ `playedOn` is today because this button only exists on a day already finished -- the landing
+  // offers no share for any other date.
+  const restored = createGame(puzzle, undefined, { deviceId, calendarDate, playedOn: localDate(today) });
   if (session && isSession(session)) restored.restore(session);
   const finished = restored.isFinished();
 
