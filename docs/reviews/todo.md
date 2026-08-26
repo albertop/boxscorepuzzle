@@ -135,16 +135,42 @@ right; a refusal because the reader could not be found or parsed is a check that
 every rotation for ever. Those two cases publish-and-report.
 
 
-## ⬜ 2026-08-24 - event retention is unbounded, on a Postgres four other sites share
+## ⬜ 2026-08-24 - event retention is unbounded. ⚠️ **NARROWED 2026-08-26: two of the three tables are capped**
 
 **Raised by the operator while the stack was being deployed, asking whether anything in it grows until
-the disk is full.** Everything in the containers is capped; this is the one thing that is not, and it is
-not in a container.
+the disk is full.** Everything in the containers is capped; this was the one thing that was not, and it
+is not in a container.
 
-`docs/keep-api.md`: *Event retention: indefinite because nobody has decided otherwise.* That is a
-recorded non-decision rather than an oversight, and the effect is the same either way -- `events` and
-`shares` grow for ever in `bxcpze_keep`, inside `postgres-postgres-1`, which also carries dglweb,
-sabertables, sixdegrees and revive.
+### ✔ What was closed on 2026-08-25 — `shares` and `client_errors`
+
+**Operator's decision, and it is in `keep/src/keep/purge.py`:**
+
+```python
+RETENTION_DAYS = {"shares": 365, "client_errors": 180}
+```
+
+A year for shares, six months for client errors, swept nightly by ofelia at **08:45 UTC** —
+`[job-exec "purge"]`, running `python -m keep.purge` inside `bxcpze-keep`, which is why no database
+password appears in the scheduler's config.
+
+⚠️ `received_at` is stamped by `keep` on arrival and not by a database default, in UTC, because
+`DEFAULT CURRENT_TIMESTAMP` meant two different things on the two engines and the purge compares that
+column as a string. Recorded above.
+
+### ⬜ What is still open, and it is only `events`
+
+**`events` is deliberately absent from that dict**, and the comment beside it says why: §26 sells
+comparison and percentiles, and **percentiles need history**. Capping events is not a configuration
+change, it is a decision about the paid feature.
+
+`docs/keep-api.md` still reads *Event retention: indefinite because nobody has decided otherwise* — a
+recorded non-decision rather than an oversight, and the effect is the same either way: `events` grows for
+ever in `bxcpze_keep`, inside `postgres-postgres-1`, which also carries dglweb, sabertables, sixdegrees
+and revive.
+
+⚠️ **The two halves are not the same question and closing the loud one does not answer the quiet one.**
+Shares and errors are operational debris with a shelf life; an event is the product's memory of a game
+somebody played.
 
 ### What is capped, so the open item is not read as wider than it is
 
@@ -7024,60 +7050,12 @@ on the same boards.
 
 ---
 
-## ⬜ Open question: the ghost runner and the global identity
+## ✔ **CLOSED 2026-08-26** — the ghost runner and the global identity
 
-**Not a task. A question with its reasoning, written down so it is neither lost nor re-derived.**
+**Operator's decision, and it dissolves the question rather than answering it: those games are not in
+the universe.** `produce()` refuses an extra-inning game from 2020 on in the regular season, so no
+board this product can publish has ever had a runner placed on second without a plate appearance.
 
-### What it is
-
-From 2020 onward, an extra inning starts with **a runner already on second who did not get there by
-batting**. No plate appearance put him on base.
-
-The global identity is `PA = Outs + Runs + LOB`. If the ghost runner scores, there is a **run no plate
-appearance explains**. If he is stranded, there is a **left-on-base with no PA behind it**. Either way
-the right-hand side is larger than the left, and the identity would not close.
-
-### ⚠️ What it is not — and this is the part that is already settled
-
-**It is not the pinch runner**, which is the case `plausibility._batting_row_faults` deliberately does
-not test, and which `v36-P3-16` was nearly "fixed" into asserting.
-
-The distinction is exact: **the pinch runner's chain contains a plate appearance.** The original batter
-spent his PA and reached base; the runner only changes who occupies it and who eventually scores. The
-identity never notices, because nothing was added to the right-hand side that the left-hand side did
-not already account for.
-
-**The ghost runner has no plate appearance anywhere in the chain.** That is why he is a different
-question rather than the same one again.
-
-### What is unknown
-
-**Whether Retrosheet records the placement in a way that closes the identity anyway.** They may log it
-as an event that accounts for the runner, or count LOB differently in that inning. **Nobody has
-looked.** The answer is a property of the data, not of the rule.
-
-### What would settle it
-
-Games from **2020 onward that went to extra innings**: does the global identity close?
-
-- **If it closes** — nothing to do, and the reason is recorded here so the question does not come back.
-- **If it does not** — those games leave the pool. Every extra-inning game from 2020 on, which under
-  `MAX_INNINGS = 12` is a narrow band and a real one.
-
-⚠️ **Check the batting order in the same run.** The ghost runner is the player who made the previous
-inning's last out, so he consumes no turn and the cyclic distribution should be unaffected — **that is
-a prediction, not a measurement**, and the instrument to test it already segments extra innings as an
-arm (`discovery/batting-order/measure.py`).
-
-### Why it waits
-
-It costs a database run and the P3 batch is in progress.
-
-**And it is not urgent, for a reason worth stating rather than assuming: if the identity does not
-close, those boards are already failing layer 1.** The pool is not silently shipping broken puzzles
-either way. What the measurement would change is whether **a band of modern games is being quietly
-discarded by a check nobody knew was doing it** — which is a question about inventory and about the
-eras the product can reach, not about correctness.
-
-⚠️ The pool's window is `(1910, 2029)`, so those seasons are in scope today. This is not a question
-about a future the pool cannot reach yet.
+⚠️ **What Retrosheet does or does not record about the placement therefore does not matter here.** The
+entry asked whether the data closes `PA = Outs + Runs + LOB` anyway; the answer is that the identity is
+never asked about such a game. `docs/excluded-games.md` §2 carries the exclusion and its reasoning.
