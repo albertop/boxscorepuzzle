@@ -71,7 +71,7 @@ html, body {
   display: flex;
   flex-direction: column;
   height: 100dvh;
-  max-width: 375px;
+  max-width: var(--board-width);
   margin: 0 auto;
 }
 
@@ -617,7 +617,7 @@ td.label.substitute { padding-left: 14px; }
 
 .reveal-sheet {
   width: 100%;
-  max-width: 375px;
+  max-width: var(--board-width);
   max-height: 94dvh;
   overflow-y: auto;
   background: var(--paper);

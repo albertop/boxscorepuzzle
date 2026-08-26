@@ -232,6 +232,54 @@ partitions by directory and a dependency that crosses one is invisible to it.
 guarantee is the hook; this paragraph exists so the next person to read a green forge badge after a
 `serve/` change knows what it did not run.
 
+## ⚠️⚠️ The share-image guard runs on the hook and **not in CI** — decided 2026-08-26
+
+`forge/tests/test_the_share_image_is_not_the_screen.py` rasterises the share image at 375×812 and at
+1440×900 and requires the same PNG, byte for byte. It needs **chromium and a running dev server**, and
+it lives in `forge/tests/` while everything it watches is in `serve/`.
+
+**So `ci-forge.yml`'s `paths-ignore: serve/**` means it does not run in exactly the case it watches** —
+a `serve/`-only change. Green for ever by construction, which is the shape recorded three times in
+`CLAUDE.md`. That is stated here rather than fixed, and the choice was made with the alternatives priced.
+
+### What was not done, and what each would have cost
+
+| | |
+|---|---|
+| **drop `serve/**` from `ci-forge.yml`** | the whole Python suite on every `serve/` commit, plus chromium. **32% of measured pushes touch only `serve/`** — it gives back most of what the split above was for |
+| **add a step to `ci-browser.yml`** | that workflow runs the in-page suite through `run_browser_tests.py`. This is a pytest test needing `forge`'s environment, so the job would install Python twice |
+
+### Why the hook
+
+**Because this is the expensive class the hook-primary arrangement already exists for.** One developer,
+one machine: the hook runs everything before a push reaches `main`, and CI is the safety net rather than
+the gate — the reversal is deliberate and is stated at the top of this file. A test that needs a browser
+and a server is exactly what that decision put on the laptop.
+
+⚠️ **And what CI buys is the `--frozen` install into an empty environment**, the one thing the warm venv
+of months cannot fail at. This test does not exercise that: it needs a browser binary that the laptop and
+the runner both already have, and its subject is a stylesheet.
+
+### ⚠️ The cost, which is real and is not new
+
+**A `git push --no-verify` leaves this test unrun and CI would not see it.** That is true of the whole
+suite and not of this test in particular — it is the standing cost of the hook being primary, already
+recorded above under what stops a push. **What is new is only that one more guard now sits on that side
+of the line.**
+
+### What would reverse it
+
+**The day a pull request arrives from anybody but the operator.** The hook is one machine checking
+itself; a contributor's branch has no hook, and a guard that only exists locally guards nothing about
+code somebody else wrote.
+
+**Or the day the hook stops being run** — `core.hooksPath` unset on a new checkout, a second machine, or
+a habit of `--no-verify`. The hook's whole value is that it is unconditional in practice; the moment it
+is not, every check that lives only there has to move.
+
+⚠️ Neither is a judgement call about cost. Both are **facts about who pushes and whether the hook ran**,
+and either one makes this paragraph wrong rather than merely expensive.
+
 ## The guard
 
 `forge/tests/test_the_hook_runs_what_ci_runs.py` asserts that the hook and the push workflows check

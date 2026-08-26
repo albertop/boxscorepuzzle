@@ -42,10 +42,32 @@ export const WIDE = "wide";
 /**
  * The width at which the layout changes, read from `tokens.css`, or `null` when nobody has decided.
  *
- * ⚠️⚠️ **`--wide-from` is deliberately not declared yet.** Where the breakpoint is — or whether there is
- * one at all — is `beta-1-plan.md`'s **C-iii**, and it is the operator's. **An open decision must not be
- * enforced as though the answer were always yes**, so with no token there is no breakpoint and the class
- * is never applied. Declaring the token is the whole of turning it on.
+ * ⚠️⚠️ **`--wide-from` is not declared, and 2026-08-26 is the day that stopped being *undecided* and
+ * became *measured*.** C-iii asked where the breakpoint is **or whether there is one at all**, and the
+ * sweep answers the second: **there is not one.**
+ *
+ * `/today` was rendered at 320, 360, 375, 414, 480, 540, 600, 640, 700, 768, 820, 900, 1024, 1200, 1440
+ * and 1920, and asked at each width for `#app`'s box, the grid's box, the air either side, and whether
+ * any cell's text was wider than its own box:
+ *
+ * | | 320 | 375 | 768 | 1440 | 1920 |
+ * |---|---|---|---|---|---|
+ * | `#app` | 320 | 375 | **375** | **375** | **375** |
+ * | grid | 304 | 359 | **359** | **359** | **359** |
+ * | air each side | 0 | 0 | 197 | 533 | 773 |
+ * | clipped cells | 0 | 0 | **0** | **0** | **0** |
+ * | sideways scroll | no | no | **no** | **no** | **no** |
+ *
+ * **Nothing degrades at any width.** From 414 upwards the board holds 375 and the surplus becomes air —
+ * which is §6's rule already in force: *the board is identical on all screens; desktop gets more
+ * whitespace, not more content.* There is no width at which the board stops fitting, so **there is no
+ * number to put here**, and inventing one would be §7's forbidden parameter: a value that shapes the
+ * product and came from nobody's measurement.
+ *
+ * ⚠️ **The machinery stays**, because the question it answers can be reopened and the protection it
+ * gives is what makes a media query refusable. Declaring the token is the whole of turning it on, and
+ * `forge/tests/test_the_share_image_is_not_the_screen.py` is what fails if a wide rule reaches the
+ * shared PNG.
  */
 export function wideFrom(doc = document) {
   const declared = getComputedStyle(doc.documentElement).getPropertyValue("--wide-from").trim();

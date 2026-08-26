@@ -15,7 +15,7 @@ body {
 
 .landing,
 .tutorial {
-  max-width: 375px;
+  max-width: var(--board-width);
   margin: 0 auto;
   padding: 20px var(--board-margin) calc(24px + env(safe-area-inset-bottom));
   box-sizing: border-box;

@@ -28,6 +28,21 @@
      This is not the *two families* §6's reasoning rules out — that is about a display face competing
      with a body face for 375 pixels, and a fallback that can set no word competes with nothing. */
   --face: "IBM Plex Sans Condensed";
+
+  /* ⚠️⚠️ **The width every number below descends from, and it was spelled by hand in three places** --
+     `board.css` twice and `landing.css` once, with nothing checking they agreed. `docs/beta-0.md`
+     measured the board at 1400x900 and found it correct, and recorded that **nothing guarded it**: the
+     only width assertion in the suite was for the narrow-phone media query.
+
+     **Section 6's whole column argument rests on this number.** 375 minus 2x8 margin is 359; minus a
+     24px slot and a 66px label leaves 269 for six data columns, 44.8px each -- the 44px touch target
+     with 0.8px to spare. Three copies of the premise is three chances for the arithmetic above to stop
+     describing the board.
+
+     ⚠️ It is the board's width on EVERY screen. Section 6: *the board is identical on all screens;
+     desktop gets more whitespace, not more content.* */
+  --board-width: 375px;
+
   --cell: 44px;
   --slot-column: 24px;
   --label-column: 66px;

@@ -155,3 +155,61 @@ def test_the_share_image_is_identical_at_every_viewport(served: str) -> None:
         f"({str(desktop['sha'])[:16]}). A wide layout has reached the sheet -- see wide.js, and use "
         f"#app.wide rather than a media query."
     )
+
+
+_MEASURED_THE_BOARD = """
+() => {
+  const app = document.querySelector("#app") ?? document.querySelector(".landing");
+  const board = document.querySelector(".grid") ?? document.querySelector(".linescore table");
+  return {
+    app: app ? Math.round(app.getBoundingClientRect().width) : null,
+    board: board ? Math.round(board.getBoundingClientRect().width) : null,
+    document: document.documentElement.clientWidth,
+    scrolls_sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  };
+}
+"""
+
+
+def test_the_board_does_not_stretch_at_a_desktop_viewport(served: str) -> None:
+    """⚠️⚠️ **Section 6: the board is identical on all screens. Desktop gets more whitespace, not more content.**
+
+    `docs/beta-0.md` measured this once by hand at 1400x900 and found it correct -- and recorded that
+    **nothing guarded it**, with the width spelled by hand in three stylesheets. This is the guard, and it
+    reads the RENDERED box rather than the stylesheet: asserting a token says 375 is the
+    bytes-versus-works distinction that shipped a blank page.
+
+    ⚠️ Seen red by setting `--board-width: 900px`, which is also what A's token replaced.
+    """
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    with sync_playwright() as play:
+        browser = play.chromium.launch()
+        try:
+            measured = {}
+            for label, viewport in (("phone", _PHONE), ("desktop", _DESKTOP)):
+                context = browser.new_context(viewport=viewport)
+                try:
+                    page = context.new_page()
+                    page.goto(f"{served}today", wait_until="load")
+                    page.wait_for_selector(".grid", timeout=20_000)
+                    measured[label] = dict(page.evaluate(_MEASURED_THE_BOARD))
+                finally:
+                    context.close()
+        finally:
+            browser.close()
+
+    # The subject was there: a page that drew no board would agree with itself about nothing.
+    assert measured["phone"]["board"], f"no board rendered at {_PHONE['width']}px"
+
+    assert measured["desktop"]["app"] == measured["phone"]["app"], (
+        f"the board stretched: {measured['phone']['app']}px at {_PHONE['width']} and "
+        f"{measured['desktop']['app']}px at {_DESKTOP['width']}. Section 6 gives desktop whitespace, "
+        f"not width."
+    )
+    assert measured["desktop"]["board"] == measured["phone"]["board"], (
+        f"the grid itself differs: {measured['phone']['board']}px against {measured['desktop']['board']}px"
+    )
+    # ⚠️ And it must not have bought that by overflowing. A board that keeps its width while the document
+    # scrolls sideways is a board that does not fit, which is the failure this is meant to prevent.
+    assert not measured["desktop"]["scrolls_sideways"], "the desktop page scrolls sideways"

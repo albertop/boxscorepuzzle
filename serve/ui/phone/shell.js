@@ -123,12 +123,61 @@ export function boot({
   app.append(scroller);
 
   let keypad = null;
+  /**
+   * One input, from wherever it came. **The keypad and the keyboard call this and nothing else.**
+   *
+   * ⚠️⚠️ **`applyKey` does not fork, and the reason is written in `board.js`.** Two paths into
+   * `game.enter` — one for a button, one for a key — is the shape every serious defect in this project
+   * has had. The thirds branch running ahead of its own flag, and the digit cap existing in one of the
+   * two places it was written, were both that, and both were found by a person pressing keys.
+   */
+  const press = (key) => {
+    if (!selected) return;
+    applyKey(game, selected, key);
+    repaint();
+    remember();
+  };
+
+  /**
+   * The blanks, in the order the board draws them. **The keyboard's world.**
+   *
+   * ⚠️ **Blank cells only, and that is the operator's decision.** A board is mostly given cells and
+   * walking them is walking where nothing can be typed — `select()` already refuses them, so arrowing
+   * over one would land on a cell that then refuses to be selected.
+   */
+  const walkable = () => [...scroller.querySelectorAll(".cell")]
+    .map((node) => node.dataset.cell)
+    .filter((name) => game.isBlank(name));
+
+  /** The blank `step` places along from the selected one, or the first when nothing is selected. */
+  const neighbour = (step) => {
+    const names = walkable();
+    if (names.length === 0) return null;
+    const at = selected === null ? -1 : names.indexOf(selected);
+    if (at === -1) return names[0];
+    // ⚠️ Wraps. The last blank's *next* is the first: a board is a loop of unfilled cells, and stopping
+    // dead at the end makes the player reach for the mouse — which is the alternative, not the input.
+    return names[(at + step + names.length) % names.length];
+  };
+
+  const goTo = (name) => {
+    if (name === null) return;
+    select(name);
+    // ⚠️ **Scrolled into view, because the board is taller than the screen.** Arrowing to a cell nobody
+    // can see is arrowing to nowhere, and the totals row is pinned so the target can sit under it.
+    scroller.querySelector(`[data-cell="${name}"]`)?.scrollIntoView({ block: "nearest" });
+  };
+
   const select = (name) => {
-    if (!game.isBlank(name)) return;
+    // ⚠️⚠️ **`null` deselects, and it used to fall out of the guard below.** `isBlank(null)` is false, so
+    // the keyboard's Escape did nothing at all: `selected` kept its value, the amber stayed, and the
+    // next digit landed in a cell the player believed they had left. A sentinel that a guard silently
+    // swallows is worse than one that is refused.
+    if (name !== null && !game.isBlank(name)) return;
     selected = name;
     // The visible half of the same rule the handler enforces: the thirds keys apply to one kind of
     // cell, so they are only offered on that kind.
-    keypad?.allowThirds(isInningsCell(name));
+    keypad?.allowThirds(name !== null && isInningsCell(name));
     for (const node of scroller.querySelectorAll(".cell")) {
       const isSelected = node.dataset.cell === name;
       node.classList.toggle("selected", isSelected);
@@ -138,12 +187,13 @@ export function boot({
       // The row and column a selected cell shares an equation with. Shown because a deduction is
       // always about a line, and finding it by eye on a 44px grid is the tedious part.
       const other = node.dataset.cell !== name;
-      const sameRow = node.dataset.cell.split(".")[0] === name.split(".")[0];
+      const sameRow = name !== null && node.dataset.cell.split(".")[0] === name.split(".")[0];
       // ⚠️ **Same column *within the same block*.** `hits` names a batting column and a pitching column,
       // so comparing the column alone lit the pitching grid from a batting selection — two grids that
       // share a word and no equation. The offence's hits and what the opposing staff allowed are
       // related, but by the cross-team identity, not by being one column.
       const sameColumn =
+        name !== null &&
         node.dataset.cell.split(".")[1] === name.split(".")[1] &&
         sectionOf(node.dataset.cell) === sectionOf(name);
       // ⚠️ **The footnote line takes the amber and nothing else.** The highlight answers *which cells
@@ -351,15 +401,7 @@ export function boot({
   // threw `Cannot access 'footer' before initialization` on every restored finished board. Caught by
   // running the suite, which is the only reason this is a note rather than a defect.
   if (!game.isFinished()) {
-    keypad = renderKeypad(
-      (key) => {
-        if (!selected) return;
-        applyKey(game, selected, key);
-        repaint();
-        remember();
-      },
-      () => check(),
-    );
+    keypad = renderKeypad(press, () => check());
     app.append(keypad);
   }
 
@@ -448,6 +490,63 @@ export function boot({
     // by the line above; neither depended on the reveal being on screen.
     finishedChrome();
   }
+
+  /**
+   * The keyboard. **What beta 1 is for** — `beta-0.md`: a physical keyboard is a different and better
+   * interaction, and it is why desktop comes before tablet.
+   *
+   * ⚠️⚠️ **Every branch ends in `press()`, which is `applyKey`.** Nothing here decides what a digit
+   * means; it decides which key is a digit. The rule itself stays in `board.js`, in the one testable
+   * place, and `engine/` is not touched at all — `game.js` already exposed everything a keyboard needs.
+   *
+   * ⚠️ **A second digit CONCATENATES**, and that is not a new rule: `grow` appends and replaces past two
+   * digits, capped at 99, because board totals exceed nine — a batting row reads 29, 31 — and replacing
+   * would put them out of reach. Moving to another cell starts fresh because the next cell's value is
+   * what `grow` is given.
+   *
+   * ⚠️ **Enter does NOT Check.** It confirms the cell and moves to the next blank. `Check` is a
+   * commitment — it records a failed attempt on the event record — and one keystroke away from a
+   * commitment is a commitment pressed by accident.
+   *
+   * ⚠️ **Nothing is bound while a panel is open.** The reveal and the reference sheet make their
+   * siblings `inert`, and a board that kept typing underneath a boxscore would be editing a game the
+   * player has finished reading.
+   */
+  const typed = (event) => {
+    if (panel || game.isFinished()) return;
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
+
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key];
+    if (step !== undefined) {
+      event.preventDefault();
+      goTo(neighbour(step));
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      select(null);
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      // Confirm is *move on*: the value is already in the game, so the only thing left is the cursor.
+      goTo(neighbour(1));
+      return;
+    }
+    if (event.key === "Backspace" || event.key === "Delete") {
+      event.preventDefault();
+      press({ clear: true });
+      return;
+    }
+    if (event.key >= "0" && event.key <= "9" && event.key.length === 1) {
+      event.preventDefault();
+      // ⚠️ Nothing selected: the first digit lands on the first blank rather than being swallowed. A
+      // key that does nothing on a board full of empty cells reads as a broken keyboard.
+      if (selected === null) goTo(neighbour(1));
+      press({ digit: Number(event.key) });
+    }
+  };
+  doc.addEventListener("keydown", typed);
 
   const attention = followAttention({ clock, save: remember, doc, target: app });
   // `pagehide` rather than `beforeunload`: it is the one a phone actually fires when a tab is

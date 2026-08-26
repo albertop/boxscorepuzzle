@@ -2450,6 +2450,133 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
   const press = (root, selector) => root.querySelector(selector).click();
 
+  /** A real `keydown` on the document, which is where the shell listens. */
+  const key = (name, options = {}) =>
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: name, bubbles: true, cancelable: true, ...options }));
+
+  test("⚠️⚠️ the whole board is solvable with the keyboard alone", async () => {
+    // **This is what beta 1 is for.** `beta-0.md`: a physical keyboard is a different and better
+    // interaction, and it is why desktop comes before tablet. The claim is not *keys work* — it is that
+    // a player who never touches the pad can finish, which is the only version of it worth having.
+    //
+    // ⚠️ Innings cells are skipped by the walk below and typed through the pad: thirds are a keypad
+    // affordance and a keyboard rule for them is not part of B.
+    const shell = await bootShell(packages[0].raw);
+    const answers = new Map(shell.game.cells().map((cell) => [cell.name, cell.answer]));
+    const plain = shell.game.blanks().filter((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
+    assert(plain.length > 5, `only ${plain.length} plain blanks; this would prove very little`);
+
+    key("Escape");
+    for (const name of plain) {
+      // Arrow to it rather than clicking: the point is that nothing was pressed.
+      let guard = 0;
+      while (shell.root.querySelector(".cell.selected")?.dataset.cell !== name) {
+        key("ArrowDown");
+        guard += 1;
+        assert(guard < 400, `arrowing never reached ${name}`);
+      }
+      for (const digit of String(answers.get(name))) key(digit);
+    }
+
+    for (const name of plain) {
+      equal(shell.game.value(name), answers.get(name), `${name} did not take its value from the keyboard`);
+    }
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ a second digit concatenates, because board totals exceed nine", async () => {
+    // **The operator's decision, and replacing would put 29 and 31 out of reach.** It is not a new rule:
+    // `grow` already appended for the pad, and the keyboard reaching the same `applyKey` is what makes
+    // one rule serve both. **Moving to another cell starts fresh** — the next cell's value is what
+    // `grow` is handed.
+    const shell = await bootShell(packages[0].raw);
+    const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
+
+    shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
+    key("2");
+    equal(shell.game.value(first), 2);
+    key("9");
+    equal(shell.game.value(first), 29, "the second digit replaced instead of concatenating");
+
+    key("ArrowDown");
+    const second = shell.root.querySelector(".cell.selected").dataset.cell;
+    key("3");
+    equal(shell.game.value(second), 3, "moving on did not start fresh");
+    shell.teardown();
+  });
+
+  test("⚠️⚠️ arrows walk blank cells only, and Enter does not Check", async () => {
+    // **Two of the operator's three decisions.** A board is mostly given cells and walking them is
+    // walking where nothing can be typed. And `Check` is a commitment — it records a failed attempt on
+    // the event record — so one keystroke away from it is a commitment pressed by accident.
+    const shell = await bootShell(packages[0].raw);
+    const blanks = new Set(shell.game.blanks());
+    assert(blanks.size < shell.game.cells().length, "every cell is blank; this proves nothing");
+
+    key("Escape");
+    const visited = [];
+    for (let step = 0; step < 12; step++) {
+      key("ArrowDown");
+      visited.push(shell.root.querySelector(".cell.selected").dataset.cell);
+    }
+    for (const name of visited) {
+      assert(blanks.has(name), `arrowing landed on ${name}, which is not blank`);
+    }
+
+    // ⚠️⚠️ **Asserted on a FULL board, and on an empty one this could not fail.** The first version
+    // pressed Enter with nothing filled and compared `failed_checks`: `check()` on an empty board
+    // records nothing, so the assertion was true whether or not Enter ran one. **A check that cannot
+    // fire is indistinguishable from a broken one** — and it was guarding the decision the operator
+    // named as the reason for the rule. Found by breaking `Enter` on purpose and watching it stay green.
+    fill(shell);
+    equal(shell.game.isFinished(), false, "the fixture finished the board before Enter was pressed");
+
+    key("Enter");
+
+    equal(shell.game.isFinished(), false, "Enter ran a Check and finished the game");
+    assert(shell.root.querySelector(".reveal") === null, "Enter opened the reveal");
+    shell.teardown();
+  });
+
+  test("⚠️ Backspace clears, and Escape leaves the cell", async () => {
+    const shell = await bootShell(packages[0].raw);
+    const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
+
+    shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
+    key("4");
+    equal(shell.game.value(first), 4);
+    key("Backspace");
+    equal(shell.game.value(first), null, "Backspace did not clear the cell");
+
+    key("Escape");
+    assert(shell.root.querySelector(".cell.selected") === null, "Escape left the cell selected");
+
+    // ⚠️⚠️ **And typing afterwards starts at the first blank rather than resuming the abandoned cell.**
+    // `select(null)` used to fall out of `isBlank(null)` and do nothing at all, so Escape was decoration:
+    // the amber stayed and the next digit went back where the player had just left.
+    //
+    // ⚠️ The digit is not swallowed either. A key that does nothing on a board full of empty cells reads
+    // as a broken keyboard, so an unselected board takes the first blank.
+    const firstBlank = shell.game.blanks()[0];
+    key("7");
+    equal(shell.root.querySelector(".cell.selected").dataset.cell, firstBlank, "typing did not start at the top");
+    shell.teardown();
+  });
+
+  test("⚠️ the keyboard is silent while a panel is open", async () => {
+    // The reveal and the reference sheet make their siblings inert. A board that kept typing underneath
+    // a boxscore would be editing a game the player has finished reading.
+    const shell = await bootShell(packages[0].raw);
+    const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
+    shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
+
+    press(shell.root, ".reference-key");
+    key("5");
+
+    assert(shell.game.value(first) !== 5, "a digit reached the board through an open panel");
+    shell.teardown();
+  });
+
   test("⚠️ a live board offers a keypad and a Check key that is dead until the board is full", async () => {
     const shell = await bootShell(packages[0].raw);
     const check = shell.root.querySelector(".keypad button.check");
