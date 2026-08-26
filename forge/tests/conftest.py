@@ -14,6 +14,7 @@ as though the footnote columns are decoration.
 
 import os
 import re
+from collections.abc import Iterator
 from datetime import timedelta
 from pathlib import Path
 
@@ -168,3 +169,47 @@ def nginx_base_image() -> str:
         message = "no FROM nginx: line in deploy/serve.Dockerfile; the tests would run some other nginx"
         raise AssertionError(message)
     return match.group(1)
+
+
+_INVENTORY = Path(__file__).resolve().parents[2] / "forge" / "inventory"
+
+
+def _generations() -> set[str]:
+    """The generation directories that exist right now, or an empty set when there is no inventory."""
+    return {path.name for path in _INVENTORY.iterdir() if path.is_dir()} if _INVENTORY.is_dir() else set()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _the_suite_does_not_write_into_the_real_inventory() -> Iterator[None]:
+    """⚠️⚠️ **The suite must not touch `forge/inventory/`. It wrote 214 directories into it on 2026-08-26.**
+
+    `build_inventory` computes that path from `_ROOT`, and the tests redirect the builder by patching
+    `_ROOT` to a temporary tree. **A tidy-up hoisted the path into a module-level constant** --
+    `INVENTORY = _ROOT / "forge" / "inventory"` -- which is evaluated at IMPORT time, so the patch stopped
+    reaching it and every test that produced a generation wrote into the operator's real inventory.
+
+    ⚠️⚠️ **Twenty-six tests went red and fourteen did not: they wrote.** The red ones were diagnosed, the
+    constant was reverted and the suite went green -- and nobody asked what the green ones had been doing
+    while the path was wrong. **A test that passes while writing to the wrong place is indistinguishable
+    from a test that passes.** That is the whole reason this exists as a check rather than as care.
+
+    ⚠️⚠️ **And it nearly reached production.** `forge/inventory/` is rsynced to the VPS, and `rotate.py`
+    searches generations **newest first** -- so 45 junk generations carrying `days/` pointers sorted ahead
+    of the three real ones and would have shadowed **100 calendar dates**. The rotation would have served
+    a test fixture's puzzle, signed, valid, and passing every health check.
+
+    ⚠️ **Session-scoped and counted, not mocked.** A fixture that redirected the path would protect the
+    suite and say nothing about a script run by hand; this asks the directory what happened, which is the
+    only question that catches every route to it.
+    """
+    before = _generations()
+    yield
+    appeared = _generations() - before
+    if appeared:
+        listed = ", ".join(sorted(appeared)[:6])
+        message = (
+            f"the suite wrote {len(appeared)} generation(s) into {_INVENTORY}: {listed}. "
+            f"Tests build inventories in tmp_path; a path resolved at import time ignores that redirect. "
+            f"This directory is rsynced to the VPS and rotate.py reads the NEWEST generation first."
+        )
+        raise AssertionError(message)
