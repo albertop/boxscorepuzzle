@@ -34,11 +34,18 @@ import {
   renderKeypad,
   renderLineScore,
   renderSection,
+  renderTypedControls,
   totalNameFor,
 } from "./board.js";
+import { POINTED, followPointer } from "./wide.js";
 
 export function boot({
   puzzle,
+  // ⚠️⚠️ **Which device this is, as a `matchMedia` result, and it is a boundary like `doc` and `store`.**
+  // The browser suite runs in a real desktop Chromium, so `(pointer: fine)` is true there — every test
+  // about the phone's keypad would otherwise be testing a pointed device and reporting about the wrong
+  // one. `null` asks the window, which is what a player's browser does.
+  pointer = null,
   root = document.getElementById("app"),
   clock = createClock(),
   // ⚠️ `storage` first, and `store` derived from it. Two calls to `browserStorage()` would probe
@@ -131,6 +138,9 @@ export function boot({
    * has had. The thirds branch running ahead of its own flag, and the digit cap existing in one of the
    * two places it was written, were both that, and both were found by a person pressing keys.
    */
+  /** Whether `.` was typed and the next digit means thirds. ⚠️ Innings cells only; see `typed`. */
+  let thirdsNext = false;
+
   const press = (key) => {
     if (!selected) return;
     applyKey(game, selected, key);
@@ -162,6 +172,9 @@ export function boot({
 
   const goTo = (name) => {
     if (name === null) return;
+    // ⚠️ The armed point does not travel: `.` then an arrow then `1` would otherwise write a third into
+    // a cell the player was only passing through.
+    thirdsNext = false;
     select(name);
     // ⚠️ **Scrolled into view, because the board is taller than the screen.** Arrowing to a cell nobody
     // can see is arrowing to nowhere, and the totals row is pinned so the target can sit under it.
@@ -400,9 +413,25 @@ export function boot({
   // away, and the footer is created below — calling it from this branch read it before its `const` and
   // threw `Cannot access 'footer' before initialization` on every restored finished board. Caught by
   // running the suite, which is the only reason this is a note rather than a defect.
+  // ⚠️⚠️ **A pointed device gets no on-screen keypad — everything is the physical keyboard.**
+  //
+  // ⚠️ **Detected by POINTER, never by width.** A touchscreen laptop is wide *and* touch: hiding the pad
+  // by width takes it from somebody using a finger on a 1440px screen. `followPointer` asks
+  // `(pointer: fine) and (hover: hover)`, which is what a mouse has and a finger and a stylus do not.
+  //
+  // ⚠️ **What is left of the pad is Hint and Check**, built from the same factories the pad builds from
+  // and appended to the footer instead. `The relations` is already there. One definition, two parents.
+  const stopWatchingPointer = followPointer(app, { doc, matcher: pointer });
+  const pointed = app.classList.contains(POINTED);
   if (!game.isFinished()) {
-    keypad = renderKeypad(press, () => check());
-    app.append(keypad);
+    if (pointed) {
+      // ⚠️ `keypad` still holds it, because `repaint()` and `select()` ask this object for
+      // `allowThirds`, `allowCheck` and `showHints` and must not learn which device they are on.
+      keypad = renderTypedControls(press, () => check());
+    } else {
+      keypad = renderKeypad(press, () => check());
+      app.append(keypad);
+    }
   }
 
   // ⚠️ **The end of the game, which for a long time did not exist.** A player could fill every cell and
@@ -462,7 +491,9 @@ export function boot({
 
   const footer = doc.createElement("div");
   footer.className = "footer";
-  footer.append(reference, verdict);
+  // ⚠️ The three a pointed device has below the board: the relations, Hint, Check. On a phone the footer
+  // is unchanged — `nodes` exists only on the typed controls.
+  footer.append(reference, ...(keypad?.nodes ?? []), verdict);
   app.append(footer);
 
   /** Swap the keypad for the way back to the clipping, in place, when the game ends mid-session. */
@@ -533,6 +564,20 @@ export function boot({
       goTo(neighbour(1));
       return;
     }
+    // ⚠️⚠️ **Innings are typed as they read: `7.2`, `8.1`, `9.0` or `9`.** The point arms the next digit
+    // to mean thirds instead of whole innings, which is how a printed boxscore writes it.
+    //
+    // ⚠️⚠️ **`.3` to `.9` do not enter, and NOT because a rule rejects them.** The cell holds **outs**,
+    // an integer: `inningsToDisplay` prints `Math.floor(outs / 3)` and `outs % 3`, so the fractional part
+    // can only ever be 0, 1 or 2. **A value like `7.3` is unrepresentable rather than refused** — there
+    // is nothing to validate, and anyone adding a check here would be guarding a state the data model
+    // cannot hold. What happens is that `applyKey` is never called: the digit is dropped and the cell
+    // keeps what it had.
+    if (event.key === "." && selected !== null && isInningsCell(selected)) {
+      event.preventDefault();
+      thirdsNext = true;
+      return;
+    }
     if (event.key === "Backspace" || event.key === "Delete") {
       event.preventDefault();
       press({ clear: true });
@@ -543,7 +588,16 @@ export function boot({
       // ⚠️ Nothing selected: the first digit lands on the first blank rather than being swallowed. A
       // key that does nothing on a board full of empty cells reads as a broken keyboard.
       if (selected === null) goTo(neighbour(1));
-      press({ digit: Number(event.key) });
+      const digit = Number(event.key);
+      if (thirdsNext) {
+        thirdsNext = false;
+        // ⚠️ **`{ thirds }` is the pad's own call**, the one the ⅓ and ⅔ keys make. The keyboard does
+        // not compute a value; it says which of the pad's two thirds this is. `.0` is the whole-innings
+        // path with a zero remainder, which `withThirds(current, 0)` is exactly.
+        if (digit <= 2) press({ thirds: digit });
+        return;
+      }
+      press({ digit });
     }
   };
   doc.addEventListener("keydown", typed);
@@ -581,6 +635,8 @@ export function boot({
     showReveal,
     repaint,
     remember,
+    // ⚠️ For a test that unmounts. Nothing in the browser calls it: a board lives as long as its page.
+    stopWatchingPointer,
     location: doc.defaultView?.location,
   };
 }

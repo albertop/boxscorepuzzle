@@ -86,6 +86,14 @@ const escapingFrom = async (body) => {
   return escaped;
 };
 
+/**
+ * A device, as `matchMedia` would answer. ⚠️ **The suite runs in a desktop Chromium**, so a test that
+ * says nothing is a test about a pointed device — and almost every one of these is about the phone.
+ */
+const asDevice = (matches) => ({ matches, addEventListener() {}, removeEventListener() {} });
+const PHONE = () => asDevice(false);
+const POINTED_DEVICE = () => asDevice(true);
+
 // Loaded here rather than inside the suite: `suite()` takes a synchronous callback, and top-level await
 // is what this module already uses for the packages themselves.
 const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
@@ -2178,6 +2186,7 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
         setItem: (k, v) => kept.set(k, v),
         removeItem: (k) => kept.delete(k),
       }),
+      pointer: PHONE(),
     });
     const before = shell.game.blanks().map((n) => shell.game.value(n)).join(",");
 
@@ -2191,7 +2200,7 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
 });
 
 suite("⚠️⚠️ The development test mode, and the four things that keep it away from a player", () => {
-  const bootShell = async ({ session = null, fresh = false } = {}) => {
+  const bootShell = async ({ session = null, fresh = false, pointer = PHONE() } = {}) => {
     const { boot } = await import("../ui/phone/shell.js");
     const { createStore } = await import("../engine/store.js");
     const { readPackage } = await import("../engine/package.js");
@@ -2208,7 +2217,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     // ⚠️ A `history` nothing navigates with. The mode drops the parameter from the address bar, and a
     // test that let it touch the real one would rewrite the suite's own URL.
     const wrote = [];
-    const shell = boot({ puzzle, root, store, fresh });
+    const shell = boot({ puzzle, root, store, fresh, pointer });
     return {
       ...shell,
       puzzle,
@@ -2396,7 +2405,10 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
    * The boundaries are all handed in: a detached root, a clock this test moves by hand, and a store
    * backed by an object so one case cannot see another's session.
    */
-  const bootShell = async (raw, { session = null, now = { at: 7_000_000 }, outbox = null, storage = null } = {}) => {
+  const bootShell = async (
+    raw,
+    { session = null, now = { at: 7_000_000 }, outbox = null, storage = null, pointer = PHONE() } = {},
+  ) => {
     const { boot } = await import("../ui/phone/shell.js");
     const { createClock } = await import("../engine/clock.js");
     const { createStore } = await import("../engine/store.js");
@@ -2422,6 +2434,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
       store,
       storage: backing,
       outbox,
+      pointer,
       clock: createClock({ now: () => now.at }),
     });
     return { ...shell, puzzle, root, now, kept, teardown: () => root.remove() };

@@ -444,6 +444,66 @@ export const isInningsCell = (name) => name.startsWith("pitching") && name.endsW
  * control that works again the moment anything reaches it another way — a keyboard, a test, a future
  * layer. Presentation says *not here*; the handler is what makes it true.
  */
+/**
+ * Enable or disable a control, in the one place that knows both halves of it.
+ *
+ * ⚠️ **The accessible name has to say it too.** A disabled button a screen reader announces as available
+ * is a control that reads as broken rather than as inapplicable — the rule the thirds keys, Check and
+ * Hint each stated separately before this existed.
+ */
+export function setAvailable(node, allowed) {
+  node.disabled = !allowed;
+  node.setAttribute("aria-disabled", allowed ? "false" : "true");
+}
+
+/**
+ * The Hint key. **One definition; the pad and the desktop footer both build from it.**
+ *
+ * ⚠️⚠️ **Not a second rendering.** On a phone it is appended to the keypad, on a pointed device to the
+ * board's footer — one factory, one handler, one catalogue key, two parents. Two *definitions* is what
+ * this project's most-recorded defect is about, and there is only one here.
+ *
+ * ⚠️ **The hint acts on the selected cell**, which is why it sits among the keys that act on the selected
+ * cell wherever there are keys.
+ */
+export function hintKey(onKey) {
+  const hint = el("button", "word hint", text("keypad.hint"));
+  hint.addEventListener("click", () => onKey({ hint: true }));
+  return hint;
+}
+
+/**
+ * The Check key. **One definition, same as `hintKey`.**
+ *
+ * ⚠️⚠️ **Check is a button and never a keystroke**, on every device. Enter confirms a cell and moves on;
+ * `Check` records a failed attempt on the C7 record, and one keystroke from a commitment is a commitment
+ * pressed by accident. Removing the pad from a pointed device therefore has to take Check somewhere the
+ * player can still reach it, which is what the footer is for.
+ */
+export function checkKey(onCheck) {
+  const check = el("button", "word check", text("done.check"));
+  check.addEventListener("click", () => onCheck());
+  return check;
+}
+
+/**
+ * Hint and Check alone, for a device with a keyboard. **The pad's two non-digit controls, without the pad.**
+ *
+ * ⚠️ It answers to the same three methods the pad does, so `repaint()` and `select()` do not branch on
+ * which one they have. `allowThirds` is a no-op here and says so: a pointed device types `.1` and `.2`,
+ * so there is no thirds key to enable or disable.
+ */
+export function renderTypedControls(onKey, onCheck) {
+  const hint = hintKey(onKey);
+  const check = checkKey(onCheck);
+  const controls = { nodes: [hint, check] };
+  controls.allowThirds = () => {};
+  controls.allowCheck = (allowed) => setAvailable(check, allowed);
+  controls.showHints = (left) => setAvailable(hint, left > 0);
+  controls.allowCheck(false);
+  return controls;
+}
+
 export function renderKeypad(onKey, onCheck) {
   const pad = el("div", "keypad");
   for (const digit of [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]) {
@@ -473,8 +533,7 @@ export function renderKeypad(onKey, onCheck) {
   // ⚠️ **The hint acts on the selected cell**, so it belongs among the keys that act on the selected
   // cell. The reference sheet does not and is not here — it is permanent context rather than input,
   // and it lives in the board's own chrome.
-  const hint = el("button", "word hint", text("keypad.hint"));
-  hint.addEventListener("click", () => onKey({ hint: true }));
+  const hint = hintKey(onKey);
   pad.append(hint);
 
   // ⚠️⚠️ **Check sits in the pad's last slot, and this used to be an argument against.** The note that
@@ -487,16 +546,10 @@ export function renderKeypad(onKey, onCheck) {
   // unwanted press on a complete-but-wrong board says the board does not balance and records the cells
   // that were wrong — exactly what a deliberate press would have done a second later. The clock does
   // not stop and attempts are unlimited.
-  const check = el("button", "word check", text("done.check"));
-  check.addEventListener("click", () => onCheck());
+  const check = checkKey(onCheck);
   pad.append(check);
   pad.allowThirds = (allowed) => {
-    for (const key of pad.querySelectorAll("button.thirds")) {
-      key.disabled = !allowed;
-      // The name has to say it too: a disabled button a screen reader announces as available is a
-      // control that reads as broken rather than as inapplicable.
-      key.setAttribute("aria-disabled", allowed ? "false" : "true");
-    }
+    for (const key of pad.querySelectorAll("button.thirds")) setAvailable(key, allowed);
   };
   /**
    * Whether the board can be checked at all: **every blank filled, and nothing about whether it is
@@ -506,12 +559,7 @@ export function renderKeypad(onKey, onCheck) {
    * already read off the grid — unlike *which* cells are wrong or *how many*, which the board may
    * never say. Completeness is not a step toward the answer; correctness is.
    */
-  pad.allowCheck = (allowed) => {
-    check.disabled = !allowed;
-    // The name has to say it too: a disabled control a screen reader announces as available reads as
-    // broken rather than as inapplicable. Same rule as the thirds keys.
-    check.setAttribute("aria-disabled", allowed ? "false" : "true");
-  };
+  pad.allowCheck = (allowed) => setAvailable(check, allowed);
 
   /**
    * Whether a hint can still be spent. **The key carries no count.**
@@ -525,10 +573,7 @@ export function renderKeypad(onKey, onCheck) {
    * project keeps finding. `aria-disabled` carries exactly what the greying-out carries, and nothing
    * more.
    */
-  pad.showHints = (left) => {
-    hint.disabled = left === 0;
-    hint.setAttribute("aria-disabled", left === 0 ? "true" : "false");
-  };
+  pad.showHints = (left) => setAvailable(hint, left > 0);
 
   pad.allowThirds(false);
   pad.allowCheck(false);

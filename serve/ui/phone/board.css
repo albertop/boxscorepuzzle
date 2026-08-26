@@ -941,3 +941,52 @@ td.label.substitute { padding-left: 14px; }
   height: 18px;
   flex: none;
 }
+
+/* ⚠️⚠️ **The footer on a pointed device: three controls, one shape, a third of the width each.**
+
+   There is no keypad here, so what was the pad's last row is the whole of the board's chrome — and the
+   three arrived wearing what they wore where they came from. `The relations` was a pill sized to sit
+   quietly beside a keypad; `Hint` and `Check` were keys in a grid of keys. Side by side under a
+   boxscore they read as three controls from three different products, which is the same defect the
+   reveal's footer had.
+
+   ⚠️ **Scoped to `.pointed`, so the phone's footer is untouched.** There the pill is alone beside the
+   verdict and is right as it is — this rule cannot reach it, which is the whole reason the pointer is a
+   class on `#app` rather than a media query. */
+.pointed .footer {
+  gap: 10px;
+  padding: 10px var(--board-margin) calc(10px + env(safe-area-inset-bottom));
+}
+
+.pointed .footer .reference-key,
+.pointed .footer .word {
+  /* Equal thirds: `flex: 1 1 0` divides the row by the number of items rather than by their labels, so
+     `Hint` and `The relations` are the same width despite one being three times the other's length. */
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 50px;
+  padding: 8px 12px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* One shape, and it is the product's own: the same rule, radius and type as `.app-button`, which is
+     the tutorial's button moved into `tokens.css`. A fourth spelling is what this rule exists to avoid. */
+  border: 1px solid var(--rule-strong);
+  border-radius: 10px;
+  background: var(--key);
+  color: var(--ink);
+  /* ⚠️⚠️ **15px and one line, because 16 broke `The relations` in two.** At a third of 375 the box is
+     110px, and the longest of the three labels wrapped — so one button stood taller than the others and
+     the row read as two shapes again, which is the thing this rule exists to fix. **Found in the
+     photograph; the measured widths said 110, 110, 110 and were all correct.** A number that is right
+     about width says nothing about height. */
+  font: 600 15px/1.15 var(--face), system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+/* ⚠️ The verdict is not one of the three. It is a sentence that appears when a check fails, and giving
+   it a third of the row would leave three buttons and a gap whenever the board balances. */
+.pointed .footer .verdict {
+  flex: 0 1 auto;
+}

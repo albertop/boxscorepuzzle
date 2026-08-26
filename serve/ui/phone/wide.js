@@ -39,6 +39,31 @@
 /** The class the layout hangs from. ⚠️ On the app's own root, which the measurement stage is not inside. */
 export const WIDE = "wide";
 
+/** The class a device with a real pointer and a real keyboard carries. */
+export const POINTED = "pointed";
+
+/**
+ * Whether this device has a fine pointer and hover — a mouse or a trackpad, which means a keyboard too.
+ *
+ * ⚠️⚠️ **Pointer, never width, and a touchscreen laptop is why.** It is wide *and* touch: hiding the
+ * on-screen keypad by width takes it from somebody using a finger on a 1440px screen. `pointer: fine`
+ * asks what the person is actually pointing with, which is the question.
+ *
+ * ⚠️ **`hover` as well as `pointer`.** A stylus reports `pointer: fine` and hovers over nothing, and a
+ * phone in desktop-site mode has lied about worse. Both together is what a mouse has and a finger and a
+ * stylus do not.
+ *
+ * ⚠️ It is a class on `#app` rather than a media query for the reason in this file's header: a media
+ * query reaches the share image's measurement stage and a scoped rule cannot.
+ */
+export function followPointer(root, { doc = document, matcher = null } = {}) {
+  const query = matcher ?? doc.defaultView.matchMedia("(pointer: fine) and (hover: hover)");
+  const apply = () => root.classList.toggle(POINTED, query.matches);
+  apply();
+  query.addEventListener("change", apply);
+  return () => query.removeEventListener("change", apply);
+}
+
 /**
  * The width at which the layout changes, read from `tokens.css`, or `null` when nobody has decided.
  *
