@@ -167,9 +167,50 @@ question can no longer be asked cleanly.
 
 ---
 
-## ▶ Deliverable
+## ▶ Deliverable — **rewritten 2026-08-26, to say what the measurement found**
 
-**A desktop board somebody can play with a keyboard, and a statement about `engine/`.**
+**A board somebody can play with a keyboard, and a statement about `engine/`.**
+
+⚠️⚠️ **It said *a desktop board* and there is no desktop board to build.** The old sentence promised a
+wide-screen layout, and the measurement says there is none: **what beta 1 wins is the keyboard.** The
+deliverable is rewritten before it is marked, for the same reason beta 0's Deliverable B was — marking
+against a sentence the work does not support puts a false claim in the document that defines done.
+
+### ⚠️⚠️ The measurement, here rather than in a footnote
+
+**The next reader has to be able to see why there is no layout work, rather than assume it was skipped.**
+
+`/today` was rendered at **sixteen widths from 320 to 1920** and asked, at each, for `#app`'s box, the
+grid's box, the air either side, whether any cell's text overflowed its own box, and whether the document
+scrolled sideways:
+
+| | 320 | 375 | 414 | 768 | 1024 | 1440 | 1920 |
+|---|---|---|---|---|---|---|---|
+| `#app` | 320 | 375 | **375** | **375** | **375** | **375** | **375** |
+| grid | 304 | 359 | **359** | **359** | **359** | **359** | **359** |
+| air each side | 0 | 0 | 20 | 197 | 325 | 533 | 773 |
+| clipped cells | 0 | 0 | **0** | **0** | **0** | **0** | **0** |
+| sideways scroll | no | no | **no** | **no** | **no** | **no** | **no** |
+
+**From 414 upwards the board holds 375 and every extra pixel becomes air. Nothing degrades anywhere.**
+
+### What that made of C
+
+| | |
+|---|---|
+| **C-1**, the board centred with air and nothing beside it | **needed no code.** `#app` has `max-width` and `margin: 0 auto`, so §6's *desktop gets more whitespace, not more content* was already in force before beta 1 opened |
+| **C-2**, the mouse as the alternative | **needed no code.** It works because it works, and what desktop wins is the keyboard |
+| **C-3**, the breakpoint | ⚠️⚠️ **has no answer.** There is no width at which the board stops fitting, so there is no breakpoint. `--wide-from` stays undeclared: **declaring a number that came from no measurement is what §7 forbids** |
+
+⚠️ **`wide.js` stays even though nothing turns it on.** It is not the layout; it is what makes a media
+query refusable — a wide rule written as one reaches the share image's measurement stage and a rule
+scoped to `#app.wide` cannot. The sweep lives in its header so the next person to reach for `@media`
+meets the reason first.
+
+### What beta 1 actually is
+
+**The keyboard**, and the width made into one value so the §6 arithmetic has a single premise. That is
+smaller than the milestone was written to be and it is what the screen turned out to need.
 
 ⚠️ **What it does not include:** tablet, and anything that begins *while we are in there*. Each milestone
 has its successor named so nothing drifts into the wrong one (`beta-0.md`), and the failure that prevents
