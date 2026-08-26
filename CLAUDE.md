@@ -718,6 +718,25 @@ This covers a query *used as a status check*, which is decidable by looking at w
 for. It does not cover the general case — whether a tool was pointed at the right subject is still
 intent, and still not derivable from the code.
 
+**⚠️⚠️ An estimate that rests on how callers use something is not answered by the thing they call.**
+This is the register's own shape applied to *reading* code rather than to running it, and it cost an
+approved decision on 2026-08-26.
+
+Asked what it would cost to require every shell test to name its device, I read the helper, saw
+`pointer = PHONE()` in the signature, and reported that **the tests already declare it, so none needs
+touching**. Fifteen minutes was approved on that number. **They declare none: 34 calls, 0 passing
+`pointer`.** Removing the default breaks every one, and the real figure was 32 edits and forty minutes.
+
+**A default in a definition reads as *they all have it* and means the opposite: *none asks for it*.** The
+signature is where the value is written; the call sites are where the question is answered. Only one of
+them was looked at, and it answered truthfully about itself.
+
+⚠️ **The discipline is a counting command, not a habit.** `grep -c` over the call sites is the whole of
+it. What makes this worth a paragraph is that it is the same failure as `nginx -t` approving a config it
+was never given and a probe measuring `document.body` because the page's root was not in its selector
+list — **a correct answer about the wrong subject** — arriving through a reader's eyes instead of a
+tool's output, where none of the guards above can reach it.
+
 **Look at the output.** Every serious defect in this project was found by rendering something and
 reading it, never by computing a statistic. **Twice now this has been the only thing that
 could have worked.** The first was a board carrying rows of noughts, from a flag meaning *appeared*

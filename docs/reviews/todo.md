@@ -1,5 +1,59 @@
 # Review backlog
 
+## ⬜ 2026-08-26 - a test that names no device inherits `PHONE()` silently
+
+**Recorded, not built. The default stays and it is correct** -- nearly every test that boots the shell is
+about the phone, and `PHONE()` is what they mean.
+
+`boot()` takes `pointer` as a boundary because the browser suite runs in a **desktop Chromium**: with the
+keypad now hidden on a fine pointer, every test about the pad was one line from describing a device it
+had not chosen, staying green while it did. `bootShell` passes `PHONE()` so they describe a phone.
+
+⚠️ **The guard is that somebody wrote it, not that anything requires it.** A new test calling
+`bootShell()` with no argument gets a phone without saying so — right today, and wrong the first time
+somebody means a desktop and forgets.
+
+### What closing it costs, so whoever picks it up prices it correctly
+
+**32 call sites, roughly 40 minutes.** Removing the default is one line per helper; what follows is the
+work. `bootShell` is called **34 times and 0 of them pass `pointer`** — and most are `await bootShell()`
+with no argument object at all, so each one gains `{ pointer: PHONE() }` rather than a field.
+
+⚠️ **Mechanical and not trivial**: 32 places to get wrong, and getting one wrong leaves a test silently
+describing a desktop, which is the thing the change exists to prevent.
+
+⚠️ **A static guard instead is worse and is the option to refuse.** A test reading `engine.test.js` and
+requiring every `bootShell` call to name a device closes the same hole without touching 32 sites — and
+it is a regular expression over source, which this project has recorded failing four times.
+
+## ⚠️⚠️ 2026-08-26 - the estimate was read off the definition, and the call sites were the subject
+
+**This is the finding, and the row above is the thing it was about.**
+
+Asked what closing the hole would cost, I read the helper, saw `pointer = PHONE()` in its signature, and
+reported that **the tests already declare their device, so none needs touching**. The operator approved
+fifteen minutes of work on that number.
+
+**They declare none. 34 calls, 0 passing `pointer`.** Removing the default breaks every one.
+
+⚠️⚠️ **A default in a definition reads as *they all have it* and means the opposite: *none asks for
+it*.** The signature is where the value is written and the call sites are where the question is
+answered, and only one of them was looked at.
+
+### Why it belongs here rather than as an apology
+
+**It is the day's shape applied to reading code instead of running it.** `nginx -t` approved a config it
+was never given; a fetch supplied the directory whose absence was the defect; a probe measured
+`document.body` because the tutorial's root was not in its selector list; `button_widths` read
+[110, 110, 110] about a row that was visibly two different shapes. **Every one is a correct answer about
+the wrong subject**, and so is this: the definition answered truthfully and was not the thing being
+asked about.
+
+⚠️ **The cheap discipline, which needs no tooling:** an estimate that rests on how callers use something
+is not answered by the thing they call. Count the callers. `grep -c` is the whole of it, and it is what
+turned fifteen minutes into forty.
+
+
 ## ⬜ 2026-08-24 - `PAGES` in the C11 guard is still a hand-written list beside a directory
 
 **Recorded, not built. Noticed while closing the same shape one file over, and left open deliberately.**
