@@ -6,6 +6,9 @@
 that knows nothing about screens*. Beta 0 built the first interface and the core underneath it. **Beta 1
 is the first time that claim can be false.**
 
+**The route there: `docs/beta-1-plan.md`.** Five groups, A to E, against the repository as it
+actually stands. **It is the authority on progress; this file is what done means.**
+
 `§N` points at `docs/design-boxscore-puzzle.md`.
 
 ---

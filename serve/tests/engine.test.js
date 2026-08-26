@@ -3781,6 +3781,7 @@ suite("⚠️ The boundary checks the pointer too, and a finished board is immut
     "share-send.js",
     "shell.js",
     "testmode.js",
+    "wide.js",
     "today.js",
     "tutorial-main.js",
     "tutorial.js",
@@ -4963,6 +4964,79 @@ suite("The uplink: one storage, one device, both queues, in the one place three 
     for (const file of ["main.js", "landing-main.js", "tutorial-main.js"]) {
       const source = await (await fetch(`../ui/phone/${file}`)).text();
       assert(/startUplink\(/.test(source), `${file} never starts the uplink, so it reports nothing`);
+    }
+  });
+});
+
+suite("⚠️⚠️ Wide layout is a class, because a media query reaches the share image", () => {
+  // **Measured 2026-08-26.** `shareImage` lays the sheet out in the real document to measure its height
+  // and draws it inside an SVG, which is a separate document with its own 375px viewport — so a media
+  // query is evaluated twice against two different widths. With a probe rule at `min-width: 800px` and
+  // the page at 1440, the produced image came out 2872px tall instead of 1864: the boxscore drawn small
+  // at the top with blank paper below, and not even looking broken, because the sheet's background
+  // stretches. `forge/tests/test_the_share_image_is_not_the_screen.py` is what fails if it recurs.
+
+  test("⚠️⚠️ with no breakpoint decided, nothing is applied", async () => {
+    // **An open decision must not be enforced as though the answer were always yes.** Where the
+    // breakpoint is — or whether there is one — is `beta-1-plan.md`'s C-iii and it is the operator's.
+    // Until `--wide-from` is declared there is no breakpoint, and this says so rather than guessing.
+    const { followWidth, wideFrom, WIDE } = await import("../ui/phone/wide.js");
+    const root = document.createElement("div");
+
+    equal(wideFrom(), null, "--wide-from is declared; C-iii was decided and this test was not updated");
+    const stop = followWidth(root);
+    equal(root.classList.contains(WIDE), false, "a class was applied with no breakpoint to apply it at");
+    stop();
+  });
+
+  test("the class follows the viewport, and stops when told", async () => {
+    // Driven through a fake `MediaQueryList` rather than by resizing: the behaviour under test is
+    // *what the class does when the answer changes*, and a real resize cannot be made to happen here.
+    const { followWidth, WIDE } = await import("../ui/phone/wide.js");
+    const root = document.createElement("div");
+    const listeners = new Set();
+    const query = {
+      matches: false,
+      addEventListener: (_name, fn) => listeners.add(fn),
+      removeEventListener: (_name, fn) => listeners.delete(fn),
+    };
+    // A document that answers with a breakpoint, so `followWidth` gets past the C-iii guard above.
+    const doc = { documentElement: root, defaultView: { matchMedia: () => query } };
+    const styled = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = () => ({ getPropertyValue: () => "800px" });
+    try {
+      const stop = followWidth(root, { doc, matcher: query });
+      equal(root.classList.contains(WIDE), false, "narrow did not start narrow");
+
+      query.matches = true;
+      for (const fn of listeners) fn();
+      equal(root.classList.contains(WIDE), true, "widening did not apply the class");
+
+      query.matches = false;
+      for (const fn of listeners) fn();
+      equal(root.classList.contains(WIDE), false, "narrowing did not remove it");
+
+      // ⚠️ A watcher that cannot be stopped is a leak on every page that mounts twice.
+      stop();
+      query.matches = true;
+      for (const fn of listeners) fn();
+      equal(root.classList.contains(WIDE), false, "it kept listening after being stopped");
+    } finally {
+      globalThis.getComputedStyle = styled;
+    }
+  });
+
+  test("⚠️ a breakpoint that is not a pixel width is refused rather than ignored", async () => {
+    // A token spelled `48em` is a decision this cannot read. Treating it as absent would make a
+    // configured breakpoint look like an unconfigured one — the absence of the evidence reading as the
+    // evidence, in a token.
+    const { wideFrom } = await import("../ui/phone/wide.js");
+    const styled = globalThis.getComputedStyle;
+    globalThis.getComputedStyle = () => ({ getPropertyValue: () => "48em" });
+    try {
+      throws(() => wideFrom({ documentElement: document.documentElement }), /--wide-from/);
+    } finally {
+      globalThis.getComputedStyle = styled;
     }
   });
 });

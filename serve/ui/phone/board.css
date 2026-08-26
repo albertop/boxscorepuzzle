@@ -185,7 +185,24 @@ html, body {
    ⚠️ The breakpoint is documented in `tokens.css` beside the other presentation constants. It is a
    literal here because a media query condition is evaluated before the cascade and cannot read a
    custom property. §33 keeps it out of `forge/`: the inning cap it supports is a domain fact and lives
-   in `boxscore_domain`, but a viewport width is presentation and the forge must not know it. */
+   in `boxscore_domain`, but a viewport width is presentation and the forge must not know it.
+
+   ⚠️⚠️ **DO NOT READ THIS AS LICENCE FOR A DESKTOP MEDIA QUERY.** The sentence above explains why the
+   number is a literal; it says nothing about whether a media query is the right instrument, and the
+   answer for a *wide* layout is no. `share-image.js` lays the sheet out in the real document to measure
+   its height and then draws it inside an SVG, which is a **separate document with its own 375px
+   viewport** — so a media query is evaluated twice against two different widths.
+
+   **Measured on 2026-08-26, not deduced.** With a probe `@media (min-width: 800px)` added here and the
+   page at 1440: the rule matched in the page, did NOT match inside the SVG, and the produced image came
+   out **2872px tall instead of 1864** — the boxscore drawn small at the top with blank paper below,
+   because the height was measured under one set of rules and the content drawn under another. It does
+   not even look broken; `.share-sheet`'s background stretches, so the empty part is white.
+
+   ⚠️ **Wide layout hangs off `#app.wide`, set from JavaScript** (`wide.js`). The measurement stage is a
+   child of `document.body`, not of the app root, so a rule scoped to that class cannot reach it. And the
+   constraint this comment describes disappears there: `matchMedia` is called from JavaScript, which
+   **can** read the custom property. */
 @media (max-width: 359px) {
   .linescore table { font-size: 11px; }
 }

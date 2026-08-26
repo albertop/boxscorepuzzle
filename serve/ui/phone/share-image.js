@@ -269,6 +269,19 @@ export async function shareImage(puzzle, game, { random } = {}) {
   document.body.append(stage);
 
   try {
+    // ⚠️⚠️ **Wait for the faces before measuring, and this was a real defect before any desktop layout
+    // existed.** The sheet is measured HERE, with the page's fonts, and drawn inside the SVG with the
+    // faces `embedFonts` inlines. **If the page's faces have not finished loading, the measurement uses
+    // fallback metrics and the canvas comes out the wrong height** — the same measure-here-draw-there
+    // asymmetry as a media query, in a different variable.
+    //
+    // **Observed, not feared:** the same board at the same viewport produced 1864px on one run and
+    // 1866px on the next, and the two-viewport guard caught it on its first execution.
+    //
+    // ⚠️ `fonts.ready`, never `fonts.check`. `CLAUDE.md` records `check` reporting false about a face
+    // that was loaded — it asks a different question. `ready` resolves when loading is finished, which
+    // is the question.
+    await document.fonts.ready;
     const height = Math.ceil(sheet.getBoundingClientRect().height);
     if (height < 1) {
       throw new Error("share image: the board measured zero high, so nothing was laid out");

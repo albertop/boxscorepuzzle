@@ -34,7 +34,8 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 
 ⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
 
-**⚠️⚠️ Current milestone: `docs/beta-1.md` — DESKTOP. Opened 2026-08-24.** One puzzle, a second
+**⚠️⚠️ Current milestone: `docs/beta-1.md` — DESKTOP. Opened 2026-08-24. The route is
+`docs/beta-1-plan.md`, five groups, A to E.** One puzzle, a second
 interface. **It is the first time `serve-brief.md`'s central claim can be false**: if the engine really
 knows nothing about screens, beta 1 touches `ui/` and nothing under `engine/` — so the diff is the
 evidence, and *`engine/` was not touched* is half of what closes it. ⚠️ **§6 is the rule most likely to
