@@ -536,11 +536,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8eefc2",
   "date": "2026-10-30",
-  "direction": "SDN",
-  "game_id": "ATL198408102",
-  "puzzle_id": "60e448ca7e1757ba",
+  "direction": "BRO",
+  "game_id": "BRO195408150",
+  "puzzle_id": "fbe95b9ff2929d77",
   "status": "active"
  },
  {
@@ -1152,11 +1152,11 @@
   "status": "active"
  },
  {
-  "assigned": "gen6a8a4aa0",
+  "assigned": "gen6a8eefc2",
   "date": "2027-01-15",
-  "direction": "TBA",
-  "game_id": "TOR202310010",
-  "puzzle_id": "5079de3f48de0f48",
+  "direction": "BRO",
+  "game_id": "BRO195408130",
+  "puzzle_id": "cacb4b528ae00b51",
   "status": "active"
  },
  {

@@ -18,7 +18,8 @@ import importlib.util
 import json
 import re
 import sys
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
@@ -71,6 +72,7 @@ class _Loaded:
 @dataclass(frozen=True, slots=True)
 class _Package:
     puzzle_id: str
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 def _stub(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, *, available: int) -> None:
@@ -116,7 +118,20 @@ def _stub(builder: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, 
                 {
                     "puzzle_id": package.puzzle_id,
                     "schema": SCHEMA_VERSION,
-                    "metadata": {"target_stalls": 8, **_FACTS},
+                    # ⚠️⚠️ **`families` is the THIRD field to arrive here late, and the comment above
+                    # predicted each one.** A stub that mirrors a writer is two places holding one
+                    # shape, and the stub is the half nobody edits — `schema` fell behind at format 6,
+                    # and this fell behind the day `audit()` started asking how many relation families a
+                    # board uses. Every stubbed board would otherwise read as one produced before the
+                    # question existed, and the honest reading of that is a refusal.
+                    #
+                    # ⚠️ Four, from `MINIMUM_FAMILIES`, so the fixture cannot drift below the floor it is
+                    # not testing. `ALL_FIVE` is the vocabulary; the count is what matters here.
+                    "metadata": {
+                        "target_stalls": 8,
+                        "families": list(ALL_FIVE[: builder.MINIMUM_FAMILIES]),
+                        **_FACTS,
+                    },
                 }
             ),
             encoding="utf-8",
@@ -128,9 +143,20 @@ _FACTS = {"innings": 9, "account": "Y", "disposition": ""}
 """The admissibility facts `produce()` records on a board that may ship: regulation length, a complete
 game account, no administrative disposition."""
 
+ALL_FIVE = ("column_sum", "row_identity", "cross_team", "global_identity", "batting_order")
+"""The five relation families, in the order `identities.py` declares them."""
 
-"""The admissibility facts `produce()` records on a board that may ship: regulation length, a complete
-game account, no administrative disposition."""
+
+def _metadata(**extra: object) -> dict[str, object]:
+    """What `produce()` records on a package, for a fixture that writes one by hand.
+
+    ⚠️⚠️ **One place, because there were two and both fell behind.** The stub in `_stub` and the one in
+    `_writes_facts` each spelled this dict, and each was edited separately when the writer gained a
+    field — `schema` at format 6, `families` when `audit()` began asking how many relations a board uses.
+    **A fixture that mirrors a writer is two places holding one shape**, and the fixture is the half
+    nobody edits. Making it one place does not fix that; it halves it.
+    """
+    return {"target_stalls": 8, "families": list(ALL_FIVE[:4]), **_FACTS, **extra}
 
 
 class TestTheCalendarIsAuditedAgainstTheRegister:
@@ -189,8 +215,10 @@ class TestTheCalendarIsAuditedAgainstTheRegister:
         The stub's games are all from 1911, so the boundary is moved down to reach them rather than
         fabricating a 2021 fixture -- the same technique the dormant version used.
         """
-        extra = {"innings": 11, "account": "Y", "disposition": ""}
-        self._built(monkeypatch, tmp_path, extra)
+        # ⚠️ Through `_metadata`, so this board differs from an admissible one in exactly ONE field.
+        # Spelled by hand it also lacked `families`, and the audit refused it for that instead — a test
+        # green on the wrong refusal is a test about nothing.
+        self._built(monkeypatch, tmp_path, _metadata(innings=11))
 
         builder = _builder()
         _stub(builder, monkeypatch, tmp_path, available=20)
@@ -233,7 +261,10 @@ class TestBoardsProducedBeforeTheRulesExisted:
         for entry in builder.read(builder.CALENDAR):
             path = tmp_path / "forge" / "inventory" / entry.assigned / f"{entry.puzzle_id}.json"
             document = json.loads(path.read_text(encoding="utf-8"))
-            document["metadata"] = {"target_stalls": 8}
+            # ⚠️ `families` stays: it is OLDER than the admissibility rules, so a pre-rules generation
+            # carried it. Stripping it here would make the rebuild look like a different board — a
+            # fixture inventing a package shape that never existed.
+            document["metadata"] = {"target_stalls": 8, "families": list(ALL_FIVE[:4])}
             path.write_text(json.dumps(document), encoding="utf-8")
             stripped.append(path)
         return stripped
@@ -244,7 +275,7 @@ class TestBoardsProducedBeforeTheRulesExisted:
             builder,
             "write_package",
             lambda path, package: path.write_text(
-                json.dumps({"puzzle_id": package.puzzle_id, "metadata": {"target_stalls": 8, **_FACTS, **extra}}),
+                json.dumps({"puzzle_id": package.puzzle_id, "metadata": _metadata(**extra)}),
                 encoding="utf-8",
             ),
         )
@@ -395,7 +426,10 @@ class TestAGenerationCanBeSignedWithoutProducing:
         builder.build(5, date(2026, 9, 2), _key(), _TODAY)
         entry = builder.read(builder.CALENDAR)[0]
         package = tmp_path / "forge" / "inventory" / entry.assigned / f"{entry.puzzle_id}.json"
-        package.write_text(json.dumps({"metadata": {"innings": 17, "account": "Y", "disposition": ""}}), "utf-8")
+        # ⚠️ Through `_metadata`, so this board differs from an admissible one in exactly ONE field — the
+        # innings. Spelled by hand it also lacked `families`, and the audit refused it for that instead:
+        # a test that passes on the wrong refusal is a test about nothing.
+        package.write_text(json.dumps({"metadata": _metadata(innings=17)}), "utf-8")
 
         with pytest.raises(SystemExit, match="17 innings"):
             builder.republish(_key())
@@ -1114,3 +1148,118 @@ class TestWhichDateIsBeingServed:
             f"build_inventory.py calls date.today() at lines {offences}. The calendar's boundary is the "
             f"serving date (docs/calendar.md), not the local day of whoever ran the build."
         )
+
+
+ALL_FIVE = ("column_sum", "row_identity", "cross_team", "global_identity", "batting_order")
+
+
+def _calendar_with_families(
+    builder: ModuleType, tmp_path: Path, wanted: dict[str, int | None]
+) -> tuple[tuple[object, ...], Path]:
+    """A calendar and an inventory on disk, where each date's package uses `n` families.
+
+    ⚠️ Real files rather than a stub, because `audit` reads the packages: a fake that answered from
+    memory would be testing the test.
+    """
+    inventory = tmp_path / "inventory"
+    (inventory / "gen0").mkdir(parents=True)
+    entries = []
+    for offset, (when, count) in enumerate(sorted(wanted.items())):
+        puzzle_id = f"p{offset:016x}"
+        # ⚠️ `_FACTS` too: `audit` also refuses a board with no admissibility metadata, and a fixture
+        # missing them fails for a reason this test is not about — the near-neighbour shape again.
+        metadata: dict[str, object] = dict(_FACTS)
+        if count is not None:
+            metadata["families"] = list(ALL_FIVE[:count])
+        (inventory / "gen0" / f"{puzzle_id}.json").write_text(json.dumps({"metadata": metadata}), encoding="utf-8")
+        entries.append(
+            # ⚠️ A real-shaped game id: `audit` reads the season out of it, so `G0` fails on the era
+            # check for a reason that has nothing to do with what this is testing.
+            builder.Entry(when, puzzle_id, f"CHN1954{offset:04d}", "CHN", "active", "gen0")
+        )
+    return tuple(entries), inventory
+
+
+class TestTheFamilyFloor:
+    """⚠️⚠️ **A board using two of the five relations is arithmetic, not a puzzle.**
+
+    2026-08-26 shipped with `column_sum, row_identity` -- the only one of 150 dates that used two -- and
+    landed on the second day of beta 0. It was reported as ridiculously easy, and it was: the three
+    families it never asked for are exactly the ones that make a player look somewhere else on the board.
+
+    **`build_inventory` did not mention `families` once.** That 137 of 150 used four was an emergent
+    property of the generator, guaranteed by nothing and reported by nothing.
+    """
+
+    @pytest.mark.parametrize("used", [1, 2, 3, 4, 5])
+    def test_the_gate_returns_nothing_for_a_board_under_the_floor(
+        self, monkeypatch: pytest.MonkeyPatch, used: int
+    ) -> None:
+        """⚠️⚠️ **The intake half, exercised — the first version of this test could not fail.**
+
+        It asserted `MINIMUM_FAMILIES >= 2` and called nothing. **Deleting the filter left it green**,
+        which is this project's own recorded shape: a check that never fires is indistinguishable from
+        one that is broken. Found by breaking the filter on purpose and watching nothing turn red.
+
+        Every count from 1 to 5, so the boundary is crossed rather than sampled either side of it.
+        """
+        builder = _builder()
+        package = _Package("p1", {"families": list(ALL_FIVE[:used])})
+        monkeypatch.setattr(
+            builder, "produce", lambda *_args, **_kwargs: SimpleNamespace(package=package, cause=None, refusals=())
+        )
+        counts: Counter[str] = Counter()
+
+        got = builder._hardest_target(_Loaded("CHN19540101"), _key(), counts, Counter())
+
+        if used >= builder.MINIMUM_FAMILIES:
+            assert got is package, f"{used} families is at or above the floor and was refused"
+        else:
+            assert got is None, f"{used} families is under the floor and was published"
+            assert counts[f"under {builder.MINIMUM_FAMILIES} families"] == 1, (
+                "the refusal was silent; at volume nobody would know which check was discarding boards"
+            )
+
+    def test_a_future_date_under_the_floor_stops_the_run(self, tmp_path: Path) -> None:
+        """⚠️ **The population half, which the filter cannot do.**
+
+        A filter acts on arrival and leaves nothing behind that can be asked afterwards -- it says
+        nothing about the dates already assigned, and a rule about what may exist always arrives after
+        the inventory does. Seen red by removing the check from `audit`.
+        """
+        builder = _builder()
+        calendar, inventory = _calendar_with_families(builder, tmp_path, {"2026-12-01": 4, "2026-12-02": 2})
+
+        # ⚠️⚠️ **Matched on the family message, not on the date, and matching on the date passed for the
+        # wrong reason.** `audit` also refuses an entry whose package is missing, and that message names
+        # the date too — so `match="2026-12-02"` was green against a check this test is not about. The
+        # near-neighbour shape, in the test written to close one.
+        with pytest.raises(SystemExit, match="fewer than 4 relation families"):
+            builder.audit(calendar, inventory, today=date(2026, 11, 1))
+
+    def test_a_date_already_served_is_named_and_kept(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+        """⚠️⚠️ **Section 21 is two rules and an unscoped check would abort every build for ever.**
+
+        A future date with a defective puzzle is replaced; a past one keeps its assignment. A board
+        already served has been played, and refusing to build November because August was thin fixes
+        nothing and stops everything -- `CLAUDE.md` records that as the 1964 board halting a production
+        run over a question about a different era.
+
+        ⚠️ It is still SAID. A check that passed over it silently is the reason nobody would ever learn
+        which dates they were.
+        """
+        builder = _builder()
+        calendar, inventory = _calendar_with_families(builder, tmp_path, {"2026-08-26": 2, "2026-12-01": 4})
+
+        builder.audit(calendar, inventory, today=date(2026, 8, 26))
+
+        assert "2026-08-26" in capsys.readouterr().out, "a thin board already served was passed over in silence"
+
+    def test_a_package_recording_no_families_is_a_fault(self, tmp_path: Path) -> None:
+        """⚠️ *The absence of the evidence must not read as the evidence.* A package that cannot answer
+        the question is refused, exactly as `restamp` refuses one with no admissibility facts."""
+        builder = _builder()
+        calendar, inventory = _calendar_with_families(builder, tmp_path, {"2026-12-01": None})
+
+        with pytest.raises(SystemExit, match="records no families"):
+            builder.audit(calendar, inventory, today=date(2026, 11, 1))

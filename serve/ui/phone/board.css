@@ -806,10 +806,20 @@ td.label.substitute { padding-left: 14px; }
   font-weight: 700;
 }
 
-/* The date under the result line. A reveal is written for a reader, so the date reads as one. */
+/* The date under the result line. A reveal is written for a reader, so the date reads as one.
+
+   ⚠️⚠️ **`--rule-strong` stood here and it is a GRID-LINE colour, not a text colour.** `#9aa1ad` is
+   sized to be a visible hairline between two data cells — `tokens.css` records it as measured at 1.44:1
+   against paper, which is right for a rule and unreadable as a sentence. The date is the one line on
+   this screen that says which game the player just rebuilt, and it was the faintest thing on it.
+
+   ⚠️ **`--ink`, matching `Your time` and `Hints used`** rather than `--muted`: those are the other
+   pieces of text the reveal prints around the boxscore, and the date belongs with them. A token whose
+   name is about lines has no business colouring words — that is what made this easy to write and hard
+   to see. */
 .clipping-date {
   margin: 0 0 10px;
-  color: var(--rule-strong);
+  color: var(--ink);
 }
 
 /* A club's name inside the shared pitching block. Ruled above, so the two clubs read as two groups

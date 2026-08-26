@@ -127,6 +127,43 @@ says about whether the corrected scale corresponds to felt difficulty, and **not
 medium or hard until it comes back**. Five stalls was an example the operator gave, not a standard.
 """
 
+MINIMUM_FAMILIES: Final = 4
+"""How many of the five relation families a published board must use. **Operator's decision, 2026-08-26.**
+
+**Because a board that needs two of them is arithmetic, not a puzzle.** The five are `column_sum`,
+`row_identity`, `cross_team`, `global_identity` and `batting_order`. The first two live inside a single
+row or a single column; the other three are the ones that make a player look somewhere else on the board.
+A board using only the first two never asks that.
+
+⚠️⚠️ **Set by a board that shipped and was played.** 2026-08-26 in the first calendar used
+`column_sum, row_identity` -- **the only one of 150 dates that used two** -- and it landed on the second
+day of beta 0. The operator's report was that it was *ridiculously easy*. 137 of the 150 use four
+families, 10 use all five, and 2 use three.
+
+⚠️⚠️ **What the floor costs is NOT the 2% it looks like, and the shape of the cost is why the number is
+here rather than inline.** The three thin boards are at stalls 2, 3 and 4, and there is not one above 4:
+
+| rungs | boards | thin | rate |
+|---|---|---|---|
+| 1-4 | 21 | 3 | **14%** |
+| 5-8 | 39 | 0 | 0% |
+| 9-13 | 90 | 0 | 0% |
+
+**The whole cost lands on the easy end**, which is already the scarcest part of the inventory -- and the
+calendar over-samples the hard end (90 of 150 at rung 9+, mean 8.7), so **the true rate in the pool is
+probably higher than 2%, not lower**. The pool is 400,000+ directions, so volume is not the risk; the
+easy end is. ⚠️ If the difficulty curve of §31 is ever built -- *easy Monday, hard Saturday* -- it needs
+low-rung boards, and this takes one in seven of them. **The two decisions pull against each other and
+should be taken together.**
+
+⚠️⚠️ **And the field this filters on is what the solver USED, not what the board REQUIRES.** A board may
+admit four routes while the solver takes one of two. With three cases there is no way to tell a genuinely
+poor board from one that happened to solve short, so **this floor may be refusing boards that are fine**.
+That is accepted knowingly: an underpowered board that ships is met by a player, and a good board refused
+is met by nobody. **Raising or lowering this is a one-line change and that is the point of it being
+here.**
+"""
+
 ERA_QUOTA: Final = 1
 """Minimum boards from each decade a hand-solve pack must contain. **PROVISIONAL.**
 

@@ -62,6 +62,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey 
 from boxscore_domain import (  # noqa: E402
     AUTOMATIC_RUNNER_FROM,
     MAX_INNINGS,
+    MINIMUM_FAMILIES,
     REGULATION_INNINGS,
     ZERO_DENSITY_GATE,
 )
@@ -253,6 +254,16 @@ def _hardest_target(
         for refusal in attempt.refusals:
             refusals[refusal.split(":")[0].strip()] += 1
         if attempt.package is not None:
+            # ⚠️⚠️ **The floor, and it is checked on the HARDEST target the board reached.** More stalls
+            # means more of the board had to be reasoned about, so the hardest target is also the richest
+            # in families: if that one is thin, the board is thin and no easier target will rescue it.
+            #
+            # ⚠️ **Discarded, never repaired** (§22). The pool is 400,000+ directions and throwing one
+            # away costs nothing; the counter is what makes the discarding visible at volume.
+            used = len(attempt.package.metadata.get("families", ()))
+            if used < MINIMUM_FAMILIES:
+                counts[f"under {MINIMUM_FAMILIES} families"] += 1
+                return None
             return attempt.package
     return None
 
@@ -493,7 +504,7 @@ def write_manifest(generation: str, out: Path, key: Ed25519PrivateKey) -> int:
     return len(ids)
 
 
-def audit(calendar: Calendar) -> None:
+def audit(calendar: Calendar, inventory: Path | None = None, today: date | None = None) -> None:
     """Assert what the calendar is, after it is built. **Never printed and believed.**
 
     ⚠️⚠️ **A3.5, and its absence is the whole reason the first inventory was wrong.** The run reported
@@ -507,6 +518,12 @@ def audit(calendar: Calendar) -> None:
     was the first with a written quota; a game published twice, a date assigned twice and a puzzle used
     twice are the same class, and all four are checked below.
     """
+    # ⚠️⚠️ **Computed here from `_ROOT`, never hoisted to a module constant.** Tidying the four call
+    # sites into one `INVENTORY = _ROOT / ...` at the top looks like removing a duplicate and is not:
+    # `_ROOT` is what the suite redirects, and a module-level constant fixes the path at IMPORT time, so
+    # every test that points the builder at a temporary tree is silently ignored. Twenty-six of them
+    # went red. **A default that cannot be overridden is a parameter that only looks like one.**
+    root = inventory if inventory is not None else _ROOT / "forge" / "inventory"
     if not calendar:
         return
     faults: list[str] = []
@@ -540,11 +557,55 @@ def audit(calendar: Calendar) -> None:
             repeated = sorted({item for item in seen if seen.count(item) > 1})
             faults.append(f"{what} repeated: {repeated[:5]}")
 
-    faults.extend(_inadmissible_boards(calendar))
+    faults.extend(_inadmissible_boards(calendar, root))
 
     if faults:
         detail = "".join(f"\n  {fault}" for fault in faults)
         message = f"the calendar is not what it claims:{detail}"
+        raise SystemExit(message)
+
+    # ⚠️⚠️ **The population, not the intake.** `_hardest_target` refuses a thin board on the way in, and
+    # **a filter leaves nothing behind that can be asked afterwards** — it says nothing about the boards
+    # already assigned, and a rule about what may exist always arrives after the inventory does.
+    # `docs/excluded-games.md` names the three places such a rule has to live; this is the third.
+    #
+    # ⚠️ **A package recording no families is a fault, not a skip**: *the absence of the evidence must
+    # not read as the evidence*, which is why `restamp` refuses a board with no admissibility facts too.
+    #
+    # ⚠️⚠️ **Scoped to dates that can still change, and an unscoped version would abort every build for
+    # ever.** §21 is two rules: a *future* date with a defective puzzle is replaced, a *past* one keeps
+    # its assignment and is marked void. A board already served has been played; refusing to build
+    # November because August was thin fixes nothing and stops everything — `CLAUDE.md` records that
+    # shape as the 1964 board halting a production run over a question about a different era.
+    #
+    # ⚠️ **The past ones are said out loud rather than passed over.** They are a finding the operator
+    # acts on with `--replace` or a void, and a check that stayed silent about them would be the reason
+    # nobody ever learns which dates they were.
+    boundary = today if today is not None else serving_date()
+    thin, shipped = [], []
+    for entry in calendar:
+        package = root / entry.assigned / f"{entry.puzzle_id}.json"
+        # ⚠️ **A package that is not there is `_inadmissible_boards`'s fault to report, not this one's.**
+        # It already names a missing file and refuses the run, so raising here would be the same finding
+        # twice — and as a `FileNotFoundError` rather than the sentence that says which date it was.
+        if not package.is_file():
+            continue
+        document = json.loads(package.read_text(encoding="utf-8"))
+        used = document.get("metadata", {}).get("families")
+        if used is None:
+            message = f"{entry.date} names {entry.puzzle_id}, whose package records no families"
+            raise SystemExit(message)
+        if len(used) >= MINIMUM_FAMILIES:
+            continue
+        (thin if date.fromisoformat(entry.date) > boundary else shipped).append(f"{entry.date} ({len(used)})")
+    if shipped:
+        # ⚠️ ASCII only, and this line went out with a warning sign and a section mark on the first
+        # attempt. `test_reports_survive_a_redirected_stream.py` refuses non-ASCII in a print argument
+        # because a redirected stream on Windows is cp1252 — the comment may carry the symbols, the
+        # message may not.
+        _say(f"  already served and under {MINIMUM_FAMILIES} families, kept by rule 21: {', '.join(shipped)}")
+    if thin:
+        message = f"{len(thin)} future dates use fewer than {MINIMUM_FAMILIES} relation families: {', '.join(thin)}"
         raise SystemExit(message)
     _say(f"  audit: {len(pre)} pre-{DIVIDE} of {len(calendar)} (ceiling {allowed}), no repeats")
 
@@ -587,7 +648,7 @@ def _era_plan(days: int, window: list[str], wanted: list[str], calendar: Calenda
     return early, [when for when in wanted if when not in set(early)]
 
 
-def _inadmissible_boards(calendar: Calendar) -> list[str]:
+def _inadmissible_boards(calendar: Calendar, root: Path) -> list[str]:
     """Ask the **shipped population** whether it is clean, from disk and without a database.
 
     ⚠⚠ **This is what a rule living in a `WHERE` clause does not have.** The pool excludes these games
@@ -605,9 +666,8 @@ def _inadmissible_boards(calendar: Calendar) -> list[str]:
     before the facts were recorded, and *the absence of a check must not read as the check passing*.
     """
     faults: list[str] = []
-    inventory = _ROOT / "forge" / "inventory"
     for entry in calendar:
-        package = inventory / entry.assigned / f"{entry.puzzle_id}.json"
+        package = root / entry.assigned / f"{entry.puzzle_id}.json"
         where = f"{entry.date} {entry.puzzle_id}"
         if not package.is_file():
             # ⚠⚠ **A missing package is a fault, never a skip**, and skipping was the first version of
@@ -673,10 +733,9 @@ def republish(key: Ed25519PrivateKey) -> None:
     ⚠️ **Recovery is a command rather than a repair by hand.** The alternative was writing the two
     documents from a shell, which signs them outside the one place that audits first.
     """
-    inventory = _ROOT / "forge" / "inventory"
-    generations = sorted(path for path in inventory.iterdir() if path.is_dir())
+    generations = sorted(path for path in (_ROOT / "forge" / "inventory").iterdir() if path.is_dir())
     if not generations:
-        message = f"no generation under {inventory}"
+        message = f"no generation under {_ROOT / 'forge' / 'inventory'}"
         raise SystemExit(message)
 
     calendar = read(CALENDAR)
@@ -739,10 +798,9 @@ def restamp(key: Ed25519PrivateKey) -> None:
     under the name of a metadata pass.
     """
     calendar = read(CALENDAR)
-    inventory = _ROOT / "forge" / "inventory"
     stale: list[tuple[Entry, Path, dict[str, object]]] = []
     for entry in calendar:
-        path = inventory / entry.assigned / f"{entry.puzzle_id}.json"
+        path = _ROOT / "forge" / "inventory" / entry.assigned / f"{entry.puzzle_id}.json"
         document = json.loads(path.read_text(encoding="utf-8"))
         # ⚠️⚠️ **Two reasons to be stale, and the schema one was missing.** This asked only whether the
         # admissibility facts were recorded, so once they were, the pass reported `0 of 150` and
@@ -865,14 +923,13 @@ def _generation() -> Path:
     first run's packages are its own, and `Entry.assigned` would point two generations at one place. The
     suffix keeps the identity, which is the whole of what a generation is.
     """
-    inventory = _ROOT / "forge" / "inventory"
     stamp = f"gen{int(time.time()):x}"
     for suffix in ("", *ascii_lowercase):
-        out = inventory / f"{stamp}{suffix}"
+        out = _ROOT / "forge" / "inventory" / f"{stamp}{suffix}"
         if not out.exists():
             out.mkdir(parents=True)
             return out
-    message = f"{stamp} and every suffix of it already exist under {inventory}"
+    message = f"{stamp} and every suffix of it already exist under {_ROOT / 'forge' / 'inventory'}"
     raise SystemExit(message)
 
 

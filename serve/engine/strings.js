@@ -386,12 +386,32 @@ const en = {
     "Every time a batter comes to the plate it counts as a plate appearance, whether he hit, "
     + "walked or anything else. So a batter\u2019s PA is his AB plus his walks, plus anything in "
     + "the footnote line. Those are rare. Miss one and nothing will add up.",
+  // ⚠️⚠️ **The operation, not the geometry, and the subject is the player.** This read *It works
+  // downwards to find a total, and upwards to find the one row you are missing*, which had three faults
+  // in one sentence: the grammatical subject was the Totals ROW, so a reader has to reassign it midway —
+  // a row does not work, a person does; *a* total rather than *the* one in that row; and **you are never
+  // missing a ROW, you are missing a value in one**, with "the one" implying exactly one blank, which is
+  // not guaranteed.
+  //
+  // ⚠️ **`Add` and `subtract` rather than `work`.** Up and down is what the player sees; adding and
+  // subtracting is what they do. The step before this one ends *Miss one and nothing will add up*, and
+  // naming the arithmetic keeps the pair in the same voice.
   "tutorial.step.column_sum":
-    "The Totals row is the sum of the rows above it, column by column. It works downwards to find a "
-    + "total, and upwards to find the one row you are missing.",
+    "The Totals row is the sum of the rows above it, column by column. Add downwards when you have the "
+    + "rows, and subtract upwards when you have the total.",
+  // ⚠️⚠️ **It did not say the totals pair up ACROSS the halves.** This read *so their totals have to
+  // agree*, and "agree" is correct English — it is the register of bookkeeping, which is what a boxscore
+  // is. What was wrong is finer and worse: *their totals agree* can be read as **each half being
+  // internally consistent**, when the claim is that this half's H is the same number as that half's H,
+  // and so for all four. That pairing IS the step.
+  //
+  // ⚠️ *each of these totals is the same on both* forces the reading. **`equal` was considered and is a
+  // trap**: it is transitive, so `have to equal` needs an object — `be equal` or `match` — and neither
+  // says across what.
   "tutorial.step.cross_team":
     "A hit by a batter is a hit allowed by the pitcher who threw it. The two halves of this board are "
-    + "the same game seen from opposite sides, so their totals have to agree: H, BB, SO and R.",
+    + "the same game seen from opposite sides, so each of these totals is the same on both: H, BB, SO "
+    + "and R.",
   // ⚠️⚠️ **The conversion leads, and it used to trail.** The board never prints outs — the pitching
   // column is innings pitched — so this relation cannot be used without crossing the two. Read in the
   // old order the player met the rule, agreed with it, and then learned at the last sentence that the
