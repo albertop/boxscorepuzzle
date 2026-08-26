@@ -73,6 +73,31 @@ async () => {
 """
 
 
+def _needs_a_browser() -> None:
+    """Skip where chromium is not installed. ⚠️⚠️ **`docs/ci.md` decided this runs on the hook, not in CI.**
+
+    The reasoning there is sound and its first implementation was not: `ci-forge.yml` skips a
+    `serve/`-only change, so it was said this test would not run in CI — **but the workflow runs whenever
+    `forge/` changes**, which is most of the time, and the runner has no browser binary. `main` went red
+    on `25d7d7f` with `Executable doesn't exist at .../chrome-headless-shell`.
+
+    ⚠️ **A skip, and a LOUD one.** The reason is printed by `-rs` and named in `ci.md`, because a check
+    that quietly does not run is indistinguishable from one that is broken — recorded three times in
+    `CLAUDE.md`. **What makes the skip honest here is that the hook always has the browser**: the machine
+    that gates every push runs it, every time, and CI was never the runner for it.
+
+    ⚠️ It asks the launcher rather than looking for a path. A file that exists is not a browser that
+    starts, and the path differs by platform and by playwright version.
+    """
+    from playwright.sync_api import sync_playwright  # noqa: PLC0415
+
+    try:
+        with sync_playwright() as play:
+            play.chromium.launch().close()
+    except Exception as absent:
+        pytest.skip(f"chromium is not installed here, so this runs on the pre-push hook only: {absent}"[:200])
+
+
 def _free_port() -> int:
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
@@ -90,6 +115,7 @@ def served(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     explanation thrown away. **Keeping it and reading it is what neither version did.**
     """
     pytest.importorskip("playwright.sync_api", reason="playwright is not installed in this environment")
+    _needs_a_browser()
 
     port = _free_port()
     log = tmp_path_factory.mktemp("share-image") / "dev-server.log"

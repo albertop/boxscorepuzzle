@@ -260,6 +260,26 @@ and a server is exactly what that decision put on the laptop.
 of months cannot fail at. This test does not exercise that: it needs a browser binary that the laptop and
 the runner both already have, and its subject is a stylesheet.
 
+### ⚠️⚠️ How it actually behaves in CI — corrected 2026-08-26, after `main` went red
+
+**The paragraph above was right about the decision and wrong about the mechanism**, and the correction
+is worth more than the tidy version.
+
+`ci-forge.yml` skips a **`serve/`-only** change. It does **not** skip a change to `forge/` — which is
+most commits, and certainly any commit that adds a test. So this test *did* run in CI, on the first push
+that carried it, and **failed**: `BrowserType.launch: Executable doesn't exist at
+.../chrome-headless-shell`. The runner installs the playwright *package* from the dev group and has
+never installed a *browser*.
+
+**So it skips where there is no chromium**, with the reason printed. The decision is unchanged — CI does
+not get a browser — and what changed is that the test now says so instead of failing.
+
+⚠️ **A skip is the shape this file is most suspicious of**, and what makes this one honest is that the
+hook *always* has the browser. The machine that gates every push runs it every time; CI was never the
+runner for it. **A skip that means *this runs elsewhere, always* is different from one that means
+*nobody runs this*** — and the difference is only legible if it is written down, which is what this
+paragraph is.
+
 ### ⚠️ The cost, which is real and is not new
 
 **A `git push --no-verify` leaves this test unrun and CI would not see it.** That is true of the whole
