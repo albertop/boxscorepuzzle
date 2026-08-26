@@ -953,6 +953,24 @@ td.label.substitute { padding-left: 14px; }
    ⚠️ **Scoped to `.pointed`, so the phone's footer is untouched.** There the pill is alone beside the
    verdict and is right as it is — this rule cannot reach it, which is the whole reason the pointer is a
    class on `#app` rather than a media query. */
+/* ⚠️⚠️ **The footer sits under the board, not at the foot of the window.**
+
+   `#app` is `height: 100dvh` and `.scroller` is `flex: 1 1 auto`, so the scroller grows to fill the
+   column and pushes the footer to the bottom of the viewport. **On a phone that is invisible** — the
+   board is taller than the screen, so the scroller is already full and the footer lands right under it.
+   On a desktop the board is shorter than the window and the growth becomes a gap: on a 900px-tall
+   screen the three buttons sat roughly 400px below the last row, with nothing in between.
+
+   ⚠️ **`flex: 0 1 auto`, not `flex: none`.** It must still be allowed to SHRINK: a board taller than the
+   window has to scroll inside the scroller as it always has, rather than pushing the footer off-screen.
+   Growing is the only thing being taken away.
+
+   ⚠️ Scoped to `.pointed`, so the phone's column is untouched — the whole reason the pointer is a class
+   on `#app` rather than a media query. */
+.pointed .scroller {
+  flex: 0 1 auto;
+}
+
 .pointed .footer {
   gap: 10px;
   padding: 10px var(--board-margin) calc(10px + env(safe-area-inset-bottom));

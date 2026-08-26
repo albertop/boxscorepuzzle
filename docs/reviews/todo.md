@@ -462,7 +462,13 @@ true when F ships**, and F1.5 in the plan records it. Untouched today by instruc
 localhost-only, and §5 presupposes a serving VPS.
 
 ---
-## ❌❌ 2026-08-23 - `main` has been red in CI for days, and four tests pass here by reading the real signing key
+## ✔ **CLOSED 2026-08-26** — `main` was red in CI for days, and four signing-key tests
+
+**Both halves checked rather than assumed, because the title carries two claims.**
+
+`tests/test_signing_key_acquisition.py` — **9 passed**, including the four named below. And `ci-forge.yml`
+is `success` on the two most recent commits that ran it, `02dcb86` and `bf08896`. ⚠️ It failed on
+`14af383` for an unrelated reason — a runner with no chromium — which is recorded above and fixed.
 
 **Found while checking which workflows a push runs.** The `forge` workflow is `completed/failure` on
 `fc61c9f`, `acb9781` and `e8e77f3` - three consecutive pushes - while the pre-push hook passed on the
@@ -1078,7 +1084,13 @@ is a projection over the old push history, not a measurement.
 
 ---
 
-## 2026-08-22 — ⬜ four copies of one button, made knowingly
+## 2026-08-22 — ✔ **CLOSED 2026-08-26** — four copies of one button, made knowingly
+
+**Closed into `tokens.css`, the only stylesheet all three pages load.** `.app-button` is the button the
+product already had — the tutorial's 50px, 10px radius, 1px rule, 16px — moved rather than redesigned.
+⚠️ The first attempt invented a size by taking `.landing-play`'s measurements, which is the landing's
+HERO and the only control shaped that way; that is recorded in the token's own comment so nobody takes
+the hero for the standard again.
 
 `.reveal-close` was restyled to match the rest of the app — it was the only full-width white-paper
 outline button in the product, on the one screen a player reaches by earning it. It is now the same
@@ -1100,7 +1112,11 @@ halves. **Found in a picture** — every computed style said 50px and agreed wit
 
 ---
 
-## 2026-08-22 — ❌ the first real inventory is 34% pre-1950 against a 5% ceiling
+## 2026-08-22 — ✔ **CLOSED** — the first real inventory is 34% pre-1950 against a 5% ceiling
+
+**Closed by `audit()`, which is what the entry asked for**: the composition is asserted after the build
+rather than reported and believed. The calendar as it stands is **7 pre-1950 of 150 against a ceiling of
+7**, printed by every run.
 
 **§6 is explicit and still decided:** *pre-1950 boards must not exceed 5% of what the player sees* —
 about eighteen a year, so Ruth is **an event rather than the scenery**. The 150-board batch built today
@@ -1196,7 +1212,12 @@ is open, but the answer changes how much §22's four layers are worth in this pi
 
 ---
 
-## 2026-08-22 — ⬜ the 375px cap is three copies and no test
+## 2026-08-22 — ✔ **CLOSED 2026-08-26** — the 375px cap is three copies and no test
+
+**Closed by beta 1's group A, which is the milestone this entry predicted would edit it.** `--board-width`
+is one token in `tokens.css`; `board.css` twice and `landing.css` once read it. `forge/tests/
+test_the_share_image_is_not_the_screen.py` asserts the **rendered** width at a desktop viewport rather
+than reading the stylesheet, and was seen red by setting the token to 900px.
 
 **Measured while writing `beta-0.md`:** at 1400×900 the board holds at 375px, centred, cell 44.8px, table
 359px — identical to 375×812. It does not stretch, which is the requirement beta 0 needs.
@@ -1214,7 +1235,12 @@ that edits exactly this property, and discovering three disagreeing files then i
 
 ---
 
-## 2026-08-22 — ⬜ the share button is drawn and does nothing
+## 2026-08-22 — ✔ **CLOSED** — the share button is drawn and does nothing
+
+**Closed by group G, and verified the way it had to be**: G3 sent the image from a real phone through
+WhatsApp, iMessage and X, and it arrived intact. ⚠️ It has since been broken twice in production and
+fixed twice — a blob URL that tainted the canvas, and a CSS comment containing `<button>` that made the
+SVG invalid. Both are recorded above; the button works and `share-image.js` has tests now.
 
 The reveal now carries a *Share* button beside *Back to the board*, `disabled`, with the three-node web
 share mark. Operator's instruction: put it in the UX now even though it has no use yet.
@@ -1302,7 +1328,11 @@ a leftover is actually removed.
 
 ---
 
-## 2026-08-23 — ⬜⬜ Pack A cannot be built, and the reason is a result about the inventory
+## 2026-08-23 — ✔ **CLOSED** — Pack A cannot be built, and the reason is a result about the inventory
+
+**Closed: Pack A was built on 2026-08-23 and solved on 2026-08-24**, sixteen boards, none guessed. The
+entry below is the record of why the first attempt failed and what the cap that actually held it was —
+kept because it is a result about the inventory rather than a note about a build.
 
 **The pack refused itself: nine boards against a `WANTED` of sixteen.** The audit did exactly what it
 exists for — `CLAUDE.md`: *anything acting as a launch gate is asserted, not printed* — and the refusal
