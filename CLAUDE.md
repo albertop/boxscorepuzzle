@@ -34,8 +34,16 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 
 ⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
 
-**⚠️⚠️ Current milestone: `docs/beta-1.md` — DESKTOP. Opened 2026-08-24. The route is
-`docs/beta-1-plan.md`, five groups, A to E.** One puzzle, a second
+**⚠️⚠️ `docs/beta-1.md` — DESKTOP — ✔ MET 2026-08-26.** The route was `docs/beta-1-plan.md`, five
+groups A to E. ⚠️⚠️ **What it turned out to be is the KEYBOARD.** It opened expecting a desktop layout;
+sixteen widths from 320 to 1920 said there was none to build — from 414 up the board holds 375, nothing
+clips, nothing scrolls sideways, and every extra pixel becomes air, which is §6 already in force. **The
+deliverable was rewritten to say that before it was marked**, the way beta 0's Deliverable B was.
+⚠️⚠️ **And `serve-brief.md`'s central claim survived the one milestone that could have falsified it**:
+both beta 1 commits change `engine/` by zero lines, because everything deciding what a key means already
+lived in `ui/phone/`. `forge/tests/test_the_engine_knows_nothing_about_screens.py` fences that seam and
+names, in its own file, what a list of terms cannot see. ⬜ **B4 — the keypad where there is a keyboard —
+is the one item left open and it blocks nothing.** One puzzle, a second
 interface. **It is the first time `serve-brief.md`'s central claim can be false**: if the engine really
 knows nothing about screens, beta 1 touches `ui/` and nothing under `engine/` — so the diff is the
 evidence, and *`engine/` was not touched* is half of what closes it. ⚠️ **§6 is the rule most likely to

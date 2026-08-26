@@ -1,6 +1,18 @@
-# Beta 1 — desktop
+# Beta 1 — ✔ **MET 2026-08-26**
 
-**The second milestone. Opened 2026-08-24, the day beta 0 was met.**
+**The second milestone. Opened 2026-08-24, the day beta 0 was met, and closed two days later.**
+
+⚠️⚠️ **What it turned out to be is the KEYBOARD, and that is smaller than this file was written to
+promise.** It opened expecting a desktop layout. `/today` was then rendered at sixteen widths from 320 to
+1920: from 414 up the board holds 375, no cell is clipped, nothing scrolls sideways, and every extra
+pixel becomes air. **There was no layout to build** — §6's *desktop gets more whitespace, not more
+content* was already in force. `docs/beta-1-plan.md`'s deliverable was rewritten to say that before it
+was marked.
+
+⚠️⚠️ **And the central claim survived the one milestone that could have falsified it.** Both beta 1
+commits change `engine/` by **zero lines**, because `game.js` already exposed `enter`, `clear`, `blanks`
+and `cells` and `grow` already concatenated — everything deciding what a key means already lived in
+`ui/phone/`. A guard now fences that seam, and it says in its own file what it cannot see.
 
 **One puzzle, a second interface.** `docs/serve-brief.md` says *one puzzle and three interfaces, a core
 that knows nothing about screens*. Beta 0 built the first interface and the core underneath it. **Beta 1

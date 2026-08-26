@@ -15,10 +15,12 @@ it. ⚠️ Where the two differ, this file says so.
 | **A** the width | ✔ **met 2026-08-26** | `--board-width`, three readers, and a test at desktop viewport |
 | **B** the input model | ▶ **B1-B3, B5 met 2026-08-26** | digits, arrows, Enter, and one path to `game.enter`. ⬜ B4, the keypad, is not in this change |
 | **C** the wide screen | ✔ **met 2026-08-26** | ⚠️ **and two of the three needed no code.** C-i is already true, C-ii is *build nothing*, and C-iii's answer is **there is no breakpoint** |
-| **D** every screen reachable | ⬜ **not started** | landing, tutorial, reference, reveal, share |
-| **E** the evidence | ⬜ **not started** | the statement about `engine/` |
+| **D** every screen reachable | ✔ **met 2026-08-26** | ⚠️ **the measurement closed most of it**: there is no new interface to reach. Photographed |
+| **E** the evidence | ✔ **met 2026-08-26** | **`engine/` was not touched**, and a guard now fences the seam |
 
-⚠️ A went first because it blocked C. **What is left is B4, D and E.**
+⚠️⚠️ **BETA 1 IS MET — 2026-08-26**, against the rewritten deliverable below. ⬜ **B4 is the one item
+left open and it blocks nothing**: the keypad still renders where there is a keyboard, and its honest
+detection is *has a fine pointer* rather than *is wide* — which is a decision, not an oversight.
 
 ---
 
@@ -140,25 +142,48 @@ about width.
 
 **Not rebuilt, reached.** Everything beta 0 has must work on the new interface.
 
-- ⬜ **D1.** Landing, tutorial, reference sheet, check, reveal, share, persistence, the event record.
-- ⬜ **D2.** ⚠️ **The share image is 375px wide and that is deliberate** — it is a printed artefact that
+- ✔ **D1.** ⚠️⚠️ **There is no new interface to reach**, which is what C's measurement made of this
+  group. The same 375px board on the same screen, with keys as well as buttons. **Photographed at 1440
+  rather than deduced**: landing, tutorial, the finished board and the reveal each measure 375 wide with
+  533px of air a side, no clipped cell, no sideways scroll.
+  ⚠️ **The first probe reported 1440 for the tutorial** and it was the probe, not the page: the tutorial's
+  root is `#tutorial`, which the selector list did not name, so it fell through to `document.body` — and
+  body is always the viewport. An instrument answering about the wrong subject, one more time.
+- ✔ **D2.** Built before group A, because it is what protected the width token while it moved.
+  ⚠️ **The share image is 375px wide and that is deliberate** — it is a printed artefact that
   travels to other people's phones, and it must not become a desktop screenshot. `share-image.js` draws
   with the board's own renderers, so a desktop layout could silently change what gets shared.
   **A test that rasterises at a desktop viewport and asserts the image is still the phone board.**
-- ⬜ **D3.** The reveal is a printed boxscore. It has more room now, and §6's *whitespace, not content*
-  applies to it too.
-- **Done when:** every route in `ROUTES` works at a desktop viewport, photographed.
+- ✔ **D3.** ⚠️ **It does not have more room.** `.reveal-sheet` reads the same `--board-width`, so the same
+  measurement that answered C-iii answers this: the boxscore is 375 wide at every viewport.
+- ✔ **Met by:** every route photographed at 1440, with the box measured at each.
 
 ---
 
 ## ▶ Group E — the evidence, which is half the deliverable
 
-- ⬜ **E1.** The statement: **`engine/` was not touched**, or an account of exactly what had to change
-  there and why the brief was wrong.
-- ⬜ **E2.** ⚠️ **A guard, so the claim survives the milestone.** Something that fails if a desktop-only
-  concern reaches `engine/`. The survey above says the seam is clean today, which makes now the cheapest
-  moment to fence it.
-- **Done when:** the claim is written, with the diff behind it.
+- ✔ **E1. `engine/` was not touched.** Both beta 1 commits change it by **zero lines**:
+
+  | | | |
+  |---|---|---|
+  | `25d7d7f` | beta 1 groups A, B and C | `engine/`: nothing |
+  | `800c2f8` | wide layout is a class | `engine/`: nothing |
+
+  ⚠️⚠️ **And the reason is concrete rather than lucky.** `game.js` already exposed `enter`, `clear`,
+  `blanks` and `cells`; `grow` in `board.js` already concatenated and capped at two digits for the
+  keypad. **Everything deciding what a key means already lived in `ui/phone/`**, so the keyboard had
+  nothing to ask the engine for. The one `engine/` change of the week is `strings.js` in `438bc1f` —
+  tutorial copy, which is beta 0.
+- ✔ **E2.** `forge/tests/test_the_engine_knows_nothing_about_screens.py`. Seen red three ways: a viewport
+  condition in `game.js`, a `matchMedia` in `game.js`, and the marker removed from `report.js`.
+  ⚠️⚠️ **It is a list of terms and it says so.** It covers the vocabulary a screen is described with;
+  it cannot see a screen concern expressed in words it does not know — a `columns` count, a boolean named
+  `compact` — because *being about a screen* is intent, not text. **The residual is named in the file
+  rather than left to read as the class being closed.**
+  ⚠️ One line is exempt, marked **at the line**: `report.js` records the viewport into an error report,
+  which is recording what the screen was rather than deciding because of it. Exempting by filename would
+  have been the hand-maintained shape again, in a list nobody reading `report.js` would ever see.
+- ✔ **Met.** The claim is written, with the diff behind it.
 
 ⚠️⚠️ **Both outcomes are acceptable and only one is currently believed.** A desktop build that has to
 reach into the engine is `serve-brief.md`'s central claim failing, and it will say so. **The architecture
