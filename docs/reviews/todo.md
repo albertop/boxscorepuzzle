@@ -1,5 +1,37 @@
 # Review backlog
 
+## ⬜ 2026-08-26 - Hypothesis's deadline as a source of false reds. **One instance, counted.**
+
+`test_bounds.py::TestItNeverExcludesTheTruth::test_the_real_value_always_stays_inside_its_domain` failed
+a push with `DeadlineExceeded: Test took 6458.50ms, which exceeds the deadline of 5000.00ms`.
+
+**It was not a logic failure and the commit could not have caused one**: it touched `CLAUDE.md` and this
+file. The machine was running playwright and the browser suite at the same time. **Alone on a free
+machine the sixteen tests in that file pass in 24 seconds**, and the retry pushed the identical commit
+green with nothing edited.
+
+### ⚠️⚠️ Why the exit is noted and not taken
+
+`@settings(deadline=None)` on that test removes it, and **that is exactly the move this project has a
+rule against**: *a threshold set by eye that rejects real data gets loosened until it says nothing, which
+is worse than not having it -- it gives false confidence.* A deadline is a real signal about a property
+test that has started to cost minutes, and turning it off on the first false red spends the signal to
+save one retry.
+
+### ⚠️ What would make it a pattern, so the next person knows the count rather than starting over
+
+**A second false red on an unrelated commit.** Not a second failure of this test -- a second one whose
+*subject could not have caused it*, the way two documents cannot slow down an interval solver.
+
+**At two, take the exit** and record which two they were. At one, the honest reading is that the laptop
+was busy, which it was: the hook runs the whole suite while a browser and a dev server are already up,
+and that is the arrangement rather than an accident.
+
+⚠️ **The count is the point of this row.** Left unwritten, the next person meets their first one, tries
+the retry, and starts the tally at one again -- which is how a recurring flake stays a coincidence for
+ever.
+
+
 ## ⬜ 2026-08-26 - a test that names no device inherits `PHONE()` silently
 
 **Recorded, not built. The default stays and it is correct** -- nearly every test that boots the shell is
