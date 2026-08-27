@@ -64,6 +64,7 @@ from boxscore_forge.publication_key import (  # noqa: E402
     publication_key,
 )
 from boxscore_package.format import Package, read, write  # noqa: E402
+from boxscore_package.format import manifest as manifest_body  # noqa: E402
 from boxscore_package.format import pointer as pointer_body  # noqa: E402
 from boxscore_package.signing import sign_manifest  # noqa: E402
 from boxscore_verify.certify import certify_for_publication  # noqa: E402
@@ -355,9 +356,9 @@ def _publish(staging: Path, expected: int, key: Ed25519PrivateKey, out: Path) ->
     # and is never invoked, one level above the code it protects. A signature per puzzle says each
     # puzzle is genuine; only this says the *set* is, and swapping the manifest for one that points at
     # a retained generation, omits ids or names nothing at all breaks no package signature.
-    document = sign_manifest(
-        {"schema": 1, "generation": generation, "puzzles": sorted(path.stem for path in staged)}, key
-    )
+    # ⚠️ The body comes from `boxscore_package.format`, and `"schema": 1` used to be spelled here while
+    # `build_inventory` held the constant. Two places, one number, nothing comparing them.
+    document = sign_manifest(manifest_body(generation=generation, puzzle_ids=[path.stem for path in staged]), key)
     pending.write_text(json.dumps(document, indent=1, sort_keys=True), encoding="utf-8")
     # The commit. Everything above this line can fail without changing what is published.
     pending.replace(manifest)

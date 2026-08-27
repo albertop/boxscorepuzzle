@@ -48,6 +48,29 @@ version is for: the pointer's shape is what it was, so its number is what it was
 """
 
 
+MANIFEST_SCHEMA: Final = 1
+"""The generation manifest's version. **Its own constant, and separate from `POINTER_SCHEMA`.**
+
+⚠️⚠️ **It lives here for the same reason the pointer's body does: TWO scripts write this document.**
+`build_inventory` had the constant and `write_reference_puzzles` spelled `"schema": 1` by hand -- two
+places encoding one number with nothing comparing them, which is this repository's most-recorded defect.
+
+⚠️ Separate from `POINTER_SCHEMA` because one constant for two documents means a field added to either
+forces a version bump on both: a manifest republished under a version that describes no change to it, and
+a reader obliged to accept a number that means nothing.
+"""
+
+
+def manifest(*, generation: str, puzzle_ids: list[str]) -> dict[str, object]:
+    """A generation manifest's body, unsigned. **The one place its fields and its version are written.**
+
+    ⚠️⚠️ **This is the set-integrity guarantee and it is the only one there is.** A signature per package
+    says each puzzle is genuine; only the manifest says the *set* is. Swapping it for one that points at a
+    retained generation, omits ids, or names nothing at all breaks no package signature.
+    """
+    return {"schema": MANIFEST_SCHEMA, "generation": generation, "puzzles": sorted(puzzle_ids)}
+
+
 def pointer(*, day: str, puzzle_id: str, generation: str) -> dict[str, object]:
     """A dated pointer's body, unsigned. **The one place its fields and its version are written.**
 

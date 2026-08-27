@@ -52,6 +52,7 @@ from datetime import UTC, date, datetime, timedelta
 from itertools import pairwise
 from math import ceil
 from pathlib import Path
+from random import Random
 from string import ascii_lowercase
 
 _ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +84,7 @@ from boxscore_forge.publication_key import publication_key  # noqa: E402
 # rewrites the line it sits on. And **re-run the linter after `--fix`, never before**: the run that said
 # *all checks passed* was describing the file as it was, and the fix is what broke it.
 from boxscore_package.format import SCHEMA_VERSION, Package  # noqa: E402
+from boxscore_package.format import manifest as manifest_body  # noqa: E402
 from boxscore_package.format import pointer as pointer_body  # noqa: E402
 from boxscore_package.format import write as write_package  # noqa: E402
 from boxscore_package.signing import sign_manifest  # noqa: E402
@@ -399,17 +401,6 @@ MANIFEST = "manifest.json"
 """The generation manifest's filename. ⚠️ Named once so `write_manifest` can exclude it from its own
 listing -- a literal spelled twice is how it came to list itself."""
 
-MANIFEST_SCHEMA = 1
-"""The manifest's version. **The manifest only, since 2026-08-24.**
-
-⚠️⚠️ **This named the pointer's version too, and that was a recorded defect before it cost anything.**
-One constant for two documents means a field added to either forces a version bump on both -- so the
-pointer gaining `next_rotation` would have republished every manifest under a version 2 that describes
-no change to it, and a reader checking manifests would have had to accept a number that meant nothing.
-
-`docs/reviews/todo.md` carried it as *two on `MANIFEST_SCHEMA`*; this is where it came due.
-"""
-
 DAYS = "days"
 """Where the per-date pointers go, inside the generation.
 
@@ -499,7 +490,9 @@ def write_manifest(generation: str, out: Path, key: Ed25519PrivateKey) -> int:
     # ⚠️ **A signed claim about the set, wrong about the set**, and wrong in a way that only a second
     # run produces: exactly the shape that survives every test written against a fresh directory.
     ids = sorted(path.stem for path in out.glob("*.json") if path.name != MANIFEST)
-    document = sign_manifest({"generation": generation, "puzzles": ids, "schema": MANIFEST_SCHEMA}, key)
+    # ⚠️ The body comes from `boxscore_package.format`. `write_reference_puzzles` writes this same
+    # document, and the constant lived here while that one spelled the number by hand.
+    document = sign_manifest(manifest_body(generation=generation, puzzle_ids=list(ids)), key)
     (out / MANIFEST).write_text(json.dumps(document, indent=1, sort_keys=True) + "\n", encoding="utf-8")
     return len(ids)
 
@@ -582,7 +575,8 @@ def audit(calendar: Calendar, inventory: Path | None = None, today: date | None 
     # acts on with `--replace` or a void, and a check that stayed silent about them would be the reason
     # nobody ever learns which dates they were.
     boundary = today if today is not None else serving_date()
-    thin, shipped = [], []
+    thin: list[str] = []
+    shipped: list[str] = []
     for entry in calendar:
         package = root / entry.assigned / f"{entry.puzzle_id}.json"
         # ⚠️ **A package that is not there is `_inadmissible_boards`'s fault to report, not this one's.**
@@ -974,7 +968,23 @@ def replace_dates(dates: list[str], key: Ed25519PrivateKey, today: date) -> None
         _say(f"{when}: withdrawing {going.puzzle_id} ({going.game_id}), drawing from {era[0]}-{era[1]}")
         # ⚠️ **A fresh draw per date**, not one sample spread across them: the eras differ board by
         # board here, where a build's two draws each cover many dates.
-        for item in load(REPLACEMENT_DRAW, gated=True, gate=ZERO_DENSITY_GATE, window=era):
+        #
+        # ⚠️⚠️ **Shuffled, because taking the first candidate that works is taking the query's order.**
+        # `load` returns rows the database's way, which clusters by club -- and the loop below stops at
+        # the first board that produces, so it takes whatever sat at the top. **Four of five replacements
+        # on 2026-08-23 came from one club**, which is not a defect in any board and is a calendar less
+        # varied than it should be.
+        #
+        # ⚠️ **Seeded on the date, not on the clock.** A shuffle that varies run to run makes a
+        # replacement irreproducible, and §21 calls the calendar the one artefact that cannot be
+        # regenerated -- so the same date always draws the same order, and different dates draw
+        # different ones. Reproducible and unclustered are not in tension once the seed is the subject.
+        candidates = list(load(REPLACEMENT_DRAW, gated=True, gate=ZERO_DENSITY_GATE, window=era))
+        # ⚠️ `noqa: S311` because the warning is about cryptography and this is a draw order. A
+        # cryptographic generator here would be *worse*: it cannot be seeded reproducibly, which is the
+        # property the paragraph above is buying.
+        Random(when).shuffle(candidates)  # noqa: S311
+        for item in candidates:
             if item.game_id in games(calendar):
                 batch.counts["duplicate game"] += 1
                 continue

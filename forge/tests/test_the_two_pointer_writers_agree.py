@@ -63,3 +63,41 @@ def test_the_body_carries_every_field_a_pointer_needs() -> None:
     body = pointer(day="2026-09-02", puzzle_id="abc123", generation="deadbeef")
     assert set(body) == {"date", "generation", "puzzle_id", "schema"}
     assert body["schema"] == POINTER_SCHEMA
+
+
+def test_neither_writer_spells_the_manifest_body_itself() -> None:
+    """⚠️⚠️ **Same shape as the pointer, one document over, and it outlived that repair.**
+
+    `build_inventory` held `MANIFEST_SCHEMA = 1` and `write_reference_puzzles` wrote `"schema": 1` by
+    hand -- two places encoding one number with nothing comparing them. `docs/reviews/todo.md` carried it
+    as *two on MANIFEST_SCHEMA* from 2026-08-23.
+
+    ⚠️ The manifest is the **set-integrity guarantee**: a signature per package says each puzzle is
+    genuine, only this says the set is. A version that means different things in the two writers is a
+    reader accepting a number nobody agrees on.
+    """
+    for name in ("build_inventory", "write_reference_puzzles"):
+        source = (_SCRIPTS / f"{name}.py").read_text(encoding="utf-8")
+        assert '"puzzles":' not in source, (
+            f"{name}.py spells a manifest field itself; the body belongs to boxscore_package.format.manifest"
+        )
+        assert "MANIFEST_SCHEMA" not in source, (
+            f"{name}.py names MANIFEST_SCHEMA; it is `boxscore_package.format`'s and imported from there"
+        )
+
+
+def test_the_manifest_body_carries_every_field_and_no_date() -> None:
+    """⚠️ And what it must contain, plus the one thing it must not.
+
+    `write_pointers` exists because a manifest listing every id is a leak (A4.2) -- so this document
+    stays inside the generation and never reaches the served root. A **date** on it would make it a
+    schedule as well as an inventory.
+    """
+    from boxscore_package.format import MANIFEST_SCHEMA, manifest  # noqa: PLC0415
+
+    body = manifest(generation="gen0", puzzle_ids=["b", "a"])
+
+    assert set(body) == {"schema", "generation", "puzzles"}
+    assert body["schema"] == MANIFEST_SCHEMA
+    # ⚠️ Sorted, so two runs over the same set produce the same bytes and the same signature.
+    assert body["puzzles"] == ["a", "b"]
