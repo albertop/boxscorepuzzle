@@ -15,7 +15,6 @@ as though the footnote columns are decoration.
 import os
 import re
 from collections.abc import Iterator
-from datetime import timedelta
 from pathlib import Path
 
 import pytest
@@ -32,17 +31,32 @@ from boxscore_forge.boxscore import (
 
 # Composite generation of a whole balanced boxscore is not fast, and a per-example deadline tuned
 # for trivial strategies turns into a flaky failure that says nothing about the code.
-settings.register_profile("forge", deadline=timedelta(seconds=5))
-
-# ⚠⚠ **No deadline on a shared runner, because a deadline is an assertion about *performance* and a
-# shared runner cannot support one.** The Windows job failed on
-# `DeadlineExceeded: Test took 6362.99ms` against this 5s limit — on a machine where the whole suite
-# took 18m25s against 80s on the laptop and 4m on the Linux runner. Nothing about the code was slower;
-# the machine was. Keeping the deadline there would make the build fail on the runner's mood, and a
-# check that fires on noise is one people learn to re-run rather than read.
 #
-# ⚠️ **The deadline stays on locally, which is the point of it.** A test that suddenly takes six
-# seconds on the laptop is a finding. `CI` is set by GitHub Actions and by essentially every runner.
+# ⚠⚠ **No deadline anywhere, and the second half of that is new on 2026-08-26.**
+#
+# It came off the shared runner first, and the reason was right: **a deadline is an assertion about
+# PERFORMANCE and a machine you do not control cannot support one.** The Windows job failed on
+# `DeadlineExceeded: Test took 6362.99ms` against a 5s limit, on a machine where the whole suite took
+# 18m25s against 80s on the laptop. Nothing about the code was slower; the machine was.
+#
+# ⚠️⚠️ **It stayed on locally because the laptop was the quiet machine, and it is not one.** On
+# 2026-08-26 the same test failed a push at **6458ms**, on a commit that touched two Markdown documents
+# and could not have slowed an interval solver. The laptop was running playwright, a dev server and the
+# browser suite while the pre-push hook ran the whole Python suite — **which is the ordinary working
+# arrangement here, not an accident.** `docs/ci.md` records the hook as the primary runner precisely
+# because everything runs on this one machine.
+#
+# **So the premise the local deadline rested on was false, and the same sentence that removed it from CI
+# removes it here.** A threshold that rejects real data gets loosened until it says nothing; this one is
+# taken out rather than widened, because widening would have been guessing at a number no measurement
+# supports (§7).
+#
+# ⚠️ **What is lost, said plainly rather than papered over:** *a test that suddenly takes six seconds is
+# a finding* was true, and nothing replaces it. **What remains is the suite's own wall time**, which the
+# hook prints on every push and which a real regression moves visibly — 80 seconds is the figure to
+# notice changing. That is coarser than a per-example deadline and it is the signal this arrangement can
+# actually carry.
+settings.register_profile("forge", deadline=None)
 settings.register_profile("ci", deadline=None)
 settings.load_profile("ci" if os.environ.get("CI") else "forge")
 
