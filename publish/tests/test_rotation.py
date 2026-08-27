@@ -13,6 +13,7 @@ rotation that never removes anything. Every assertion below is on the **set**, o
 """
 
 import json
+import re
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -355,3 +356,86 @@ class TestWhatARefusedPointerLooksLike:
 
         with pytest.raises(RotationError, match="a pointer names"):
             rotate(inventory, tmp_path / "public", _FIRST + timedelta(days=1))
+
+
+class TestItRefusesWhatTheClientCannotRead:
+    """v42-P2-02. **The comparison the health verdict makes, made early enough to prevent it.**
+
+    ⚠️⚠️ **The property under test is not *it complains*, it is *nothing was written*.** A refusal that
+    raises after the copy is a report with a refusal's exit code, and the two are indistinguishable from
+    the exit status alone -- which is this project's own *an exit code answers did this finish, never did
+    it do the thing you wanted*. Every case below asserts on the **public directory**.
+
+    ⚠️ **Seen red both ways**: with the call to `_refuse_what_the_client_cannot_read` removed, the first
+    two report `{'p20260901', 'p20260831'}` published under a client that reads 5; with the `readable is
+    None` guard removed, the unreachable-client case dies with `TypeError` instead of publishing.
+    """
+
+    def test_a_package_the_client_cannot_parse_is_not_published_at_all(self, tmp_path: Path) -> None:
+        inventory = _inventory(tmp_path, days=2)
+        public = tmp_path / "public"
+
+        with pytest.raises(RotationError, match=re.escape("schema 6 and the deployed client reads [5]")):
+            rotate(inventory, public, _FIRST + timedelta(days=1), readable={5})
+
+        # ⚠️ Not `public.glob(...) == set()`: the directory must not have been *made*. `mkdir` happens
+        # after the check, and a rotation that creates an empty served path has already changed the site.
+        assert not public.exists()
+
+    def test_it_names_the_day_the_schema_and_what_the_client_reads(self, tmp_path: Path) -> None:
+        """⚠️ The operator reads one Ofelia log line and has to act on it. *Refused* is not actionable;
+        *today is 6, the client reads 5* says which of the two images is behind."""
+        inventory = _inventory(tmp_path, days=2)
+
+        with pytest.raises(RotationError) as refusal:
+            rotate(inventory, tmp_path / "public", _FIRST + timedelta(days=1), readable={4, 5})
+
+        said = str(refusal.value)
+        assert "today" in said
+        assert (_FIRST + timedelta(days=1)).isoformat() in said
+        assert "schema 6" in said
+        assert "[4, 5]" in said
+
+    def test_yesterday_being_unreadable_refuses_too(self, tmp_path: Path) -> None:
+        """⚠️ Yesterday is served and playable, so a board the client cannot parse is a dead page there
+        as much as on today. The first version checked `TODAY` only."""
+        inventory = _inventory(tmp_path, days=2)
+        when = _FIRST + timedelta(days=1)
+        today = json.loads((inventory / "gen1" / f"p{when.isoformat().replace('-', '')}.json").read_text())
+        today["schema"] = 5
+        (inventory / "gen1" / f"p{when.isoformat().replace('-', '')}.json").write_text(json.dumps(today))
+
+        with pytest.raises(RotationError, match="yesterday"):
+            rotate(inventory, tmp_path / "public", when, readable={5})
+
+    def test_a_readable_schema_publishes_exactly_as_before(self, tmp_path: Path) -> None:
+        inventory = _inventory(tmp_path, days=2)
+        public = tmp_path / "public"
+
+        rotation = rotate(inventory, public, _FIRST + timedelta(days=1), readable={6})
+
+        assert len(_public_packages(public)) == PUBLIC_LIMIT
+        assert len(rotation.published) == PUBLIC_LIMIT
+
+    def test_a_client_that_could_not_be_asked_publishes_rather_than_blocking_the_day(self, tmp_path: Path) -> None:
+        """⚠️⚠️ **The 1964-board case.** A question this cannot answer -- the client unreachable, its
+        literal moved -- must not stop the game for ever. `None` is *unknown*, never *forbidden*."""
+        inventory = _inventory(tmp_path, days=2)
+        public = tmp_path / "public"
+
+        rotate(inventory, public, _FIRST + timedelta(days=1), readable=None)
+
+        assert len(_public_packages(public)) == PUBLIC_LIMIT
+
+    def test_a_package_with_no_schema_is_left_to_the_boundary_that_owns_it(self, tmp_path: Path) -> None:
+        """⚠️ One rule, one place. A malformed package is `boxscore_package`'s to refuse where it is
+        written; a second weaker opinion here is two places encoding one thing."""
+        inventory = _inventory(tmp_path, days=2)
+        when = _FIRST + timedelta(days=1)
+        package = inventory / "gen1" / f"p{when.isoformat().replace('-', '')}.json"
+        package.write_text(json.dumps({"puzzle_id": package.stem}))
+        public = tmp_path / "public"
+
+        rotate(inventory, public, when, readable={6})
+
+        assert len(_public_packages(public)) == PUBLIC_LIMIT

@@ -128,8 +128,24 @@ PENDING = ".pending"
 package is not picked up by the `*.json` sweep as a real one -- and the sweep removes any it finds."""
 
 
-def rotate(inventory: Path, public: Path, when: date) -> Rotation:
+def rotate(inventory: Path, public: Path, when: date, readable: set[int] | None = None) -> Rotation:
     """Make `when` and the day before public, and **remove everything else**.
+
+    ⚠️⚠️ **`readable` is the deployed client's `READABLE`, and it makes this refuse rather than report.**
+    v42-P2-02: the health verdict compares the served packages against the client that has to parse them,
+    and it runs **after** this — so it describes a state it can no longer prevent, at 08:15 UTC with
+    nobody watching. Passing the set here moves the comparison in front of the first `_place`, and a
+    rotation that would publish an unreadable board **does not happen**: players keep yesterday's board,
+    which is readable, and `inspect` then says *the rotation has not run* — loud, and true.
+
+    ⚠️ **It closes one of the two orders, and only one exists to close.** *Packages ahead of the client*
+    is this job's own doing and is stopped here. *Client ahead of packages* is an image being deployed,
+    which does not run `publish` at all and cannot be reached from inside it.
+
+    ⚠️⚠️ **`None` publishes.** A client that could not be fetched, or whose literal has moved, is a
+    question this cannot answer — and blocking every rotation for ever on an unanswerable question is the
+    1964-board abort `CLAUDE.md` records: *scope the loud failure to where the answer could actually
+    differ.* Only a package whose schema is known and is **not** in a known set is refused.
 
     ⚠️⚠️ **Built by difference, not by deletion of a remembered third day.** The first shape of this was
     *delete the day before yesterday* — which leaves anything the previous run failed to remove in place
@@ -150,6 +166,10 @@ def rotate(inventory: Path, public: Path, when: date) -> Rotation:
                 raise RotationError(message)
             continue
         pointers[label] = (day, found, _package(inventory, found))
+
+    # ⚠️ Before `mkdir`, before the first `_place`: a refusal that has already written something is a
+    # report wearing a refusal's exit code.
+    _refuse_what_the_client_cannot_read(pointers, readable)
 
     public.mkdir(parents=True, exist_ok=True)
     wanted = {source.name for _day, _pointer_doc, source in pointers.values()}
@@ -231,3 +251,28 @@ def _place(destination: Path, content: bytes) -> None:
     except OSError:
         pending.unlink(missing_ok=True)
         raise
+
+
+def _refuse_what_the_client_cannot_read(
+    pointers: dict[str, tuple[date, dict[str, object], Path]],
+    readable: set[int] | None,
+) -> None:
+    """Raise if any package about to be published carries a schema the deployed client refuses.
+
+    ⚠️ **A package whose `schema` is missing or is not an integer is NOT refused here.** That is a
+    malformed package, which is a different fault with a different owner — `boxscore_package` validates at
+    the boundary where it is written, and inventing a second, weaker opinion about it in the rotation
+    means two places encoding one rule. This one answers exactly one question: *does the client read this
+    number?*
+    """
+    if readable is None:
+        return
+    for label, (day, _pointer_doc, source) in sorted(pointers.items()):
+        schema = json.loads(source.read_text(encoding="utf-8")).get("schema")
+        if not isinstance(schema, int) or schema in readable:
+            continue
+        message = (
+            f"{label} ({day.isoformat()}) is package schema {schema} and the deployed client reads "
+            f"{sorted(readable)}; refusing to publish a board it cannot parse"
+        )
+        raise RotationError(message)

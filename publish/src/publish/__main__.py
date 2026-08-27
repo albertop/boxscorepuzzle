@@ -18,7 +18,7 @@ import argparse
 from datetime import date
 from pathlib import Path
 
-from publish.health import DEFAULT_CLIENT, inspect
+from publish.health import DEFAULT_CLIENT, inspect, readable_versions
 from publish.rotate import RotationError, rotate, serving_date
 
 
@@ -37,8 +37,14 @@ def main() -> None:
     arguments = parser.parse_args()
 
     when = date.fromisoformat(arguments.date) if arguments.date else serving_date()
+
+    # ⚠️⚠️ **Asked before rotating, so the answer can still stop it.** v42-P2-02. `inspect()` below asks
+    # the same question of the same client and reports; this one refuses. `None` — an unreachable client,
+    # a literal that has moved — publishes and lets the verdict speak, which is what this did for both
+    # cases before today.
+    readable = readable_versions(arguments.client)
     try:
-        rotation = rotate(arguments.inventory, arguments.public, when)
+        rotation = rotate(arguments.inventory, arguments.public, when, readable)
     except RotationError as error:
         # ⚠️ A refusal is the message and a non-zero exit, never a traceback: this runs unattended and
         # the operator reads a log line. `docs/beta-0-plan.md` A5.2 requires every step to say what it

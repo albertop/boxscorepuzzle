@@ -115,6 +115,29 @@ def inspect(public: Path, today: date, client: str = DEFAULT_CLIENT) -> Verdict:
     return Verdict(healthy=not faults, faults=tuple(faults))
 
 
+def readable_versions(client: str) -> set[int] | None:
+    """The package schemas the deployed client accepts, or `None` when it cannot be asked.
+
+    ⚠️⚠️ **This exists so the rotation can refuse BEFORE it writes**, which the health verdict cannot do:
+    `inspect()` runs after `rotate()`, so by the time it compares anything the mismatched package is
+    already on the public path and already being served. **A report about a state it can no longer refuse
+    is the orphan-count shape**, and `docs/reviews/todo.md` carried it as such.
+
+    ⚠️ **`None` means the question could not be answered, and that is NOT the same as a refusal.** A
+    client that cannot be reached, or one whose `READABLE` literal has moved, must not stop a rotation:
+    `CLAUDE.md` records the 1964 board halting a production run over a question about a different era —
+    *scope the loud failure to where the answer could actually differ*. The caller publishes and lets the
+    verdict report it, which is what today already does.
+    """
+    source = _read_client(client)
+    if source is None:
+        return None
+    readable = re.search(r"const READABLE = \[([\d,\s]*)\]", source)
+    if readable is None or not readable[1].strip():
+        return None
+    return {int(one) for one in readable[1].split(",") if one.strip()}
+
+
 def _read_client(client: str) -> str | None:
     """The deployed `package.js`, from a URL or a path. `None` when it is not there.
 
