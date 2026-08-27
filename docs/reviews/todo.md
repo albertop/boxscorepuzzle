@@ -1,5 +1,117 @@
 # Review backlog
 
+## ⚠️⚠️ 2026-08-26 - **CORRECTION.** A client ahead of its packages is a DEAD SITE, not a frozen board
+
+**This supersedes what was recorded when the pre-flight refusal was built, hours earlier in the same
+day.** The earlier version was not wrong about anything it stated; it was **incomplete in the direction
+that matters**, and the incompleteness read as reassurance.
+
+### What was said, and what is true
+
+The refusal was described as closing one of the two mismatch orders — *packages ahead of the client* —
+and the other order as *cannot be closed from here, because loading an image does not run `publish`*.
+**Both sentences are still true.** What neither said is **what the site is doing meanwhile**, and that
+is the whole of the correction.
+
+**Measured, not reasoned.** A real rotation at schema 6 with a client reading 6, then `serve` alone
+deployed at schema 7 and nothing else touched:
+
+```
+rotation exit : 1
+              rotation refused: today.json (2026-09-02) is package schema 6 and the
+              deployed client reads [7]; refusing to publish a board it cannot parse
+verdict       : healthy=False
+  - p20260901.json is schema 6 and the deployed client reads [7]; every board is a controlled rejection
+  - p20260902.json is schema 6 and the deployed client reads [7]; every board is a controlled rejection
+```
+
+**Both already-public boards are unreadable.** Not the one that was about to be published — the ones
+that are being served right now. In that direction the site is **already dead before the rotation has
+an opinion**, and the refusal neither causes it nor can fix it: what is public is the old schema, and
+the new client accepts only the new one.
+
+### ⚠️⚠️ Why this matters more than a wording fix
+
+**The reassuring reading was that a refusal trades a dead board for yesterday's board.** That is true of
+*packages ahead of the client* **and only while the public path still holds packages the client can
+read** — which is the ordinary case there, because the new schema never got published. It is **never**
+true of *client ahead of packages*: there is no readable fallback on the public path at all.
+
+So the two orders are not *one closed, one open*. They are:
+
+| | what the refusal does | what the player sees |
+|---|---|---|
+| packages ahead of client | stops the publish | **yesterday's board, readable** — frozen, alive |
+| client ahead of packages | stops a publish that would not have helped | **every board dead**, already, from the moment `serve` deployed |
+
+⚠️ **`CLAUDE.md` had the general form right all along** — *push either one alone and every board dies,
+in whichever direction the mismatch runs* — and the per-direction note written when the refusal was
+built softened it without meaning to, by describing what the refusal prevents and not what remains.
+**A true sentence about the mechanism, standing next to nothing about the outcome, reads as the outcome
+being fine.**
+
+### What it changes about deploying
+
+**Nothing today.** `SCHEMA_VERSION` is 6, the client's `READABLE` is `[6]`, and both public packages are
+6. The refusal branch cannot run for this cause on the current tree.
+
+**At the next schema change it changes the ORDER.** Deploying `serve` first is not the cautious half of
+the pair: it kills the site immediately and the rotation cannot rescue it. Deploying `publish` first
+freezes the daily and leaves a readable board up. **Neither is safe — there is only a short window — but
+they are not symmetric, and the earlier note implied they were.**
+
+⚠️ Superseded, not deleted: the earlier per-direction paragraphs stay where they are, in the v42-P2-02
+closure below and in `publish/src/publish/rotate.py`'s docstring. They are accurate about the mechanism
+and this is the record of what they left out.
+
+## ⚠️⚠️ 2026-08-26 - the refusal branch does not read the health verdict. **NOT A DEFECT — do not "fix" it**
+
+**Written to stop this being re-detected as a gap and closed with the wrong remedy.** It looks like an
+omission from every angle: `__main__.py` raises `SystemExit` on `RotationError` **before reaching
+`inspect()`**, so in the one path where the verdict seems to matter most, nobody reads it. The obvious
+patch is four lines. **Do not apply it**, and the reason is not that it would break something.
+
+### ⚠️⚠️ It is the *remedy that makes a symptom rarer* shape, which is the hardest wrong answer here
+
+`CLAUDE.md` records it: **a remedy aimed at a threshold is confirmed by the same evidence as one that
+removes the cause.** Reading the verdict in the refusal branch would test green, and the commit message
+would say the halted daily now reports itself. It would be true and it would be one day of a permanent
+problem.
+
+**The halted daily ALREADY HAS A VOICE, and it is the verdict's own.** Measured against a public path
+holding a perfect rotation for the wrong day, with the client in step so only the date is wrong:
+
+| asked about | |
+|---|---|
+| the day it rotated | `healthy=True` |
+| **one day later** | `today.json names 2026-09-02 and today is 2026-09-03; **the rotation has not run**` |
+| thirty days later | the same sentence, still true |
+
+So the signal exists, it is exact, and **it arrives on its own the next morning** — from any `inspect()`
+over the public path, whoever calls it. The refusal does not need to speak about a future it cannot see.
+
+### What is actually missing, and it is a different item
+
+**Nobody queries health.** That is F3, and it is an endpoint somebody or something asks, not a branch in
+a process that has already exited. Putting the verdict in the refusal branch moves the symptom **one day
+earlier** and leaves *nobody asks* exactly where it was — while making it look addressed, which is worse
+than leaving it visible, because a closed finding stops being looked at.
+
+⚠️ **And the honest note on what a refusal costs.** A mismatch that serves is a blank board, reported in
+hours. A refusal that halts the daily **looks fine and is frozen** — the site is up, the board loads, it
+is yesterday's. Those are different failures and only one of them is noticed without being asked. That is
+an argument for F3, not for this patch.
+
+### ⚠️ Two smaller facts, so nobody has to re-derive them
+
+- **Reading the verdict changes nothing about what `rotate()` does.** It has already raised; no file is
+  opened; the `mtime`s do not move. What changes is in `main()`: two true statements would compete for one
+  `SystemExit`, and exit code `1` would stop meaning *I refused* and start meaning *I refused **or** what
+  is served is unhealthy*.
+- **Against a public path that was never created, `inspect()` says
+  `... is not a directory; nothing is being served`.** It does not go quiet over nothing — asked, not
+  assumed — but on an existing deployment that state cannot arise.
+
 ## ✔ 2026-08-26 - v44-P2-01: the runbook kept both pre-container publisher commands. **CLOSED 2026-08-26**
 
 **It is my own v43 fix applied to the instance rather than to the category, found by the next review an
@@ -359,6 +471,11 @@ unreachable-client case dies with `TypeError` instead of publishing.
 ⚠️⚠️ **The other order is still open and cannot be closed from here.** *Client ahead of packages* is an
 image deployment, which never runs `publish`. The health verdict remains the only thing that sees it.
 
+⚠️⚠️ **SUPERSEDED the same day — see the correction at the top of this file.** The paragraph above is
+accurate about the mechanism and silent about the outcome, which reads as the outcome being acceptable.
+It is not: in that direction **every already-public board is unreadable too**, so the site is dead before
+the rotation has an opinion. Kept unedited because it is the record of how the question was framed.
+
 **Recorded, not built.**
 
 `__main__.py` calls `inspect()` **after** `rotate()`. By the time the client-can-read-this comparison
@@ -373,7 +490,9 @@ publishing schema N+1 into a volume served by a client that reads N -- is the or
 08:15 UTC with nobody watching**, and a pre-flight read of the deployed `READABLE` would stop it: the
 day does not rotate, players keep yesterday's readable board, and `inspect` then says *the rotation has
 not run*, which is loud and true. *Client ahead of packages* cannot be closed from here at all, because
-loading an image does not run `publish`.
+loading an image does not run `publish`. ⚠️ **And it is worse than this sentence suggests — superseded,
+see the correction at the top of this file: in that direction the already-public boards are unreadable
+as well, so there is no readable fallback for the refusal to preserve.**
 
 ⚠️ **It must be scoped or it becomes the 1964-board abort.** A refusal on *this package's schema* is
 right; a refusal because the reader could not be found or parsed is a check that cannot answer blocking
