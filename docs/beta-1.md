@@ -142,8 +142,8 @@ be asked cleanly.
 | | |
 |---|---|
 | **Beta 0** | ✔ **met 2026-08-24** — the free daily, complete, on the VPS |
-| **Beta 1** | ▶ **open** — desktop |
-| **Beta 2** | tablet |
+| **Beta 1** | ✔ **met 2026-08-26** — desktop, which turned out to be the keyboard |
+| **Beta 2** | ▶ **open** — tablet. `docs/beta-2.md`, and `docs/beta-2-plan.md` for the route |
 | **Beta 3** | Stripe, accounts, subscription |
 
 ⚠️ **Each milestone has its successor named so nothing drifts into the wrong one.** The failure this

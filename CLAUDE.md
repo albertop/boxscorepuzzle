@@ -34,6 +34,34 @@ one nobody would think of, because `serve` can be perfectly up with an empty puz
 
 ⚠️ **Two rules in it are easy to break by accident and expensive to undo.** The board **never** says which cells are wrong or how many — marking makes probing beat deducing, and a count is a binary search over the board. And the stored clock is an **accumulated duration, never a start timestamp**, because the clock pauses when the page is hidden.
 
+**⚠️⚠️ `docs/beta-2.md` — TABLET — ▶ OPEN, from 2026-08-26.** The route is `docs/beta-2-plan.md`,
+five groups A to E, and **it is the authority on progress.**
+
+⚠️⚠️ **Unlike beta 1, the measurement was taken BEFORE the plan and it found something.** Eight tablet
+viewports in a **touch** context, both orientations, plus the two iPadOS multitasking widths: **the board
+already fits without scrolling in portrait everywhere**, and **scrolls in landscape on all three iPads** —
+short by 366, 290 and 86 px — while 379 to 496 px sit empty on *each* side. Beta 1's sweep could not have
+found it: it measured **width on a desktop profile**, and the tablet promise is about **height, on a touch
+device, in an orientation it never set**.
+
+⚠️ **The chrome is a constant 312 px on all three, so Group C is arithmetic, not opinion.** Moving the
+keypad beside the board returns exactly its 156 px — which **makes the 12.9 fit and leaves the 10.9 short
+by 134 and the mini by 210.** So C is blocked on a decision nobody has taken (is a scrolling landscape
+board a defect at all, when §6 pins the header and totals *during scroll*?), not on code. **Building it
+and reporting the brief's promise met would be true of one iPad and false of the one most people own.**
+
+⚠️⚠️ **Group A is a defect rather than a layout, and it is the first thing.** A tablet is the one device
+whose input model changes while the game is open. `followPointer` keeps the class current so the CSS
+re-lays, but `shell.js` picks the pad or the typed controls **once, at boot** — so **detaching a keyboard
+mid-game leaves no pad and no keyboard, and the player cannot enter a number until they reload.** It was a
+correct non-finding in v43 because on a phone or a desktop it cannot happen. On a tablet it is the normal
+path.
+
+⚠️ **The claim beta 2 tests is §6, not beta 1's.** *The engine knows nothing about screens* was settled —
+six commits, one comment in `engine/` — and re-quoting it here would be asserting a necessary condition
+where a sufficient one is needed. Beta 2's is: **the board is identical on all screens; a tablet gets a
+different arrangement around it, never different content in it.**
+
 **⚠️⚠️ `docs/beta-1.md` — DESKTOP — ✔ MET 2026-08-26.** The route was `docs/beta-1-plan.md`, five
 groups A to E. ⚠️⚠️ **What it turned out to be is the KEYBOARD.** It opened expecting a desktop layout;
 sixteen widths from 320 to 1920 said there was none to build — from 414 up the board holds 375, nothing
