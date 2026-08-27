@@ -73,15 +73,17 @@ were never only about width.**
 
 ## What beta 1 is
 
-⬜ **The board, playable with a keyboard**, at desktop widths, with the same six columns and the same
-rules.
+✔ **The board, playable with a keyboard**, at desktop widths, with the same six columns and the same
+rules. ⚠️ **The board did not change** — sixteen widths from 320 to 1920 said there was no layout to
+build, and §6 is what that is: the same board on every screen, the surplus becoming air.
 
-⬜ **The keypad's replacement.** Digits type; arrows move; something clears a cell; something checks. The
-phone's on-screen keypad has no reason to exist where there is a keyboard, and leaving it there is the
-phone board on a bigger screen.
+✔ **The keypad's replacement — `3cc1ab1`.** Digits type; arrows walk blank cells only; Backspace and
+Delete clear; Escape deselects; **Enter confirms and moves on rather than Checking**, because `Check`
+records a failed attempt on the C7 record and one keystroke from a commitment is a commitment pressed by
+accident. The pad is gone where there is a fine pointer and hover.
 
-⬜ **Everything beta 0 has, on the new interface**: landing, tutorial, reference sheet, check, reveal,
-share, persistence, the event record. Not rebuilt — reached.
+✔ **Everything beta 0 has, on the new interface**: landing, tutorial, reference sheet, check, reveal,
+share, persistence, the event record. Not rebuilt — reached, and photographed at 1440.
 
 ---
 
@@ -94,10 +96,21 @@ reads as decided.
 - ⬜ **What a desktop screen shows beside the board.** §6 says more whitespace rather than more content,
   which settles the *board* and says nothing about what surrounds it. The reserved slots of C9 are the
   obvious candidate and *none during play* is already the rule there.
-- ⬜ **Whether the mouse is a first-class input or a fallback.** A keyboard-first board that can also be
-  clicked and a board with two equal input models are different products to build and to test.
-- ⬜ **Where the breakpoint is**, and whether there is one at all. See the width note below — the number
-  that exists today is spelled three times and asserted nowhere.
+- ⚠️⚠️ **Whether the mouse is a first-class input or a fallback — still open, and the code has taken a
+  position without a decision being made.** On a pointed device the pad is gone and the keyboard types,
+  **but cells are still selected by clicking**, because `select()` was never touched. That is *keyboard
+  for values, mouse for navigation*, which is a third answer neither of the two this line offers. It works
+  and nobody chose it. **Left open on purpose rather than declared met**: writing it down as decided would
+  be inventing a product decision (§7), and the honest state is that the implementation is ahead of the
+  decision.
+- ✔ **Where the breakpoint is — ANSWERED 2026-08-26, and the answer is that there is none.** `/today`
+  was rendered at sixteen widths from 320 to 1920 and asked at each for `#app`'s box, the grid's box, the
+  air either side, and whether any cell's text overflowed its own box. **From 414 up the board holds 375,
+  nothing clips, nothing scrolls sideways, and every extra pixel becomes air** — which is §6 already in
+  force. So there is no number to put in `--wide-from`, and inventing one would be the forbidden parameter
+  (§7): a value that shapes the product and came from nobody's measurement.
+  ⚠️ **The machinery stays and the token stays undeclared**, because the question can be reopened and
+  because a class is what makes a media query refusable — `wide.js` carries the table.
 
 ---
 

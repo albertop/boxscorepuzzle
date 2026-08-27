@@ -741,10 +741,13 @@ because rolling back and reporting success would make a lost write look like a s
 would drop it from its queue on the strength of that. The column's range is checked at the boundary too,
 so the ordinary cause never reaches the driver.
 
-⬜ **What is still missing there, and it is the operator's call:** `CLAUDE.md` asks for a *sanity check
-on client-reported durations so absurd values do not corrupt percentiles*. What exists is the column's
-range — twenty-five days — which is a fact about the schema rather than a judgement about the game. A
-ceiling on plausible play is a number that shapes the product (§7).
+✔ **Closed 2026-08-26 — the operator's number: eight hours.** `DURATION_CEILING_MS` in
+`keep/src/keep/reading.py`, and **a value past it is CLAMPED rather than refused** — deliberately the
+opposite of the `LARGEST_STORED_INTEGER` check three lines below it. An absurd duration is a broken
+clock, not a broken client: refusing it would throw away a real game somebody played, so the game is
+kept and its duration is capped at the ceiling. §27 makes the puzzle playable all day and pauses the
+clock while the page is hidden, so eight hours of *visible* play is far past anything real and well
+short of a tab left open.
 
 ⬜ **What is not built here and belongs to F:** the Dockerfile, and the container running with its port
 unpublished.
@@ -1215,8 +1218,8 @@ same defect one level down, and there was one here.
 | | whose call |
 |---|---|
 | ⬜ **B3's N and stratum quotas** | the operator's. **It gates beta 0** |
-| ⬜ **A plausible ceiling on a reported duration** | the operator's (§7). `CLAUDE.md` asks for the sanity check and it does not exist; what `keep` has is the column's range, which is twenty-five days. `docs/reviews/todo.md` |
-| ⬜ **Event retention** | indefinite because nobody has decided otherwise, recorded so the absence is not read as a decision (`docs/keep-api.md`) |
+| ✔ **A plausible ceiling on a reported duration** | **eight hours, decided 2026-08-26** — `DURATION_CEILING_MS` in `keep/src/keep/reading.py`, **clamped rather than refused**: an absurd duration is a broken clock and the game behind it was really played. The column's range is a separate check and stays |
+| ✔ **Event retention** | **730 days, decided 2026-08-26** — `RETENTION_DAYS` in `keep/src/keep/purge.py`, swept nightly with `shares` at 365 and `client_errors` at 180 (`docs/keep-api.md`). ⚠️ It read *indefinite because nobody has decided otherwise* in **four documents** after he had answered, which is one more than the three it took to put the question to him twice |
 | ⬜ **A second payment processor** | undecided, not rejected: *none until there is evidence of a blocked customer* |
 
 ✔ **Closed since this list was written**, and recorded so neither is reopened by someone reading an old

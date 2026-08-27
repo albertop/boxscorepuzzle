@@ -37,10 +37,16 @@ lost write look like a stored one, and the client would drop it from its queue o
 The rollback repairs the *connection*; what happened to the row is still an error. The `INTEGER` range
 is checked at the boundary too, so the ordinary cause never reaches the driver.
 
-⬜ **What that still leaves open, and it is a product number rather than a bug** (§7): `CLAUDE.md` asks
-for a *sanity check on client-reported durations so absurd values do not corrupt percentiles*. The
-column's range is twenty-five days, so a duration far past absurd is still storable. There are no
-percentiles yet. `docs/reviews/todo.md`.
+✔ **Closed 2026-08-26 — the operator's number: eight hours.** `DURATION_CEILING_MS` in
+`keep/src/keep/reading.py`, and **a value past it is CLAMPED rather than refused** — deliberately the
+opposite of the `LARGEST_STORED_INTEGER` check three lines below it. An absurd duration is a broken
+clock, not a broken client: refusing it would throw away a real game somebody played, so the game is
+kept and its duration is capped at the ceiling. §27 makes the puzzle playable all day and pauses the
+clock while the page is hidden, so eight hours of *visible* play is far past anything real and well
+short of a tab left open.
+
+⚠️ The column's range stays and is a different check: twenty-five days is a fact about the `INTEGER`
+column, not a judgement about the game, and **it was mistaken for this one** while this was open.
 
 ✔ **Built at F1, 2026-08-24, and tested end to end:** `deploy/keep.Dockerfile` — unprivileged, no secret
 in the image, `EXPOSE` without publishing — and the nginx block in `deploy/nginx/` proxying
@@ -301,17 +307,21 @@ Both identifiers, from the first row written.
 breaks the link to the account while the aggregate survives. Claiming is about attaching a subject, not
 about making one more identifiable.
 
-### Events are kept indefinitely — ⬜ open, not designed
+### Events are kept **two years** — ✔ decided 2026-08-26
 
-**Nothing deletes an event today**, because percentiles need history and the volume at this scale is
-nothing.
+`RETENTION_DAYS` in `keep/src/keep/purge.py` is the one place all three live: **`events` 730 days**,
+`shares` 365, `client_errors` 180, swept nightly at 08:45 UTC by ofelia inside `bxcpze-keep`.
+`docs/keep-api.md` carries the reasoning; the short version is that §26 sells percentiles, percentiles
+need history, and two years bounds a table in a shared Postgres without being a measurement of how far
+back a percentile has to reach.
 
-⚠️ **But *grows without limit by design* and *nobody has decided yet* are different things, and this is
-the second.** Recorded as an open decision so that the absence of a retention policy is not later read as
-a decision to have none — the same defect as the absence of a check reading as a passing one.
-
-**What would force one:** the table growing enough to affect query time, or a legal obligation appearing.
-Neither is close.
+⚠️⚠️ **This heading said *kept indefinitely — open, not designed* after the decision was taken**, and
+the sentence it carried was a good one: *grows without limit by design* and *nobody has decided yet* are
+different things, and recording the second stops the absence of a policy reading as a decision to have
+none. **That protection expires the moment somebody decides**, and nothing expired it — so the file that
+must be read before touching anything that stores a person told its reader the question was still open.
+**A stale open marking costs the person who already decided**; closing one is part of taking the
+decision, not tidying afterwards.
 
 ---
 
@@ -365,8 +375,10 @@ and the API surface itself. EU VAT was closed the same day — no European is su
 puzzle.
 
 
-- ⬜ **Event retention** (§6). Kept indefinitely because nobody has decided otherwise, which is not the
-  same as by design.
+- ✔ **Event retention** (§6) — **closed 2026-08-26: 730 days.** It sat on this list as *kept
+  indefinitely because nobody has decided otherwise*, which was true when written and outlived the
+  decision. ⚠️ **A list of open questions is the one place a closed one does the most damage**, because it
+  is read as the inventory of what is left.
 - ⬜ **A second payment processor — undecided, not rejected** (§10). One processor means one source of
   truth about who has paid and one webhook signature to verify, and §35 calls that webhook the
   highest-value attack here. **The evidence that would reopen it is a blocked customer**: someone who

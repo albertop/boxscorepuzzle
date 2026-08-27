@@ -249,16 +249,41 @@ green suite means the two agree, and nothing here checks that at the depth the w
 
 ---
 
-## Event retention: indefinite because nobody has decided otherwise
+## Event retention: **two years — the operator's decision, 2026-08-26**
 
-**Not "unlimited by design", and the distinction is the whole point.** Nothing deletes an event today:
-percentiles need history and the volume at this scale is nothing.
+`RETENTION_DAYS` in `keep/src/keep/purge.py` is the one place it lives:
 
-⚠️ **Recorded as an open decision so the absence of a policy is never read as a decision to have none** —
-the same shape as absence-of-a-check reading as a passing one.
+| table | kept | what it is |
+|---|---|---|
+| `events` | **730 days** | the product's memory of a game somebody played |
+| `shares` | 365 days | operational debris with a shelf life |
+| `client_errors` | 180 days | the same |
 
-**What would force one:** the table growing enough to affect query time, or a legal obligation appearing.
-Neither is close.
+Swept nightly by ofelia at **08:45 UTC** — `[job-exec "purge"]` running `python -m keep.purge` inside
+`bxcpze-keep`, which is why no database password appears in the scheduler's config. The sweep compares
+`received_at`, stamped by `keep` on arrival in UTC and **never by a database default**: `DEFAULT
+CURRENT_TIMESTAMP` renders in the session's timezone on Postgres, and the purge compares that column as a
+string.
+
+⚠️⚠️ **This section said *indefinite because nobody has decided otherwise* until 2026-08-26, and it
+said so after he had decided.** It was correct when written — deliberately correct, recorded as an open
+decision *so the absence of a policy would never read as a decision to have none*. Then the decision was
+taken and this paragraph was not, so the file most likely to be read before touching stored data was
+telling its reader that nobody had chosen. **A rule stated where people go to learn the rules is the worst
+place for one that is false**, and a *stale open marking costs the person who already decided* — he had
+answered this once and was asked again.
+
+⚠️ **Why `events` was the last of the three and is not the same question as the other two.** §26 sells
+comparison and percentiles, and percentiles need history: a deleted event is a game gone from every
+comparison it would have counted in. Capping it is a decision about the paid feature rather than a
+configuration change, which is why it was held back while `shares` and `client_errors` were capped on
+2026-08-25.
+
+⚠️ **Two years is not a measurement and is not presented as one.** Nobody has measured how far back a
+percentile has to reach to be worth selling; at 50 players a day a row is roughly 200 bytes, so the table
+is about 3.6 MB a year and the cap is not buying disk. **It is buying a bound**, on a table living in a
+shared Postgres that also carries four other sites — where the cost of finding this late is that Postgres
+fills up and takes them down with it. Revisit it when there is a percentile anybody pays for.
 
 ---
 

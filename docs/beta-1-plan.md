@@ -13,14 +13,33 @@ it. ⚠️ Where the two differ, this file says so.
 | | | |
 |---|---|---|
 | **A** the width | ✔ **met 2026-08-26** | `--board-width`, three readers, and a test at desktop viewport |
-| **B** the input model | ▶ **B1-B3, B5 met 2026-08-26** | digits, arrows, Enter, and one path to `game.enter`. ⬜ B4, the keypad, is not in this change |
+| **B** the input model | ✔ **met 2026-08-26** | digits, arrows, Enter, and one path to `game.enter`. **B4 landed in `3cc1ab1`**: no keypad where there is a fine pointer |
 | **C** the wide screen | ✔ **met 2026-08-26** | ⚠️ **and two of the three needed no code.** C-i is already true, C-ii is *build nothing*, and C-iii's answer is **there is no breakpoint** |
 | **D** every screen reachable | ✔ **met 2026-08-26** | ⚠️ **the measurement closed most of it**: there is no new interface to reach. Photographed |
-| **E** the evidence | ✔ **met 2026-08-26** | **`engine/` was not touched**, and a guard now fences the seam |
+| **E** the evidence | ✔ **met 2026-08-26** | **`engine/` changed by one comment across six commits**, and a guard now fences the seam |
 
-⚠️⚠️ **BETA 1 IS MET — 2026-08-26**, against the rewritten deliverable below. ⬜ **B4 is the one item
-left open and it blocks nothing**: the keypad still renders where there is a keyboard, and its honest
-detection is *has a fine pointer* rather than *is wide* — which is a decision, not an oversight.
+⚠️⚠️ **BETA 1 IS MET — 2026-08-26**, against the rewritten deliverable below, **and B4 is met too as of
+`3cc1ab1`.** All five groups.
+
+### ⚠️⚠️ The evidence, checked rather than asserted — and it is *one comment*, not *nothing*
+
+This table said **`engine/` was not touched**. Read against the six commits from `25d7d7f` to `4bbfb74`,
+five change `serve/engine/` by nothing at all and **one changes it by a comment**: `14af383` annotates the
+single line in `report.js` that reads `innerWidth`/`innerHeight`, marking it *screen: recorded, not
+decided*, so `test_the_engine_knows_nothing_about_screens.py` can fence the seam around a known exception.
+No behaviour, no branch, no decision.
+
+⚠️ **The corrected claim is stronger than the round one, which is why it is corrected rather than
+kept.** *Zero lines* is a fact about a diff and invites the reader to check nothing. *One comment, naming
+the only place the engine may look at a screen and saying it must not decide with it* is a fact about the
+architecture — and it is what `serve-brief.md`'s central claim actually predicted: everything deciding
+what a key means already lived in `ui/phone/`.
+
+⚠️⚠️ **And the check was nearly impossible to run, which is a finding of its own.**
+`serve/engine/report.js` contains a **literal NUL byte** — a separator inside a template literal — so Git
+classifies the file as binary and **every diff of it renders as `Bin 4992 -> 5423 bytes`**. The one
+`engine/` change in beta 1 was invisible to `git show`, to `--numstat`, and to any review of that file,
+until `--text` was forced. Recorded in `docs/reviews/todo.md`.
 
 ---
 
@@ -80,14 +99,24 @@ that earns the milestone rather than merely widening it.
   commitment is a commitment pressed by accident.
   ⚠️⚠️ **`select(null)` did nothing before this.** It fell out of `if (!game.isBlank(name)) return`, so
   Escape was decoration: the amber stayed and the next digit went back into the abandoned cell.
-- ⬜ **B4.** The keypad is **not rendered** where there is a keyboard. `beta-0.md`'s own argument applies:
-  a control that does nothing occupies a third of the screen.
-  ⚠️ **A laptop with a touchscreen is both**, so the honest detection is *has a fine pointer* rather than
-  *is wide*.
+- ✔ **B4 — met 2026-08-26.** The keypad is not rendered where there is a keyboard. `shell.js` reads
+  `app.classList.contains(POINTED)` and builds `renderTypedControls` instead of `renderKeypad`; the footer
+  gets three controls of equal shape, a third of the **board's** width each.
+  ⚠️ **A laptop with a touchscreen is both**, so the detection is `(pointer: fine) and (hover: hover)` —
+  what the person is pointing with, never how wide the screen is. **Hover as well as pointer**: a stylus
+  reports a fine pointer and hovers over nothing.
+  ⚠️⚠️ **A class on `#app`, never a bare media query**, and that is not style. `share-image.js` measures
+  the sheet in the real document and draws it inside an SVG with its own 375px viewport, so a media query
+  is evaluated twice against two different widths — measured, not deduced: a probe rule made the shared
+  PNG a third taller with the boxscore small at the top and blank paper below. The share is the only
+  growth mechanism the product has.
+  ⚠️ **Verified by finishing a board**, not by asserting the pad was absent: a whole puzzle solved on a
+  1440px desktop with the keyboard and three buttons alone, and `7.3`, `8.5`, `9.9` each leaving the cell
+  at `7`, `8`, `9` — innings cells hold outs, so `.3` to `.9` are unrepresentable.
 - ✔ **B5.** ⚠️⚠️ **`applyKey` does not fork.** Both the pad and the keyboard call one `press()` in the
   shell, which calls `applyKey`. Nothing in the keyboard decides what a digit *means*; it decides which
   key is a digit.
-- ⬜ **B4** is not in this change. The keypad still renders everywhere.
+- ✔ **B4 landed in `3cc1ab1`**, after this deliverable was written. The keypad renders on touch only.
 - ✔ **Met by:** a browser test that arrows to every plain blank and types its answer, touching no button.
 
 ⚠️⚠️ **One of B's tests could not fail and was found by breaking the code.** *Enter does not Check* was

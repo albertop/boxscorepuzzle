@@ -39,14 +39,28 @@ groups A to E. ⚠️⚠️ **What it turned out to be is the KEYBOARD.** It ope
 sixteen widths from 320 to 1920 said there was none to build — from 414 up the board holds 375, nothing
 clips, nothing scrolls sideways, and every extra pixel becomes air, which is §6 already in force. **The
 deliverable was rewritten to say that before it was marked**, the way beta 0's Deliverable B was.
-⚠️⚠️ **And `serve-brief.md`'s central claim survived the one milestone that could have falsified it**:
-both beta 1 commits change `engine/` by zero lines, because everything deciding what a key means already
-lived in `ui/phone/`. `forge/tests/test_the_engine_knows_nothing_about_screens.py` fences that seam and
-names, in its own file, what a list of terms cannot see. ⬜ **B4 — the keypad where there is a keyboard —
-is the one item left open and it blocks nothing.** One puzzle, a second
-interface. **It is the first time `serve-brief.md`'s central claim can be false**: if the engine really
-knows nothing about screens, beta 1 touches `ui/` and nothing under `engine/` — so the diff is the
-evidence, and *`engine/` was not touched* is half of what closes it. ⚠️ **§6 is the rule most likely to
+✔ **B4 — the keypad where there is a keyboard — met 2026-08-26 in `3cc1ab1`**, so all five groups are
+closed. The detection is `(pointer: fine) and (hover: hover)` — what the person points with, never how
+wide the screen is, because **a touchscreen laptop is both** — and it is a class on `#app` rather than a
+media query, because a media query reaches the share image's measurement stage and a scoped rule cannot.
+It was verified by **finishing a whole board** on a 1440px desktop with the keyboard and three buttons
+alone, not by asserting the pad was absent.
+
+⚠️⚠️ **`serve-brief.md`'s central claim survived the one milestone that could have falsified it, and
+the true figure is not the round one.** If the engine really knows nothing about screens, beta 1 touches
+`ui/` and nothing under `engine/` — the diff is the evidence. **This paragraph said *zero lines* and it is
+one comment**: across the six beta 1 commits, five change `serve/engine/` by nothing and `14af383`
+annotates the single line in `report.js` that reads `innerWidth`, marking it *screen: recorded, not
+decided*. No behaviour, no branch. **The corrected claim is the stronger one** — *zero lines* is a fact
+about a diff and invites the reader to check nothing; *one comment naming the only place the engine may
+look at a screen* is a fact about the architecture.
+`forge/tests/test_the_engine_knows_nothing_about_screens.py` fences that seam and names, in its own file,
+what a list of terms cannot see.
+
+⚠️⚠️ **Checking it was nearly impossible and that is its own finding.** `serve/engine/report.js`
+carries a **literal NUL byte**, so Git calls the file binary and **every diff of it renders as
+`Bin 4992 -> 5423 bytes`** — the one `engine/` change in beta 1 was invisible to `git show`, to
+`--numstat` and to any review, until `--text` was forced. `docs/reviews/todo.md`. ⚠️ **§6 is the rule most likely to
 break by accident here**, because everything it forbids becomes cheap the moment the screen is wide: six
 data columns, the same board on every screen, more whitespace rather than more content. The constraints
 were never only about width.
@@ -113,8 +127,17 @@ humanly underivable. **An impossible board does not read as a fault in the game;
 good enough, and the person who concludes that leaves without telling anyone.** If a beta 0 player
 reports a board they could not finish, those three strata are the first place to look.
 
-⬜ **Still the operator's and blocking nothing:** a plausible ceiling on a client-reported duration
-(`docs/reviews/todo.md`).
+✔ **The two items that were the operator's are both answered, 2026-08-26.** A client-reported duration is
+**clamped at eight hours** (`DURATION_CEILING_MS`, `keep/src/keep/reading.py`) — clamped and not refused,
+deliberately the opposite of the check three lines below it, because an absurd duration is a broken clock
+attached to a game somebody really played. And **`events` are kept 730 days**, joining `shares` at 365 and
+`client_errors` at 180.
+
+⚠️⚠️ **Both had been decided and both were still marked open — the retention one in four documents,
+including a list titled *open questions*, which is the worst place for a closed one because that list is
+read as the inventory of what is left.** He was asked a second time about something he had already
+answered. **A stale open marking costs the person who already decided; closing one is part of taking the
+decision, not tidying afterwards.**
 
 ---
 

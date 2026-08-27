@@ -1,6 +1,189 @@
 # Review backlog
 
-## ⬜ 2026-08-26 - Hypothesis's deadline as a source of false reds. **One instance, counted.**
+## ✔ 2026-08-26 - v44-P2-01: the runbook kept both pre-container publisher commands. **CLOSED 2026-08-26**
+
+**It is my own v43 fix applied to the instance rather than to the category, found by the next review an
+hour later.** `CLAUDE.md` records that shape in as many words: *when a fix is about a category, enumerate
+the category before closing it, and put the enumeration in the commit rather than in the intention.* I
+repaired the runbook's §6 and §7 because the v43 report named those lines, and §5b and §5c were never
+opened.
+
+### ⚠️⚠️ §5b was four errors in one command, in the section that verifies the failure nothing else sees
+
+```text
+docker exec bxcpze_publish python -m publish --inventory /inventory --public /public --health
+```
+
+**Not one part of it works.** The container is `bxcpze-publish` with a hyphen; its healthy state is
+**stopped**, so nothing can `exec` into it; `publish.__main__` has no `--health` option; and the paths are
+`/srv/inventory` and `/srv/public`. Following §5b produces **no health verdict at all** — and §5b exists
+because the schema contract between `forge` and `serve` is decidable in the served root and nowhere else.
+
+⚠️ **`bxcpze_publish` is the worse half of it.** Docker answers *no such container*, which reads like the
+stack being down rather than like a typo, and sends the operator to look at the wrong thing.
+
+### ⚠️⚠️ §5c defeated the pre-flight built the same day, and the mechanism is worth keeping
+
+§5c printed the hand-built `docker run --rm`. That container is not on the backend network, so
+`bxcpze-serve` does not resolve, so `readable_versions()` gets no client — **and the pre-flight treats an
+unanswerable question as non-blocking on purpose**, which is correct for a client that is genuinely down
+and wrong when the caller is what made it unreachable. The rotation publishes; the verdict reports the
+missing client *after* the public path has changed. **On an incompatible release, unreadable boards go
+public first.**
+
+**A safeguard scoped not to block can be walked around by the thing that invokes it.** The scoping is
+still right — blocking every rotation on an unanswerable question is the 1964-board abort — and what
+follows is that **the invocation is part of the safeguard**, not a detail around it.
+
+### What closes it
+
+Both sections say `docker start -a bxcpze-publish`, which is what ofelia does and what the loader already
+printed. And `test_the_hand_run_starts_the_declared_container` reads **the runbook as well as the
+loader** — the half the review correctly identified as missing: the guard was green while the document
+the operator actually follows printed the command the guard forbids in the script.
+
+⚠️ **Scoped to the publisher's own commands**, because §5 legitimately runs `alpine` against the puzzles
+volume three times to check ownership, and a guard firing on those is a threshold rejecting real data —
+which gets loosened until it says nothing.
+
+⚠️ Three new assertions, **each seen red on its own**: the `docker run` restored, the underscore restored,
+and an `exec` into the stopped container.
+
+## ⬜ 2026-08-26 - `serve/engine/report.js` holds a NUL byte, so **every diff of it is invisible**
+
+**Recorded, not fixed. Found while checking beta 1's own evidence, which is the point of it.**
+
+Byte 3152 of the file is a literal NUL, used as a separator inside a template literal:
+
+```js
+const signature = `${message}<NUL>${stack.split("
+").slice(0, 2).join("
+")}`;
+```
+
+**Git classifies any file containing a NUL as binary.** So `git show` renders it as
+`Bin 4992 -> 5423 bytes`, `--numstat` reports `-  -`, and `git diff` shows nothing at all. The character
+is a sensible choice for a separator — it cannot appear in an error message — and it was written as a raw
+byte rather than as the `NUL` escape that produces the identical string at runtime.
+
+### ⚠️⚠️ Why this is more than cosmetic
+
+**`report.js` is what leaves the browser.** It builds the client error report: the message, the stack, the
+viewport, and what is deliberately *not* in it. A change to what that function sends — a field added, a
+redaction removed — **is invisible to every ordinary review of the diff**, and the reviewer sees a byte
+count that looks like an image changing size.
+
+**It is this project's shape one level down.** Every register entry here is about an instrument reporting
+truthfully about the wrong subject; this is an instrument reporting *nothing* and being read as *nothing
+changed*. `Bin 4992 -> 5423` is not a claim that the file is unchanged — it says the size moved — but it
+is what a reader skims past.
+
+### ⚠️⚠️ And this entry made the backlog binary while describing the defect
+
+**Writing this row put four real NUL bytes into `todo.md`**, because the example was pasted as the
+character rather than spelled as a name. `grep` answered *Binary file docs/reviews/todo.md matches* on the
+sweep run immediately afterwards, which is the only reason anybody looked — **the backlog would have been
+undiffable from the commit that recorded undiffable files.**
+
+⚠️ **The class is *documenting a byte by including it*, and it is not specific to NUL.** A control
+character, a bidirectional override, a zero-width space: each is invisible in the rendered document and
+each changes how a tool reads the file. **Name it, never paste it** — the escape `\0` in a code fence
+says exactly as much and stays text.
+
+⚠️ **And the sentence above needed three attempts, which is the finding rather than the typo.**
+The first draft pasted the byte. The repair spelled the escape in a language that reads it back as the
+byte, so the fix reintroduced it. **It is only text once something builds it that cannot interpret it**
+-- here, two bytes assembled by number. *Knowing the rule does not apply it*, in the row about knowing
+the rule.
+
+### How it surfaced
+
+`beta-1-plan.md` claimed **`engine/` was not touched** across beta 1. Checking that claim required
+`git show --text`, because the one file that *was* touched is the one Git will not diff. **The claim was
+nearly right and slightly wrong** — one comment, in `14af383` — and the evidence for it could not be read
+by the command anybody would run.
+
+### The fix, and why it is not applied here
+
+Write the separator as `NUL` in the source. **The runtime string is byte-identical**, so no signature
+changes, no stored error is affected, and nothing about deduplication moves. It is a one-character edit
+with no behaviour attached — and it is not what was asked for, so it is written down rather than done.
+
+⚠️ **A guard is worth more than the edit and is the same size**: no file under `serve/` may contain a
+NUL. That is static, decidable, and covers the class rather than the instance — the next separator
+somebody picks for the same good reason lands in the same trap.
+
+## ✔ 2026-08-26 - v43-P2-01: the publish loader refused a correct deployment. **CLOSED 2026-08-26**
+
+`docs/reviews/code_review_v43.md` carries it, and **the review was right in all seven of its
+locations** -- each was checked against the file rather than taken from the report.
+
+**The shape, which is new enough here to be worth naming: a check that outlives its subject does not go
+quiet, it starts failing the right answer.** `rotation.ini` stopped naming an image and started naming a
+container. `deploy_bxcpze_publish_image.sh` kept grepping for the removed `image =` line and **exited 1
+on a correct config**, printing as its remedy the exact setting that makes ofelia pull a local-only image
+from a registry -- the failure the container design was introduced to remove. An ordinary stale comment
+misinforms; this one was load-bearing, non-zero, and its fix was the defect.
+
+### ⚠️⚠️ Three more, found while verifying the report, and one of them was worse
+
+| | |
+|---|---|
+| **the runbook §7 listed four variables and compose demands five** | every one is `:?`, so the missing `BXCPZE_PUBLISH_VERSION` **fails the deploy in Portainer**, naming a variable the runbook says does not exist. The review said the runbook "repeats both obsolete claims" and did not identify the half that stops a deployment |
+| **`rotation.ini` contradicted itself** | its header taught the image-line design as current and titled the container design *"the option not taken"* -- twelve lines above `container = bxcpze-publish`. The `.sh`, the `.ps1` and the runbook all pointed **at that section** as the authority, so one stale explanation was being read by three operator-facing paths |
+| **the hand-run command was a `docker run --rm`** | no `--network`, so `--client` cannot resolve `bxcpze-serve` and the verdict reports on a client it never read; and `--rm` is what left the image unreferenced when a prune took it. It also skips the pre-flight refusal added the same day |
+
+### What closes it
+
+`forge/tests/test_the_transfer_bundle_is_complete.py` gains four guards: no operator-facing path asks for
+an ofelia image line, all three loaders name `BXCPZE_PUBLISH_VERSION`, the hand run starts the declared
+container, and the runbook's variable block covers every `:?` in compose.
+
+⚠️⚠️ **Two of the four were green on the broken input the first time, for the same reason, and it is
+this project's own shape:** the runbook guard read the whole document -- including the paragraph
+*explaining* the omission, which names the missing variable -- and the `.ps1` guard read the file rather
+than what it prints, including the comment explaining where the version moved. **The instrument was
+supplying the property under judgement**, twice, inside the test written to close a drift. Both now read
+only the operator-facing lines: indented command blocks, `echo`, `Write-Host`.
+
+⚠️ **A third was green for a duller reason worth recording**: `` in the pattern was written to the file
+as a literal **backspace character**, so the regex demanded a backspace before `image` and matched
+nothing. Ruff's `PLE2510` caught it; **breaking the subject on purpose is what made anybody look.**
+
+⚠️ **And a fourth defect was introduced by the fix and caught by reading it**: the replacement shell
+line wrote an `image =` reference inside backticks in a double-quoted `echo`, which bash executes.
+`bash -n` accepts command substitution happily.
+
+### ⚠️ The deliberate non-finding I would restate rather than accept
+
+The review passes over `followPointer()` because a mid-session hardware change is not a normal-path
+failure. Correct verdict, wrong reason: it is not rarity. `followPointer` keeps the **class** current and
+the class governs the CSS, so a convertible folding into a tablet re-lays the page correctly -- the only
+thing that does not come back is the on-screen keypad, which is chosen when the shell is built. The
+frequency argument would stop protecting it the day someone raises the frequency.
+
+## ✔ 2026-08-26 - Hypothesis's deadline as a source of false reds. **CLOSED 2026-08-26 — the deadline is gone, everywhere**
+
+**Closed by the operator on the same day it was opened, and NOT by taking the exit this row argued
+against.** The row said *at two, take the exit*, meaning `@settings(deadline=None)` on the flaky test.
+That would have been the loosening. What was done instead is smaller and larger at once: the **profile's**
+deadline was removed, for the reason already written three lines above it in `forge/tests/conftest.py`.
+
+**The premise the local deadline rested on was false.** It came off the shared runner in v41 because *a
+deadline is an assertion about performance and a machine you do not control cannot support one* — and it
+was kept locally because **the laptop was the quiet machine**. It is not one. `docs/ci.md` makes the
+pre-push hook the primary runner, so the whole Python suite runs on the same machine that is running
+playwright, a dev server and the browser suite, **which is the ordinary working arrangement here.** The
+6458ms was that arrangement, not a slow solver.
+
+⚠️ **So this is not the threshold being loosened until it says nothing** — it is an assertion being
+withdrawn from an environment that cannot carry it, by the same sentence that withdrew it from CI. A
+number in between would have been the forbidden parameter (§7): no measurement supports one.
+
+⚠️⚠️ **What is lost is stated in the file rather than papered over.** *A test that suddenly takes six
+seconds is a finding* was true and **nothing replaces it**. What remains is the suite's own wall time,
+which the hook prints on every push — **80 seconds is the figure to notice changing**. Coarser, and it is
+the signal this one-machine arrangement can actually carry.
 
 `test_bounds.py::TestItNeverExcludesTheTruth::test_the_real_value_always_stays_inside_its_domain` failed
 a push with `DeadlineExceeded: Test took 6458.50ms, which exceeds the deadline of 5000.00ms`.
@@ -32,7 +215,30 @@ the retry, and starts the tally at one again -- which is how a recurring flake s
 ever.
 
 
-## ⬜ 2026-08-26 - a test that names no device inherits `PHONE()` silently
+## ✔ 2026-08-26 - a test that names no device inherits `PHONE()`. **CLOSED 2026-08-26 — it is refused instead**
+
+**Closed against this row's own conclusion, and the operator asked for that.** The row said *the
+default stays and it is correct*, on the reasoning that nearly every test booting the shell is about the
+phone and `PHONE()` is what they mean. **True of every test that exists and of none that does not.**
+
+⚠️⚠️ **The default was doing real work: 34 of 34 call sites relied on it**, so the suite's device was a
+property of one line in a helper rather than of any test. That is *the absence of a decision reading as a
+decision having been made* — a desktop case added tomorrow inherits a phone, passes, and asserts phone
+behaviour under a name that says desktop.
+
+**`demandADevice` throws now**, on a sentinel rather than on `undefined` so a caller who meant to say
+something and got a variable wrong is separated from one who said nothing. It refuses rather than
+defaulting to the pointed device: **failing towards *some* device is the same defect facing the other
+way**, and the only correct answer to *which device is this test about* is the one the test gives.
+
+⚠️ **The guard has its own guard, seen red at `got 0, expected 4`.** Without it, restoring
+`pointer = PHONE()` changes nothing anywhere — 34 tests pass either way — so there is exactly one thing
+standing between *this suite runs on phones* and *this suite happens to run on phones*.
+
+⚠️⚠️ **And the estimate this row cost is recorded in `CLAUDE.md` rather than here.** I read the helper,
+saw `pointer = PHONE()` in the signature, and reported that the tests already declare their device, so
+none needed touching. **They declared none.** Fifteen minutes was approved on that number; it was 32
+edits. *A default in a definition reads as they all have it and means the opposite: none asks for it.*
 
 **Recorded, not built. The default stays and it is correct** -- nearly every test that boots the shell is
 about the phone, and `PHONE()` is what they mean.
@@ -86,7 +292,23 @@ is not answered by the thing they call. Count the callers. `grep -c` is the whol
 turned fifteen minutes into forty.
 
 
-## ⬜ 2026-08-24 - `PAGES` in the C11 guard is still a hand-written list beside a directory
+## ✔ 2026-08-24 - `PAGES` in the C11 guard is a hand-written list. **CLOSED 2026-08-26**
+
+**Closed with the shape the row named**, ten lines and in both directions:
+`forge/tests/test_the_date_guard_sweeps_every_module.py::TestTheMarkupGuardScansEveryPage` reads
+`serve/ui/phone/` and asserts (a) the subject exists at all, (b) every shipped page is in `PAGES`, and
+(c) no name in `PAGES` is absent from the directory.
+
+⚠️ **(c) is the half that is easy to leave out and is the one that matters most here.** A stale filename
+fetches a 404, whose body contains none of the forbidden strings, so the guard **passes** on a page it
+never read. That is the padded-dump shape: an instrument reporting a clean answer about nothing.
+
+⚠️ **Seen red in both directions** — a page removed from the list, and a name that does not exist added
+to it.
+
+**It stays the sixth instance of the hand-maintained-list shape and that count is not reset by closing
+one.** The discipline the row names — *every such list gets its comparison in the same commit* — is
+still the only thing covering the seventh.
 
 **Recorded, not built. Noticed while closing the same shape one file over, and left open deliberately.**
 
@@ -112,7 +334,30 @@ fires on any legitimately scoped list, and a threshold that rejects real data ge
 says nothing. What works is the discipline -- **every such list gets its comparison in the same commit**
 -- and this row is the instance where that was not done.
 
-## ⬜ 2026-08-24 - `publish.health`'s READABLE check reports after rotating, and could refuse before
+## ✔ 2026-08-24 - `publish.health`'s READABLE check reports after rotating. **CLOSED 2026-08-26 — it refuses before**
+
+**Built as this row scoped it.** `health.readable_versions(client)` reads the deployed `READABLE`
+and answers a set or `None`; `rotate()` takes it and `_refuse_what_the_client_cannot_read` runs **before
+`mkdir` and before the first `_place`**, so a refusal has written nothing at all. `__main__.py` asks
+before rotating and `inspect()` still reports after, unchanged.
+
+**The scoping this row demanded is what the tests are mostly about.** `None` — an unreachable client, a
+literal that has moved — **publishes**, because blocking every rotation for ever on a question that
+cannot be answered is the 1964-board abort. A package with no `schema`, or a non-integer one, also
+publishes: that is `boxscore_package`'s boundary and a second weaker opinion here would be two places
+encoding one rule. **Only a known schema absent from a known set is refused.**
+
+⚠️ **The property asserted is *nothing was written*, never *it complained*.** Every case checks the
+public directory — the first one asserts `not public.exists()`, because a rotation that creates an empty
+served path has already changed the site. *An exit code answers did this finish, never did it do the
+thing you wanted.*
+
+⚠️ **Seen red both ways**, as the rule requires: with the call removed, three cases report the boards
+published under a client that reads 5; with the `readable is None` guard removed, fifteen go red and the
+unreachable-client case dies with `TypeError` instead of publishing.
+
+⚠️⚠️ **The other order is still open and cannot be closed from here.** *Client ahead of packages* is an
+image deployment, which never runs `publish`. The health verdict remains the only thing that sees it.
 
 **Recorded, not built.**
 
@@ -135,7 +380,22 @@ right; a refusal because the reader could not be found or parsed is a check that
 every rotation for ever. Those two cases publish-and-report.
 
 
-## ⬜ 2026-08-24 - event retention is unbounded. ⚠️ **NARROWED 2026-08-26: two of the three tables are capped**
+## ✔ 2026-08-24 - event retention is unbounded. **CLOSED 2026-08-26 — all three tables are capped**
+
+**`events` at 730 days, the operator's decision on 2026-08-26**, joining `shares` at 365 and
+`client_errors` at 180 in `RETENTION_DAYS`. Migration `004-events-received-at.sql` gives `events` the
+`received_at` the sweep compares, stamped by `keep` on arrival in UTC.
+
+⚠️ **Two years is a bound, not a measurement, and is written down as one.** Nobody has measured how far
+back a percentile has to reach to be worth selling. At 50 players a day a row is about 200 bytes, so the
+table is roughly 3.6 MB a year and this buys no disk — **it buys a ceiling on a table in a shared Postgres
+that also carries four other sites**, where the cost of finding it late is those four going down.
+
+⚠️⚠️ **It read *indefinite because nobody has decided otherwise* in FOUR documents after he answered**
+— `keep-api.md`, `data-layer.md` twice, and `beta-0-plan.md`'s table — and `data-layer.md`'s was on a
+**list of open questions**, which is the one place a closed one does most damage: that list is read as the
+inventory of what is left. All four are closed. *A stale open marking costs the person who already
+decided, and closing one is part of taking the decision.*
 
 **Raised by the operator while the stack was being deployed, asking whether anything in it grows until
 the disk is full.** Everything in the containers is capped; this was the one thing that was not, and it
@@ -243,13 +503,62 @@ the problem.
 that has nothing to do with the code.
 
 
-## ⬜ 2026-08-24 - Pack A came back: the gate's first half passed, and the stall ladder did not order it
+## ✔ **CLOSED 2026-08-26** — Pack A: the gate passed, the ladder did not order, and the pack is gone
 
-**Two separate answers from one instrument, and only one of them is settled.** `docs/beta-0.md` is where
-the gate is defined; this is what the sixteen boards produced. The data is
-`discovery/hand-solve/pack-a-difficulty.csv`, tracked from today and irreplaceable.
+**The pack is deleted and will not be rebuilt. The operator will not hand-solve another board**, which is
+the same fact that withdrew the stratified sample: he has complete command of the identities and every
+board reads the same to him, so he is no longer an instrument that discriminates.
 
-### ✔ B3's first half: sixteen of sixteen solved, none by guessing
+⚠️⚠️ **The DATA is transcribed here because `docs/beta-0-plan.md`'s Deliverable B rests on it.** Marking a
+milestone met and then deleting the file it cites leaves the claim standing on nothing. Sixteen boards,
+solved 2026-08-24, none guessed:
+
+| board | felt difficulty | game | | board | felt difficulty | game |
+|---|---|---|---|---|---|---|
+| 01 | 5 | BOS199408072 | | 09 | 5 | ATL197409021 |
+| 02 | 2 | BAL198409242 | | 10 | 5 | WAS201307010 |
+| 03 | 3 | ATL197409090 | | 11 | 3 | BAL199407300 |
+| 04 | 4 | SDN200308240 | | 12 | 4 | ATL197409282 |
+| 05 | 2 | SEA201308270 | | 13 | 2 | BOS195408121 |
+| 06 | 2 | BRO195408221 | | 14 | 4 | BOS199406040 |
+| 07 | 4 | ATL197409030 | | 15 | 5 | TEX201309100 |
+| 08 | 2 | WAS201307261 | | 16 | 4 | SDN201308170 |
+
+**`solved: yes` and `had_to_guess: no` on all sixteen.** All sixteen were uncertified by layer 3b, so
+nothing here leaned on the weaker solver.
+
+### The two results, and only one of them is settled
+
+**✔ The gate passed.** Not a rate — a **falsification test** of *layer 3 finishing without backtracking
+implies a person can derive the board*. `CLAUDE.md` says plainly that it does not follow: layer 3
+propagates intervals across forty simultaneous relations, which is stronger than any person. **One
+failure would have falsified it. There was none.**
+
+**⬜ The ladder does not order.** Spearman rho(target stalls, felt difficulty) = **+0.202**, the rung
+explaining 4.5% of the variance against a two-tailed 5% critical value near **0.50** at n=16. Every rung
+contains a board rated 2, rung 12 included.
+
+⚠️ **It cannot become *the stall axis does not work*, and the reason was written before the pack was
+built.** The rungs were not filled from boards of similar reach, and the packages **do not record the
+board's ceiling** — so a holdout rung-11 board and a squeezed rung-5 one are indistinguishable after the
+fact. A confound has no signature in the results. What is established is that **the ladder as built does
+not order**; what would settle the rest is the ceiling in the metadata.
+
+⚠️ **The sixteenth rating moved rho eleven hundredths** (+0.094 → +0.202). An estimate that moves that far
+on one point of sixteen supports nothing built on it in either direction.
+
+### ⚠️ What stays untested, and it is accepted rather than overlooked
+
+Three strata went almost untouched: **`batting_order` — 1 board of 16 against 7% of the published
+inventory**, the one relation that cannot be read off a boxscore; **six pitchers — 0 boards against 4
+published**; **pre-1950 — 0 boards**, the pack's oldest being 1954. A board in those can pass all four
+validation layers and be humanly underivable.
+
+**An impossible board does not read as a fault in the game; it reads as not being good enough, and the
+person who concludes that leaves without telling anyone.** If a beta 0 player reports a board they could
+not finish, those three strata are the first place to look.
+
+## ✔ B3's first half: sixteen of sixteen solved, none by guessing
 
 **The operator solved every board in Pack A and had to guess on none of them.** That is what the gate
 exists to test, and it is not a rate: `docs/beta-0.md` states it as a **falsification test** of the
@@ -598,7 +907,20 @@ cannot be regenerated, and a test strategy needing it absent is one somebody eve
 putting it back.
 
 ---
-## ⬜ 2026-08-23 — two on `MANIFEST_SCHEMA`, found while answering *which schema is that `1`*
+## ✔ 2026-08-23 — two on `MANIFEST_SCHEMA`. **CLOSED 2026-08-26 — the number lives in one place**
+
+**Both halves.** `boxscore_package.format.MANIFEST_SCHEMA` is the definition, with the docstring (b)
+asked for, and `format.manifest(*, generation, puzzle_ids)` builds the body — so the two writers call it
+instead of each spelling the shape. `build_inventory.py`'s own constant is **removed**, not left as an
+alias, and `write_reference_puzzles.py`'s literal `1` is gone.
+
+**It is the repair the pointer got**, for the same reason and in the same module: a fact in two files
+lives in neither. `forge/tests/test_the_two_pointer_writers_agree.py` already refuses a writer that
+spells a pointer field itself and now covers the manifest the same way.
+
+⚠️ **`docs/package-format-v6.md`'s sentence is true now.** It told a reader the manifest's schema *is
+`MANIFEST_SCHEMA` in `build_inventory.py`* — a pointer to *the* definition when there were two, which the
+row rightly called worse than no pointer. It names `format` and there is one.
 
 **Noticed in passing during the v5 documentation pass, reported in conversation, and not written down
 until asked** — which is the rule this file exists to enforce, broken in the same session that closed
@@ -694,7 +1016,23 @@ anything was changed, and each fix was checked by reverting what its test assert
 | v39-P2-02 | the line score was parsed twice and never compared, and a package with no reveal was accepted | both compared in `agreesWithTheAnswer()`; `reveal` required |
 | v39-P3-01 | `CLAUDE.md` §6 still instructed a reader to erase the per-batter footnote cells | the bullet rewritten; the correction above it left intact |
 
-### ⬜ What is not closed: a plausible ceiling on a reported duration
+### ✔ Closed 2026-08-26: eight hours, and it clamps rather than refuses
+
+**The operator's number.** `DURATION_CEILING_MS` in `keep/src/keep/reading.py`, and `_capped_duration`
+returns `min(value, DURATION_CEILING_MS)`.
+
+⚠️⚠️ **Clamped, never refused, and it sits three lines from a check that does the opposite on purpose.**
+`LARGEST_STORED_INTEGER` rejects: a value that will not fit the column is a malformed message and there is
+nothing to keep. A duration of forty hours is a different thing — **a broken clock attached to a game
+somebody really played**, and refusing it throws away the game to protect the percentile. So the event is
+stored and the duration is capped.
+
+§27 is what makes eight defensible: the puzzle stays open all day and the clock accumulates only while the
+page is visible, so eight hours of *visible* play is far past anything real and well short of a tab left
+open on a second monitor.
+
+⚠️ **The column's range stays and is not this check.** Twenty-five days is a fact about `INTEGER`; it was
+mistaken for a plausibility check for as long as this row was open, which is why the row existed.
 
 `CLAUDE.md` says *sanity-check client-reported durations before storing, so absurd values don't corrupt
 percentiles.* **That check does not exist.** What was added is narrower and is a different thing: the
@@ -1906,7 +2244,7 @@ collide with anything, and a cleanup filter that matches somebody else's contain
 
 ## Where everything stands
 
-**42 reviews**, the last of them v42. ⚠⚠ **The finding total is deliberately not stated any more.**
+**44 reviews**, the last of them v44. ⚠⚠ **The finding total is deliberately not stated any more.**
 
 This paragraph read *"twenty-nine reviews, 135 findings"* for ten reviews after it stopped being true, and
 the section below already records that **the count in this file has been wrong three times — mine.** A
