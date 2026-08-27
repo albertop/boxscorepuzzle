@@ -24,6 +24,12 @@ import { startUplink } from "../../engine/uplink.js";
 // ⚠️ **Today's date, so a tab among twenty says which one this is.** It comes from the clock rather
 // than from the package, which is deliberate: the title must be right before the fetch resolves, and
 // a board that fails to load should still be `August 22 — boxscore puzzle` rather than nameless.
+//
+// ⚠️⚠️ **PROVISIONAL, and corrected below once the pointer says which day this is.** The clock is the
+// PLAYER'S and the title is about the PUZZLE: somebody in California playing at eleven at night reads a
+// tab dated tomorrow, naming a board that is not tomorrow's. The two dates differ for archive play as
+// well, where they are not even close. This one exists to cover the gap before the fetch resolves and
+// is replaced the moment there is something better to say.
 applyHead("board", { date: shortDate(localIso(new Date())) });
 
 // ⚠⚠ **Before the fetch, so a failure *during* it is reported** (C4). This installs the uncaught-error
@@ -43,6 +49,11 @@ try {
   // parameter is there, which is a stronger property than a module that loads and declines to act.
   // `serve/tests/engine.test.js` asserts this shape by reading this file; changing it to a top-level
   // import turns that test red.
+  // ⚠️ The puzzle's own date now, replacing the clock's guess above. `calendarDate` comes from the
+  // pointer, which is the system's answer to *which day is this board* — C4: the engine does not know
+  // what day it is and a loader decides.
+  applyHead("board", { date: shortDate(loaded.calendarDate) });
+
   const mode = new URLSearchParams(location.search).get("test");
   const test = mode ? await import("./testmode.js") : null;
   const shell = boot({

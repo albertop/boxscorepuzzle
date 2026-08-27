@@ -94,6 +94,33 @@ const asDevice = (matches) => ({ matches, addEventListener() {}, removeEventList
 const PHONE = () => asDevice(false);
 const POINTED_DEVICE = () => asDevice(true);
 
+/**
+ * ⚠️⚠️ **A test that names no device must not quietly become a phone test.**
+ *
+ * These helpers defaulted `pointer` to `PHONE()`, and the default was doing real work: **34 of 34 call
+ * sites relied on it**, so the suite's device was a property of this one line rather than of any test.
+ * The failure that follows is the one this project keeps meeting -- *the absence of a decision reading
+ * as a decision having been made*. A desktop case added tomorrow inherits a phone and passes, asserting
+ * phone behaviour under a name that says desktop.
+ *
+ * ⚠️ **A sentinel rather than `undefined`.** `pointer: undefined` from a caller that meant to say
+ * something and got a variable wrong would take the default and look deliberate; nothing can be spelled
+ * by accident, so the two cases separate.
+ *
+ * ⚠️ **It throws rather than defaulting to the pointed device.** Failing towards *some* device is the
+ * same defect facing the other way. The only correct answer to *which device is this test about* is the
+ * one the test gives.
+ */
+// ⚠️ Named `UNSTATED` rather than `REQUIRED`: a suite further down already binds `REQUIRED` to its
+// own list, and a module-level name shadowed inside one block is read wrong by whoever meets the
+// inner one first.
+const UNSTATED = Symbol("the test must say which device it is on");
+const demandADevice = (pointer) => {
+  if (pointer === UNSTATED || pointer === undefined || pointer === null) {
+    throw new Error("this test must pass `pointer:` -- PHONE() or POINTED_DEVICE(); there is no default");
+  }
+};
+
 // Loaded here rather than inside the suite: `suite()` takes a synchronous callback, and top-level await
 // is what this module already uses for the packages themselves.
 const vectors = await (await fetch("./package-vectors.json", { cache: "no-store" })).json();
@@ -2200,7 +2227,8 @@ suite("⚠️ The reference sheet, which costs no hint", () => {
 });
 
 suite("⚠️⚠️ The development test mode, and the four things that keep it away from a player", () => {
-  const bootShell = async ({ session = null, fresh = false, pointer = PHONE() } = {}) => {
+  const bootShell = async ({ session = null, fresh = false, pointer = UNSTATED } = {}) => {
+    demandADevice(pointer);
     const { boot } = await import("../ui/phone/shell.js");
     const { createStore } = await import("../engine/store.js");
     const { readPackage } = await import("../engine/package.js");
@@ -2234,7 +2262,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     // **An acceptance list, never an exclusion.** The rule this project wrote down after a filter that
     // passed on absence: an unknown value must do nothing rather than fall into a default branch.
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell();
+    const shell = await bootShell({ pointer: PHONE() });
     const before = shell.game.blanks().map((n) => shell.game.value(n)).join(",");
 
     for (const mode of [null, undefined, "", "Fill", "solved ", "reset;fill", "__proto__", "true", "1"]) {
@@ -2250,7 +2278,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
   test("⚠️⚠️ nothing in the interface reaches it", async () => {
     // The mode has no control, no binding and no affordance. A board rendered normally must contain no
     // route to it — not a button, not a link, not a data attribute somebody could click.
-    const shell = await bootShell();
+    const shell = await bootShell({ pointer: PHONE() });
 
     const suspicious = [...shell.root.querySelectorAll("*")].filter((node) =>
       /test|reset|fill|solved/i.test(node.className || "") || /\?test=/.test(node.getAttribute?.("href") ?? ""),
@@ -2287,7 +2315,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
 
   test("⚠️ fill writes through the keypad's own path, so it tests the real one", async () => {
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell();
+    const shell = await bootShell({ pointer: PHONE() });
 
     equal(applyTestMode("fill", shell), "fill");
 
@@ -2306,7 +2334,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     // **The constraint that matters if this ever runs anywhere real.** A board filled from the
     // solution is, to the rest of the engine, a perfect instant solve.
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell();
+    const shell = await bootShell({ pointer: PHONE() });
 
     applyTestMode("solved", shell);
 
@@ -2317,12 +2345,12 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
 
   test("⚠️ the mark survives the reload, so a reopen cannot launder the board", async () => {
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const first = await bootShell();
+    const first = await bootShell({ pointer: PHONE() });
     applyTestMode("fill", first);
     const saved = first.store.load(first.puzzle.id);
     first.teardown();
 
-    const second = await bootShell({ session: saved });
+    const second = await bootShell({session: saved, pointer: PHONE() });
 
     equal(second.game.record().assisted, true, "the reopen laundered a pre-filled board");
     second.teardown();
@@ -2331,7 +2359,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
   test("⚠️ solved reaches the finished state through the shell's own Check handler", async () => {
     // Not `game.finish()`: the point is the finished *screen*, and that is everything the handler does.
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell();
+    const shell = await bootShell({ pointer: PHONE() });
 
     applyTestMode("solved", shell);
 
@@ -2350,7 +2378,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     // ⚠️ The earlier design forgot the session and then navigated, and the outgoing page's `pagehide`
     // wrote it straight back. Nothing navigates now, which removes the race rather than working around
     // it — see the note on that listener in `shell.js`.
-    const first = await bootShell();
+    const first = await bootShell({ pointer: PHONE() });
     const name = first.game.blanks()[0];
     first.game.enter(name, first.game.cells().find((c) => c.name === name).answer);
     first.remember();
@@ -2358,7 +2386,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     assert(saved, "nothing was saved to forget");
     first.teardown();
 
-    const second = await bootShell({ session: saved, fresh: true });
+    const second = await bootShell({session: saved, fresh: true, pointer: PHONE() });
 
     equal(second.store.load(second.puzzle.id), null, "a fresh boot left the session behind");
     assert(second.game.blanks().every((n) => second.game.value(n) === null), "a fresh boot restored entries");
@@ -2372,7 +2400,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
     const { applyTestMode } = await import("../ui/phone/testmode.js");
 
     for (const mode of ["reset", "fill", "solved"]) {
-      const shell = await bootShell({ fresh: true });
+      const shell = await bootShell({fresh: true, pointer: PHONE() });
       applyTestMode(mode, shell);
 
       equal(shell.wrote.length, 1, `${mode} did not clean the address bar`);
@@ -2384,7 +2412,7 @@ suite("⚠️⚠️ The development test mode, and the four things that keep it 
 
   test("reset leaves an unplayed board and does nothing else", async () => {
     const { applyTestMode } = await import("../ui/phone/testmode.js");
-    const shell = await bootShell({ fresh: true });
+    const shell = await bootShell({fresh: true, pointer: PHONE() });
 
     equal(applyTestMode("reset", shell), "reset");
 
@@ -2407,8 +2435,9 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
    */
   const bootShell = async (
     raw,
-    { session = null, now = { at: 7_000_000 }, outbox = null, storage = null, pointer = PHONE() } = {},
+    { session = null, now = { at: 7_000_000 }, outbox = null, storage = null, pointer = UNSTATED } = {},
   ) => {
+    demandADevice(pointer);
     const { boot } = await import("../ui/phone/shell.js");
     const { createClock } = await import("../engine/clock.js");
     const { createStore } = await import("../engine/store.js");
@@ -2439,6 +2468,22 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     });
     return { ...shell, puzzle, root, now, kept, teardown: () => root.remove() };
   };
+
+  test("⚠️⚠️ a test that names no device is refused rather than given a phone", async () => {
+    // **The guard for the guard.** `demandADevice` is the only thing standing between *this suite runs on
+    // phones* and *this suite happens to run on phones*, and a check nobody has seen fire is
+    // indistinguishable from a broken one. Both spellings of not-saying are covered: the option object
+    // absent entirely, and `pointer` present but empty — the second is the one a typo produces.
+    let refused = 0;
+    for (const options of [{}, { pointer: undefined }, { pointer: null }, { outbox: null }]) {
+      try {
+        await bootShell(packages[0].raw, options);
+      } catch (error) {
+        if (String(error.message).includes("must pass `pointer:`")) refused += 1;
+      }
+    }
+    equal(refused, 4, "a test with no device was allowed to inherit one");
+  });
 
   /** Type one value the way a thumb does: pick the cell, clear it, press keys. */
   const type = (root, name, value) => {
@@ -2474,7 +2519,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     //
     // ⚠️ Innings cells are skipped by the walk below and typed through the pad: thirds are a keypad
     // affordance and a keyboard rule for them is not part of B.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const answers = new Map(shell.game.cells().map((cell) => [cell.name, cell.answer]));
     const plain = shell.game.blanks().filter((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
     assert(plain.length > 5, `only ${plain.length} plain blanks; this would prove very little`);
@@ -2502,7 +2547,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     // `grow` already appended for the pad, and the keyboard reaching the same `applyKey` is what makes
     // one rule serve both. **Moving to another cell starts fresh** — the next cell's value is what
     // `grow` is handed.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
 
     shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
@@ -2522,7 +2567,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     // **Two of the operator's three decisions.** A board is mostly given cells and walking them is
     // walking where nothing can be typed. And `Check` is a commitment — it records a failed attempt on
     // the event record — so one keystroke away from it is a commitment pressed by accident.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const blanks = new Set(shell.game.blanks());
     assert(blanks.size < shell.game.cells().length, "every cell is blank; this proves nothing");
 
@@ -2552,7 +2597,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️ Backspace clears, and Escape leaves the cell", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
 
     shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
@@ -2579,7 +2624,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   test("⚠️ the keyboard is silent while a panel is open", async () => {
     // The reveal and the reference sheet make their siblings inert. A board that kept typing underneath
     // a boxscore would be editing a game the player has finished reading.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const first = shell.game.blanks().find((name) => !(name.startsWith("pitching") && name.endsWith(".outs")));
     shell.root.querySelector(`.cell[data-cell="${first}"]`).click();
 
@@ -2591,7 +2636,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️ a live board offers a keypad and a Check key that is dead until the board is full", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const check = shell.root.querySelector(".keypad button.check");
 
     equal(check.disabled, true, "Check was live on an empty board");
@@ -2602,7 +2647,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️⚠️ a wrong board keeps the pad, and the verdict names nothing", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(shell, { wrongAt: 2 });
 
     press(shell.root, ".keypad button.check");
@@ -2622,7 +2667,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
   test("⚠️⚠️ finishing replaces the pad, kills the board, and opens the boxscore", async () => {
     // The whole lifecycle in one pass, through the real handlers.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(shell);
 
     press(shell.root, ".keypad button.check");
@@ -2692,7 +2737,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
   test("⚠️⚠️ finishing queues exactly one event, carrying the whole C7 record", async () => {
     const outbox = collectingOutbox();
-    const shell = await bootShell(packages[0].raw, { outbox });
+    const shell = await bootShell(packages[0].raw, {outbox, pointer: PHONE() });
     fill(shell);
 
     press(shell.root, ".keypad button.check");
@@ -2720,7 +2765,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
       setItem: (key, value) => held.set(key, value),
       removeItem: (key) => held.delete(key),
     };
-    const shell = await bootShell(packages[0].raw, { outbox, storage });
+    const shell = await bootShell(packages[0].raw, {outbox, storage, pointer: PHONE() });
     fill(shell);
     press(shell.root, ".keypad button.check");
     const first = outbox.added[0].event_id;
@@ -2729,7 +2774,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
 
     // The reload: a fresh shell over the same storage and the saved session, which is how a finished
     // board comes back.
-    const again = await bootShell(packages[0].raw, { outbox, storage, session });
+    const again = await bootShell(packages[0].raw, {outbox, storage, session, pointer: PHONE() });
 
     assert(again.game.isFinished(), "the session did not come back finished, so this proves nothing");
     equal(outbox.added.length, 1, "a reopened finished board queued a second event");
@@ -2741,7 +2786,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   test("⚠️ a board with no outbox plays exactly the same", async () => {
     // §23, and it is what every test written before C3 relies on. A shell handed nothing to send with
     // records nothing and draws the same game.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(shell);
 
     press(shell.root, ".keypad button.check");
@@ -2759,7 +2804,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
         throw new Error("the queue is broken");
       },
     };
-    const shell = await bootShell(packages[0].raw, { outbox: exploding });
+    const shell = await bootShell(packages[0].raw, {outbox: exploding, pointer: PHONE() });
     fill(shell);
 
     const escaped = await escapingFrom(() => press(shell.root, ".keypad button.check"));
@@ -2771,7 +2816,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️ closing the reveal and reopening it uses the frozen record, not a new reading", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(shell);
     press(shell.root, ".keypad button.check");
     const first = shell.root.querySelector(".reveal-time-figure").textContent;
@@ -2797,7 +2842,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   // -------------------------------------------------------------------------------------------
 
   test("⚠️ opening a panel moves focus into it and takes the board out of reach", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
 
     press(shell.root, ".reference-key");
     const opened = shell.root.querySelector(".reference");
@@ -2817,7 +2862,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️⚠️ activating the opener again cannot stack a second dialog", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
 
     press(shell.root, ".reference-key");
     // The exact failure: the opener kept focus behind the overlay, so a keyboard user pressing Enter
@@ -2830,7 +2875,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️ closing a panel restores focus to whatever opened it", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const opener = shell.root.querySelector(".reference-key");
 
     opener.click();
@@ -2846,7 +2891,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   });
 
   test("⚠️ Escape closes a panel, and closes exactly one", async () => {
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     const opener = shell.root.querySelector(".reference-key");
 
     opener.click();
@@ -2863,7 +2908,7 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   test("⚠️⚠️ the reveal after Check takes focus, whose opener no longer exists", async () => {
     // The complementary failure, and the one with no opener to return to: `rebuildChrome()` removes
     // *Check* before the reveal is appended, so a keyboard user arrived at the payoff holding nothing.
-    const shell = await bootShell(packages[0].raw);
+    const shell = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(shell);
 
     press(shell.root, ".keypad button.check");
@@ -2894,14 +2939,14 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
     // ⚠️ **v30-P1-03 is not reopened by this and the test says which half is which.** That finding was
     // the clock resuming and the board coming back editable; both are asserted below and both still
     // hold. Only the automatic opening of the reveal is gone.
-    const first = await bootShell(packages[0].raw);
+    const first = await bootShell(packages[0].raw, { pointer: PHONE() });
     fill(first);
     press(first.root, ".keypad button.check");
     const earned = first.root.querySelector(".reveal-time-figure").textContent;
     const saved = first.store.load(first.puzzle.id);
     first.teardown();
 
-    const second = await bootShell(packages[0].raw, { session: saved, now: { at: 9_000_000 } });
+    const second = await bootShell(packages[0].raw, { session: saved, now: { at: 9_000_000 }, pointer: PHONE() });
 
     assert(!second.root.querySelector(".reveal"), "reopening drew the boxscore over the board again");
     assert(!second.root.querySelector(".keypad"), "a finished session came back with a keypad");
@@ -2922,13 +2967,13 @@ suite("⚠️⚠️ The shell itself, driven through the keypad it renders", () 
   test("⚠️ an unfinished session comes back playable, which is the case the others could hide", async () => {
     // The control. Every assertion above is about a board that has stopped; a shell that refused to
     // build a keypad at all would pass all of them.
-    const first = await bootShell(packages[0].raw);
+    const first = await bootShell(packages[0].raw, { pointer: PHONE() });
     const name = first.game.blanks()[0];
     type(first.root, name, first.game.cells().find((c) => c.name === name).answer);
     const saved = first.store.load(first.puzzle.id);
     first.teardown();
 
-    const second = await bootShell(packages[0].raw, { session: saved });
+    const second = await bootShell(packages[0].raw, {session: saved, pointer: PHONE() });
 
     equal(second.game.isFinished(), false);
     assert(second.root.querySelector(".keypad"), "a half-played session came back without a keypad");
