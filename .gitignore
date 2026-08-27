@@ -51,8 +51,13 @@ desktop.ini
 # defect, in the file that exists to prevent one class of it.
 #
 # ⚠️ `*key.csv` rather than `*-key.csv` so the unprefixed `key.csv` is covered by the same rule.
-# `forge/tests/test_hand_solve_keys_are_ignored.py` asserts the class, so a fourth key added next
-# year is protected by having the name rather than by somebody remembering this line.
+#
+# ⚠️⚠️ **The directory does not exist as of 2026-08-26 and this rule stays anyway.** Pack A was deleted
+# and its sixteen results were transcribed into `docs/reviews/todo.md` first. **Nothing tests this line
+# now** -- `test_hand_solve_keys_are_ignored.py` went with the pack, because its own *assert the sweep
+# found keys* guard is unsatisfiable over an empty directory, which is that guard working rather than
+# failing. So this is a standing rule with no check behind it, said out loud rather than left to be
+# discovered: a key committed once is disclosed permanently, and rebuilding a pack is one script away.
 discovery/hand-solve/*key.csv
 discovery/**/run.log
 
@@ -70,9 +75,6 @@ discovery/ephemeral-puzzles/
 # holds whatever a failed run left behind. It reached a commit once, from a run that discarded four of
 # six boards and left the rest on disk.
 serve/data/puzzles/.staging/
-
-# The ceiling pack's erasure cache. Regenerable and large, and it is keyed to one sample.
-discovery/hand-solve/ceiling-erasures.json
 
 # The image tars, built by `tools/create_docker_image.ps1` and transferred to the VPS by hand.
 #

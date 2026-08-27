@@ -809,6 +809,34 @@ def shipping_games() -> tuple[dict[str, str], set[str]]:
 
 
 def main() -> None:
+    """⚠️⚠️ **RETIRED 2026-08-26. Pack A is deleted and no pack may be built from this file.**
+
+    The operator solved sixteen boards by hand, none was guessed, and **the gate closed on that**
+    (`docs/beta-0.md`, Deliverable B). Pack A's own question -- does the difficulty ordering match felt
+    difficulty -- was answered *no*, and the calibration that would have followed was withdrawn rather
+    than resized: he now has complete command of the identities, so **he is no longer an instrument that
+    discriminates.** The sixteen ratings and their game ids are transcribed in `docs/reviews/todo.md`;
+    the boards, the PDFs, the recording sheets and the answer keys are gone.
+
+    ⚠️⚠️ **The MODULE stays, and that is deliberate rather than an incomplete delete.** `CLAUDE.md`:
+    *retirement is a refusal in `main()`, not a deletion and not a move -- the file stays where its tests
+    and its history are.* **Five test files use its renderer as an independent second implementation** --
+    the footnote line, the slot references, the innings notation, the row labels, and the erased-board
+    parity -- which is §22's no-shared-code principle in miniature. Deleting the file took twenty guards
+    with it and none of them was about the pack.
+
+    ⚠️ **What it is NOT any more: a tool.** Building a pack would need the answer keys back on disk, and
+    a key committed once is disclosed permanently.
+    """
+    message = (
+        "build_pack is retired: Pack A was deleted on 2026-08-26 and its result is in "
+        "docs/reviews/todo.md. The renderer stays because five test files use it; the pack does not. "
+        "See docs/beta-0.md Deliverable B for what closed the hand-solve gate."
+    )
+    raise SystemExit(message)
+
+
+def _unreachable_main() -> None:
     rng = random.Random(PICK_SEED)
     assigned, generations = shipping_games()
     # ⚠⚠ **No `load()`, and therefore no database.** The boards are read from the signed packages the
