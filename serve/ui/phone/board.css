@@ -210,7 +210,24 @@ html, body {
 /* ---- the board ------------------------------------------------------------------------------- */
 
 .scroller {
-  flex: 1 1 auto;
+  /* ⚠️⚠️ **`0 1 auto`, so the board is as tall as the board and the pad sits against it.**
+     It may shrink and it may not grow. On a phone that is invisible -- the content is always taller
+     than the space, so the scroller is at its minimum either way, and all four arrangements measured
+     on 2026-08-26 put the board at 95-595, the pad at 595-751 and the footer at 751-812, identically.
+     **The phone cannot change, which is why this is safe to state unconditionally.**
+
+     With `1 1 auto` the scroller GREW to fill the column, and the empty space landed *inside* it, below
+     the last row: 23px on an iPad mini in portrait, 70px on a 10.9, **256px on a 12.9**, and 70 and 77
+     in the two iPadOS multitasking widths. The pad was never pushed away -- the gap between the two
+     boxes measured 0 everywhere -- so what looked like a gap was the board's own background stretched
+     below its content. Photographed before and after.
+
+     ⚠️ **This was `.pointed .scroller` and the scoping was too narrow.** It was written at beta 1 so
+     the desktop footer would sit under the board rather than at the bottom of the screen. That reason
+     is re-derived here rather than carried across, because *a justification is scoped and it does not
+     travel*: the tablet's reason is the pad rather than the footer, the mechanism is the same, and the
+     phone is unaffected by measurement rather than by argument. One rule now, no `.pointed` copy. */
+  flex: 0 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 0 var(--board-margin);
@@ -967,10 +984,6 @@ td.label.substitute { padding-left: 14px; }
 
    ⚠️ Scoped to `.pointed`, so the phone's column is untouched — the whole reason the pointer is a class
    on `#app` rather than a media query. */
-.pointed .scroller {
-  flex: 0 1 auto;
-}
-
 .pointed .footer {
   gap: 10px;
   padding: 10px var(--board-margin) calc(10px + env(safe-area-inset-bottom));
