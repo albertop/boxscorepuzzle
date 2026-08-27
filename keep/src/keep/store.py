@@ -24,7 +24,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 """What this code expects the database to be.
 
 ⚠️⚠️ **Migrations are manual and startup refuses a mismatch** (`data-layer.md` §7), and neither half
@@ -168,11 +168,6 @@ class Store(ABC):
             raise SchemaMismatchError(message)
 
 
-_EVENT_COLUMNS = (
-    "event_id", "device_id", "account_id", "puzzle_id", "calendar_date", "played_on",
-    "duration_ms", "hints", "errors", "failed_checks", "highest_technique", "solved", "assisted",
-)  # fmt: skip
-
 RECEIVED_AT = "received_at"
 """The column `keep` stamps on arrival. **Written here, in UTC, never by a database default.**
 
@@ -189,6 +184,12 @@ def _now() -> str:
     """Arrival, as an ISO instant in UTC. ⚠️ `Z`, and seconds: the column is compared as a string."""
     return datetime.now(tz=UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+
+_EVENT_COLUMNS = (
+    "event_id", "device_id", "account_id", "puzzle_id", "calendar_date", "played_on",
+    "duration_ms", "hints", "errors", "failed_checks", "highest_technique", "solved", "assisted",
+    RECEIVED_AT,
+)  # fmt: skip
 
 _ERROR_COLUMNS = ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent", RECEIVED_AT)
 

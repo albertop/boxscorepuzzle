@@ -51,6 +51,45 @@ def _text(row: dict[str, Any], field: str, *, optional: bool = False) -> str | N
     return value
 
 
+DURATION_CEILING_MS = 8 * 60 * 60 * 1000
+"""The longest a game may be recorded as taking. **Operator's decision, 2026-08-26: eight hours.**
+
+⚠️⚠️ **The clock is a duration the CLIENT reports**, accumulated in the browser and paused when the page
+is hidden — so a machine asleep with the tab open, a clock that ran while nobody played, or a client
+sending anything at all can put a number here that no game produced. **`CLAUDE.md` asks for this under
+Security**: sanity-check client-reported durations before storing, so absurd values do not corrupt
+percentiles.
+
+⚠️ **Why it corrupts rather than merely looks wrong:** §26 sells comparison, and a handful of eleven-day
+games drags the median far enough that *faster than 78%* stops being true. **And it cannot be repaired
+afterwards** — nothing in the row says which number was the real one.
+
+⚠️ **Eight hours is deliberately generous.** It is not a guess at how long a puzzle takes; it is a bound
+above anything a person does in one sitting, chosen so a slow honest solve is never touched. A board is
+solved in minutes.
+"""
+
+
+def _capped_duration(row: dict[str, Any]) -> int:
+    """The reported duration, or the ceiling when it is past it. **Clamped, not refused.**
+
+    ⚠️⚠️ **This is the opposite of the rule three lines down, and the two cases are genuinely different.**
+    A value above `LARGEST_STORED_INTEGER` **cannot be stored** — refusing is the only honest answer, and
+    the comment there explains why a clamp would be a wrong number wearing a measurement's clothes.
+
+    **A twelve-hour duration is storable and merely implausible**, and the operator's decision is that
+    the game should still be recorded: refusing it would throw away a real player's real solve because
+    their laptop slept, and §27's *you can never lose* is the same principle one layer down.
+
+    ⚠️ **So a clamped row IS a wrong number, knowingly.** What makes it acceptable is that every value it
+    can produce is 8h exactly, which is outside the range any honest solve occupies — a percentile
+    computed over these can be read as *this many players took more than eight hours*, and that is a
+    fact rather than a corruption.
+    """
+    value = _whole(row, "duration_ms")
+    return min(value, DURATION_CEILING_MS)
+
+
 def _whole(row: dict[str, Any], field: str) -> int:
     value = row.get(field)
     # ⚠️ `bool` is an `int` in Python, so `solved: true` would arrive as a perfectly good `1` for a
@@ -119,7 +158,7 @@ def read_event(row: Any) -> Event:  # noqa: ANN401
         puzzle_id=_text(row, "puzzle_id") or "",
         calendar_date=_text(row, "calendar_date", optional=True),
         played_on=_text(row, "played_on", optional=True),
-        duration_ms=_whole(row, "duration_ms"),
+        duration_ms=_capped_duration(row),
         hints=_whole(row, "hints"),
         errors=_whole(row, "errors"),
         failed_checks=_whole(row, "failed_checks"),

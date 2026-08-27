@@ -41,17 +41,39 @@ def _rows(db: sqlite3.Connection, table: str) -> int:
 
 def _seed(db: sqlite3.Connection, table: str, ident: str, days_ago: int) -> None:
     columns = {
+        "events": (
+            "event_id",
+            "device_id",
+            "puzzle_id",
+            "duration_ms",
+            "hints",
+            "errors",
+            "failed_checks",
+            "solved",
+            "assisted",
+            "received_at",
+        ),
         "shares": ("share_id", "device_id", "puzzle_id", "channel", "received_at"),
         "client_errors": ("error_id", "device_id", "message", "stack", "page", "viewport", "user_agent", "received_at"),
     }[table]
-    values = [ident] + ["x"] * (len(columns) - 2) + [_stamp(days_ago)]
+    # ⚠️ `events` carries integers and booleans where the other two carry text, so the filler cannot be
+    # one value: a table's own shape decides what a plausible row looks like.
+    filler = {
+        # puzzle_id, duration_ms, hints, errors, failed_checks, solved, assisted
+        "events": ["p", 1, 0, 0, 0, 1, 0],
+        # puzzle_id, channel
+        "shares": ["x"] * 2,
+        # message, stack, page, viewport, user_agent
+        "client_errors": ["x"] * 5,
+    }[table]
+    values = [ident, "d", *filler, _stamp(days_ago)]
+    assert len(values) == len(columns), f"{table}: {len(values)} values for {len(columns)} columns"
     db.execute(f"INSERT INTO {table} ({', '.join(columns)}) VALUES ({', '.join('?' * len(columns))})", values)  # noqa: S608
 
 
 def test_the_two_windows_are_the_operators_decision() -> None:
     """⚠️ Spelled once, here, so a future reader sees a decision rather than a number in a query."""
-    assert RETENTION_DAYS == {"shares": 365, "client_errors": 180}
-    assert "events" not in RETENTION_DAYS
+    assert RETENTION_DAYS == {"events": 730, "shares": 365, "client_errors": 180}
 
 
 def test_a_row_past_its_window_goes_and_one_inside_it_stays(db: sqlite3.Connection) -> None:
@@ -64,30 +86,34 @@ def test_a_row_past_its_window_goes_and_one_inside_it_stays(db: sqlite3.Connecti
 
     gone = purge(db, now=NOW, placeholder="?")
 
-    assert gone == {"shares": 1, "client_errors": 1}
+    assert gone == {"events": 0, "shares": 1, "client_errors": 1}
     assert [r[0] for r in db.execute("SELECT share_id FROM shares")] == ["new"]
     assert [r[0] for r in db.execute("SELECT error_id FROM client_errors")] == ["new"]
 
 
-def test_events_are_never_touched(db: sqlite3.Connection) -> None:
-    """⚠️⚠️ **The whole reason `events` is absent from `RETENTION_DAYS`**, asserted rather than assumed.
+def test_an_event_survives_two_years_and_goes_after(db: sqlite3.Connection) -> None:
+    """⚠️⚠️ **`events` was deliberately uncapped until 2026-08-26, and the reason it was still stands.**
 
-    Seen red by adding `"events": 1` to the dict: the row disappears and this is what says so.
+    §26 sells comparison and percentiles, and **a deleted event is a game gone from every percentile that
+    would have counted it**. The operator was told that before deciding and set two years anyway, which
+    is a choice about how far back a comparison reaches.
+
+    ⚠️ **One day either side of the boundary**, because a window is a threshold and a test that samples
+    far from it passes for any window at all -- including the wrong one. That is this file's own recorded
+    finding: a test that samples cannot see what lives between its samples.
     """
-    db.execute(
-        "INSERT INTO events (event_id, device_id, puzzle_id, calendar_date, played_on, duration_ms, "
-        "hints, errors, failed_checks, solved, assisted) "
-        "VALUES ('e', 'd', 'p', '2020-01-01', '2020-01-01', 1, 0, 0, 0, 1, 0)"
-    )
+    _seed(db, "events", "old", 731)
+    _seed(db, "events", "new", 729)
 
-    purge(db, now=NOW, placeholder="?")
+    gone = purge(db, now=NOW, placeholder="?")
 
-    assert _rows(db, "events") == 1, "the retention sweep took an event; percentiles need history"
+    assert gone["events"] == 1
+    assert [r[0] for r in db.execute("SELECT event_id FROM events")] == ["new"]
 
 
 def test_an_empty_database_is_not_an_error(db: sqlite3.Connection) -> None:
     # It runs nightly and most nights there is nothing to delete.
-    assert purge(db, now=NOW, placeholder="?") == {"shares": 0, "client_errors": 0}
+    assert purge(db, now=NOW, placeholder="?") == {"events": 0, "shares": 0, "client_errors": 0}
 
 
 def test_a_row_arriving_today_survives_every_window(db: sqlite3.Connection) -> None:
@@ -96,7 +122,7 @@ def test_a_row_arriving_today_survives_every_window(db: sqlite3.Connection) -> N
     _seed(db, "shares", "today", 0)
     _seed(db, "client_errors", "today", 0)
 
-    assert purge(db, now=NOW, placeholder="?") == {"shares": 0, "client_errors": 0}
+    assert purge(db, now=NOW, placeholder="?") == {"events": 0, "shares": 0, "client_errors": 0}
 
 
 def test_received_at_is_utc_from_the_application(db: sqlite3.Connection) -> None:

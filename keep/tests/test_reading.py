@@ -7,7 +7,15 @@ rule, and a boundary whose refusals are untested is one nobody has watched refus
 
 import pytest
 
-from keep.reading import LARGEST_STORED_INTEGER, MalformedError, read_batch, read_error, read_event, read_share
+from keep.reading import (
+    DURATION_CEILING_MS,
+    LARGEST_STORED_INTEGER,
+    MalformedError,
+    read_batch,
+    read_error,
+    read_event,
+    read_share,
+)
 
 
 def an_event() -> dict[str, object]:
@@ -72,10 +80,37 @@ class TestOneRow:
             with pytest.raises(MalformedError, match=field):
                 read_event({**an_event(), field: 2**31})
 
-    def test_the_largest_value_the_column_holds_is_still_accepted(self) -> None:
-        # ⚠️ **The other side of the boundary.** A check that refuses one value too many is a check that
-        # rejects legitimate data, and off-by-one at a limit is how that happens.
-        assert read_event({**an_event(), "duration_ms": LARGEST_STORED_INTEGER}).duration_ms == LARGEST_STORED_INTEGER
+    def test_a_duration_past_eight_hours_is_clamped_rather_than_refused(self) -> None:
+        """⚠️⚠️ **Clamped, and that is the opposite of the rule for a value the column cannot hold.**
+
+        The two cases are different. `LARGEST_STORED_INTEGER` is a number the database refuses, so the
+        only honest answer is to refuse the row. **Twelve hours is storable and merely implausible** —
+        and the operator's decision is that the game is still recorded, because refusing it throws away
+        a real player's real solve because their laptop slept. §27's *you can never lose*, one layer down.
+
+        ⚠️ **A clamped row is a wrong number, knowingly.** What makes it acceptable is that every value it
+        produces is 8h exactly, outside the range an honest solve occupies.
+        """
+        twelve_hours = 12 * 60 * 60 * 1000
+        assert read_event({**an_event(), "duration_ms": twelve_hours}).duration_ms == DURATION_CEILING_MS
+
+    def test_a_duration_under_the_ceiling_is_untouched(self) -> None:
+        """⚠️ The other side of the boundary, one millisecond below it.
+
+        A clamp that also flattens honest solves is worse than no clamp: it would make every long game
+        the same length, and the percentile it protects is computed over exactly those.
+        """
+        assert read_event({**an_event(), "duration_ms": DURATION_CEILING_MS - 1}).duration_ms == DURATION_CEILING_MS - 1
+        assert read_event({**an_event(), "duration_ms": DURATION_CEILING_MS}).duration_ms == DURATION_CEILING_MS
+
+    def test_a_value_the_column_cannot_hold_is_still_refused(self) -> None:
+        """⚠️ The clamp must not have swallowed the refusal it sits in front of.
+
+        `_capped_duration` calls `_whole` first, so an unstorable value raises before anything is
+        clamped — and if it did not, the ceiling would silently accept nonsense as eight hours.
+        """
+        with pytest.raises(MalformedError, match="duration_ms"):
+            read_event({**an_event(), "duration_ms": LARGEST_STORED_INTEGER + 1})
 
     def test_a_non_boolean_flag_is_refused(self) -> None:
         # `"true"` from a client that stringified its JSON twice: truthy, and not a boolean.

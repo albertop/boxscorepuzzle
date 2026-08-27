@@ -10,10 +10,22 @@ import os
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-RETENTION_DAYS = {"shares": 365, "client_errors": 180}
-"""How long each table keeps a row. **Operator's decision, 2026-08-24.**
+RETENTION_DAYS = {"events": 730, "shares": 365, "client_errors": 180}
+"""How long each table keeps a row. **Operator's decision: 2026-08-24, and `events` on 2026-08-26.**
 
-⚠️ `events` is deliberately absent. §26 sells comparison and percentiles, and those need history.
+⚠️⚠️ **`events` was deliberately absent and now is not, and the reason it was absent still stands.** §26
+sells comparison and percentiles, and a deleted event is a game gone from every percentile that would
+have counted it. **The operator was told that before deciding and decided a year anyway**, which is a
+choice about how far back a comparison reaches rather than an oversight.
+
+⚠️ **What two years cost, so nobody has to re-derive it:** at beta 0 scale a row is about 200 bytes and
+fifty players a day is 3.6 MB a year, so this frees nothing worth freeing today. **What it buys is a
+bound** — the table cannot grow without limit on a Postgres four other sites share, which is the question
+that raised the whole subject.
+
+⚠️ **A percentile computed after a purge describes the last year, not all time**, and that is the thing
+to remember when the paid tier reads these rows. It is a different statistic from the one an uncapped
+table would have given, and it is the one the product now has.
 """
 
 
