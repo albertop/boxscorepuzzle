@@ -387,21 +387,38 @@ may write an inventory.
 
     sudo install -D -m 644 deploy/ofelia/rotation.ini /srv/boxscorepuzzle/ofelia/config.ini
 
-⚠️⚠️ **Its `image =` line names the version, and ofelia does not interpolate environment variables.**
-A deploy that loads a new `bxcpze-publish` and does not edit that line keeps running the old rotation —
-successfully, printing normally, exiting zero. `tools/deploy_bxcpze_publish_image.sh` refuses to finish
-while the two disagree, **but only on that path**: editing the INI by hand bypasses it. The design that
-would close it is recorded in the INI itself under *the option not taken*.
+⚠️⚠️ **It names a container and carries no version**, so there is nothing here that can fall behind
+a deploy. `publish`'s tag is `BXCPZE_PUBLISH_VERSION` in the stack below, beside `serve`'s and `keep`'s.
+
+⚠️ **This section said the opposite until 2026-08-26** — that the INI's `image =` line named the version
+and that a deploy which did not edit it kept running last month's code. That was true, and the container
+design removed the line. **The paragraph outlived it**, along with the load script's check for that line,
+which then refused correct deployments and told the operator to add the setting that makes ofelia pull a
+local-only image from a registry. v43-P2-01.
+
+⚠️ **What can still be wrong here is the file being absent or being an old copy.** A fresh VPS with no
+config schedules nothing, and a first rotation run by hand makes launch day look correct while the puzzle
+stops changing the next morning. The load script reports which of the two it found.
 
 ### 7. The stack
 
 Portainer → *Stacks → Add stack*, named **`boxscorepuzzle`** — the volume takes its prefix from that
-name. Paste `deploy/compose.yaml`. Four variables, none with a default:
+name. Paste `deploy/compose.yaml`. **Five variables, none with a default** — compose spells each with `:?`, so
+a missing one fails the deploy rather than starting something half-configured:
 
-    BXCPZE_SERVE_VERSION   BXCPZE_KEEP_VERSION   KEEP_SHARED_TOKEN   KEEP_DATABASE_URL
+    BXCPZE_SERVE_VERSION   BXCPZE_KEEP_VERSION   BXCPZE_PUBLISH_VERSION
+    KEEP_SHARED_TOKEN      KEEP_DATABASE_URL
 
-⚠️ `publish` is **not** a service and has no variable here: the scheduler creates its container from the
-image the INI names, and deletes it afterwards.
+⚠️⚠️ **This list said four and omitted `BXCPZE_PUBLISH_VERSION`, which stops the stack from deploying
+at all.** It was written when `publish` was not a service, and the same paragraph still said so — it is a
+service now, a **stopped** container the scheduler starts. Following the old list literally produces a
+Portainer error naming a variable the runbook says does not exist. v43-P2-01.
+
+⚠️ `NGINX_LOCAL_RESOLVERS` also appears in compose and is **not** on this list on purpose: it has a
+default, so it is set only to override it.
+
+⚠️ **`publish` runs once and exits**, with `restart: "no"`. Seeing `bxcpze-publish` stopped in Portainer
+is the healthy state, not a failure — it wakes at 08:15 UTC.
 
 ### 8. The host's nginx
 
@@ -447,8 +464,18 @@ halves exist at once. A test in `forge` cannot see what is deployed and neither 
 **So the procedure is: push both images, then ask.**
 
 ```bash
-docker exec bxcpze_publish python -m publish --inventory /inventory --public /public --health
+docker start -a bxcpze-publish
 ```
+
+⚠️⚠️ **This was `docker exec bxcpze_publish python -m publish ... --health` until 2026-08-26 and not one
+part of it could work**: the container is `bxcpze-publish` with a hyphen, its healthy state is **stopped**
+so nothing can `exec` into it, `publish.__main__` has no `--health` option, and the paths are
+`/srv/inventory` and `/srv/public`. Four errors in one command, in the section that exists to verify the
+one deployment failure nothing else can see. v44-P2-01.
+
+**The container already carries the answer** — the rotation reads the health verdict itself and exits
+non-zero when the public path is wrong, so starting it *is* asking. Redeploying the stack runs it once on
+its own; `docker start -a` is the repeatable version.
 
 ⚠️ **Before that check existed this held because it was done carefully**, which is not a property of the
 system. The state on 2026-08-24 — repository at schema 6, VPS serving 5 with a client reading 5 — was
@@ -460,10 +487,17 @@ safe by accident of nothing having been pushed yet.
 
 Run it once by hand rather than waiting for 08:15 UTC:
 
-    docker run --rm \
-      -v /srv/boxscorepuzzle/inventory:/srv/inventory:ro \
-      -v boxscorepuzzle_puzzles:/srv/public \
-      bxcpze-publish:x.y.z
+    docker start -a bxcpze-publish
+
+⚠⚠ **THE CONTAINER, never a hand-built `docker run`** — which is what this said until 2026-08-26. An
+ad-hoc container is a different job wearing the same image: it is not on the backend network, so
+`bxcpze-serve` does not resolve, so `readable_versions()` gets no client — and **the pre-flight refusal
+treats an unanswerable question as non-blocking by design**, which is right for an unreachable client and
+wrong when the caller is what made it unreachable. The rotation publishes, and the verdict reports the
+missing client *after* the public path has changed. On an incompatible release that means unreadable
+boards go public first.
+
+⚠️ And `--rm` leaves the image unreferenced, **which is how a prune on this shared host deleted it once**.
 
 **What a good run says:**
 

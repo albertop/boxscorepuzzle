@@ -172,14 +172,15 @@ Write-Host "Docker image creation completed successfully!"
 Write-Host ""
 Write-Host "  1. Transfer docker_images/ to the VPS (only the tars you rebuilt need to travel)."
 Write-Host "  2. On the server:  chmod +x deploy_bxcpze_$($Image)_image.sh && ./deploy_bxcpze_$($Image)_image.sh"
-# ⚠️⚠️ **`publish` is not a Portainer variable and telling the operator it is was v42-P2-02.**
-# `compose.yaml` has BXCPZE_SERVE_VERSION and BXCPZE_KEEP_VERSION and no BXCPZE_PUBLISH_VERSION: ofelia
-# reads no environment, so the publisher's version lives in `rotation.ini`. The old line gave the
-# operator a successful-looking action that changed nothing about the image the scheduler runs.
+# ⚠️⚠️ **This said `publish` is not a Portainer variable, and it stopped being true before it was
+# read.** v42-P2-02 was right at the time -- ofelia read no environment, so the publisher's version lived
+# in `rotation.ini` -- and the container design then put it in `compose.yaml` as
+# `BXCPZE_PUBLISH_VERSION` beside the other two. **The correction outlived the thing it corrected**, so
+# this told the operator to edit an INI line that no longer exists, which is a successful-looking action
+# that changes nothing. All three images take the same step now. v43-P2-01.
 if ($Image -eq "publish") {
-    Write-Host "  3. Update the image line in /srv/boxscorepuzzle/ofelia/config.ini to bxcpze-publish:$Version,"
-    Write-Host "     then:  docker restart bxcpze-scheduler"
-    Write-Host "     (rotation.ini travelled with this bundle; the load script checks the two agree.)"
+    Write-Host "  3. Portainer -> Stacks -> boxscorepuzzle -> BXCPZE_PUBLISH_VERSION=$Version -> redeploy."
+    Write-Host "     (rotation.ini travelled with this bundle; install it if the VPS has none.)"
 }
 else {
     Write-Host "  3. Portainer -> Stacks -> boxscorepuzzle -> BXCPZE_$($Image.ToUpper())_VERSION=$Version -> redeploy."

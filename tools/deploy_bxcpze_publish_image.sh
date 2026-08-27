@@ -69,22 +69,20 @@ if ! docker images "$IMAGE:$VERSION" --format "{{.Repository}}:{{.Tag}}" | grep 
 fi
 
 echo "  verified  $IMAGE:$VERSION   $(docker images "$IMAGE:$VERSION" --format '{{.Size}}')"
-# ⚠️⚠️ **THE SCHEDULER'S CONFIG IS CHECKED, AND THIS REFUSES RATHER THAN CORRECTS.**
+# ⚠️⚠️ **THIS USED TO INSPECT THE SCHEDULER'S CONFIG, AND THE CHECK OUTLIVED WHAT IT CHECKED.**
 #
-# Ofelia does not interpolate environment variables into an INI, so `publish`'s version is written out
-# in `config.ini` -- unlike `serve` and `keep`, whose versions are Portainer variables. **A deploy that
-# loads a new image and does not edit that line keeps running the old rotation: successfully, printing
-# normally, exiting zero, with last month's code.** It is the one thing in this deployment that can fall
-# behind with no signal at all.
+# It required an `image = bxcpze-publish:<tag>` line in `config.ini` and exited 1 without one -- correct
+# while ofelia created the container from an image named there. **The container design removed that line
+# on purpose** (`rotation.ini`, and `compose.yaml`'s `publish` service), so this script refused a
+# CORRECT deployment, and its remediation told the operator to add back the exact setting that makes
+# ofelia pull a local-only image from a registry and fail.
 #
-# ⚠️⚠️ **It does not rewrite the file, and that is the decision rather than an omission.** A load that
-# silently changed what production runs is the opposite of a deploy: the image arriving on the host and
-# the host being told to use it are two acts, and collapsing them means nobody ever chose the second.
+# ⚠️⚠️ **A check that outlives its subject does not go quiet; it starts failing the right answer.**
+# That is what separates it from an ordinary stale comment: it is load-bearing, it exits non-zero, and
+# the fix it prints is the defect. v43-P2-01.
 #
-# ⚠️ **WHAT THIS COVERS AND WHAT IT DOES NOT.** It covers this script. Editing the INI by hand, loading
-# an image another way, or copying a tar and running `docker load` directly all bypass it completely.
-# **It makes forgetting loud on the path used almost every time; it does not close the class.** The
-# design that would close it is recorded in `deploy/ofelia/rotation.ini` under "the option not taken".
+# **`publish` finishes like the other two loaders now**: the version is `BXCPZE_PUBLISH_VERSION` in
+# Portainer, one place, with nothing left to fall behind and nothing here to compare.
 CONFIG="/srv/boxscorepuzzle/ofelia/config.ini"
 
 echo ""
@@ -93,51 +91,48 @@ echo "The scheduler's config"
 echo "======================================"
 echo ""
 
+# ⚠️⚠️ **Existence only, and that is the whole of what is left to check here.** The INI carries the
+# schedule and the container name; it carries no version, so there is nothing that can fall behind it and
+# nothing to compare against the tag just loaded. **What it can still be is ABSENT** -- on a fresh VPS
+# ofelia comes up with no bind-mounted config, the daily rotation never starts, and a manual first
+# rotation makes launch day look correct while the puzzle stops changing the next morning. v42-P2-02.
 if [ ! -f "$CONFIG" ]; then
-    # ⚠️ Not an error: the config is installed once, and the first load of this image legitimately
-    # happens before it exists. Said out loud so its absence is not read as a passing check.
-    echo "  $CONFIG does not exist yet."
-    echo "  Install it before the scheduler can run anything:"
+    echo "  MISSING: $CONFIG"
+    echo ""
+    echo "  Nothing is scheduled until it exists. Install it from this bundle:"
     echo ""
     echo "    sudo install -D -m 644 $SCRIPT_DIR/rotation.ini $CONFIG"
-    echo ""
-    echo "  Then set its image line to bxcpze-publish:$VERSION and start the stack."
-else
-    # ⚠️ Anchored and asserted. A grep that matched nothing would leave CONFIGURED empty, and an empty
-    # string compared against a version is a mismatch reported for the wrong reason -- so the absence of
-    # the line is its own message rather than a confusing inequality.
-    CONFIGURED=$(grep -E '^[[:space:]]*image[[:space:]]*=[[:space:]]*bxcpze-publish:' "$CONFIG" | head -1 | sed 's/.*bxcpze-publish://; s/[[:space:]]*$//')
-
-    if [ -z "$CONFIGURED" ]; then
-        echo "  ERROR: $CONFIG names no bxcpze-publish image."
-        echo "  The scheduler cannot run the rotation. Add:"
-        echo ""
-        echo "    image = bxcpze-publish:$VERSION"
-        exit 1
-    fi
-
-    if [ "$CONFIGURED" != "$VERSION" ]; then
-        echo "  ERROR: the scheduler would run a different version than the one just loaded."
-        echo ""
-        echo "    loaded here : bxcpze-publish:$VERSION"
-        echo "    $CONFIG : bxcpze-publish:$CONFIGURED"
-        echo ""
-        echo "  Nothing has been changed. Loading an image and telling the host to use it are two"
-        echo "  separate acts, and this script does not take the second one for you."
-        echo ""
-        echo "    sudo sed -i 's|^\([[:space:]]*image[[:space:]]*=[[:space:]]*\)bxcpze-publish:.*|\1bxcpze-publish:$VERSION|' $CONFIG"
-        echo "    grep -n 'bxcpze-publish' $CONFIG"
-        echo "    docker restart bxcpze-scheduler"
-        echo ""
-        echo "  READ the grep. A sed that matches nothing exits zero and leaves the old tag."
-        exit 1
-    fi
-
-    echo "  $CONFIG names bxcpze-publish:$CONFIGURED -- the version just loaded."
-    echo "  Restart the scheduler so it picks up a changed config:"
-    echo ""
     echo "    docker restart bxcpze-scheduler"
+else
+    # ⚠️ Named out loud rather than passed over in silence, so a present config is a reported fact
+    # rather than the absence of a complaint.
+    echo "  present   $CONFIG"
+    echo ""
+    # ⚠⚠ No backticks inside a double-quoted echo: bash runs what is between them. The first draft of
+    # this very line wrote 'an `image =` line' and would have executed `image =` on every run -- a fix
+    # introducing the class of defect it was written to remove, caught by reading the line rather than by
+    # `bash -n`, which accepts command substitution happily.
+    echo "  ⚠ It must name a container, never an image. A config still carrying an image line predates"
+    echo "  the container design, and ofelia will try to pull from a registry -- reinstall it from here:"
+    echo ""
+    echo "    grep -n 'image\|container' $CONFIG"
 fi
+
+echo ""
+echo "======================================"
+echo "Tell the stack to use it"
+echo "======================================"
+echo ""
+echo "  Portainer -> Stacks -> boxscorepuzzle -> BXCPZE_PUBLISH_VERSION=$VERSION -> redeploy."
+echo ""
+echo "  Redeploying recreates the stopped bxcpze-publish container on the new tag and runs one"
+echo "  rotation immediately. The scheduler starts that same container at 08:15 UTC every day."
+echo ""
+echo "  ⚠ Confirm it rather than assuming the variable took:"
+echo ""
+echo "    docker inspect -f '{{.Config.Image}}' bxcpze-publish"
+echo ""
+echo "  It must print bxcpze-publish:$VERSION. Anything else means the stack did not redeploy."
 
 echo ""
 echo "======================================"
@@ -146,10 +141,13 @@ echo "======================================"
 echo ""
 echo "  Rather than waiting for 08:15 UTC:"
 echo ""
-echo "    docker run --rm \\"
-echo "      -v /srv/boxscorepuzzle/inventory:/srv/inventory:ro \\"
-echo "      -v boxscorepuzzle_puzzles:/srv/public \\"
-echo "      bxcpze-publish:$VERSION"
+echo "    docker start -a bxcpze-publish"
+echo ""
+echo "  ⚠⚠ THE CONTAINER, never a hand-built docker run. That is a different job wearing the same"
+echo "  image: it misses the backend network, so the health verdict cannot fetch the deployed client"
+echo "  and reports on one it never read -- and the rotation skips its refusal to publish a package"
+echo "  the client cannot parse. With --rm it also leaves the image unreferenced, which is how a"
+echo "  prune on this shared host took it once already."
 echo ""
 echo "  It prints what it published, what is public now, and WHAT IT RETIRED, then reads the health"
 echo "  verdict itself. A non-zero exit means the public path is not what it should be."
